@@ -94,6 +94,36 @@ from the same input array order). Part B (one explore episode) is **report-only*
 different RNG streams make exact agreement impossible, so it is an order-of-magnitude
 sanity check, not an assertion. The cross-language learning-quality comparison is P9.
 
+## P9 benchmark methodology (the speedup claim)
+
+`acs2-bench` (bin) and `baseline/run_pyalcs_maze.py` run the **identical** §5 protocol
+(500 explore @ ε=0.8, then 3×200 exploit; final-window mean steps; n_exp=10; GA OFF)
+and emit the **same CSV schema** so `baseline/compare_bench.py` can join them.
+Methodology constraints that make the timing claim valid:
+
+- **Optimized Rust only.** The timed binary is `target/release/acs2-bench` built with
+  `cargo build --release`. A debug build can read *slower* than CPython and would
+  invert the result — never time `cargo run`/debug.
+- **Sequential, uncontended.** The pyalcs and Rust timed runs never overlap (they
+  contend for cores); run one, then the other, on the same machine.
+- **Timed region is symmetric.** Only explore+exploit are timed; population/reliable
+  metrics are computed *after* the timed region on both sides (pyalcs builds them
+  post-`explore`/`exploit`; Rust reads `population()` after the loops).
+- **`do_ga` is one flag on both sides** (`--do-ga`), default OFF for the first
+  comparison (P9), so a single value sets GA identically (PROJECT_CONTEXT §5).
+- **Std is population std (÷N, `pstdev`)** on both sides; **steps std is over the
+  n_exp per-repeat final-window means**, not over individual trials.
+- **Two speedup readings, both reported:** per-maze `t_py/t_rust` and the total-time
+  `Σt_py/Σt_rust` (Woods100-dominated). The headline is the total-time ratio, labelled.
+- **Correctness gate = order of magnitude** (`compare_bench.py` flags any maze whose
+  exploit-steps ratio exceeds 2× as INVESTIGATE). Rust learning marginally *more*
+  (smaller/cleaner population, equal-or-fewer steps) is expected from the P8 `apply_alp`
+  skip, **not** a regression.
+- **RNG is two injected ChaCha streams** (env reset + agent), both seeded per repeat;
+  reproducible within Rust but not bit-identical to pyalcs's `random`/`numpy` (§5
+  accepts this — the comparison is wall-clock + learning quality). See
+  `reports/P9_comparison.md`.
+
 ## Other choices
 
 - **No `cfg` field in `Classifier`** (unlike pyalcs). `beta` and the `theta_*`
