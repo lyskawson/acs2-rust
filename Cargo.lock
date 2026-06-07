@@ -24,6 +24,7 @@ name = "acs2-envs"
 version = "0.1.0"
 dependencies = [
  "acs2-core",
+ "serde_json",
 ]
 
 [[package]]

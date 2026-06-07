@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 acs2-core = { path = "../acs2-core" }
+
+[dev-dependencies]
+serde_json = "1"
