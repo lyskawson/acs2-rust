@@ -23,76 +23,139 @@ pub struct Classifier<const N: usize> {
 
 impl<const N: usize> Classifier<N> {
     pub fn general(action: Option<usize>, config: &Configuration) -> Self {
-        todo!()
+        Self {
+            condition: Condition::all_wildcard(),
+            action,
+            effect: Effect::all_wildcard(),
+            mark: Mark::new(),
+            q: config.initial_q,
+            r: config.initial_r,
+            ir: config.initial_ir,
+            num: 1,
+            exp: 1,
+            talp: None,
+            tga: 0,
+            tav: 0.0,
+            ee: false,
+        }
     }
 
     pub fn covering(action: usize, time: u64, config: &Configuration) -> Self {
-        todo!()
+        Self {
+            condition: Condition::all_wildcard(),
+            action: Some(action),
+            effect: Effect::all_wildcard(),
+            mark: Mark::new(),
+            q: config.initial_q,
+            r: 0.0,
+            ir: config.initial_ir,
+            num: 1,
+            exp: 0,
+            talp: Some(time),
+            tga: time,
+            tav: 0.0,
+            ee: false,
+        }
     }
 
     pub fn copy_from(other: &Classifier<N>, time: u64) -> Self {
-        todo!()
+        Self {
+            condition: other.condition,
+            action: other.action,
+            effect: other.effect,
+            mark: Mark::new(),
+            q: other.q,
+            r: other.r,
+            ir: other.ir,
+            num: 1,
+            exp: 1,
+            talp: Some(time),
+            tga: time,
+            tav: other.tav,
+            ee: false,
+        }
     }
 
     pub fn fitness(&self) -> f64 {
-        todo!()
+        self.q * self.r
     }
 
     pub fn increase_quality(&mut self, beta: f64) {
-        todo!()
+        self.q += beta * (1.0 - self.q);
     }
 
     pub fn decrease_quality(&mut self, beta: f64) {
-        todo!()
+        self.q -= beta * self.q;
     }
 
     pub fn increase_experience(&mut self) {
-        todo!()
+        self.exp += 1;
     }
 
     pub fn update_application_average(&mut self, time: u64, beta: f64) {
-        todo!()
+        let previous = self.talp.unwrap_or(time);
+        let last_applied = time as f64 - previous as f64 - self.tav;
+        if (self.exp as f64) < 1.0 / beta {
+            self.tav += last_applied / self.exp as f64;
+        } else {
+            self.tav += beta * last_applied;
+        }
+        self.talp = Some(time);
     }
 
     pub fn is_reliable(&self, theta_r: f64) -> bool {
-        todo!()
+        self.q > theta_r
     }
 
     pub fn is_inadequate(&self, theta_i: f64) -> bool {
-        todo!()
+        self.q < theta_i
     }
 
     pub fn is_more_general(&self, other: &Classifier<N>) -> bool {
-        todo!()
+        self.condition.specificity() < other.condition.specificity()
     }
 
     pub fn does_anticipate_correctly(&self, p0: &Perception<N>, p1: &Perception<N>) -> bool {
-        todo!()
+        self.effect.anticipates_correctly(p0, p1)
     }
 
     pub fn does_anticipate_change(&self) -> bool {
-        todo!()
+        self.effect.specify_change()
     }
 
     pub fn does_match(&self, perception: &Perception<N>) -> bool {
-        todo!()
+        self.condition.does_match(perception)
     }
 
     pub fn set_mark(&mut self, perception: &Perception<N>) {
-        todo!()
+        if self.mark.set_using_condition(&self.condition, perception) {
+            self.ee = false;
+        }
     }
 
     pub fn is_marked(&self) -> bool {
-        todo!()
+        self.mark.is_marked()
     }
 
     pub fn specialize(&mut self, p0: &Perception<N>, p1: &Perception<N>, leave_specialized: bool) {
-        todo!()
+        for index in 0..N {
+            if leave_specialized && !self.effect.get(index).is_wildcard() {
+                continue;
+            }
+            if p0.get(index) != p1.get(index) {
+                if self.effect.get(index).is_wildcard() {
+                    self.effect.set(index, p1.get(index));
+                }
+                self.condition.set(index, p0.get(index));
+            }
+        }
     }
 }
 
 impl<const N: usize> PartialEq for Classifier<N> {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        self.condition == other.condition
+            && self.action == other.action
+            && self.effect == other.effect
     }
 }

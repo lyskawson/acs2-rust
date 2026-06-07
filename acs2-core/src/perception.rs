@@ -7,10 +7,10 @@ pub struct Perception<const N: usize> {
 
 impl<const N: usize> Perception<N> {
     pub fn new(symbols: [Symbol; N]) -> Self {
-        todo!()
+        Self { symbols }
     }
 
     pub fn get(&self, index: usize) -> Symbol {
-        todo!()
+        self.symbols[index]
     }
 }
