@@ -1,0 +1,532 @@
+{
+  "category": "subsumption",
+  "fixtures": [
+    {
+      "id": "does_subsume_true_1",
+      "operation": "subsumption.does_subsume",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_subsume_another_classifier",
+      "description": "general reliable experienced classifier subsumes specific",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.93,
+          "r": 1.35,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 23,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.35,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9,
+        "theta_i": 0.1
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "does_subsume_false_action",
+      "operation": "subsumption.does_subsume",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_subsume_another_classifier",
+      "description": "low experience and action mismatch prevents subsumption",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "1",
+            "0",
+            "#",
+            "#",
+            "0",
+            "#",
+            "1",
+            "#"
+          ],
+          "action": 6,
+          "effect": [
+            "0",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.84,
+          "r": 0.33,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 3,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#",
+            "2",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "0",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.41,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9,
+        "theta_i": 0.1
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "does_subsume_true_2",
+      "operation": "subsumption.does_subsume",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_subsume_another_classifier",
+      "description": "non-changing general classifier subsumes specific",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "action": 6,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.99,
+          "r": 11.4,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 32,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "action": 6,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 9.89,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9,
+        "theta_i": 0.1
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "is_subsumer_too_young",
+      "operation": "subsumption.is_subsumer",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_distinguish_classifier_as_subsumer",
+      "description": "young low-quality is not a subsumer",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": null,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "is_subsumer_ok",
+      "operation": "subsumption.is_subsumer",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_distinguish_classifier_as_subsumer",
+      "description": "experienced reliable unmarked is a subsumer",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": null,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.92,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 30,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "is_subsumer_not_experienced",
+      "operation": "subsumption.is_subsumer",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_distinguish_classifier_as_subsumer",
+      "description": "insufficient experience",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": null,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.92,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 15,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "subsumption"
+    },
+    {
+      "id": "is_subsumer_marked",
+      "operation": "subsumption.is_subsumer",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_not_distinguish_marked_classifier_as_subsumer",
+      "description": "marked classifier is never a subsumer",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": null,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [
+              "1"
+            ],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.92,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 30,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20,
+        "theta_r": 0.9
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "subsumption"
+    }
+  ]
+}

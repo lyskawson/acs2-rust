@@ -1,0 +1,261 @@
+{
+  "category": "effect_anticipation",
+  "fixtures": [
+    {
+      "id": "effect_passthrough_correct",
+      "operation": "Effect.anticipates_correctly",
+      "source": "generated: deterministic",
+      "description": "wildcard pass-through with no change is correct",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_passthrough_unexpected_change",
+      "operation": "Effect.anticipates_correctly",
+      "source": "generated: deterministic",
+      "description": "wildcard pass-through but value changed is incorrect",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_specified_change_correct",
+      "operation": "Effect.anticipates_correctly",
+      "source": "generated: deterministic",
+      "description": "specified change to the observed value is correct",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "0",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_specified_no_change",
+      "operation": "Effect.anticipates_correctly",
+      "source": "generated: deterministic",
+      "description": "specified change but value stayed is incorrect",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "0",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_specified_wrong_value",
+      "operation": "Effect.anticipates_correctly",
+      "source": "generated: deterministic",
+      "description": "specified change to a different value is incorrect",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "0",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "1",
+          "9",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_specializable_all_wildcard",
+      "operation": "Effect.is_specializable",
+      "source": "generated: deterministic",
+      "description": "all-wildcard effect is always specializable",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_not_specializable_wrong_target",
+      "operation": "Effect.is_specializable",
+      "source": "generated: deterministic",
+      "description": "specified attr not matching p1 is not specializable",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "1",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "effect_anticipation"
+    },
+    {
+      "id": "effect_not_specializable_no_change",
+      "operation": "Effect.is_specializable",
+      "source": "generated: deterministic",
+      "description": "specified attr where p0==p1 is not specializable",
+      "wildcard": "#",
+      "input": {
+        "effect": [
+          "#",
+          "1",
+          "#",
+          "#"
+        ],
+        "p0": [
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "1",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "effect_anticipation"
+    }
+  ]
+}

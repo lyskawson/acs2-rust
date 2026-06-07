@@ -1,0 +1,232 @@
+{
+  "category": "updates_qrir_tav",
+  "fixtures": [
+    {
+      "id": "increase_quality_1",
+      "operation": "Classifier.increase_quality",
+      "source": "generated: deterministic",
+      "description": "q toward 1 by beta",
+      "wildcard": "#",
+      "input": {
+        "q": 0.5,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "q": 0.525
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "increase_quality_2",
+      "operation": "Classifier.increase_quality",
+      "source": "generated: deterministic",
+      "description": "q toward 1 by beta",
+      "wildcard": "#",
+      "input": {
+        "q": 0.4,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "q": 0.43000000000000005
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "decrease_quality_1",
+      "operation": "Classifier.decrease_quality",
+      "source": "generated: deterministic",
+      "description": "q toward 0 by beta",
+      "wildcard": "#",
+      "input": {
+        "q": 0.5,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "q": 0.475
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "decrease_quality_2",
+      "operation": "Classifier.decrease_quality",
+      "source": "generated: deterministic",
+      "description": "q toward 0 by beta",
+      "wildcard": "#",
+      "input": {
+        "q": 0.4,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "q": 0.38
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "tav_running_mean_exp1",
+      "operation": "Classifier.update_application_average",
+      "source": "generated: deterministic",
+      "description": "MAM running mean at exp=1",
+      "wildcard": "#",
+      "input": {
+        "exp": 1,
+        "talp": 0,
+        "tav": 0.0,
+        "time": 10,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "tav": 10.0,
+        "talp": 10
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "tav_running_mean_exp5",
+      "operation": "Classifier.update_application_average",
+      "source": "generated: deterministic",
+      "description": "MAM running mean at exp=5",
+      "wildcard": "#",
+      "input": {
+        "exp": 5,
+        "talp": 5,
+        "tav": 2.0,
+        "time": 30,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "tav": 6.6,
+        "talp": 30
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "tav_running_mean_exp19",
+      "operation": "Classifier.update_application_average",
+      "source": "generated: deterministic",
+      "description": "MAM running mean just below 1/beta boundary",
+      "wildcard": "#",
+      "input": {
+        "exp": 19,
+        "talp": 100,
+        "tav": 10.0,
+        "time": 160,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "tav": 12.631578947368421,
+        "talp": 160
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "tav_exponential_exp20",
+      "operation": "Classifier.update_application_average",
+      "source": "generated: deterministic",
+      "description": "MAM exponential exactly at exp=1/beta",
+      "wildcard": "#",
+      "input": {
+        "exp": 20,
+        "talp": 100,
+        "tav": 10.0,
+        "time": 160,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "tav": 12.5,
+        "talp": 160
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "tav_exponential_exp50",
+      "operation": "Classifier.update_application_average",
+      "source": "generated: deterministic",
+      "description": "MAM exponential above boundary",
+      "wildcard": "#",
+      "input": {
+        "exp": 50,
+        "talp": 873,
+        "tav": 71.3967,
+        "time": 900,
+        "beta": 0.05
+      },
+      "expected": {
+        "mode": "exact",
+        "tav": 69.17686499999999,
+        "talp": 900
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "rl_goal_reward",
+      "operation": "rl.update_classifier",
+      "source": "test: tests/lcs/strategies/test_reinforcement_learning.py::test_should_update_classifier",
+      "description": "reward and bootstrap propagate into r and ir",
+      "wildcard": "#",
+      "input": {
+        "r": 0.5,
+        "ir": 0.0,
+        "reward": 1000,
+        "max_fitness": 1000,
+        "beta": 0.05,
+        "gamma": 0.95
+      },
+      "expected": {
+        "mode": "exact",
+        "r": 97.97500000000001,
+        "ir": 50.0
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "rl_episode_end",
+      "operation": "rl.update_classifier",
+      "source": "generated: deterministic",
+      "description": "terminal step with zero reward and zero bootstrap",
+      "wildcard": "#",
+      "input": {
+        "r": 0.5,
+        "ir": 0.0,
+        "reward": 0,
+        "max_fitness": 0,
+        "beta": 0.05,
+        "gamma": 0.95
+      },
+      "expected": {
+        "mode": "exact",
+        "r": 0.475,
+        "ir": 0.0
+      },
+      "category": "updates_qrir_tav"
+    },
+    {
+      "id": "rl_intermediate_bootstrap",
+      "operation": "rl.update_classifier",
+      "source": "generated: deterministic",
+      "description": "zero step reward but nonzero bootstrap",
+      "wildcard": "#",
+      "input": {
+        "r": 10.0,
+        "ir": 5.0,
+        "reward": 0,
+        "max_fitness": 2.0,
+        "beta": 0.05,
+        "gamma": 0.95
+      },
+      "expected": {
+        "mode": "exact",
+        "r": 9.595,
+        "ir": 4.75
+      },
+      "category": "updates_qrir_tav"
+    }
+  ]
+}

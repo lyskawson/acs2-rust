@@ -1,0 +1,23 @@
+[project]
+name = "acs2-baseline"
+version = "0.0.0"
+description = "Isolated environment and runner for the unmodified pyalcs ACS2 maze baseline"
+requires-python = "==3.10.*"
+dependencies = [
+    "pyalcs",
+    "parrotprediction-openai-envs",
+    "numpy==1.23.5",
+    "gym==0.23.0",
+    "networkx==2.5",
+    "bitstring==3.1.7",
+    "dataslots>=1.0.1",
+    "dill",
+    "mlflow-skinny",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+pyalcs = { path = "../../acs2vcp-python/pyalcs", editable = true }
+parrotprediction-openai-envs = { path = "../../acs2vcp-python/openai-envs", editable = true }

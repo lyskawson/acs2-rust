@@ -1,0 +1,320 @@
+{
+  "category": "mark_differences",
+  "fixtures": [
+    {
+      "id": "mark_diff_empty",
+      "operation": "PMark.get_differences",
+      "source": "test: tests/lcs/agents/acs/test_PMark.py::test_should_get_differences_1",
+      "description": "empty mark yields fully general difference",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          []
+        ],
+        "p0": [
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "diff": [
+          "#",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#"
+        ]
+      },
+      "category": "mark_differences"
+    },
+    {
+      "id": "mark_diff_all_positions",
+      "operation": "PMark.get_differences",
+      "source": "test: tests/lcs/agents/acs/test_PMark.py::test_should_get_differences_4",
+      "description": "nr2 branch specializes every multi-valued position (deterministic)",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "0"
+          ]
+        ],
+        "p0": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "diff": [
+          "1",
+          "1",
+          "#",
+          "1",
+          "1",
+          "#",
+          "1",
+          "#"
+        ]
+      },
+      "category": "mark_differences"
+    },
+    {
+      "id": "mark_diff_single_candidate",
+      "operation": "PMark.get_differences",
+      "source": "generated: deterministic (single nr1 candidate)",
+      "description": "exactly one differing position is specialized deterministically",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [],
+          [],
+          [
+            "1"
+          ],
+          [],
+          [],
+          [],
+          [],
+          []
+        ],
+        "p0": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "diff": [
+          "#",
+          "#",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#"
+        ]
+      },
+      "category": "mark_differences"
+    },
+    {
+      "id": "mark_diff_property_specificity1",
+      "operation": "PMark.get_differences",
+      "source": "test: tests/lcs/agents/acs/test_PMark.py::test_should_get_differences_2",
+      "description": "nr1 branch specializes one random differing position",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [
+            "1"
+          ],
+          [
+            "1"
+          ],
+          [
+            "0"
+          ],
+          [
+            "0"
+          ],
+          [
+            "0"
+          ],
+          [
+            "0"
+          ],
+          [
+            "1"
+          ],
+          [
+            "0"
+          ]
+        ],
+        "p0": [
+          "1",
+          "1",
+          "0",
+          "1",
+          "1",
+          "1",
+          "0",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "property",
+        "allowed_specialized_indices": [
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "allowed_specificity": [
+          1
+        ],
+        "specialized_value_equals_p0": true
+      },
+      "category": "mark_differences"
+    },
+    {
+      "id": "mark_diff_property_mixed",
+      "operation": "PMark.get_differences",
+      "source": "test: tests/lcs/agents/acs/test_PMark.py::test_should_get_differences_3",
+      "description": "nr1 dominates nr2: one random differing position specialized",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "1"
+          ],
+          [
+            "0",
+            "1"
+          ],
+          [
+            "1"
+          ]
+        ],
+        "p0": [
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "property",
+        "allowed_specialized_indices": [
+          3,
+          5,
+          7
+        ],
+        "allowed_specificity": [
+          1
+        ],
+        "specialized_value_equals_p0": true
+      },
+      "category": "mark_differences"
+    },
+    {
+      "id": "mark_diff_property_two_candidates",
+      "operation": "PMark.get_differences",
+      "source": "test: tests/lcs/agents/acs/test_PMark.py::test_should_get_differences_5",
+      "description": "two nr1 candidates, one chosen at random",
+      "wildcard": "#",
+      "input": {
+        "mark": [
+          [],
+          [],
+          [],
+          [
+            "0"
+          ],
+          [],
+          [],
+          [
+            "0"
+          ],
+          []
+        ],
+        "p0": [
+          "0",
+          "0",
+          "2",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "property",
+        "allowed_specialized_indices": [
+          3,
+          6
+        ],
+        "allowed_specificity": [
+          1
+        ],
+        "specialized_value_equals_p0": true
+      },
+      "category": "mark_differences"
+    }
+  ]
+}

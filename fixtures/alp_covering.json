@@ -1,0 +1,137 @@
+{
+  "category": "alp_covering",
+  "fixtures": [
+    {
+      "id": "cover_1",
+      "operation": "alp.cover",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_create_new_classifier_using_covering",
+      "description": "covering classifier anticipates the observed change",
+      "wildcard": "#",
+      "input": {
+        "p0": [
+          "0",
+          "1",
+          "0",
+          "0",
+          "1",
+          "1",
+          "0",
+          "1"
+        ],
+        "p1": [
+          "0",
+          "0",
+          "0",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ],
+        "action": 3,
+        "time": 100
+      },
+      "expected": {
+        "mode": "exact",
+        "classifier": {
+          "condition": [
+            "#",
+            "1",
+            "#",
+            "0",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "0",
+            "#",
+            "1",
+            "#",
+            "#",
+            "1",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 0,
+          "talp": 100,
+          "tga": 100,
+          "tav": 0.0
+        }
+      },
+      "category": "alp_covering"
+    },
+    {
+      "id": "cover_2",
+      "operation": "alp.cover",
+      "source": "generated: deterministic",
+      "description": "covering specializes only changed positions",
+      "wildcard": "#",
+      "input": {
+        "p0": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "p1": [
+          "0",
+          "1",
+          "1",
+          "0"
+        ],
+        "action": 2,
+        "time": 5
+      },
+      "expected": {
+        "mode": "exact",
+        "classifier": {
+          "condition": [
+            "#",
+            "0",
+            "0",
+            "#"
+          ],
+          "action": 2,
+          "effect": [
+            "#",
+            "1",
+            "1",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 0,
+          "talp": 5,
+          "tga": 5,
+          "tav": 0.0
+        }
+      },
+      "category": "alp_covering"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["acs2-core", "acs2-envs", "acs2-bench"]

@@ -1,0 +1,413 @@
+{
+  "category": "learning_step",
+  "fixtures": [
+    {
+      "id": "learning_step_covering",
+      "operation": "ClassifiersList.apply_alp+apply_reinforcement_learning",
+      "source": "generated: deterministic (covering only)",
+      "description": "empty action set triggers deterministic covering",
+      "wildcard": "#",
+      "input": {
+        "config": {
+          "classifier_length": 8,
+          "beta": 0.05,
+          "gamma": 0.95,
+          "theta_exp": 20,
+          "theta_r": 0.9,
+          "theta_i": 0.1
+        },
+        "population": [],
+        "p0": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "action": 0,
+        "p1": [
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "time": 10,
+        "reward": 0,
+        "max_fitness": 0.0
+      },
+      "expected": {
+        "mode": "exact",
+        "population_after": [
+          {
+            "condition": [
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.5,
+            "r": 0.0,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 0,
+            "talp": 10,
+            "tga": 10,
+            "tav": 0.0
+          }
+        ]
+      },
+      "category": "learning_step"
+    },
+    {
+      "id": "learning_step_unexpected",
+      "operation": "ClassifiersList.apply_alp+apply_reinforcement_learning",
+      "source": "generated: deterministic (unexpected + covering dedup)",
+      "description": "incorrect anticipation specializes a child that covering then merges",
+      "wildcard": "#",
+      "input": {
+        "config": {
+          "classifier_length": 8,
+          "beta": 0.05,
+          "gamma": 0.95,
+          "theta_exp": 20,
+          "theta_r": 0.9,
+          "theta_i": 0.1
+        },
+        "population": [
+          {
+            "condition": [
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.5,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": 0,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ],
+        "p0": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "action": 0,
+        "p1": [
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "time": 10,
+        "reward": 0,
+        "max_fitness": 0.0
+      },
+      "expected": {
+        "mode": "exact",
+        "population_after": [
+          {
+            "condition": [
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ],
+              [
+                "0"
+              ]
+            ],
+            "q": 0.475,
+            "r": 0.475,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 2,
+            "talp": 10,
+            "tga": 0,
+            "tav": 5.0
+          },
+          {
+            "condition": [
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.525,
+            "r": 0.475,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": 10,
+            "tga": 10,
+            "tav": 5.0
+          }
+        ]
+      },
+      "category": "learning_step"
+    },
+    {
+      "id": "learning_step_expected_none",
+      "operation": "ClassifiersList.apply_alp+apply_reinforcement_learning",
+      "source": "generated: deterministic (expected case, no child)",
+      "description": "correct anticipation increases quality and applies reinforcement",
+      "wildcard": "#",
+      "input": {
+        "config": {
+          "classifier_length": 8,
+          "beta": 0.05,
+          "gamma": 0.95,
+          "theta_exp": 20,
+          "theta_r": 0.9,
+          "theta_i": 0.1
+        },
+        "population": [
+          {
+            "condition": [
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.6,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 5,
+            "talp": 0,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ],
+        "p0": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "action": 0,
+        "p1": [
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "time": 10,
+        "reward": 1000,
+        "max_fitness": 12.5
+      },
+      "expected": {
+        "mode": "exact",
+        "population_after": [
+          {
+            "condition": [
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 0,
+            "effect": [
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.62,
+            "r": 51.06875,
+            "ir": 50.0,
+            "num": 1,
+            "exp": 6,
+            "talp": 10,
+            "tga": 0,
+            "tav": 1.6666666666666667
+          }
+        ]
+      },
+      "category": "learning_step"
+    }
+  ]
+}
