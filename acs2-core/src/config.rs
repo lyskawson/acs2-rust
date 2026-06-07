@@ -23,6 +23,26 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn default_protocol() -> Self {
-        todo!()
+        Self {
+            number_of_possible_actions: 8,
+            beta: 0.05,
+            gamma: 0.95,
+            theta_i: 0.1,
+            theta_r: 0.9,
+            theta_exp: 20,
+            theta_as: 20,
+            theta_ga: 100,
+            mu: 0.3,
+            chi: 0.8,
+            u_max: 100_000,
+            epsilon: 0.5,
+            initial_q: 0.5,
+            initial_r: 0.5,
+            initial_ir: 0.0,
+            do_ga: false,
+            do_pee: false,
+            do_action_planning: false,
+            do_subsumption: true,
+        }
     }
 }

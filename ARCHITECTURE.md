@@ -68,6 +68,18 @@ only as a P8 differential mismatch, not a compile error — hence this note.
   estimate (§8: minimize per-step heap churn).
 - **Const-generic genome length `N`.** Core carries no environment dimension;
   the maze fixes `N = 8` at the edge (`MAZE_PERCEPTION_LEN`).
+- **Subsumption is a relational strategy module** (`subsumption.rs`, added in P3),
+  not methods on `Classifier`: free `is_subsumer(&Classifier, theta_exp, theta_r)`
+  and `does_subsume(cl, other, theta_exp, theta_r)`, mirroring pyalcs
+  `lcs/strategies/subsumption.py` (SPEC F.4). ALP (P4/P5) and GA (P5) reuse it.
+  `Condition::subsumes` itself is the **symmetric** per-position permissive rule
+  (`a==# || b==# || a==b`, identical to `does_match`) exactly as pyalcs
+  `acs/Condition.py`; classifier-level subsumption is made asymmetric by the
+  separate `is_more_general` (strict `specificity <`) guard inside `does_subsume`,
+  not by `Condition::subsumes`.
+- **`Symbol::Token(u8)` assumes a single-byte alphabet** (holds for maze codes
+  `'0'/'1'/'9'`; fixtures also use `'2'`). Revisit if a non-maze environment with a
+  multi-byte/wider alphabet is ever added.
 - **`Symbol = enum { Wildcard, Token(u8) }`** (Copy/Ord). `Mark<N>` is
   `[BTreeSet<Symbol>; N]`. `Classifier` identity (`PartialEq`) is
   `(condition, action, effect)` only — implemented manually, no `Hash`.
