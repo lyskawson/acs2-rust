@@ -1,0 +1,741 @@
+{
+  "category": "alp_unexpected_case",
+  "fixtures": [
+    {
+      "id": "unexpected_case_1",
+      "operation": "alp.unexpected_case",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_handle_unexpected_case_1",
+      "description": "general classifier specialized; original quality decreased and marked",
+      "wildcard": "#",
+      "input": {
+        "classifier": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 2,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "p0": [
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "1",
+          "0",
+          "0",
+          "0",
+          "1",
+          "0"
+        ],
+        "time": 14
+      },
+      "expected": {
+        "mode": "exact",
+        "returns_child": true,
+        "input_after": {
+          "q": 0.475,
+          "mark": [
+            [
+              "0"
+            ],
+            [
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0"
+            ],
+            [
+              "0"
+            ],
+            [
+              "0"
+            ],
+            [
+              "0"
+            ],
+            [
+              "0"
+            ]
+          ]
+        },
+        "child": {
+          "condition": [
+            "0",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0",
+            "#"
+          ],
+          "action": 2,
+          "effect": [
+            "1",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#",
+            "1",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": 14,
+          "tga": 14,
+          "tav": 0.0
+        }
+      },
+      "category": "alp_unexpected_case"
+    },
+    {
+      "id": "unexpected_case_2",
+      "operation": "alp.unexpected_case",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_handle_unexpected_case_2",
+      "description": "specialized child built from changing positions",
+      "wildcard": "#",
+      "input": {
+        "classifier": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0"
+          ],
+          "action": 4,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            []
+          ],
+          "q": 0.4,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "p0": [
+          "1",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "1",
+          "0",
+          "0",
+          "1",
+          "1",
+          "1",
+          "0",
+          "1"
+        ],
+        "time": 94
+      },
+      "expected": {
+        "mode": "exact",
+        "returns_child": true,
+        "input_after": {
+          "q": 0.38,
+          "mark": [
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            []
+          ]
+        },
+        "child": {
+          "condition": [
+            "#",
+            "1",
+            "1",
+            "0",
+            "#",
+            "0",
+            "1",
+            "0"
+          ],
+          "action": 4,
+          "effect": [
+            "#",
+            "0",
+            "0",
+            "1",
+            "#",
+            "1",
+            "0",
+            "1"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": 94,
+          "tga": 94,
+          "tav": 0.0
+        }
+      },
+      "category": "alp_unexpected_case"
+    },
+    {
+      "id": "unexpected_case_3_none",
+      "operation": "alp.unexpected_case",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_handle_unexpected_case_3",
+      "description": "effect not specializable: quality decreased, no child returned",
+      "wildcard": "#",
+      "input": {
+        "classifier": {
+          "condition": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "1",
+            "#",
+            "0"
+          ],
+          "action": null,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0",
+            "#",
+            "1"
+          ],
+          "mark": [
+            [
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0"
+            ],
+            [
+              "1"
+            ],
+            [],
+            [
+              "1"
+            ],
+            [],
+            [
+              "1"
+            ]
+          ],
+          "q": 0.475,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "p0": [
+          "1",
+          "1",
+          "0",
+          "0",
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "0",
+          "1",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "time": 20
+      },
+      "expected": {
+        "mode": "exact",
+        "returns_child": false,
+        "input_after": {
+          "q": 0.45125,
+          "mark": [
+            [
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [],
+            [
+              "1"
+            ],
+            [],
+            [
+              "0",
+              "1"
+            ]
+          ]
+        },
+        "child": null
+      },
+      "category": "alp_unexpected_case"
+    },
+    {
+      "id": "unexpected_case_5",
+      "operation": "alp.unexpected_case",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_handle_unexpected_case_5",
+      "description": "child inherits reward statistics from parent",
+      "wildcard": "#",
+      "input": {
+        "classifier": {
+          "condition": [
+            "0",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#",
+            "1",
+            "#"
+          ],
+          "action": 2,
+          "effect": [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [
+              "2"
+            ],
+            [
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0"
+            ],
+            [],
+            [
+              "0"
+            ]
+          ],
+          "q": 0.129,
+          "r": 341.967,
+          "ir": 130.369,
+          "num": 1,
+          "exp": 201,
+          "talp": 9628,
+          "tga": 129,
+          "tav": 25.08
+        },
+        "p0": [
+          "0",
+          "0",
+          "2",
+          "1",
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "p1": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "time": 9628
+      },
+      "expected": {
+        "mode": "exact",
+        "returns_child": true,
+        "input_after": {
+          "q": 0.12255,
+          "mark": [
+            [],
+            [],
+            [
+              "2"
+            ],
+            [
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0"
+            ],
+            [],
+            [
+              "0"
+            ]
+          ]
+        },
+        "child": {
+          "condition": [
+            "0",
+            "0",
+            "2",
+            "1",
+            "#",
+            "0",
+            "1",
+            "#"
+          ],
+          "action": 2,
+          "effect": [
+            "#",
+            "#",
+            "0",
+            "0",
+            "#",
+            "1",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 341.967,
+          "ir": 130.369,
+          "num": 1,
+          "exp": 1,
+          "talp": 9628,
+          "tga": 9628,
+          "tav": 25.08
+        }
+      },
+      "category": "alp_unexpected_case"
+    },
+    {
+      "id": "unexpected_case_6",
+      "operation": "alp.unexpected_case",
+      "source": "test: tests/lcs/agents/acs2/test_alp.py::test_should_handle_unexpected_case_6",
+      "description": "child specializes additional changing positions",
+      "wildcard": "#",
+      "input": {
+        "classifier": {
+          "condition": [
+            "0",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "1"
+          ],
+          "action": 2,
+          "effect": [
+            "1",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#",
+            "0"
+          ],
+          "mark": [
+            [],
+            [
+              "1"
+            ],
+            [],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            []
+          ],
+          "q": 0.38505,
+          "r": 1.20898,
+          "ir": 0,
+          "num": 1,
+          "exp": 11,
+          "talp": 873,
+          "tga": 95,
+          "tav": 71.3967
+        },
+        "p0": [
+          "0",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "0",
+          "1"
+        ],
+        "p1": [
+          "1",
+          "1",
+          "0",
+          "1",
+          "1",
+          "1",
+          "1",
+          "0"
+        ],
+        "time": 873
+      },
+      "expected": {
+        "mode": "exact",
+        "returns_child": true,
+        "input_after": {
+          "q": 0.3657975,
+          "mark": [
+            [],
+            [
+              "1"
+            ],
+            [],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            [
+              "1"
+            ],
+            [
+              "0",
+              "1"
+            ],
+            []
+          ]
+        },
+        "child": {
+          "condition": [
+            "0",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "0",
+            "1"
+          ],
+          "action": 2,
+          "effect": [
+            "1",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "1",
+            "0"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 1.20898,
+          "ir": 0,
+          "num": 1,
+          "exp": 1,
+          "talp": 873,
+          "tga": 873,
+          "tav": 71.3967
+        }
+      },
+      "category": "alp_unexpected_case"
+    }
+  ]
+}

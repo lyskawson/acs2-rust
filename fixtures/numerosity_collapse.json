@@ -1,0 +1,679 @@
+{
+  "category": "numerosity_collapse",
+  "fixtures": [
+    {
+      "id": "identity_same_cae_differ_qrn",
+      "operation": "Classifier.__eq__",
+      "source": "generated: deterministic",
+      "description": "identity ignores q, r, numerosity",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.9,
+          "r": 5.0,
+          "ir": 0.0,
+          "num": 4,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.2,
+          "r": 0.1,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        }
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "numerosity_collapse"
+    },
+    {
+      "id": "identity_differ_condition",
+      "operation": "Classifier.__eq__",
+      "source": "generated: deterministic",
+      "description": "different condition breaks identity",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        }
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "numerosity_collapse"
+    },
+    {
+      "id": "identity_differ_action",
+      "operation": "Classifier.__eq__",
+      "source": "generated: deterministic",
+      "description": "different action breaks identity",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 4,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        }
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "numerosity_collapse"
+    },
+    {
+      "id": "identity_differ_effect",
+      "operation": "Classifier.__eq__",
+      "source": "generated: deterministic",
+      "description": "different effect breaks identity",
+      "wildcard": "#",
+      "input": {
+        "cl": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "other": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        }
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "numerosity_collapse"
+    },
+    {
+      "id": "add_classifier_identical_merges",
+      "operation": "alp.add_classifier",
+      "source": "generated: deterministic",
+      "description": "identical (C,A,E) child increases existing quality, not appended",
+      "wildcard": "#",
+      "input": {
+        "population": [
+          {
+            "condition": [
+              "1",
+              "#",
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 3,
+            "effect": [
+              "#",
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.5,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": null,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ],
+        "new_list": [],
+        "child": {
+          "condition": [
+            "1",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20
+      },
+      "expected": {
+        "mode": "exact",
+        "new_list_size": 0,
+        "population_size": 1,
+        "merged_existing": true,
+        "population": [
+          {
+            "condition": [
+              "1",
+              "#",
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 3,
+            "effect": [
+              "#",
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.525,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": null,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ]
+      },
+      "category": "numerosity_collapse"
+    },
+    {
+      "id": "add_classifier_distinct_appends",
+      "operation": "alp.add_classifier",
+      "source": "generated: deterministic",
+      "description": "distinct child with no subsumer is appended to the new list",
+      "wildcard": "#",
+      "input": {
+        "population": [
+          {
+            "condition": [
+              "1",
+              "#",
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 3,
+            "effect": [
+              "#",
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.5,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": null,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ],
+        "new_list": [],
+        "child": {
+          "condition": [
+            "0",
+            "#",
+            "#",
+            "0",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "action": 3,
+          "effect": [
+            "#",
+            "#",
+            "1",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+          ],
+          "mark": [
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+          ],
+          "q": 0.5,
+          "r": 0.5,
+          "ir": 0.0,
+          "num": 1,
+          "exp": 1,
+          "talp": null,
+          "tga": 0,
+          "tav": 0.0
+        },
+        "theta_exp": 20
+      },
+      "expected": {
+        "mode": "exact",
+        "new_list_size": 1,
+        "population_size": 1,
+        "merged_existing": false,
+        "population": [
+          {
+            "condition": [
+              "1",
+              "#",
+              "#",
+              "0",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "action": 3,
+            "effect": [
+              "#",
+              "#",
+              "1",
+              "#",
+              "#",
+              "#",
+              "#",
+              "#"
+            ],
+            "mark": [
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              [],
+              []
+            ],
+            "q": 0.5,
+            "r": 0.5,
+            "ir": 0.0,
+            "num": 1,
+            "exp": 1,
+            "talp": null,
+            "tga": 0,
+            "tav": 0.0
+          }
+        ]
+      },
+      "category": "numerosity_collapse"
+    }
+  ]
+}

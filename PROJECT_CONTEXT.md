@@ -130,8 +130,12 @@ Default protocol (the pyalcs shipped ACS2 maze-script configuration):
   `theta_exp = 20`, `theta_as = 20`, `mu = 0.3`, `chi = 0.8`, `u_max = 100000`.
 - `do_ga = False`, `do_pee = False`, `do_action_planning = False`,
   `do_subsumption = True` (affects only the GA path, so effectively inert with GA off).
-- Phases: explore 500 episodes (epsilon = 0.8), then exploit (epsilon does not affect
-  exploit). Fix a single trial schedule and apply it to BOTH implementations.
+- Trial schedule (pinned, replicates the shipped pyalcs `run_acs2_maze*.py`): explore
+  500 episodes (epsilon = 0.8), then THREE exploit phases of 200 episodes each.
+  Exploitation always uses BestAction and ignores epsilon, so the three exploit phases
+  are behaviorally identical pure-RL evaluations of the (frozen) population. The
+  measured metric is mean steps-to-goal over the FINAL 200-episode exploit window.
+  Apply this exact schedule to BOTH implementations.
 - `n_exp` independent repetitions (use 10 to match the spirit of the paper).
 - Seed BOTH `random` and `numpy.random` in the Python baseline; inject a seeded RNG in
   Rust. Reproducibility is best-effort; the comparison is about wall-clock + learning
@@ -162,7 +166,13 @@ identically on both sides — the Rust bench (`acs2-bench`) and the pyalcs basel
 - **Reward = 1000 on entering the reward cell (also sets done), 0 on every other step.**
   (Note: this differs from the ALCS backend's -1 step penalty — use 0.)
 - Reset = agent placed at a uniformly random path cell.
-- Episode length cap is enforced by the runner (use the paper's 200-step cap).
+- Episode length (truncation) cap is per-maze, taken from the pyalcs gym
+  registration, NOT from the supervisor's paper. Shipped values: **50** for
+  Maze4/5/7 and Woods1; **500** for Woods100/101/102; use each maze's registered
+  `max_episode_steps`. The earlier "200" was a vestige of the abandoned CPU3/paper
+  protocol and is wrong here — the source-of-truth hierarchy (§2) makes the pyalcs
+  registration authoritative. Store the cap as per-maze data, identical on both the
+  Rust runner and the pyalcs baseline.
 
 ---
 
@@ -226,12 +236,14 @@ acs2/                      (Cargo workspace)
    supplies a learned `V(s')` at the same call site.
 
 **Representation note / future optimization.** Canonical ACS2 (pyalcs) does NOT
-bit-pack; conditions are sequences of symbols. Start with a straightforward Rust
-representation (e.g. `[Symbol; 8]` or a small fixed array, wildcard as a sentinel/enum
-variant). Element-wise matching first, correctness-parity first. Bit-packing (the
-2×u64 trick from the ALCS backend) is a LATER optimization behind the same interface,
-introduced only after parity is established — it is where Rust gains the most, but it
-must not compromise the initial correctness comparison.
+bit-pack; conditions are sequences of symbols. Use a stack-allocated fixed-length
+array parameterized by a **const generic** length `[Symbol; N]` (wildcard as a
+sentinel/enum variant), so acs2-core stays independent of any environment dimension;
+the maze environment fixes `N = 8` at the edge. Do NOT hardcode `8` inside acs2-core.
+Element-wise matching first, correctness-parity first. Bit-packing (the 2×u64 trick
+from the ALCS backend) is a LATER optimization behind the same interface, introduced
+only after parity is established — it is where Rust gains the most, but it must not
+compromise the initial correctness comparison.
 
 ---
 

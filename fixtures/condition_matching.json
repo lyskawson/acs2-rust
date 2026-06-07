@@ -1,0 +1,271 @@
+{
+  "category": "condition_matching",
+  "fixtures": [
+    {
+      "id": "cond_match_full",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "identical perception matches",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "other": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_match_no",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "single mismatch fails",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "other": [
+          "1",
+          "0",
+          "1",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_match_wildcard_in_condition",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "wildcard in condition matches anything",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "#",
+          "0",
+          "#",
+          "0"
+        ],
+        "other": [
+          "1",
+          "0",
+          "0",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_match_all_wildcard",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "fully general condition matches",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "other": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_match_wildcard_other_side",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "wildcard on the other side also matches",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "1",
+          "0",
+          "1",
+          "0"
+        ],
+        "other": [
+          "#",
+          "0",
+          "#",
+          "0"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_match_maze_symbol_9",
+      "operation": "Condition.does_match",
+      "source": "generated: deterministic",
+      "description": "specified reward symbol vs wall fails",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "#",
+          "#",
+          "#",
+          "#",
+          "9",
+          "#",
+          "#",
+          "#"
+        ],
+        "other": [
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1",
+          "1"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_subsumes_more_general",
+      "operation": "Condition.subsumes",
+      "source": "test: tests/lcs/strategies/test_subsumption.py::test_should_subsume_another_classifier",
+      "description": "general condition subsumes specific compatible one",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "#",
+          "#",
+          "#",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "other": [
+          "1",
+          "#",
+          "#",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_subsumes_conflict_false",
+      "operation": "Condition.subsumes",
+      "source": "generated: deterministic",
+      "description": "conflicting specified attributes do not subsume",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "1",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "other": [
+          "1",
+          "1",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#",
+          "#"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": false
+      },
+      "category": "condition_matching"
+    },
+    {
+      "id": "cond_subsumes_equal",
+      "operation": "Condition.subsumes",
+      "source": "generated: deterministic",
+      "description": "identical conditions subsume",
+      "wildcard": "#",
+      "input": {
+        "condition": [
+          "1",
+          "#",
+          "#",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#"
+        ],
+        "other": [
+          "1",
+          "#",
+          "#",
+          "0",
+          "#",
+          "#",
+          "#",
+          "#"
+        ]
+      },
+      "expected": {
+        "mode": "exact",
+        "result": true
+      },
+      "category": "condition_matching"
+    }
+  ]
+}
