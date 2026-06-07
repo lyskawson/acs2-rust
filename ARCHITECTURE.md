@@ -84,7 +84,29 @@ only as a P8 differential mismatch, not a compile error — hence this note.
   `[BTreeSet<Symbol>; N]`. `Classifier` identity (`PartialEq`) is
   `(condition, action, effect)` only — implemented manually, no `Hash`.
 - **RNG.** `acs2-core::rng::RandomSource` is the injected trait (object-safe:
-  `gen_bool`, `gen_range`; `shuffle` is a free function). `ChaChaRandomSource`
+  `gen_bool`, `gen_range`, `gen_unit`; `shuffle` is a free function). `ChaChaRandomSource`
   wraps `ChaCha8Rng` seeded via `seed_from_u64`. `rand`/`rand_chacha` use
   `default-features = false` so `getrandom`/OS entropy is **not** linked into the
   domain — determinism comes from the seed (§8), not entropy.
+
+## Truncation contract — the trial loop has NO internal step cap (read before writing `Maze::step`)
+
+Decided in P6, binding on P7. The shared trial loop (`agent.rs`,
+`run_explore_trial` / `run_exploit_trial`) follows Gymnasium delegation: it has
+**no internal iteration limit** and runs until the `Environment` sets
+`terminated || truncated`. Consequences that `acs2-envs::Maze` MUST honor:
+
+- **`Maze::step` MUST set `truncated = true` once the per-episode step count reaches
+  that maze's registered `max_episode_steps`.** Per PROJECT_CONTEXT §5: **50** for
+  Maze4/5/7 and Woods1; **500** for Woods100/101/102. Use each maze's registered cap.
+- **The cap is per-maze data, stored with the geometry**, and must be **identical on
+  the Rust runner and the pyalcs baseline** (`baseline/run_pyalcs_maze.py`) for the
+  comparison to be valid.
+- **If the maze never raises `truncated`, a deterministic exploit trial on a maze the
+  frozen policy cannot solve will infinite-loop** — the loop has nothing else to stop
+  it. This is not a safety net the agent provides; the environment owns it.
+- **On `terminated` OR `truncated` the loop runs one terminal learning pass with
+  bootstrap `0`.** This is correct for parity: gym 0.23 folds `TimeLimit` into the
+  single `done` flag, so pyalcs also bootstraps `0` at the cap. **P8 asserts this and
+  must NOT "fix" it** to bootstrap on truncation — a truncation-bootstrap variant would
+  diverge from the baseline being measured.
