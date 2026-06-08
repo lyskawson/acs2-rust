@@ -9,7 +9,7 @@ pub struct MaxFitnessBootstrap;
 
 impl<const N: usize> BootstrapEstimator<N> for MaxFitnessBootstrap {
     fn estimate(&self, population: &Population<N>, match_set: &[ClassifierRef]) -> f64 {
-        todo!()
+        population.get_maximum_fitness(match_set)
     }
 }
 
@@ -20,7 +20,9 @@ pub fn update_classifier<const N: usize>(
     beta: f64,
     gamma: f64,
 ) {
-    todo!()
+    let discounted_reward = reward + gamma * bootstrap;
+    classifier.r += beta * (discounted_reward - classifier.r);
+    classifier.ir += beta * (reward - classifier.ir);
 }
 
 pub fn apply_reinforcement_learning<const N: usize>(
@@ -31,5 +33,7 @@ pub fn apply_reinforcement_learning<const N: usize>(
     beta: f64,
     gamma: f64,
 ) {
-    todo!()
+    for &reference in action_set {
+        update_classifier(population.get_mut(reference), reward, bootstrap, beta, gamma);
+    }
 }

@@ -6,10 +6,13 @@ pub enum Symbol {
 
 impl Symbol {
     pub fn is_wildcard(self) -> bool {
-        todo!()
+        matches!(self, Symbol::Wildcard)
     }
 
     pub fn token(self) -> Option<u8> {
-        todo!()
+        match self {
+            Symbol::Wildcard => None,
+            Symbol::Token(value) => Some(value),
+        }
     }
 }

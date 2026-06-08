@@ -1,0 +1,22 @@
+{
+  "episodes": [
+    {
+      "maze": "Woods1-v0",
+      "seed": 42,
+      "trials": 1,
+      "steps": 1,
+      "macro_population": 1,
+      "numerosity": 1,
+      "reliable": 0
+    },
+    {
+      "maze": "Maze4-v0",
+      "seed": 42,
+      "trials": 1,
+      "steps": 50,
+      "macro_population": 26,
+      "numerosity": 26,
+      "reliable": 0
+    }
+  ]
+}
