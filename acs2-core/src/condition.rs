@@ -6,36 +6,46 @@ pub struct Condition<const N: usize> {
     pub symbols: [Symbol; N],
 }
 
+fn symbols_compatible(left: Symbol, right: Symbol) -> bool {
+    left.is_wildcard() || right.is_wildcard() || left == right
+}
+
 impl<const N: usize> Condition<N> {
     pub fn all_wildcard() -> Self {
-        todo!()
+        Self {
+            symbols: [Symbol::Wildcard; N],
+        }
     }
 
     pub fn does_match(&self, perception: &Perception<N>) -> bool {
-        todo!()
+        (0..N).all(|index| symbols_compatible(self.symbols[index], perception.symbols[index]))
     }
 
     pub fn subsumes(&self, other: &Condition<N>) -> bool {
-        todo!()
+        (0..N).all(|index| symbols_compatible(self.symbols[index], other.symbols[index]))
     }
 
     pub fn specificity(&self) -> usize {
-        todo!()
+        self.symbols.iter().filter(|symbol| !symbol.is_wildcard()).count()
     }
 
     pub fn specialize_with(&mut self, other: &Condition<N>) {
-        todo!()
+        for index in 0..N {
+            if !other.symbols[index].is_wildcard() {
+                self.symbols[index] = other.symbols[index];
+            }
+        }
     }
 
     pub fn generalize(&mut self, position: usize) {
-        todo!()
+        self.symbols[position] = Symbol::Wildcard;
     }
 
     pub fn get(&self, index: usize) -> Symbol {
-        todo!()
+        self.symbols[index]
     }
 
     pub fn set(&mut self, index: usize, symbol: Symbol) {
-        todo!()
+        self.symbols[index] = symbol;
     }
 }

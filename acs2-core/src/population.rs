@@ -9,66 +9,96 @@ pub struct Population<const N: usize> {
 
 impl<const N: usize> Population<N> {
     pub fn new() -> Self {
-        todo!()
+        Self {
+            classifiers: Vec::new(),
+        }
     }
 
     pub fn from_classifiers(classifiers: Vec<Classifier<N>>) -> Self {
-        todo!()
+        Self { classifiers }
     }
 
     pub fn len(&self) -> usize {
-        todo!()
+        self.classifiers.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        todo!()
+        self.classifiers.is_empty()
     }
 
     pub fn numerosity(&self) -> u32 {
-        todo!()
+        self.classifiers.iter().map(|classifier| classifier.num).sum()
     }
 
     pub fn reliable_count(&self, theta_r: f64) -> usize {
-        todo!()
+        self.classifiers
+            .iter()
+            .filter(|classifier| classifier.is_reliable(theta_r))
+            .count()
     }
 
     pub fn iter(&self) -> Box<dyn Iterator<Item = &Classifier<N>> + '_> {
-        todo!()
+        Box::new(self.classifiers.iter())
     }
 
     pub fn get(&self, reference: ClassifierRef) -> &Classifier<N> {
-        todo!()
+        &self.classifiers[reference]
     }
 
     pub fn get_mut(&mut self, reference: ClassifierRef) -> &mut Classifier<N> {
-        todo!()
+        &mut self.classifiers[reference]
     }
 
     pub fn view(&self, references: &[ClassifierRef]) -> Vec<&Classifier<N>> {
-        todo!()
+        references
+            .iter()
+            .map(|&reference| &self.classifiers[reference])
+            .collect()
     }
 
     pub fn form_match_set(&self, state: &Perception<N>) -> Vec<ClassifierRef> {
-        todo!()
+        (0..self.classifiers.len())
+            .filter(|&reference| self.classifiers[reference].does_match(state))
+            .collect()
     }
 
-    pub fn form_action_set(
-        &self,
-        match_set: &[ClassifierRef],
-        action: usize,
-    ) -> Vec<ClassifierRef> {
-        todo!()
+    pub fn form_action_set(&self, match_set: &[ClassifierRef], action: usize) -> Vec<ClassifierRef> {
+        match_set
+            .iter()
+            .copied()
+            .filter(|&reference| self.classifiers[reference].action == Some(action))
+            .collect()
     }
 
     pub fn get_maximum_fitness(&self, match_set: &[ClassifierRef]) -> f64 {
-        todo!()
+        match_set
+            .iter()
+            .map(|&reference| &self.classifiers[reference])
+            .filter(|classifier| classifier.does_anticipate_change())
+            .map(|classifier| classifier.fitness())
+            .fold(0.0, f64::max)
     }
 
     pub fn insert(&mut self, classifier: Classifier<N>) -> ClassifierRef {
-        todo!()
+        self.classifiers.push(classifier);
+        self.classifiers.len() - 1
     }
 
     pub fn remove(&mut self, reference: ClassifierRef) {
-        todo!()
+        self.classifiers.remove(reference);
+    }
+
+    pub fn remove_many(&mut self, removed_sorted: &[ClassifierRef]) {
+        for &index in removed_sorted.iter().rev() {
+            self.classifiers.remove(index);
+        }
+    }
+}
+
+pub fn remap_after_removal(refs: &mut Vec<ClassifierRef>, removed_sorted: &[ClassifierRef]) {
+    refs.retain(|reference| removed_sorted.binary_search(reference).is_err());
+    for reference in refs.iter_mut() {
+        let shift = removed_sorted.iter().take_while(|&&removed| removed < *reference).count();
+        *reference -= shift;
     }
 }

@@ -26,7 +26,7 @@ EXPLOIT_PHASES = 3
 EXPLORE_EPSILON = 0.8
 
 
-def build_configuration() -> Configuration:
+def build_configuration(do_ga: bool = False) -> Configuration:
     return Configuration(
         classifier_length=8,
         number_of_possible_actions=8,
@@ -42,7 +42,7 @@ def build_configuration() -> Configuration:
         u_max=100000,
         mu=0.3,
         chi=0.8,
-        do_ga=False,
+        do_ga=do_ga,
         do_pee=False,
         do_action_planning=False,
         do_subsumption=True,
@@ -53,14 +53,14 @@ def steps_per_trial(trial_metrics: List[dict]) -> List[int]:
     return [m["steps_in_trial"] for m in trial_metrics]
 
 
-def run_repeat(maze_id: str, seed: int) -> Dict:
+def run_repeat(maze_id: str, seed: int, do_ga: bool = False) -> Dict:
     random.seed(seed)
     np.random.seed(seed)
 
     env = gym.make(maze_id)
     env.action_space.seed(seed)
 
-    agent = ACS2(build_configuration())
+    agent = ACS2(build_configuration(do_ga))
 
     explore_start = time.perf_counter()
     explore_metrics = agent.explore(env, EXPLORE_TRIALS)
@@ -123,36 +123,81 @@ def report_repeat(maze_id: str, repeat_index: int, result: Dict) -> None:
     print()
 
 
+CSV_HEADER = (
+    "maze,n_exp,exploit_steps_mean,exploit_steps_std,macro_pop_mean,numerosity_mean,"
+    "reliable_mean,explore_time_total_s,exploit_time_total_s,total_time_s"
+)
+
+
+def aggregate_maze(maze_id: str, seed: int, repeats: int, do_ga: bool, verbose: bool) -> Dict:
+    final_window_means: List[float] = []
+    macro_values: List[int] = []
+    numerosity_values: List[int] = []
+    reliable_values: List[int] = []
+    explore_total = 0.0
+    exploit_total = 0.0
+
+    for repeat_index in range(repeats):
+        result = run_repeat(maze_id, seed + repeat_index, do_ga)
+        if verbose:
+            report_repeat(maze_id, repeat_index, result)
+        final_window_means.append(fmean(result["exploit_phase_steps"][-1]))
+        macro_values.append(result["macro_population"])
+        numerosity_values.append(result["numerosity"])
+        reliable_values.append(result["reliable"])
+        explore_total += result["explore_time"]
+        exploit_total += result["exploit_time"]
+
+    return {
+        "maze": maze_id,
+        "n_exp": repeats,
+        "exploit_steps_mean": fmean(final_window_means),
+        "exploit_steps_std": pstdev(final_window_means),
+        "macro_pop_mean": fmean(macro_values),
+        "numerosity_mean": fmean(numerosity_values),
+        "reliable_mean": fmean(reliable_values),
+        "explore_time_total_s": explore_total,
+        "exploit_time_total_s": exploit_total,
+        "total_time_s": explore_total + exploit_total,
+    }
+
+
+def csv_row(summary: Dict) -> str:
+    return (
+        f"{summary['maze']},{summary['n_exp']},{summary['exploit_steps_mean']:.4f},"
+        f"{summary['exploit_steps_std']:.4f},{summary['macro_pop_mean']:.2f},"
+        f"{summary['numerosity_mean']:.2f},{summary['reliable_mean']:.2f},"
+        f"{summary['explore_time_total_s']:.4f},{summary['exploit_time_total_s']:.4f},"
+        f"{summary['total_time_s']:.4f}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("maze", help="gym_maze environment id, e.g. Maze4-v0")
+    parser.add_argument("mazes", nargs="+", help="gym_maze environment ids, e.g. Maze4-v0")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--repeats", type=int, default=1)
+    parser.add_argument("--do-ga", action="store_true")
+    parser.add_argument("--csv", default=None, help="write aggregated per-maze CSV to this path")
     args = parser.parse_args()
 
-    overall_start = time.perf_counter()
-    final_window_means: List[float] = []
-    total_times: List[float] = []
+    verbose = args.csv is None
+    rows = [CSV_HEADER]
+    print(f"pyalcs baseline: n_exp={args.repeats} seed={args.seed} do_ga={args.do_ga}")
 
-    for repeat_index in range(args.repeats):
-        seed = args.seed + repeat_index
-        result = run_repeat(args.maze, seed)
-        report_repeat(args.maze, repeat_index, result)
-        final_window_means.append(fmean(result["exploit_phase_steps"][-1]))
-        total_times.append(result["explore_time"] + result["exploit_time"])
+    for maze_id in args.mazes:
+        summary = aggregate_maze(maze_id, args.seed, args.repeats, args.do_ga, verbose)
+        rows.append(csv_row(summary))
+        print(
+            f"{maze_id:<12} exploit_steps={summary['exploit_steps_mean']:.3f}"
+            f"±{summary['exploit_steps_std']:.3f} macro={summary['macro_pop_mean']:.1f} "
+            f"reliable={summary['reliable_mean']:.1f} total_time={summary['total_time_s']:.3f}s"
+        )
 
-    wall_clock = time.perf_counter() - overall_start
-
-    print(f"### {args.maze}: {args.repeats} repeat(s) ###")
-    print(
-        f"final_exploit_window_steps over repeats: "
-        f"mean={fmean(final_window_means):.3f} "
-        f"std={pstdev(final_window_means):.3f}"
-    )
-    print(
-        f"protocol_time per repeat: mean={fmean(total_times):.3f}s "
-        f"total_wall_clock={wall_clock:.3f}s"
-    )
+    if args.csv is not None:
+        with open(args.csv, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(rows) + "\n")
+        print(f"wrote {args.csv}")
 
 
 if __name__ == "__main__":

@@ -109,6 +109,16 @@ samplers used by both scripts.
 
 ## Notes
 
+- **P1 backlog — pin the symmetric-`subsumes` divergent case.** Add one
+  `does_subsume` fixture where the candidate subsumer is more-general-by-count yet
+  specifies a token at a position the other leaves wildcard, e.g. `cl=[1,1,#,#]`
+  (spec 2) vs `other=[1,#,9,9]` (spec 3), equal action/effect, `cl` experienced +
+  reliable + unmarked. pyalcs (`acs/Condition.py:72-77`, symmetric) returns
+  `does_subsume = true`; an asymmetric `#`-superset rule would return `false`. The
+  current three `does_subsume` fixtures do not cover this, so the symmetric choice is
+  presently pinned only by the Rust regression test
+  `does_subsume_symmetric_wildcard_superset_swallows_more_specific`
+  (`acs2-core/tests/p3_fixtures.rs`); this fixture would pin it language-neutrally.
 - **GA fixtures are deferred to P5.** GA is off in the benchmark protocol and its
   paths add RNG (roulette selection, mutation, crossover, victim deletion);
   generating those as deterministic vectors belongs with the GA implementation.

@@ -110,11 +110,18 @@ must leave clean seams for it (see §7).
   only specializes. Replicate this (do not silently "fix" it) for parity.
 
 ### Known pyalcs hazards — DO NOT transcribe these into Rust
-The spec flags three real bugs in the orchestration/extension layer. Re-derive the
-trial loop cleanly in Rust instead of copying it:
+The spec flags four real bugs. The first three sit in the orchestration/extension
+layer; the fourth sits in a learning primitive (apply_alp itself). Re-derive the
+trial loop cleanly in Rust instead of copying it, and use deferred deletion in ALP:
 - `_is_preferred_to_delete` checks `is_marked` (the bound method, always truthy).
 - `ClassifiersList.copy()` is broken (copies `__slots__`, not the classifiers).
 - `ACS2VCP._run_trial_exploit` raises `TypeError`.
+- `apply_alp` calls `action_set.safe_remove(cl)` while iterating `action_set`,
+  so deleting an inadequate classifier makes the Python list iterator skip the next
+  member — it is never processed (no experience bump, no mark, no anticipation
+  update). Rust uses deferred deletion (iterate a cloned set, delete after the loop)
+  and is the correct side per §J. Found via the P8 differential, not in the
+  literature.
 Also: exploitation ignores epsilon (always BestAction) — a property of the algorithm,
 keep it; just be aware the epsilon values in the exploit scripts are inert.
 

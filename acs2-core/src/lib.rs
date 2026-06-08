@@ -4,6 +4,7 @@ pub mod condition;
 pub mod effect;
 pub mod mark;
 pub mod classifier;
+pub mod subsumption;
 pub mod population;
 pub mod alp;
 pub mod ga;
