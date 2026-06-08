@@ -235,3 +235,35 @@ separate Rust unit tests. `tests/maze_parity.rs` asserts embedded geometry ==
 dumped grid (definitive matrix-match) and perception/transition/reward/terminated
 parity. P7 ports **Maze4, Maze5, Maze7, Woods1 (cap 50), Woods100 (cap 500)** —
 both cap values exercised; 888 probes total.
+
+## Deliberate pyalcs-fidelity deviations from canonical ACS2 (Butz & Stolzmann)
+
+These are NOT bugs and NOT representation choices — they are behaviours where pyalcs
+under its shipped config diverges from canonical ACS2, and the Rust port reproduces
+them ON PURPOSE so the P9 benchmark compares the same algorithm on both sides
+(PROJECT_CONTEXT §2: port target is pyalcs-as-code, not the Butz paper). Collected
+here as the fidelity ledger for the thesis and as the revisit-checklist for the
+Actor-Critic stage, where the port target no longer applies.
+
+- **ALP generalization disabled by `u_max = 100000`** (SPEC J.5). The expected-case
+  over-specialization generalization branches never execute; under the shipped config
+  ALP only specializes. Canonical ACS2 generalizes via ALP. To restore Butz behaviour:
+  lower `u_max` and implement the generalization while-loops (currently omitted, noted
+  in expected_case).
+- **Exploitation ignores epsilon — always BestAction** (SPEC J.8, PROJECT_CONTEXT §4).
+  The epsilon values in the exploit scripts are inert. Kept as a property of the
+  measured algorithm.
+- **`biased_exploration` is dead config** (SPEC J.3). EpsilonGreedy reads `epsilon` and
+  discards the biased-exploration parameter; exploration is pure epsilon-greedy with no
+  action-delay / knowledge-array bias, even though those strategy classes exist in
+  pyalcs.
+- **No generalization pressure under the benchmark config.** With u_max generalization
+  dead AND GA OFF (the P9 protocol), structural learning is specialize-only. This is
+  faithful to the tested pyalcs maze scripts; it is also why population counts stay
+  high. Revisit if GA-ON or AC changes the regime.
+
+Note: RL bootstrap on q·r is NOT in this list — SPEC J.6 confirms it MATCHES Butz, so
+it is canonical, not a deviation. The four pyalcs bugs (the §4 hazards + the P8
+apply_alp skip) are also NOT here — Rust does not reproduce those; it is the correct
+side. This list is only behaviours Rust intentionally mirrors that depart from the
+paper.
