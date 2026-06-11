@@ -1,0 +1,2 @@
+maze,mode,no_subsumption,total_time_s,avg_exp_time_s,std_exp_time_s,exploit_avg_steps,exploit_avg_steps_std,micro_pop_exploit2_avg,macro_pop_exploit2_avg,micro_pop_rel_exploit2_avg,macro_pop_rel_exploit2_avg,gpu_apply_learning_s,gpu_batch_add_s,gpu_subsumption_s,gpu_reserve_slots_s,gpu_metrics_s
+Maze4,CPU Single,True,5.483619928359985,2.1361361742019653,0.11166754252904633,5.966,7.97087473242429,3498.79,188.758,2934.5,77.5,0.0,0.0,0.0,0.0,0.0
