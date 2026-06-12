@@ -1,0 +1,5 @@
+maze,n_exp,exploit_steps_mean,exploit_steps_std,macro_pop_mean,numerosity_mean,reliable_mean,explore_time_total_s,exploit_time_total_s,total_time_s
+Maze4-ounold,2,7.5700,3.7500,301.00,301.00,87.50,0.0283,0.0016,0.0299
+MazeE2-ounold,2,26.5400,6.4000,578.00,578.00,88.00,0.0481,0.0107,0.0588
+MiyazakiA-ounold,2,3.5800,0.2200,412.50,412.50,44.00,0.0191,0.0011,0.0202
+Woods100-ounold,2,6.2900,0.3700,18.00,18.00,10.50,0.0014,0.0002,0.0015
