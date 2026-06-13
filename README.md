@@ -69,7 +69,7 @@ knowledge):
 | Crate | Kind | Purpose |
 |---|---|---|
 | `acs2-core` | lib | Pure ACS2 domain: classifier, population, ALP, RL, GA, action selection, config, injected RNG, and the shared trial loop. |
-| `acs2-envs` | lib | The `Environment` (Gymnasium-style) trait impl: the 8-sensor maze and the canonical maze geometries ported from `gym_maze`. |
+| `acs2-envs` | lib | The `Environment` (Gymnasium-style) trait impl: the 8-sensor maze plus geometry definitions in `mazes/` — the 5 canonical pyalcs mazes ported from `gym_maze` (the default run) and 22 additional ounold/ALCS mazes (opt-in via `--mazes`). |
 | `acs2-bench` | bin | Runs the maze suite under the benchmark protocol, computes metrics + timing, emits CSV. |
 
 The Python reference (pyalcs baseline + dump/compare scripts) lives under
