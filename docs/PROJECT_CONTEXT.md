@@ -230,7 +230,12 @@ acs2/                      (Cargo workspace)
 ├── acs2-envs/   (lib)     Environment trait (Gymnasium-style) + Maze
 │   ├── environment         trait: reset, step -> (obs, reward, terminated, truncated)
 │   ├── maze                8-sensor perception, compass actions, reward scheme
-│   └── maze_data           the canonical maze geometries (ported from gym_maze)
+│   ├── maze_data           re-export shim (MazeGeometry, geometry_by_id, MAZE_GEOMETRIES)
+│   └── mazes               geometry defs, one file per maze, tagged by MazeSource
+│       ├── canonical        5 pyalcs mazes (Maze4/5/7, Woods1, Woods100)
+│       │                    = MAZE_GEOMETRIES, the default benchmark run
+│       └── unold            22 ounold/ALCS mazes = UNOLD_GEOMETRIES,
+│                            opt-in only via --mazes (NOT in the default run)
 ├── acs2-bench/  (bin)     runs the suite, computes metrics, emits CSV + timing
 └── acs2-py/     (lib, LATER, optional)   PyO3 bindings exposing a Gymnasium agent
 ```

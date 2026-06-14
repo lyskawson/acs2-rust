@@ -1,0 +1,111 @@
+[1/22] Running maze=Cassandra4x4 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[1/22] Finished maze=Cassandra4x4 mode=CPU Single no_subsumption=True Exploit Avg.=5.0348 +/- 6.0472 Total Time=5.26s
+[2/22] Running maze=Littman57 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[2/22] Finished maze=Littman57 mode=CPU Single no_subsumption=True Exploit Avg.=5.7024 +/- 7.7504 Total Time=6.18s
+[3/22] Running maze=Littman89 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[3/22] Finished maze=Littman89 mode=CPU Single no_subsumption=True Exploit Avg.=5.7124 +/- 4.6149 Total Time=11.68s
+[4/22] Running maze=Maze10 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[4/22] Finished maze=Maze10 mode=CPU Single no_subsumption=True Exploit Avg.=147.9950 +/- 83.1686 Total Time=40.13s
+[5/22] Running maze=Maze4 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[5/22] Finished maze=Maze4 mode=CPU Single no_subsumption=True Exploit Avg.=5.3938 +/- 4.6157 Total Time=11.21s
+[6/22] Running maze=Maze7 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[6/22] Finished maze=Maze7 mode=CPU Single no_subsumption=True Exploit Avg.=141.0918 +/- 80.8989 Total Time=21.65s
+[7/22] Running maze=MazeA mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[7/22] Finished maze=MazeA mode=CPU Single no_subsumption=True Exploit Avg.=40.3978 +/- 73.4105 Total Time=23.64s
+[8/22] Running maze=MazeB mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[8/22] Finished maze=MazeB mode=CPU Single no_subsumption=True Exploit Avg.=5.5136 +/- 4.7826 Total Time=11.50s
+[9/22] Running maze=MazeD mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[9/22] Finished maze=MazeD mode=CPU Single no_subsumption=True Exploit Avg.=4.2860 +/- 3.7893 Total Time=10.68s
+[10/22] Running maze=MazeE1 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[10/22] Finished maze=MazeE1 mode=CPU Single no_subsumption=True Exploit Avg.=9.8646 +/- 18.6433 Total Time=21.83s
+[11/22] Running maze=MazeE2 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[11/22] Finished maze=MazeE2 mode=CPU Single no_subsumption=True Exploit Avg.=7.7778 +/- 13.2444 Total Time=21.90s
+[12/22] Running maze=MazeE3 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[12/22] Finished maze=MazeE3 mode=CPU Single no_subsumption=True Exploit Avg.=15.9298 +/- 28.5701 Total Time=55.10s
+[13/22] Running maze=MazeF2 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[13/22] Finished maze=MazeF2 mode=CPU Single no_subsumption=True Exploit Avg.=3.2700 +/- 1.6263 Total Time=2.08s
+[14/22] Running maze=MazeF3 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[14/22] Finished maze=MazeF3 mode=CPU Single no_subsumption=True Exploit Avg.=103.9820 +/- 90.9207 Total Time=15.76s
+[15/22] Running maze=MazeF4 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[15/22] Finished maze=MazeF4 mode=CPU Single no_subsumption=True Exploit Avg.=157.5990 +/- 72.8963 Total Time=27.12s
+[16/22] Running maze=MiyazakiA mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[16/22] Finished maze=MiyazakiA mode=CPU Single no_subsumption=True Exploit Avg.=4.6308 +/- 5.0694 Total Time=9.00s
+[17/22] Running maze=MiyazakiB mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[17/22] Finished maze=MiyazakiB mode=CPU Single no_subsumption=True Exploit Avg.=5.1444 +/- 2.6893 Total Time=9.75s
+[18/22] Running maze=Woods1 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[18/22] Finished maze=Woods1 mode=CPU Single no_subsumption=True Exploit Avg.=3.0942 +/- 3.0620 Total Time=4.17s
+[19/22] Running maze=Woods100 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[19/22] Finished maze=Woods100 mode=CPU Single no_subsumption=True Exploit Avg.=2.2456 +/- 1.0604 Total Time=0.94s
+[20/22] Running maze=Woods101 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[20/22] Finished maze=Woods101 mode=CPU Single no_subsumption=True Exploit Avg.=83.5050 +/- 89.0681 Total Time=19.62s
+[21/22] Running maze=Woods101_5 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[21/22] Finished maze=Woods101_5 mode=CPU Single no_subsumption=True Exploit Avg.=154.2416 +/- 79.6730 Total Time=45.57s
+[22/22] Running maze=Woods102 mode=CPU Single no_subsumption=None
+--- Starting Phase: explore (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit1 (Mode: cpu_single, Episodes: 500) ---
+--- Starting Phase: exploit2 (Mode: cpu_single, Episodes: 500) ---
+[22/22] Finished maze=Woods102 mode=CPU Single no_subsumption=True Exploit Avg.=152.1532 +/- 80.3780 Total Time=60.40s
+Benchmark completed. Results saved to /Users/aleklyskawa/Desktop/acs2-rust/reports/cpu_single_raw/cpu_single_full_f50.csv
