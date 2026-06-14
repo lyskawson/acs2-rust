@@ -1,0 +1,52 @@
+# COPY of ALCS experiments/configs/batch_mazes.yaml — INPUT ONLY, not a source modification.
+# Only deltas vs native:
+#   - metric_calculation_frequency: 1 -> 50  (TIMER-SYMMETRY measurement knob; observational scan)
+#   - modes: trimmed to [cpu_single]         (measurement scope, not a learning param)
+#   - mazes: explicit 22-maze unold set       (measurement scope, not a learning param)
+# ALL learning parameters below are byte-for-byte native.
+
+# General parameters for batch maze benchmark
+n_exp: 2
+n_steps: 200
+beta: 0.05
+gamma: 0.95
+theta_i: 0.1
+theta_r: 0.9
+epsilon: 0.1
+u_max: 1
+metric_calculation_frequency: 50
+no_subsumption: true
+
+# Phase definitions
+explore_episodes: 500
+explore_epsilon: 0.8
+explore_beta: 0.05
+explore_alp: true
+explore_ga: true
+explore_decay: false
+
+exploit1_episodes: 500
+exploit1_epsilon: 0.2
+exploit1_beta: 0.05
+exploit1_alp: true
+exploit1_ga: false
+exploit1_decay: false
+
+exploit2_episodes: 500
+exploit2_epsilon: 0.0
+exploit2_beta: 0.05
+exploit2_alp: false
+exploit2_ga: false
+exploit2_decay: false
+
+environment:
+  type: grid_maze
+  name: Woods1
+  parameters: {}
+  reset_to_random_start: true
+
+modes:
+  - cpu_single
+
+mazes:
+  - MazeE3

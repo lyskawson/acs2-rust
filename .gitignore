@@ -4,3 +4,7 @@ __pycache__/
 baseline/.venv/
 target/
 articles/*.pdf
+baseline/cpusingle/.venv/
+baseline/cpusingle/alcs_sandbox/
+
+/reference/
