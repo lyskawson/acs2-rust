@@ -1,0 +1,4 @@
+size,explore_trials,n_exp,knowledge_mean,knowledge_min,reached_full,macro_pop_mean,macro_pop_std,reliable_mean,reliable_std,reliable_spec_mean,reliable_spec_std,explore_time_total_s,exploit_time_total_s,total_time_s
+6,20000,10,1.000000,1.000000,10/10,102.30,10.34,28.10,2.30,3.0437,0.0678,0.7956,0.0073,0.8029
+11,200000,10,1.000000,1.000000,10/10,295.80,20.24,56.70,3.26,4.1501,0.1803,23.2315,0.0235,23.2550
+20,300000,10,1.000000,1.000000,10/10,4366.90,370.31,88.60,3.38,5.2357,0.2528,195.4317,0.2543,195.6860
