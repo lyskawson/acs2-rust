@@ -1,0 +1,3 @@
+size,explore_trials,n_exp,knowledge_mean,knowledge_min,macro_pop_mean,reliable_mean,explore_time_total_s,exploit_time_total_s,total_time_s
+6,20000,5,1.000000,1.000000,259.80,259.80,0.3057,0.0061,0.3117
+11,400000,5,1.000000,1.000000,4380.00,4380.00,101.8002,0.1138,101.9140

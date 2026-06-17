@@ -266,3 +266,50 @@ table produced on one machine.
   interface as a pure optimization, re-running P3–P5 fixtures to confirm parity.
 - Optional secondary baseline: time the supervisor's ALCS cpu_single (with its quirks
   intact) as an "even vs optimized Python" datapoint — never as the AC foundation.
+
+## MPX phases (Task 2) — overview
+
+M1 (build + correctness), M2 (speed/reach), M3 (conditional pack) are coordinated
+via per-phase agent prompts, gated like P0–P9. M1 is the correctness gate (the MPX
+analogue of P8); M2 measures reach + per-component cost; M3 only fires if M2 proves a
+ceiling.
+
+## M3 — Bit-packed representation (CONDITIONAL, in-scope-of-MPX, LAST)
+
+This is NOT MPX preparation and NOT a generic "after everything" optimization. It is
+the conditional final phase WITHIN MPX, run ONLY if the M2 reach measurement proves a
+specific component is the ceiling (memory or speed).
+
+**Preconditions (all must hold before M3 is written or run):**
+- M1 gate passed (MPX correctness: knowledge=1.0 on 6/11/20; analytic oracle green;
+  sampled knowledge ≡ exhaustive at k=11/20).
+- M2 produced a reach curve WITH per-component memory/time measurement
+  (Mark vs condition vs effect) AND named which component is the ceiling. Packing
+  without this measurement is forbidden: the likely large-N memory ceiling is
+  `Mark = [BTreeSet<Symbol>; N]` (one BTreeSet per attribute), NOT condition/effect,
+  so packing condition "because it's obvious" may optimize the wrong component.
+  Measurement decides what to pack, not intuition.
+
+**What M3 does (only if triggered):**
+- Pack ONLY the component M2 proved is the ceiling, behind the existing acs2-core
+  interface (Condition/Effect/Mark surface unchanged; element-wise and packed are
+  interchangeable impls).
+
+**Re-validation (mandatory — this is rewriting the validated core, not adding an
+optimization):**
+- Full P8 re-run: packed matching must reproduce the element-wise differential EXACTLY
+  (761/761 zero divergence).
+- Full P9 + MPX re-run: existing maze speedup numbers and MPX knowledge/reach numbers
+  must NOT move (packed is a representation change, same algorithm).
+
+**May be unnecessary:** if element-wise reaches MPX-137 in M2 without a ceiling, M3 is
+NOT run, and "element-wise sufficed to MPX-137" is itself a reportable result.
+
+**Opportunity exception:** if, AFTER MPX is closed, bit-packing is judged a worthwhile
+contribution in itself ("packed representation gives an additional X× at preserved
+correctness, same algorithm"), it is a legitimate deliberate phase WITH full
+re-validation, reported as a separate element-wise-vs-packed result. That is a post-hoc
+decision made WITH measurement in hand — never before MPX validation.
+
+**Gate M3 (only if run):** packed component reproduces P8 761/761 exactly; P9 maze
+numbers and MPX numbers unchanged; the M2-identified ceiling measurably relieved.

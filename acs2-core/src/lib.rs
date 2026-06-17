@@ -14,3 +14,4 @@ pub mod config;
 pub mod rng;
 pub mod environment;
 pub mod agent;
+pub mod knowledge;
