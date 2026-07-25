@@ -3,6 +3,7 @@ use crate::config::Configuration;
 use crate::effect::Effect;
 use crate::mark::Mark;
 use crate::perception::Perception;
+use crate::rng::RandomSource;
 
 #[derive(Clone, Debug)]
 pub struct Classifier<const N: usize> {
@@ -135,6 +136,24 @@ impl<const N: usize> Classifier<N> {
 
     pub fn is_marked(&self) -> bool {
         self.mark.is_marked()
+    }
+
+    pub fn specified_unchanging_attributes(&self) -> Vec<usize> {
+        (0..N)
+            .filter(|&index| {
+                !self.condition.get(index).is_wildcard() && self.effect.get(index).is_wildcard()
+            })
+            .collect()
+    }
+
+    pub fn generalize_unchanging_condition_attribute(&mut self, rng: &mut dyn RandomSource) -> bool {
+        let unchanging = self.specified_unchanging_attributes();
+        if unchanging.is_empty() {
+            return false;
+        }
+        let chosen = unchanging[rng.gen_range(unchanging.len())];
+        self.condition.generalize(chosen);
+        true
     }
 
     pub fn specialize(&mut self, p0: &Perception<N>, p1: &Perception<N>, leave_specialized: bool) {

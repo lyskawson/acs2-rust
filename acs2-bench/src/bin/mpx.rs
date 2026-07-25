@@ -1,8 +1,9 @@
 use std::time::Instant;
 
+use acs2_bench::{parse_u_max_mode, parse_variant, resolve_u_max, variant_label, UMaxMode};
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
-use acs2_core::config::Configuration;
+use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_envs::multiplexer::{evaluate_knowledge, Multiplexer};
@@ -20,6 +21,8 @@ struct Options {
     exploit_phases: u32,
     skip_knowledge: bool,
     do_ga: bool,
+    u_max_mode: UMaxMode,
+    alp_gen_variant: AlpGenVariant,
     out: String,
 }
 
@@ -34,6 +37,8 @@ impl Options {
             exploit_phases: 3,
             skip_knowledge: false,
             do_ga: false,
+            u_max_mode: UMaxMode::Default,
+            alp_gen_variant: AlpGenVariant::Pyalcs,
             out: "reports/mpx_rust.csv".to_string(),
         };
         let mut args = std::env::args().skip(1);
@@ -56,6 +61,14 @@ impl Options {
                 "--exploit-phases" => options.exploit_phases = args.next().unwrap().parse().unwrap(),
                 "--skip-knowledge" => options.skip_knowledge = true,
                 "--do-ga" => options.do_ga = true,
+                "--u-max" => {
+                    options.u_max_mode =
+                        parse_u_max_mode(&args.next().expect("--u-max needs a value"))
+                }
+                "--alp-gen-variant" => {
+                    options.alp_gen_variant =
+                        parse_variant(&args.next().expect("--alp-gen-variant needs a value"))
+                }
                 "--out" => options.out = args.next().unwrap(),
                 other => panic!("unknown flag {other}"),
             }
@@ -89,6 +102,8 @@ fn run_repeat<const N: usize>(explore_trials: u32, options: &Options, seed: u64)
     let mut config = Configuration::mpx();
     config.epsilon = EXPLORE_EPSILON;
     config.do_ga = options.do_ga;
+    config.alp_gen_variant = options.alp_gen_variant;
+    config.u_max = resolve_u_max(options.u_max_mode, config.u_max, N - 1, options.alp_gen_variant);
 
     let mut env = Multiplexer::<N>::new(Box::new(ChaChaRandomSource::from_seed(seed)));
     let mut agent = Agent::<N, _>::new(config, ChaChaRandomSource::from_seed(seed));
@@ -156,6 +171,7 @@ fn run_size_dispatch(size: usize, explore_trials: u32, options: &Options, seed: 
 
 struct SizeSummary {
     size: usize,
+    u_max: u32,
     explore_trials: u32,
     knowledge_mean: f64,
     knowledge_min: f64,
@@ -203,6 +219,7 @@ fn run_size(size: usize, options: &Options) -> SizeSummary {
 
     SizeSummary {
         size,
+        u_max: resolve_u_max(options.u_max_mode, Configuration::mpx().u_max, size, options.alp_gen_variant),
         explore_trials,
         knowledge_mean: mean(&knowledge_values),
         knowledge_min: knowledge_values.iter().copied().fold(f64::INFINITY, f64::min),
@@ -221,13 +238,13 @@ fn run_size(size: usize, options: &Options) -> SizeSummary {
 fn csv_header() -> String {
     "size,explore_trials,n_exp,knowledge_mean,knowledge_min,reached_full,macro_pop_mean,macro_pop_std,\
      reliable_mean,reliable_std,reliable_spec_mean,reliable_spec_std,\
-     explore_time_total_s,exploit_time_total_s,total_time_s"
+     explore_time_total_s,exploit_time_total_s,total_time_s,u_max,alp_gen_variant"
         .to_string()
 }
 
-fn csv_row(summary: &SizeSummary, n_exp: u32) -> String {
+fn csv_row(summary: &SizeSummary, n_exp: u32, variant: &str) -> String {
     format!(
-        "{},{},{},{:.6},{:.6},{}/{},{:.2},{:.2},{:.2},{:.2},{:.4},{:.4},{:.4},{:.4},{:.4}",
+        "{},{},{},{:.6},{:.6},{}/{},{:.2},{:.2},{:.2},{:.2},{:.4},{:.4},{:.4},{:.4},{:.4},{},{}",
         summary.size,
         summary.explore_trials,
         n_exp,
@@ -244,6 +261,8 @@ fn csv_row(summary: &SizeSummary, n_exp: u32) -> String {
         summary.explore_seconds_total,
         summary.exploit_seconds_total,
         summary.explore_seconds_total + summary.exploit_seconds_total,
+        summary.u_max,
+        variant,
     )
 }
 
@@ -252,15 +271,22 @@ fn main() {
     let mut lines = vec![csv_header()];
 
     println!(
-        "acs2-bench mpx: sizes={:?} n_exp={} seed={} exploit={}x{}",
-        options.sizes, options.n_exp, options.seed, options.exploit_trials, options.exploit_phases,
+        "acs2-bench mpx: sizes={:?} n_exp={} seed={} exploit={}x{} do_ga={} alp_gen_variant={}",
+        options.sizes,
+        options.n_exp,
+        options.seed,
+        options.exploit_trials,
+        options.exploit_phases,
+        options.do_ga,
+        variant_label(options.alp_gen_variant),
     );
 
     for &size in &options.sizes {
         let summary = run_size(size, &options);
         println!(
-            "mpx-{:<4} explore={:<8} knowledge={:.4} (min {:.4}, {}/{} at 1.0) macro={:.1}±{:.1} reliable={:.1}±{:.1} spec={:.2}±{:.2}/{} time={:.3}s",
+            "mpx-{:<4} u_max={:<7} explore={:<8} knowledge={:.4} (min {:.4}, {}/{} at 1.0) macro={:.1}±{:.1} reliable={:.1}±{:.1} spec={:.2}±{:.2}/{} time={:.3}s",
             summary.size,
+            summary.u_max,
             summary.explore_trials,
             summary.knowledge_mean,
             summary.knowledge_min,
@@ -275,7 +301,7 @@ fn main() {
             summary.size + 1,
             summary.explore_seconds_total + summary.exploit_seconds_total,
         );
-        lines.push(csv_row(&summary, options.n_exp));
+        lines.push(csv_row(&summary, options.n_exp, variant_label(options.alp_gen_variant)));
     }
 
     std::fs::write(&options.out, lines.join("\n") + "\n").expect("write csv");

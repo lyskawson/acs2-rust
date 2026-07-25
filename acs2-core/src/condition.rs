@@ -1,4 +1,5 @@
 use crate::perception::Perception;
+use crate::rng::RandomSource;
 use crate::symbol::Symbol;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -39,6 +40,16 @@ impl<const N: usize> Condition<N> {
 
     pub fn generalize(&mut self, position: usize) {
         self.symbols[position] = Symbol::Wildcard;
+    }
+
+    pub fn generalize_specific_attribute_randomly(&mut self, rng: &mut dyn RandomSource) {
+        let specific: Vec<usize> = (0..N)
+            .filter(|&index| !self.symbols[index].is_wildcard())
+            .collect();
+        if !specific.is_empty() {
+            let chosen = specific[rng.gen_range(specific.len())];
+            self.generalize(chosen);
+        }
     }
 
     pub fn get(&self, index: usize) -> Symbol {

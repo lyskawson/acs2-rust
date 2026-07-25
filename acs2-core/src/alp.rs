@@ -1,5 +1,6 @@
 use crate::classifier::Classifier;
-use crate::config::Configuration;
+use crate::condition::Condition;
+use crate::config::{AlpGenVariant, Configuration};
 use crate::perception::Perception;
 use crate::population::{remap_after_removal, ClassifierRef, Population};
 use crate::rng::RandomSource;
@@ -64,7 +65,7 @@ pub fn expected_case<const N: usize>(
     config: &Configuration,
     rng: &mut dyn RandomSource,
 ) -> Option<Classifier<N>> {
-    let difference = classifier.mark.get_differences(p0, rng);
+    let mut difference = classifier.mark.get_differences(p0, rng);
 
     if difference.specificity() == 0 {
         classifier.increase_quality(config.beta);
@@ -72,11 +73,83 @@ pub fn expected_case<const N: usize>(
     }
 
     let mut child = Classifier::copy_from(classifier, time);
+
+    match config.alp_gen_variant {
+        AlpGenVariant::Pyalcs => {
+            generalize_over_specification_pyalcs(classifier, &mut difference, config.u_max, rng)
+        }
+        AlpGenVariant::Butz => {
+            generalize_over_specification_butz(&mut child, &mut difference, config.u_max, rng)
+        }
+    }
+
     child.condition.specialize_with(&difference);
     if child.q < 0.5 {
         child.q = 0.5;
     }
     Some(child)
+}
+
+fn generalize_over_specification_pyalcs<const N: usize>(
+    parent: &mut Classifier<N>,
+    difference: &mut Condition<N>,
+    u_max: u32,
+    rng: &mut dyn RandomSource,
+) {
+    let u_max = u_max as i64;
+    let mut no_spec = parent.specified_unchanging_attributes().len() as i64;
+    let mut no_spec_new = difference.specificity() as i64;
+
+    if no_spec >= u_max {
+        while no_spec >= u_max {
+            let generalized = parent.generalize_unchanging_condition_attribute(rng);
+            debug_assert!(generalized);
+            no_spec -= 1;
+        }
+        while no_spec + no_spec_new > u_max {
+            if rng.gen_unit() < 0.5 {
+                difference.generalize_specific_attribute_randomly(rng);
+                no_spec_new -= 1;
+            } else if parent.generalize_unchanging_condition_attribute(rng) {
+                no_spec -= 1;
+            }
+        }
+    } else {
+        while no_spec + no_spec_new > u_max {
+            difference.generalize_specific_attribute_randomly(rng);
+            no_spec_new -= 1;
+        }
+    }
+}
+
+fn generalize_over_specification_butz<const N: usize>(
+    child: &mut Classifier<N>,
+    difference: &mut Condition<N>,
+    u_max: u32,
+    rng: &mut dyn RandomSource,
+) {
+    let u_max = u_max as i64;
+    let mut spec = child.condition.specificity() as i64;
+    let mut spec_new = difference.specificity() as i64;
+
+    if spec >= u_max {
+        child.condition.generalize_specific_attribute_randomly(rng);
+        spec -= 1;
+        while spec + spec_new > u_max {
+            if rng.gen_unit() < 0.5 {
+                child.condition.generalize_specific_attribute_randomly(rng);
+                spec -= 1;
+            } else {
+                difference.generalize_specific_attribute_randomly(rng);
+                spec_new -= 1;
+            }
+        }
+    } else {
+        while spec + spec_new > u_max {
+            difference.generalize_specific_attribute_randomly(rng);
+            spec_new -= 1;
+        }
+    }
 }
 
 pub fn unexpected_case<const N: usize>(
