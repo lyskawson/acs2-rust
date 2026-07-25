@@ -1,0 +1,13 @@
+########## REACH pyalcs k=135 (cap 360s, n=1) ##########
+acs2-bench mpx-reach: sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_cap=360s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=9
+  mpx-135 repeat 0: TIME-LIMITED trials=324500 knowledge=0.0000 reliable=0 spec=0.00/136 peak_macro=16805 peak_rss=0.26GB wall=360.1s
+  mpx-135 verdict agreement across 1 repeats: ALL AGREE
+########## REACH butz k=135 (cap 360s, n=1) ##########
+acs2-bench mpx-reach: sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_cap=360s do_ga=true alp_gen_variant=butz
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=10
+  mpx-135 repeat 0: TIME-LIMITED trials=188000 knowledge=0.0000 reliable=0 spec=0.00/136 peak_macro=18208 peak_rss=0.38GB wall=381.3s
+  mpx-135 verdict agreement across 1 repeats: ALL AGREE
+K135_DONE
