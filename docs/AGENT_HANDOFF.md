@@ -60,16 +60,46 @@ The MPX arc so far:
 
 ## 4. Experiments in flight (check these first)
 
-Jobs submitted 2026-07-25, logs on the cluster in `~/acs2-rust/reports/`:
-
-| Job | What | Internal cap | Log |
+| Job | What | Internal cap | Checkout / log |
 |---|---|---|---|
-| 5551654 | k=135, seed 42, pyalcs @ u_max=9 | 250,000 s (~69 h) | `slurm_mpx135_s42.out` |
-| 5551655 | k=70, seed 43 (confirmation) | 40,000 s | `slurm_mpx70_s43.out` |
-| 5551656 | k=70, seed 44 (confirmation) | 40,000 s | `slurm_mpx70_s44.out` |
+| 5551654 | k=135, seed 42, pyalcs @ u_max=9 | 250,000 s (~69 h) | `~/acs2-rust/reports/slurm_mpx135_s42.out` |
+| 5552394 | k=70, seed 43 (confirmation) | 600,000 s (~7 d) | `~/acs2-rust-repo/reports/slurm_mpx70_s43.out` |
+| 5552395 | k=70, seed 44 (confirmation) | 600,000 s | `~/acs2-rust-repo/reports/slurm_mpx70_s44.out` |
+| 5552396 | k=70, seed 45 (confirmation) | 600,000 s | `~/acs2-rust-repo/reports/slurm_mpx70_s45.out` |
+| 5552397 | k=70, seed 46 (confirmation) | 600,000 s | `~/acs2-rust-repo/reports/slurm_mpx70_s46.out` |
 
-Check: `ssh -i ~/.ssh/id_rsa_wcss alelys2099@ui.wcss.pl 'squeue -u alelys2099; tail -3 acs2-rust/reports/slurm_*.out'`
+Check: `ssh -i ~/.ssh/id_rsa_wcss alelys2099@ui.wcss.pl 'squeue -u alelys2099; tail -3 acs2-rust*/reports/slurm_mpx*.out'`
 A finished run ends with `repeat 0: SUCCESS|TIME-LIMITED|... trials=... knowledge=...`.
+
+Submit further runs from the git clone via the versioned wrapper:
+`sbatch --job-name=<n> ~/acs2-rust-repo/slurm/mpx_reach.sh <size> <seed> <time_cap_secs>`.
+
+### 4a. Budget correction of 2026-07-25 (read before interpreting seeds 43-46)
+
+The k=70 confirmation seeds were first submitted with a 40,000 s cap calibrated on seed
+42 (17.88 M trials, 6105 s on the M1). That cap was wrong by roughly a factor of three
+and the jobs were cancelled ~1.5 h in and resubmitted at 600,000 s. Two independent
+reasons, both worth remembering:
+
+- **Seed variance is large.** At 4.2 M trials seeds 43/44 sat at knowledge 0.26-0.27
+  where seed 42 was at 0.62 — they track seed 42's state at ~1.7 M, a ~2.5x lag, and
+  extrapolate to ~45 M trials. Seed 42 condensed its population early; it is a *fast*
+  seed, not a typical one. Size k=70 budgets from ~45 M trials and present the seed-42
+  headline as a best case.
+- **Cluster wall-clock is contention-polluted.** Compute nodes run fully packed
+  (`CPUAlloc=48/48`); throughput measured 1395 -> 648 trials/s *within* a single run as
+  population grew, and is ~2.7x below the M1. Wall-clock caps therefore buy far fewer
+  trials than an M1-calibrated estimate implies.
+
+Methodological point for the thesis: a confirmation seed truncated by a cap tuned on the
+fastest seed is a measurement artifact, not a failed confirmation. Decision-tree branch 4
+only fires once a seed has had a budget comparable to ~45 M trials. Diagnose stalls by
+specificity and reliable-rule count, not knowledge alone — pre-condensation runs sit at
+spec ~8.0-8.3 with ~80-100 reliable rules, converging ones drive spec toward 7.04 with
+180+. Partial 40 k-cap logs kept as `~/acs2-rust/reports/slurm_mpx70_s4{3,4}.cap40k.partial.out`.
+
+Seeds 45/46 were added (user-approved) because the observed variance makes three seeds a
+thin basis for the reach claim.
 
 Bench binary flags (`mpx_reach`): `--sizes 70,135` `--n-exp` `--seed`
 `--time-cap-secs` `--u-max derived|<int>` `--alp-gen-variant pyalcs|butz`
