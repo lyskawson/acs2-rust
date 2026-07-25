@@ -1,0 +1,17 @@
+source,size,seed,variant,u_max,repeat,verdict,trials,knowledge,reliable,spec,n_bits,peak_macro,peak_rss_gb,wall_s
+mpx_m2b_reach37.log,37,42,butz,8,0,SUCCESS,1140000,1.0,144,6.0,38,6276,0.06,117.7
+mpx_m2b_reach37.log,37,43,butz,8,1,SUCCESS,768000,1.0,152,6.0,38,7913,0.06,81.5
+mpx_m2b_reach37.log,37,44,butz,8,2,SUCCESS,684000,1.0,161,6.01,38,7464,0.06,80.6
+mpx_m2b_reach37.log,37,42,pyalcs,7,0,SUCCESS,678000,1.0,144,6.03,38,6893,0.03,71.6
+mpx_m2b_reach37.log,37,43,pyalcs,7,1,SUCCESS,1116000,1.0,156,6.05,38,7401,0.05,99.9
+mpx_m2b_reach37.log,37,44,pyalcs,7,2,SUCCESS,882000,1.0,144,6.01,38,6141,0.05,78.1
+mpx_m2b_reach70.log,70,42,butz,9,0,TIME-LIMITED,931500,0.2562,215,8.58,71,14773,0.11,600.0
+mpx_m3_e1_traj70_butz.log,70,42,butz,9,0,TIME-LIMITED,5714000,0.4001,114,7.21,71,28314,0.19,7201.6
+mpx_m2b_reach70.log,70,43,butz,9,1,TIME-LIMITED,858500,0.2677,203,8.52,71,14247,0.11,600.3
+mpx_m2b_reach70.log,70,44,butz,9,2,TIME-LIMITED,894000,0.2081,223,8.75,71,15958,0.12,600.2
+mpx_m2b_reach70.log,70,42,pyalcs,8,0,TIME-LIMITED,1625500,0.2406,110,8.63,71,10741,0.13,600.1
+mpx_m3_e1_traj70_pyalcs.log,70,42,pyalcs,8,0,SUCCESS,17880000,1.0,277,7.04,71,16326,0.12,6105.4
+mpx_m2b_reach70.log,70,43,pyalcs,8,1,TIME-LIMITED,1555000,0.1349,75,9.2,71,6951,0.13,600.1
+mpx_m2b_reach70.log,70,44,pyalcs,8,2,TIME-LIMITED,1503000,0.1419,91,9.79,71,12548,0.14,600.1
+mpx_m2b_reach135.log,135,42,butz,10,0,TIME-LIMITED,188000,0.0,0,0.0,136,18208,0.38,381.3
+mpx_m2b_reach135.log,135,42,pyalcs,9,0,TIME-LIMITED,324500,0.0,0,0.0,136,16805,0.26,360.1

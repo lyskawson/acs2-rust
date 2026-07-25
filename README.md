@@ -73,9 +73,14 @@ knowledge):
 | `acs2-bench` | bin | Runs the maze suite under the benchmark protocol, computes metrics + timing, emits CSV. |
 
 The Python reference (pyalcs baseline + dump/compare scripts) lives under
-`baseline/`. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
-`BUILD_PLAN.md`, `ARCHITECTURE.md`. Generated artefacts and reports are in
-`reports/`; golden vectors in `fixtures/`.
+`baseline/`, whose lockfile is pinned as part of the differential-validation
+evidence. Figure generation for the MPX experiments is a **separate** Python
+project under `tools/` (see `tools/README.md`) precisely so that plotting
+dependencies never perturb that pinned environment. Cluster job scripts are in
+`slurm/`. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
+`BUILD_PLAN.md`, `ARCHITECTURE.md`; the live experiment state and decision tree
+are in `docs/AGENT_HANDOFF.md`. Generated artefacts and reports are in
+`reports/` (figures in `reports/figures/`); golden vectors in `fixtures/`.
 
 ---
 
@@ -135,6 +140,22 @@ resolve):
 uv run --project baseline python baseline/compare_bench.py
 # reads reports/bench_rust.csv + reports/bench_pyalcs.csv, writes reports/P9_comparison.md
 ```
+
+### MPX figures
+
+Long MPX runs happen on the WCSS cluster (`slurm/mpx_reach.sh`); check them with
+`./slurm/mpx_status.sh`. Their logs reduce to committed CSVs, and the figures are
+generated from those CSVs — never from the logs — so they regenerate from the
+repository alone:
+
+```bash
+python3 tools/parse_mpx_logs.py reports/mpx_m3_e1_traj70_pyalcs.log reports/slurm_mpx70_*.out
+uv run --project tools python tools/plot_mpx.py
+```
+
+`tools/README.md` documents the log-format traps the parser exists to absorb (the
+`seed = base_seed + repeat` rule is the one that silently corrupts results) and
+the chart conventions.
 
 ### Tests
 

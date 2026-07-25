@@ -752,3 +752,48 @@ table above (Mark dominates, 75%→84% share k=20→135). Runtime peak RSS at ea
 (ALP-gen reach runs, far below the 5.6 GB cap, confirming TIME- not memory-binding): k=37
 0.03–0.06 GB; k=70 0.11–0.14 GB; k=135 0.26–0.38 GB. `Mark` remains the M3 packing target.
 
+
+---
+
+## Analysis tooling — logs reduce to committed CSVs, figures read only CSVs
+
+Thesis provenance requires every figure to regenerate from the repository alone, but
+the raw `mpx_reach` logs are large, arrive in several vintages, and mostly live on the
+WCSS cluster. So the pipeline has a deliberate seam:
+
+```
+logs (.log/.out) --> tools/parse_mpx_logs.py --> reports/mpx_*.csv --> tools/plot_mpx.py --> reports/figures/
+                          stdlib only                committed              matplotlib
+```
+
+**Nothing downstream of the CSV reads a log.** The CSVs are small and reviewable, so a
+supervisor or examiner can check the numbers behind a figure without cluster access.
+
+### Why `tools/` is a separate uv project from `baseline/`
+
+`baseline/` pins an unmodified pyalcs (Python 3.10, `gym==0.23.0`, `numpy==1.23.5`) and
+its lockfile is part of the P8 differential-validation evidence. Plotting dependencies
+must not perturb an environment whose job is to stay fixed, so `tools/` carries its own
+lock and a much looser Python floor.
+
+### NAMED HAZARD — `seed = base_seed + repeat`
+
+`mpx_reach` runs repeat `r` at `options.seed + r`. An `n_exp=3` log headed `seed=42`
+therefore contains seeds **42, 43 and 44**, not three runs of seed 42. Collapsing them
+into one series would have hidden the effect that turned out to dominate at k=70 (see
+`docs/AGENT_HANDOFF.md` §4a): trials-to-success varies ~2.5x across seeds, and seed 42
+is a fast outlier. The parser reconstructs the effective seed for exactly this reason.
+
+Two related log-format facts the parser absorbs: trajectory lines carry no repeat index
+(they are attributed to the repeat closed by the next verdict line, and an unclosed tail
+becomes the next, unfinished repeat), and older logs predate `u_max` / `alp_gen_variant`
+while a single file may hold several runs behind banner lines.
+
+### Chart conventions
+
+No dual-axis plots — the `anatomy` figure is stacked panels sharing one x-axis, because
+knowledge, specificity and population have unrelated units and twin axes would invite
+reading meaningless crossings. Colour follows the seed rather than its rank, mapped from
+every seed in the CSV so that filtering never repaints survivors. A run cut off by its
+time cap gets a hollow end marker and an explicit footnote: truncation is a budget
+artifact and must never read as a failure to converge.
