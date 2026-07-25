@@ -1,0 +1,4 @@
+size,explore_trials,n_exp,knowledge_mean,knowledge_min,reached_full,macro_pop_mean,macro_pop_std,reliable_mean,reliable_std,reliable_spec_mean,reliable_spec_std,explore_time_total_s,exploit_time_total_s,total_time_s,u_max,alp_gen_variant
+6,20000,10,1.000000,1.000000,10/10,100.70,7.94,28.20,1.99,3.0197,0.0259,0.8058,0.0074,0.8132,5,butz
+11,200000,10,1.000000,1.000000,10/10,289.50,19.48,57.80,2.71,3.9982,0.0055,22.8748,0.0223,22.8970,6,butz
+20,300000,10,1.000000,1.000000,10/10,514.50,37.67,92.30,3.58,5.0000,0.0000,95.9745,0.0431,96.0175,7,butz

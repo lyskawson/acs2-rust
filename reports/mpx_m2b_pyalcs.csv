@@ -1,0 +1,4 @@
+size,explore_trials,n_exp,knowledge_mean,knowledge_min,reached_full,macro_pop_mean,macro_pop_std,reliable_mean,reliable_std,reliable_spec_mean,reliable_spec_std,explore_time_total_s,exploit_time_total_s,total_time_s,u_max,alp_gen_variant
+6,20000,10,1.000000,1.000000,10/10,97.50,9.94,27.50,2.11,3.0033,0.0100,0.8368,0.0071,0.8439,4,pyalcs
+11,200000,10,1.000000,1.000000,10/10,292.50,31.94,56.00,3.41,4.0000,0.0000,23.7415,0.0224,23.7639,5,pyalcs
+20,300000,10,1.000000,1.000000,10/10,507.70,40.39,88.30,3.69,5.0197,0.0342,92.5572,0.0421,92.5992,6,pyalcs
