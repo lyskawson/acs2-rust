@@ -93,13 +93,34 @@ def millions(value, _position):
     return f"{value / 1e6:g}M"
 
 
-def spread(values, min_gap):
-    """Nudge end-of-line label positions apart just enough to stop them colliding."""
-    order = sorted(range(len(values)), key=lambda index: values[index])
-    adjusted = list(values)
-    for previous, current in zip(order, order[1:]):
-        if adjusted[current] - adjusted[previous] < min_gap:
-            adjusted[current] = adjusted[previous] + min_gap
+def spread(points, min_gap, x_tolerance, ceiling):
+    """Nudge end-of-line labels apart vertically, but only where they actually collide.
+
+    Labels collide only when their anchors are close in *both* axes, so lines that
+    finish at the same knowledge but thousands of trials apart keep their true y.
+    Within a cluster the stack is centred on the group, so it stays under `ceiling`
+    instead of marching off the top of the axes.
+    """
+    adjusted = [point["y"] for point in points]
+    order = sorted(range(len(points)), key=lambda index: points[index]["x"])
+
+    cluster = [order[0]]
+    clusters = [cluster]
+    for index in order[1:]:
+        if points[index]["x"] - points[cluster[-1]]["x"] <= x_tolerance:
+            cluster.append(index)
+        else:
+            cluster = [index]
+            clusters.append(cluster)
+
+    for cluster in clusters:
+        if len(cluster) == 1:
+            continue
+        cluster.sort(key=lambda index: points[index]["y"])
+        centre = sum(points[index]["y"] for index in cluster) / len(cluster)
+        start = centre - min_gap * (len(cluster) - 1) / 2
+        for position, index in enumerate(cluster):
+            adjusted[index] = min(start + position * min_gap, ceiling)
     return adjusted
 
 
@@ -162,7 +183,9 @@ def plot_reach(trajectory, verdicts, size, variant, out_dir, formats):
                       markerfacecolor="white", markeredgecolor=colors[seed], markeredgewidth=1.2)
         endpoints.append({"seed": seed, "x": trials[-1], "y": knowledge[-1]})
 
-    for label, y in zip(endpoints, spread([point["y"] for point in endpoints], 0.055 * 1.08)):
+    x_span = max(point["x"] for point in endpoints) or 1
+    label_y = spread(endpoints, min_gap=0.06, x_tolerance=0.08 * x_span, ceiling=1.06)
+    for label, y in zip(endpoints, label_y):
         axes.annotate(f"seed {label['seed']}", xy=(label["x"], y),
                       xytext=(8, 0), textcoords="offset points",
                       color=INK_SECONDARY, fontsize=7.5, va="center")

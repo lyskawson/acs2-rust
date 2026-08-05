@@ -180,6 +180,73 @@ M2b freeze-break.
 
 ---
 
+## Act IV — k=70 solved at knowledge = 1.0, on every seed tried (M3)
+
+Given a budget large enough, canonical ALP-generalization does **not** stop at k=37. All
+five seeds attempted at k=70 (pyalcs variant, `u_max` derived = 8, GA on) reach
+knowledge = 1.0:
+
+| seed | trials to success | reliable rules | reliable spec (/71) | wall | machine |
+|------|-------------------|----------------|---------------------|------|---------|
+| 42 | 17,880,000 | 277 | 7.04 | 6,105 s | M1 laptop |
+| 43 | 17,820,000 | 269 | 7.00 | 13,692 s | Bem2 |
+| 44 | 44,580,000 | 274 | 7.00 | 28,988 s | Bem2 |
+| 45 | 21,300,000 | 271 | 7.00 | 11,529 s | Bem2 |
+| 46 | 66,420,000 | 268 | 7.00 | 46,266 s | Bem2 |
+
+This exceeds every published ACS/ACS2 result (literature maximum ~37-bit; see
+`MPX_literature_review.md`). Two properties of the table matter more than the headline:
+
+**The solution is invariant; the cost is not.** Every seed lands on the same structure —
+268–277 reliable rules at the IDEAL `a+1` = 7 specificity — but trials-to-success spans
+17.82 M to 66.42 M, a **3.73x spread** (median 21.30 M). Seed 42, the seed the earlier
+sections report, is at the fast end of that range and must not be read as typical. Any
+budget derived from it under-provisions by up to ~4x.
+
+**The plateau is not a stall, and it can be enormous.** Every trajectory is an S-curve:
+climb, plateau, sprint. The plateau length is what varies:
+
+| seed | plateau level | plateau span | share of run |
+|------|---------------|--------------|--------------|
+| 42 | 0.669 | 5.0 M → 7.5 M (2.5 M) | 14 % |
+| 43 | 0.351 | 6.3 M → 7.7 M (1.4 M) | 8 % |
+| 44 | 0.723 | 14.0 M → 31.3 M (17.3 M) | 39 % |
+| 45 | 0.636 | 8.2 M → 9.5 M (1.3 M) | 6 % |
+| 46 | 0.745 | 27.5 M → 57.5 M (29.9 M) | 45 % |
+
+Seed 46 held knowledge ≈ 0.745 for **29.9 M consecutive trials — 45 % of its run — and
+then still converged to 1.0.** Any experiment that had stopped it at 50 M trials would
+have reported a confident, wrong negative. This is the single most important
+methodological caution the MPX arc produces: **at k ≥ 70, a flat knowledge curve is not
+evidence of non-convergence at any budget short of tens of millions of trials.**
+Specificity and reliable-count are the diagnostic channels — they keep moving while
+knowledge looks frozen (`reports/figures/mpx70_anatomy_s46_pyalcs.pdf`).
+
+### k=135 — a mechanism boundary, not a budget boundary
+
+The k=135 run (seed 42, pyalcs @ `u_max` = 9, GA on) was given **105,621,000 trials over
+250,000 s** — 1.6x the trials that solved k=70's slowest seed — and ended TIME-LIMITED at
+knowledge = 0.0000. The trajectory contains no learning signal whatsoever:
+
+- **reliable = 0 at every one of the 1,760 evaluation points.** Not a slow climb; never a
+  single rule crossed the reliability threshold.
+- **Population is stationary**: decile means 4,023–4,133 across the entire run (min 3,147,
+  max 19,469), with no trend in either direction.
+- For contrast, every k=70 seed formed its first reliable rule inside the first ~10⁵
+  trials.
+
+This is qualitatively unlike the k=70 plateau, where knowledge was flat but specificity
+and population were visibly still converging. Here nothing moves. The honest reading is
+that k=135 is bounded by mechanism, not budget, and that **more wall-clock is not the
+lever** — which is exactly the condition under which the thesis's prioritization /
+experience-replay mechanism is the intervention to test. The hypothesis to falsify first
+is mark saturation: at 135 attributes the mark accumulates values at nearly every
+position, so the ALP specialization heuristic loses the signal that tells it which
+attribute to specialize. That hypothesis is **not yet measured** — no claim is made here
+beyond the three bullets above, which are direct observations.
+
+---
+
 ## Provenance and honesty ledger
 
 Every non-obvious choice, stated plainly so the numbers can be trusted:
@@ -225,9 +292,15 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
    specificity (cleaner than GA at every k, strikingly so at k=37: 6.0 vs 7.91) and turns the
    k=70 boundary from race-lost (spec ~57, knowledge ≈ 0) into compact-but-time-bound (spec
    ~`a+1`, knowledge ~0.2).
-3. It does NOT push the knowledge=1.0 reach past k=37, because ALP still runs on the previous
-   action set and remains action-set-revisitation-bound — **which is precisely the empirical
-   motivation for the prioritization / experience-replay mechanism** the thesis proposes.
+3. Given a large enough budget it pushes the knowledge=1.0 reach to **k=70 on all five seeds
+   tried** (17.8 M–66.4 M trials, median 21.3 M; 268–277 reliable rules at the ideal `a+1`
+   specificity) — beyond every published ACS/ACS2 result. The earlier "does not pass k=37"
+   reading was a budget artifact of 600-second probes, not a property of the mechanism.
+   **k=135, however, is a mechanism boundary**: 105.6 M trials produced zero reliable rules
+   at every one of 1,760 evaluations, with a stationary population — ALP still runs on the
+   previous action set and remains action-set-revisitation-bound, **which is precisely the
+   empirical motivation for the prioritization / experience-replay mechanism** the thesis
+   proposes.
 4. The **pyalcs-vs-Butz (parent- vs child-generalization) divergence** is a first-class
    implementation finding, but a confound-controlled isolation shows the freeze-break itself
    is variant-INDEPENDENT (knowledge ~0.25 either way); the separable variant differences are
@@ -236,4 +309,8 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
    and derive its `u_max` accordingly — that choice, not a compactness sweep, is the finding.
 
 *Raw data: `reports/mpx_m2b_pyalcs.csv`, `reports/mpx_m2b_butz.csv`,
-`reports/mpx_m2b_reach{37,70,135}.log`. Implementation record: `docs/ARCHITECTURE.md` §M2b.*
+`reports/mpx_m2b_reach{37,70,135}.log`. M3 raw logs: `reports/mpx_m3_e1_traj70_pyalcs.log`
+(seed 42) and `reports/slurm_mpx70_s4{3,4,5,6}.out`, `reports/slurm_mpx135_s42.out` (Bem2);
+reduced to `reports/mpx_trajectory.csv` + `reports/mpx_verdicts.csv`, from which every
+figure in `reports/figures/` regenerates (`tools/README.md`). Implementation record:
+`docs/ARCHITECTURE.md` §M2b and §"Analysis tooling".*

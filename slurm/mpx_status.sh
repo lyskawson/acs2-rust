@@ -18,7 +18,9 @@ for f in ~/acs2-rust/reports/slurm_mpx*.out ~/acs2-rust-repo/reports/slurm_mpx*.
   verdict=$(grep -oE 'repeat 0: [A-Z-]+' "$f" 2>/dev/null | tail -1 | awk '{print $3}')
   state=${verdict:-running}
 
-  tail -1 "$f" | awk -v name="$(basename "$f" .out | sed 's/^slurm_//')" -v st="$state" '
+  # a finished log ends with the verdict-agreement footer, so read the last
+  # trajectory point rather than the last line
+  grep 'traj:' "$f" | tail -1 | awk -v name="$(basename "$f" .out | sed 's/^slurm_//')" -v st="$state" '
     /traj:/ {
       for (i = 1; i <= NF; i++) {
         split($i, kv, "=")
