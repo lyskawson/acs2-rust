@@ -12,7 +12,7 @@ use acs2_core::mark::Mark;
 use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
-use acs2_envs::multiplexer::{evaluate_knowledge, Multiplexer};
+use acs2_envs::multiplexer::{control_bits_for, evaluate_knowledge, Multiplexer};
 
 const EXPLORE_EPSILON: f64 = 0.8;
 const SAMPLE_INPUTS: usize = 50_000;
@@ -92,6 +92,10 @@ struct PopulationDiagnostics {
     marked_fraction: f64,
     mark_density: f64,
     experience_mean: f64,
+    address_specified_mean: f64,
+    address_complete_fraction: f64,
+    structurally_correct: usize,
+    address_random_baseline: f64,
 }
 
 fn population_diagnostics<const N: usize>(population: &Population<N>) -> PopulationDiagnostics {
@@ -104,6 +108,11 @@ fn population_diagnostics<const N: usize>(population: &Population<N>) -> Populat
     let mut marked = 0usize;
     let mut mark_density_sum = 0.0;
     let mut experience_sum = 0.0;
+    let control_bits = control_bits_for(N);
+    let input_bits = N - 1;
+    let mut address_specified_sum = 0.0;
+    let mut address_complete = 0usize;
+    let mut structurally_correct = 0usize;
 
     for classifier in population.iter() {
         micro_size += classifier.num as u64;
@@ -126,6 +135,29 @@ fn population_diagnostics<const N: usize>(population: &Population<N>) -> Populat
             marked += 1;
             mark_density_sum += marked_attributes as f64 / N as f64;
         }
+
+        let address_specified = (0..control_bits)
+            .filter(|index| !classifier.condition.symbols[*index].is_wildcard())
+            .count();
+        address_specified_sum += address_specified as f64;
+        if address_specified == control_bits {
+            address_complete += 1;
+            let mut address = 0usize;
+            for index in 0..control_bits {
+                let bit = match classifier.condition.symbols[index].token() {
+                    Some(token) => (token - b'0') as usize,
+                    None => 0,
+                };
+                address = (address << 1) | bit;
+            }
+            let data_index = control_bits + address;
+            if data_index < input_bits
+                && !classifier.condition.symbols[data_index].is_wildcard()
+                && specificity == control_bits + 1
+            {
+                structurally_correct += 1;
+            }
+        }
     }
 
     let size = population.len().max(1) as f64;
@@ -139,6 +171,10 @@ fn population_diagnostics<const N: usize>(population: &Population<N>) -> Populat
         marked_fraction: marked as f64 / size,
         mark_density: if marked == 0 { 0.0 } else { mark_density_sum / marked as f64 },
         experience_mean: experience_sum / size,
+        address_specified_mean: address_specified_sum / size,
+        address_complete_fraction: address_complete as f64 / size,
+        structurally_correct,
+        address_random_baseline: (specificity_sum / size) * control_bits as f64 / input_bits as f64,
     }
 }
 
@@ -213,7 +249,7 @@ fn run_reach_repeat<const N: usize>(
             if log_diagnostics {
                 let diagnostics = population_diagnostics(agent.population());
                 println!(
-                    "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1}",
+                    "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1} addr_spec={:.3} addr_random={:.3} addr_full={:.4} correct={}",
                     diagnostics.micro_size,
                     diagnostics.specificity_mean,
                     diagnostics.specificity_max,
@@ -223,6 +259,10 @@ fn run_reach_repeat<const N: usize>(
                     diagnostics.marked_fraction,
                     diagnostics.mark_density,
                     diagnostics.experience_mean,
+                    diagnostics.address_specified_mean,
+                    diagnostics.address_random_baseline,
+                    diagnostics.address_complete_fraction,
+                    diagnostics.structurally_correct,
                 );
             }
             if final_knowledge >= 1.0 {

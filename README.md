@@ -77,7 +77,8 @@ The Python reference (pyalcs baseline + dump/compare scripts) lives under
 evidence. Figure generation for the MPX experiments is a **separate** Python
 project under `tools/` (see `tools/README.md`) precisely so that plotting
 dependencies never perturb that pinned environment. Cluster job scripts are in
-`slurm/`. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
+`slurm/`. Start with [`docs/ACS2_PRIMER.md`](docs/ACS2_PRIMER.md) for a code-anchored explanation of ACS2
+from first principles. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
 `BUILD_PLAN.md`, `ARCHITECTURE.md`; the live experiment state and decision tree
 are in `docs/AGENT_HANDOFF.md`. Generated artefacts and reports are in
 `reports/` (figures in `reports/figures/`); golden vectors in `fixtures/`.
