@@ -12,9 +12,10 @@ set -euo pipefail
 SIZE="$1"
 SEED="$2"
 TIME_CAP="${3:-600000}"
+shift 3 2>/dev/null || shift $#
 
 REPO="$HOME/acs2-rust-repo"
-OUT="$REPO/reports/slurm_mpx${SIZE}_s${SEED}.out"
+OUT="$REPO/reports/slurm_mpx${SIZE}_s${SEED}${TAG:+_$TAG}.out"
 
 cd "$REPO"
 exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
@@ -25,5 +26,6 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --u-max derived \
   --alp-gen-variant pyalcs \
   --log-trajectory \
-  --eval-interval 60000 \
+  --eval-interval "${EVAL_INTERVAL:-60000}" \
+  "$@" \
   >"$OUT" 2>&1
