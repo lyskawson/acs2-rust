@@ -9,6 +9,7 @@ use acs2_core::condition::Condition;
 use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::effect::Effect;
 use acs2_core::mark::Mark;
+use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_envs::multiplexer::{evaluate_knowledge, Multiplexer};
@@ -81,6 +82,66 @@ struct GenConfig {
     alp_gen_variant: AlpGenVariant,
 }
 
+struct PopulationDiagnostics {
+    micro_size: u64,
+    specificity_mean: f64,
+    specificity_max: usize,
+    quality_mean: f64,
+    quality_max: f64,
+    above_half_quality: usize,
+    marked_fraction: f64,
+    mark_density: f64,
+    experience_mean: f64,
+}
+
+fn population_diagnostics<const N: usize>(population: &Population<N>) -> PopulationDiagnostics {
+    let mut micro_size = 0u64;
+    let mut specificity_sum = 0.0;
+    let mut specificity_max = 0usize;
+    let mut quality_sum = 0.0;
+    let mut quality_max = 0.0f64;
+    let mut above_half_quality = 0usize;
+    let mut marked = 0usize;
+    let mut mark_density_sum = 0.0;
+    let mut experience_sum = 0.0;
+
+    for classifier in population.iter() {
+        micro_size += classifier.num as u64;
+        let specificity = classifier.condition.specificity();
+        specificity_sum += specificity as f64;
+        specificity_max = specificity_max.max(specificity);
+        quality_sum += classifier.q;
+        quality_max = quality_max.max(classifier.q);
+        if classifier.q > 0.5 {
+            above_half_quality += 1;
+        }
+        experience_sum += classifier.exp as f64;
+        let marked_attributes = classifier
+            .mark
+            .attributes
+            .iter()
+            .filter(|attribute| !attribute.is_empty())
+            .count();
+        if marked_attributes > 0 {
+            marked += 1;
+            mark_density_sum += marked_attributes as f64 / N as f64;
+        }
+    }
+
+    let size = population.len().max(1) as f64;
+    PopulationDiagnostics {
+        micro_size,
+        specificity_mean: specificity_sum / size,
+        specificity_max,
+        quality_mean: quality_sum / size,
+        quality_max,
+        above_half_quality,
+        marked_fraction: marked as f64 / size,
+        mark_density: if marked == 0 { 0.0 } else { mark_density_sum / marked as f64 },
+        experience_mean: experience_sum / size,
+    }
+}
+
 fn run_reach_repeat<const N: usize>(
     size: usize,
     trials_cap: u64,
@@ -89,6 +150,7 @@ fn run_reach_repeat<const N: usize>(
     gen: GenConfig,
     eval_interval: u64,
     log_trajectory: bool,
+    log_diagnostics: bool,
 ) -> ReachOutcome {
     let mut config = Configuration::mpx();
     config.epsilon = EXPLORE_EPSILON;
@@ -148,6 +210,21 @@ fn run_reach_repeat<const N: usize>(
                     agent.population().len(),
                 );
             }
+            if log_diagnostics {
+                let diagnostics = population_diagnostics(agent.population());
+                println!(
+                    "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1}",
+                    diagnostics.micro_size,
+                    diagnostics.specificity_mean,
+                    diagnostics.specificity_max,
+                    diagnostics.quality_mean,
+                    diagnostics.quality_max,
+                    diagnostics.above_half_quality,
+                    diagnostics.marked_fraction,
+                    diagnostics.mark_density,
+                    diagnostics.experience_mean,
+                );
+            }
             if final_knowledge >= 1.0 {
                 break Verdict::Success;
             }
@@ -190,12 +267,13 @@ fn run_reach_dispatch(
     gen: GenConfig,
     eval_interval: u64,
     log_trajectory: bool,
+    log_diagnostics: bool,
 ) -> ReachOutcome {
     match size {
-        37 => run_reach_repeat::<38>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory),
-        70 => run_reach_repeat::<71>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory),
-        135 => run_reach_repeat::<136>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory),
-        20 => run_reach_repeat::<21>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory),
+        37 => run_reach_repeat::<38>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
+        70 => run_reach_repeat::<71>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
+        135 => run_reach_repeat::<136>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
+        20 => run_reach_repeat::<21>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
         other => panic!("reach not configured for {other}-bit multiplexer"),
     }
 }
@@ -235,6 +313,7 @@ struct Options {
     alp_gen_variant: AlpGenVariant,
     eval_interval: u64,
     log_trajectory: bool,
+    log_diagnostics: bool,
 }
 
 impl Options {
@@ -249,6 +328,7 @@ impl Options {
             alp_gen_variant: AlpGenVariant::Pyalcs,
             eval_interval: DEFAULT_KNOWLEDGE_EVAL_INTERVAL,
             log_trajectory: false,
+            log_diagnostics: false,
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -283,6 +363,7 @@ impl Options {
                     options.eval_interval = args.next().unwrap().parse().unwrap()
                 }
                 "--log-trajectory" => options.log_trajectory = true,
+                "--log-diagnostics" => options.log_diagnostics = true,
                 other => panic!("unknown flag {other}"),
             }
         }
@@ -330,6 +411,7 @@ fn main() {
                 gen,
                 options.eval_interval,
                 options.log_trajectory,
+                options.log_diagnostics,
             );
             verdicts.push(outcome.verdict);
             println!(
