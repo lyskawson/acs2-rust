@@ -23,7 +23,7 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --n-exp 1 \
   --seed "$SEED" \
   --time-cap-secs "$TIME_CAP" \
-  --u-max derived \
+  --u-max "${U_MAX:-derived}" \
   --alp-gen-variant pyalcs \
   --log-trajectory \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
