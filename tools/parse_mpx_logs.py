@@ -1,13 +1,14 @@
-"""Parse `mpx_reach` stdout logs into two tidy CSVs for plotting and review.
+"""Parse `mpx_reach` stdout logs into tidy CSVs for plotting and review.
 
 Figures must be reproducible from committed data, so the raw logs (which live on
 the cluster and on the laptop in several vintages) are reduced here to a stable
 schema that lands in `reports/`. Everything downstream reads the CSVs, never the
 logs.
 
-Two record types come out of a run:
+Three record types come out of a run:
 
   trajectory  one row per `--log-trajectory` evaluation point (the S-curve)
+  diagnostic  one row per `--log-diagnostics` point (population structure)
   verdict     one row per repeat, the terminal SUCCESS / TIME-LIMITED / ... line
 
 Three details of the log format that the state machine exists to handle:
@@ -31,6 +32,7 @@ from pathlib import Path
 HEADER = re.compile(r"acs2-bench mpx-reach:\s*(?P<fields>.*)")
 CONFIG = re.compile(r"^\s*mpx-(?P<size>\d+) trials_cap=(?P<trials_cap>\d+).*?(?:u_max=(?P<u_max>\d+))?\s*$")
 TRAJECTORY = re.compile(r"^\s*mpx-(?P<size>\d+) traj:\s*(?P<fields>.*)")
+DIAGNOSTIC = re.compile(r"^\s*mpx-(?P<size>\d+) diag:\s*(?P<fields>.*)")
 VERDICT = re.compile(
     r"^\s*mpx-(?P<size>\d+) repeat (?P<repeat>\d+):\s*(?P<verdict>[A-Z-]+)\s*(?P<fields>.*)"
 )
@@ -38,6 +40,12 @@ VERDICT = re.compile(
 TRAJECTORY_COLUMNS = [
     "source", "size", "seed", "variant", "u_max", "repeat",
     "trials", "wall_s", "knowledge", "reliable", "spec", "pop",
+]
+DIAGNOSTIC_COLUMNS = [
+    "source", "size", "seed", "variant", "u_max", "repeat", "trials",
+    "micro", "pop_spec", "spec_max", "q_mean", "q_max", "q_above_half",
+    "marked", "mark_density", "exp_mean",
+    "addr_spec", "addr_random", "addr_full", "correct",
 ]
 VERDICT_COLUMNS = [
     "source", "size", "seed", "variant", "u_max", "repeat", "verdict",
@@ -71,6 +79,7 @@ class RunContext:
         self.variant = fields.get("alp_gen_variant", "")
         self.u_max = {}
         self.pending = {}
+        self.pending_diagnostics = {}
         self.next_repeat = {}
 
     def seed_for(self, repeat):
@@ -78,9 +87,9 @@ class RunContext:
 
 
 def parse_log(path):
-    """Return (trajectory_rows, verdict_rows) for one log file."""
+    """Return (trajectory_rows, diagnostic_rows, verdict_rows) for one log file."""
     source = path.name
-    trajectory_rows, verdict_rows = [], []
+    trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
     context = RunContext({})
 
     for line in path.read_text(errors="replace").splitlines():
@@ -106,6 +115,17 @@ def parse_log(path):
                 "reliable": int(fields["reliable"]),
                 "spec": spec,
                 "pop": int(fields["pop"]),
+            })
+            continue
+
+        diagnostic = DIAGNOSTIC.match(line)
+        if diagnostic:
+            size = diagnostic.group("size")
+            fields = parse_fields(diagnostic.group("fields"))
+            context.pending_diagnostics.setdefault(size, []).append({
+                key: fields.get(key, "")
+                for key in DIAGNOSTIC_COLUMNS
+                if key not in ("source", "size", "seed", "variant", "u_max", "repeat")
             })
             continue
 
@@ -137,10 +157,25 @@ def parse_log(path):
             })
             for point in context.pending.pop(size, []):
                 trajectory_rows.append({**shared, **point})
+            for point in context.pending_diagnostics.pop(size, []):
+                diagnostic_rows.append({**shared, **point})
             context.next_repeat[size] = repeat + 1
             continue
 
     # A run still in flight (or scancelled) leaves trajectory points unclosed.
+    for size, points in context.pending_diagnostics.items():
+        repeat = context.next_repeat.get(size, 0)
+        shared = {
+            "source": source,
+            "size": int(size),
+            "seed": context.seed_for(repeat),
+            "variant": context.variant,
+            "u_max": context.u_max.get(size, ""),
+            "repeat": repeat,
+        }
+        for point in points:
+            diagnostic_rows.append({**shared, **point})
+
     for size, points in context.pending.items():
         repeat = context.next_repeat.get(size, 0)
         shared = {
@@ -154,7 +189,7 @@ def parse_log(path):
         for point in points:
             trajectory_rows.append({**shared, **point})
 
-    return trajectory_rows, verdict_rows
+    return trajectory_rows, diagnostic_rows, verdict_rows
 
 
 def write_csv(path, columns, rows):
@@ -170,19 +205,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("logs", nargs="+", type=Path, help="mpx_reach log files (.log/.out/.txt)")
     parser.add_argument("--trajectory-csv", type=Path, default=Path("reports/mpx_trajectory.csv"))
+    parser.add_argument("--diagnostic-csv", type=Path, default=Path("reports/mpx_diagnostics.csv"))
     parser.add_argument("--verdict-csv", type=Path, default=Path("reports/mpx_verdicts.csv"))
     args = parser.parse_args()
 
-    trajectory_rows, verdict_rows = [], []
+    trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
     for log in args.logs:
         if not log.is_file():
             raise SystemExit(f"not a file: {log}")
-        trajectory, verdicts = parse_log(log)
+        trajectory, diagnostics, verdicts = parse_log(log)
         trajectory_rows.extend(trajectory)
+        diagnostic_rows.extend(diagnostics)
         verdict_rows.extend(verdicts)
 
     sort_key = lambda row: (row["size"], row["variant"], row["seed"], row["trials"])
     write_csv(args.trajectory_csv, TRAJECTORY_COLUMNS, sorted(trajectory_rows, key=sort_key))
+    write_csv(args.diagnostic_csv, DIAGNOSTIC_COLUMNS, sorted(diagnostic_rows, key=sort_key))
     write_csv(args.verdict_csv, VERDICT_COLUMNS, sorted(verdict_rows, key=sort_key))
 
 

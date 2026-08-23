@@ -236,14 +236,53 @@ knowledge = 0.0000. The trajectory contains no learning signal whatsoever:
   trials.
 
 This is qualitatively unlike the k=70 plateau, where knowledge was flat but specificity
-and population were visibly still converging. Here nothing moves. The honest reading is
-that k=135 is bounded by mechanism, not budget, and that **more wall-clock is not the
-lever** — which is exactly the condition under which the thesis's prioritization /
-experience-replay mechanism is the intervention to test. The hypothesis to falsify first
-is mark saturation: at 135 attributes the mark accumulates values at nearly every
-position, so the ALP specialization heuristic loses the signal that tells it which
-attribute to specialize. That hypothesis is **not yet measured** — no claim is made here
-beyond the three bullets above, which are direct observations.
+and population were visibly still converging. Here nothing moves, so **more wall-clock is
+not the lever**.
+
+### The diagnosis, measured: ALP specializes blindly at k=135
+
+Population-wide instrumentation (`--log-diagnostics`, read-only over the population —
+the k=70 run below reproduces its trials-to-success exactly, 17,880,000) locates the
+failure precisely.
+
+First, what it is **not**. At k=135 mean population specificity sits at 8.8–9.6 against
+an ideal `a+1` = 8, while the *solvable* k=70 run runs at 8.7 rising to 10.3 against its
+ideal of 7. The k=135 population is, if anything, closer to ideal specificity than the
+one that succeeds — so the "specialization outruns generalization" reading carried over
+from M2a does **not** explain k=135. Mark density is likewise not the discriminator: the
+k=70 run ends at 0.914 and solves, against k=135's 0.935.
+
+The discriminator is *which* attributes get specialized. For MPX-k a correct rule must
+specify the `a` address bits plus the data bit those bits select. Measuring how many
+address positions each classifier specifies, against `specificity x a / k` — what the same
+classifier would hit choosing attributes uniformly — gives a signal with a built-in null
+hypothesis:
+
+| | MPX-70 (solved at 17.88 M) | MPX-135 (9.51 M trials) |
+|---|---|---|
+| address-bit enrichment over blind choice | 1.12x -> **8.0x** | **0.81–1.08x, no trend** |
+| share of population holding a complete address | 0 -> **0.227** | **0.0000 at every point** |
+| structurally correct rules (`a+1` spec, right bits) | 0 -> **256** | **0 always** |
+| mean classifier experience | 2.9 -> **9,245.8** | **2.8, flat** |
+
+At k=70 ALP's attribute choice is enriched eightfold over chance and a fifth of the
+population ends up holding a complete address. At k=135 the enrichment never leaves the
+blind-choice line, and across 9.51 M trials **not one classifier in the population ever
+specifies all seven address bits** (`reports/figures/mpx_specialization_signal.pdf`).
+
+That closes the chain: ALP specializes blindly -> no rule assembles a complete address ->
+none can anticipate correctly -> quality tops out near 0.79, under `theta_r` = 0.9 -> the
+rule is replaced before accumulating experience (mean 2.8) -> `reliable` = 0 forever.
+
+**What remains open.** The measurement establishes that ALP has no signal at k=135; it
+does not establish *why*. Two candidates are entangled and this data cannot separate them:
+a mark too saturated to indicate which attribute matters, and rules too short-lived for
+the mark to sharpen — each feeds the other. Separating them needs a further experiment.
+
+What the diagnosis does supply is a target. The failure is that rules never accumulate
+the repeated evidence a correct specialization would need, while waiting on the
+environment to revisit the relevant action set — which is exactly what prioritized
+experience replay attacks.
 
 ---
 
