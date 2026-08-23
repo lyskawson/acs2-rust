@@ -8,3 +8,6 @@ baseline/cpusingle/.venv/
 baseline/cpusingle/alcs_sandbox/
 
 /reference/
+
+# SLURM wrapper-level diagnostics (job stderr, not measurements)
+reports/slurm-*.wrapper
