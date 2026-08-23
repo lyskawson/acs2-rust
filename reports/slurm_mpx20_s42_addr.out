@@ -1,0 +1,9 @@
+acs2-bench mpx-reach: sizes=[20] n_exp=1 seed=42 rss_cap=5.6GB time_cap=21600s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-20 (N=21): condition=42B effect=42B mark=504B (stack) classifier=672B  mark/classifier=75.0%  rss-cap pop-threshold=8333333
+  mpx-20 trials_cap=3276800000 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=6
+  mpx-20 traj: trials=60000 wall=6s knowledge=0.9932 reliable=131 spec=5.28 pop=580
+  mpx-20 diag: trials=60000 micro=1191 pop_spec=4.93 spec_max=15 q_mean=0.650 q_max=1.000 q_above_half=400 marked=0.412 mark_density=0.781 exp_mean=85.4 addr_spec=2.500 addr_random=0.987 addr_full=0.1776 correct=61
+  mpx-20 traj: trials=120000 wall=8s knowledge=1.0000 reliable=93 spec=5.00 pop=543
+  mpx-20 diag: trials=120000 micro=1209 pop_spec=4.71 spec_max=15 q_mean=0.623 q_max=1.000 q_above_half=389 marked=0.409 mark_density=0.783 exp_mean=172.7 addr_spec=2.541 addr_random=0.943 addr_full=0.1565 correct=64
+  mpx-20 repeat 0: SUCCESS trials=120000 knowledge=1.0000 reliable=93 spec=5.00/21 peak_macro=4264 peak_rss=0.00GB wall=7.8s
+  mpx-20 verdict agreement across 1 repeats: ALL AGREE

@@ -9,6 +9,8 @@ Two figures so far:
              seed variance that goes with it
   anatomy    one seed as three stacked panels sharing the trials axis --
              knowledge, mean specificity of reliable rules, population size
+  signal     whether ALP's specialization actually finds the address bits, per
+             multiplexer size, against the rate blind attribute choice would give
 
 `anatomy` is stacked panels rather than one plot with several y-scales on
 purpose: the three measures have unrelated units, and overlaying them on twin
@@ -244,16 +246,65 @@ def plot_anatomy(trajectory, size, variant, seed, out_dir, formats):
     save(figure, out_dir, f"mpx{size}_anatomy_s{seed}_{variant}", formats)
 
 
+def plot_signal(diagnostics, sizes, out_dir, formats):
+    """Enrichment of address-bit specialization over the blind-choice baseline.
+
+    `addr_random` is what a classifier of the same specificity would hit by
+    choosing attributes uniformly, so the ratio is 1.0 when ALP carries no signal
+    about which attribute matters. The lower panel is the share of the population
+    holding a complete address -- the precondition for ever predicting correctly.
+    """
+    series = defaultdict(list)
+    for row in diagnostics:
+        size = int(row["size"])
+        if size in sizes and row["addr_random"]:
+            series[size].append(row)
+    if not series:
+        raise SystemExit("no address diagnostics for the requested sizes")
+    for rows in series.values():
+        rows.sort(key=lambda row: row["trials"])
+
+    order = sorted(series)
+    colors = {size: SERIES_COLORS[index] for index, size in enumerate(order)}
+
+    figure, (top, bottom) = plt.subplots(2, 1, figsize=(6.4, 5.2), sharex=True)
+    for size in order:
+        rows = series[size]
+        trials = [row["trials"] for row in rows]
+        ratio = [row["addr_spec"] / row["addr_random"] if row["addr_random"] else 0.0 for row in rows]
+        top.plot(trials, ratio, color=colors[size], linewidth=LINE_WIDTH,
+                 label=f"MPX-{size}", solid_capstyle="round")
+        bottom.plot(trials, [row["addr_full"] for row in rows], color=colors[size],
+                    linewidth=LINE_WIDTH, label=f"MPX-{size}", solid_capstyle="round")
+
+    top.axhline(1.0, color=INK_MUTED, linewidth=0.7, linestyle=(0, (4, 3)), zorder=0)
+    top.annotate("blind choice", xy=(0.995, 1.0), xycoords=("axes fraction", "data"),
+                 xytext=(0, 4), textcoords="offset points",
+                 color=INK_SECONDARY, fontsize=7.5, ha="right")
+    top.set_ylabel("address-bit enrichment\n(observed / blind choice)")
+    top.set_title("Does ALP find the address bits?", loc="left", pad=10)
+    top.legend(loc="upper left")
+
+    bottom.set_ylabel("share of population with\na complete address")
+    bottom.set_xlabel("explore trials")
+    bottom.set_xlim(left=0)
+    bottom.xaxis.set_major_formatter(FuncFormatter(millions))
+
+    save(figure, out_dir, "mpx_specialization_signal", formats)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--trajectory-csv", type=Path, default=Path("reports/mpx_trajectory.csv"))
+    parser.add_argument("--diagnostic-csv", type=Path, default=Path("reports/mpx_diagnostics.csv"))
     parser.add_argument("--verdict-csv", type=Path, default=Path("reports/mpx_verdicts.csv"))
     parser.add_argument("--out-dir", type=Path, default=Path("reports/figures"))
     parser.add_argument("--size", type=int, default=70)
     parser.add_argument("--variant", default="pyalcs")
     parser.add_argument("--anatomy-seed", type=int, default=42)
     parser.add_argument("--formats", default="pdf,png", help="comma-separated: pdf, png, pgf, svg")
-    parser.add_argument("--figures", default="reach,anatomy")
+    parser.add_argument("--figures", default="reach,anatomy,signal")
+    parser.add_argument("--signal-sizes", default="70,135")
     args = parser.parse_args()
 
     trajectory = numeric(load(args.trajectory_csv), "trials", "wall_s", "knowledge", "reliable", "spec", "pop")
@@ -266,6 +317,10 @@ def main():
         plot_reach(trajectory, verdicts, args.size, args.variant, args.out_dir, formats)
     if "anatomy" in figures:
         plot_anatomy(trajectory, args.size, args.variant, args.anatomy_seed, args.out_dir, formats)
+    if "signal" in figures:
+        diagnostics = numeric(load(args.diagnostic_csv), "trials", "addr_spec", "addr_random", "addr_full")
+        sizes = {int(item) for item in args.signal_sizes.split(",") if item.strip()}
+        plot_signal(diagnostics, sizes, args.out_dir, formats)
 
 
 if __name__ == "__main__":
