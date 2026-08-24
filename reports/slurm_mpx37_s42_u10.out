@@ -1,0 +1,59 @@
+acs2-bench mpx-reach: sizes=[37] n_exp=1 seed=42 rss_cap=5.6GB time_cap=3600s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-37 (N=38): condition=76B effect=76B mark=912B (stack) classifier=1152B  mark/classifier=79.2%  rss-cap pop-threshold=4861111
+  mpx-37 trials_cap=429496729600000 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=10
+  mpx-37 traj: trials=30000 wall=27s knowledge=0.0155 reliable=8 spec=8.88 pop=6360
+  mpx-37 diag: trials=30000 micro=6388 pop_spec=10.13 spec_max=22 q_mean=0.601 q_max=1.000 q_above_half=5129 marked=0.368 mark_density=0.742 exp_mean=3.1 addr_spec=1.510 addr_random=1.370 addr_full=0.0013 correct=0
+  mpx-37 traj: trials=60000 wall=59s knowledge=0.0582 reliable=66 spec=9.89 pop=10660
+  mpx-37 diag: trials=60000 micro=10743 pop_spec=10.93 spec_max=22 q_mean=0.626 q_max=1.000 q_above_half=9000 marked=0.381 mark_density=0.717 exp_mean=3.6 addr_spec=1.841 addr_random=1.477 addr_full=0.0048 correct=0
+  mpx-37 traj: trials=90000 wall=105s knowledge=0.1344 reliable=219 spec=10.51 pop=13526
+  mpx-37 diag: trials=90000 micro=13733 pop_spec=11.26 spec_max=23 q_mean=0.638 q_max=1.000 q_above_half=11579 marked=0.365 mark_density=0.708 exp_mean=4.1 addr_spec=2.035 addr_random=1.521 addr_full=0.0083 correct=1
+  mpx-37 traj: trials=120000 wall=157s knowledge=0.2279 reliable=373 spec=10.51 pop=15069
+  mpx-37 diag: trials=120000 micro=15444 pop_spec=11.42 spec_max=23 q_mean=0.650 q_max=1.000 q_above_half=13003 marked=0.351 mark_density=0.704 exp_mean=4.8 addr_spec=2.218 addr_random=1.543 addr_full=0.0120 correct=6
+  mpx-37 traj: trials=150000 wall=204s knowledge=0.3254 reliable=515 spec=10.62 pop=14163
+  mpx-37 diag: trials=150000 micro=14664 pop_spec=11.48 spec_max=23 q_mean=0.662 q_max=1.000 q_above_half=12443 marked=0.349 mark_density=0.703 exp_mean=5.9 addr_spec=2.372 addr_random=1.551 addr_full=0.0172 correct=8
+  mpx-37 traj: trials=180000 wall=239s knowledge=0.4263 reliable=628 spec=10.47 pop=12043
+  mpx-37 diag: trials=180000 micro=12675 pop_spec=11.50 spec_max=23 q_mean=0.669 q_max=1.000 q_above_half=10515 marked=0.339 mark_density=0.704 exp_mean=7.3 addr_spec=2.541 addr_random=1.553 addr_full=0.0251 correct=7
+  mpx-37 traj: trials=210000 wall=264s knowledge=0.4856 reliable=649 spec=10.44 pop=10391
+  mpx-37 diag: trials=210000 micro=11114 pop_spec=11.40 spec_max=24 q_mean=0.675 q_max=1.000 q_above_half=9080 marked=0.345 mark_density=0.708 exp_mean=9.3 addr_spec=2.685 addr_random=1.541 addr_full=0.0345 correct=10
+  mpx-37 traj: trials=240000 wall=282s knowledge=0.5485 reliable=586 spec=10.30 pop=7902
+  mpx-37 diag: trials=240000 micro=8671 pop_spec=11.44 spec_max=24 q_mean=0.680 q_max=1.000 q_above_half=6835 marked=0.322 mark_density=0.711 exp_mean=11.7 addr_spec=2.761 addr_random=1.547 addr_full=0.0442 correct=22
+  mpx-37 traj: trials=270000 wall=294s knowledge=0.6325 reliable=563 spec=10.11 pop=6148
+  mpx-37 diag: trials=270000 micro=6956 pop_spec=11.44 spec_max=24 q_mean=0.684 q_max=1.000 q_above_half=5276 marked=0.307 mark_density=0.715 exp_mean=16.1 addr_spec=2.901 addr_random=1.546 addr_full=0.0662 correct=33
+  mpx-37 traj: trials=300000 wall=302s knowledge=0.7240 reliable=519 spec=9.79 pop=4305
+  mpx-37 diag: trials=300000 micro=5204 pop_spec=11.40 spec_max=24 q_mean=0.683 q_max=1.000 q_above_half=3582 marked=0.283 mark_density=0.729 exp_mean=23.3 addr_spec=3.037 addr_random=1.540 addr_full=0.0894 correct=48
+  mpx-37 traj: trials=330000 wall=308s knowledge=0.7552 reliable=471 spec=9.66 pop=3272
+  mpx-37 diag: trials=330000 micro=4227 pop_spec=11.29 spec_max=24 q_mean=0.672 q_max=1.000 q_above_half=2588 marked=0.276 mark_density=0.746 exp_mean=30.5 addr_spec=3.069 addr_random=1.526 addr_full=0.1137 correct=56
+  mpx-37 traj: trials=360000 wall=313s knowledge=0.8266 reliable=394 spec=9.04 pop=2433
+  mpx-37 diag: trials=360000 micro=3453 pop_spec=11.34 spec_max=24 q_mean=0.672 q_max=1.000 q_above_half=1902 marked=0.238 mark_density=0.760 exp_mean=46.6 addr_spec=3.192 addr_random=1.532 addr_full=0.1319 correct=72
+  mpx-37 traj: trials=390000 wall=317s knowledge=0.8540 reliable=319 spec=8.57 pop=1967
+  mpx-37 diag: trials=390000 micro=2986 pop_spec=11.35 spec_max=24 q_mean=0.654 q_max=1.000 q_above_half=1460 marked=0.238 mark_density=0.782 exp_mean=63.1 addr_spec=3.228 addr_random=1.533 addr_full=0.1434 correct=81
+  mpx-37 traj: trials=420000 wall=320s knowledge=0.8827 reliable=251 spec=8.07 pop=1719
+  mpx-37 diag: trials=420000 micro=2798 pop_spec=11.27 spec_max=24 q_mean=0.638 q_max=1.000 q_above_half=1231 marked=0.239 mark_density=0.797 exp_mean=75.2 addr_spec=3.216 addr_random=1.523 addr_full=0.1466 correct=89
+  mpx-37 traj: trials=450000 wall=324s knowledge=0.9121 reliable=224 spec=7.56 pop=1560
+  mpx-37 diag: trials=450000 micro=2647 pop_spec=11.25 spec_max=24 q_mean=0.631 q_max=1.000 q_above_half=1108 marked=0.240 mark_density=0.810 exp_mean=92.0 addr_spec=3.144 addr_random=1.520 addr_full=0.1397 correct=93
+  mpx-37 traj: trials=480000 wall=327s knowledge=0.9261 reliable=185 spec=7.12 pop=1503
+  mpx-37 diag: trials=480000 micro=2631 pop_spec=11.07 spec_max=24 q_mean=0.616 q_max=1.000 q_above_half=1003 marked=0.249 mark_density=0.812 exp_mean=106.0 addr_spec=3.236 addr_random=1.496 addr_full=0.1371 correct=102
+  mpx-37 traj: trials=510000 wall=330s knowledge=0.9390 reliable=189 spec=6.85 pop=1415
+  mpx-37 diag: trials=510000 micro=2538 pop_spec=11.02 spec_max=24 q_mean=0.613 q_max=1.000 q_above_half=926 marked=0.259 mark_density=0.818 exp_mean=132.0 addr_spec=3.049 addr_random=1.490 addr_full=0.1357 correct=105
+  mpx-37 traj: trials=540000 wall=332s knowledge=0.9610 reliable=186 spec=6.72 pop=1339
+  mpx-37 diag: trials=540000 micro=2501 pop_spec=11.24 spec_max=24 q_mean=0.625 q_max=1.000 q_above_half=937 marked=0.227 mark_density=0.814 exp_mean=158.3 addr_spec=3.218 addr_random=1.519 addr_full=0.1494 correct=113
+  mpx-37 traj: trials=570000 wall=335s knowledge=0.9659 reliable=176 spec=6.72 pop=1326
+  mpx-37 diag: trials=570000 micro=2556 pop_spec=11.02 spec_max=24 q_mean=0.618 q_max=1.000 q_above_half=895 marked=0.237 mark_density=0.819 exp_mean=174.6 addr_spec=3.273 addr_random=1.489 addr_full=0.1471 correct=111
+  mpx-37 traj: trials=600000 wall=337s knowledge=0.9638 reliable=175 spec=6.50 pop=1406
+  mpx-37 diag: trials=600000 micro=2591 pop_spec=10.67 spec_max=24 q_mean=0.612 q_max=1.000 q_above_half=937 marked=0.238 mark_density=0.825 exp_mean=180.3 addr_spec=3.083 addr_random=1.442 addr_full=0.1330 correct=112
+  mpx-37 traj: trials=630000 wall=340s knowledge=0.9605 reliable=169 spec=6.30 pop=1276
+  mpx-37 diag: trials=630000 micro=2532 pop_spec=11.05 spec_max=24 q_mean=0.613 q_max=1.000 q_above_half=846 marked=0.208 mark_density=0.826 exp_mean=216.8 addr_spec=3.273 addr_random=1.494 addr_full=0.1458 correct=115
+  mpx-37 traj: trials=660000 wall=343s knowledge=0.9734 reliable=169 spec=6.41 pop=1336
+  mpx-37 diag: trials=660000 micro=2591 pop_spec=10.68 spec_max=24 q_mean=0.605 q_max=1.000 q_above_half=855 marked=0.239 mark_density=0.836 exp_mean=227.4 addr_spec=3.191 addr_random=1.443 addr_full=0.1467 correct=117
+  mpx-37 traj: trials=690000 wall=345s knowledge=0.9783 reliable=166 spec=6.35 pop=1269
+  mpx-37 diag: trials=690000 micro=2515 pop_spec=10.82 spec_max=24 q_mean=0.612 q_max=1.000 q_above_half=848 marked=0.218 mark_density=0.834 exp_mean=260.2 addr_spec=3.273 addr_random=1.462 addr_full=0.1450 correct=120
+  mpx-37 traj: trials=720000 wall=347s knowledge=0.9869 reliable=164 spec=6.43 pop=1194
+  mpx-37 diag: trials=720000 micro=2468 pop_spec=11.03 spec_max=24 q_mean=0.610 q_max=1.000 q_above_half=788 marked=0.229 mark_density=0.830 exp_mean=298.2 addr_spec=3.197 addr_random=1.490 addr_full=0.1441 correct=120
+  mpx-37 traj: trials=750000 wall=350s knowledge=0.9839 reliable=160 spec=6.34 pop=1170
+  mpx-37 diag: trials=750000 micro=2482 pop_spec=11.11 spec_max=24 q_mean=0.616 q_max=1.000 q_above_half=784 marked=0.223 mark_density=0.828 exp_mean=326.7 addr_spec=3.280 addr_random=1.501 addr_full=0.1521 correct=123
+  mpx-37 traj: trials=780000 wall=352s knowledge=0.9963 reliable=158 spec=6.32 pop=1196
+  mpx-37 diag: trials=780000 micro=2464 pop_spec=10.87 spec_max=24 q_mean=0.604 q_max=1.000 q_above_half=756 marked=0.251 mark_density=0.835 exp_mean=339.5 addr_spec=3.273 addr_random=1.469 addr_full=0.1538 correct=126
+  mpx-37 traj: trials=810000 wall=354s knowledge=1.0000 reliable=151 spec=6.22 pop=1071
+  mpx-37 diag: trials=810000 micro=2411 pop_spec=11.42 spec_max=24 q_mean=0.614 q_max=1.000 q_above_half=721 marked=0.197 mark_density=0.828 exp_mean=393.2 addr_spec=3.296 addr_random=1.543 addr_full=0.1681 correct=128
+  mpx-37 repeat 0: SUCCESS trials=810000 knowledge=1.0000 reliable=151 spec=6.22/38 peak_macro=15251 peak_rss=0.00GB wall=354.3s
+  mpx-37 verdict agreement across 1 repeats: ALL AGREE

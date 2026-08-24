@@ -284,6 +284,56 @@ the repeated evidence a correct specialization would need, while waiting on the
 environment to revisit the relevant action set — which is exactly what prioritized
 experience replay attacks.
 
+### The boundary is not absolute: `u_max` = 12 breaks it (preliminary)
+
+The diagnosis pointed at its own test. Population specificity at k=135 sits at 8.8–9.6
+against a derived `u_max` of 9 — rules were resting *on the limit*, so the limit itself
+was a candidate cause: a blindly specializing rule may need to hold surplus attributes
+before the right ones are among them, and `u_max` = 9 generalizes it back first. Sweeping
+`u_max` at k=135 (seed 42, 6 h cap each) confirms it:
+
+| `u_max` | trials | knowledge | reliable | address enrichment | complete address |
+|---|---|---|---|---|---|
+| 8 | 5.54 M | 0.0000 | 0 | 0.87x | 0.0000 |
+| 9 *(derived)* | 6.08 M | 0.0000 | 0 | 0.97x | 0.0000 |
+| 10 | 7.82 M | 0.0000 | 0 | 0.99x | 0.0000 |
+| **12** | **7.04 M** | **0.0129** | **226** | **3.44x** | **0.0008** |
+| 16 | 3.96 M | 0.0000 | 0 | 1.02x | 0.0000 |
+| 24 | 1.59 M | 0.0000 | 0 | 0.97x | 0.0000 |
+
+At `u_max` = 12 every indicator that had been frozen starts moving: the first reliable
+rule appears at 3.66 M trials, the count reaches 226, knowledge climbs monotonically
+0.0001 -> 0.0015 -> 0.0048 -> 0.0129, maximum classifier quality reaches 1.000, and address
+enrichment rises past 3x. **This is the first non-zero knowledge ever recorded at k=135.**
+
+Three honesty notes. Knowledge is 0.0129, not 1.0 — this is the foot of the S-curve, not a
+solution. The run was TIME-LIMITED with every indicator still rising, so the ceiling is
+unknown. And `u_max` = 16 and 24 are **not** refuted: larger populations run slower, so
+they reached only 3.96 M and 1.59 M trials, less than the 3.66 M at which `u_max` = 12
+produced its first reliable rule. Longer runs across `u_max` ∈ {11, 12, 13, 14, 16}, plus a
+second seed at 12, are in flight.
+
+(The `structurally correct` count stays 0 here for a metric reason, not a learning one: it
+requires specificity exactly `a+1` = 8, while `u_max` = 12 rules carry ~13.3 — they hold the
+complete address *plus* surplus attributes. In this regime the complete-address share is
+the meaningful column.)
+
+### `u_max` is not doing hidden work at the sizes that already solve
+
+The honesty ledger flags that a *derived* `u_max` could smuggle in knowledge of the
+solution. Sweeping it where the system converges shows it does not — every value tried
+solves, at knowledge 1.0 and near-ideal specificity:
+
+| k | ideal | `u_max` values tried | result | trials range |
+|---|---|---|---|---|
+| 20 | 5 | 5, 6, 7, 8, 9, 10 | **all SUCCESS**, spec 5.00–5.42 | 80 k – 160 k |
+| 37 | 6 | 6, 7, 8, 9, 10, 12 | **all SUCCESS**, spec 6.00–6.85 | 690 k – 1.02 M |
+
+The derived value is the *fastest* at both sizes (k=20 at 6, k=37 at 7), but nothing hinges
+on picking it — the reach claim survives any value in the range. Which makes the k=135
+result sharper rather than weaker: `u_max` is inert where the task is tractable and
+decisive exactly where it is not.
+
 ---
 
 ## Provenance and honesty ledger
