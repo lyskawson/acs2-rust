@@ -1,0 +1,29 @@
+acs2-bench mpx-reach: sizes=[20] n_exp=1 seed=42 rss_cap=5.6GB time_cap=3600s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-20 (N=21): condition=42B effect=42B mark=504B (stack) classifier=672B  mark/classifier=75.0%  rss-cap pop-threshold=8333333
+  mpx-20 trials_cap=3276800000 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=10
+  mpx-20 traj: trials=10000 wall=3s knowledge=0.3330 reliable=84 spec=7.27 pop=4616
+  mpx-20 diag: trials=10000 micro=4786 pop_spec=9.56 spec_max=18 q_mean=0.585 q_max=1.000 q_above_half=3141 marked=0.377 mark_density=0.555 exp_mean=4.5 addr_spec=1.921 addr_random=1.911 addr_full=0.0396 correct=5
+  mpx-20 traj: trials=20000 wall=4s knowledge=0.5998 reliable=147 spec=7.30 pop=2942
+  mpx-20 diag: trials=20000 micro=3313 pop_spec=9.24 spec_max=20 q_mean=0.615 q_max=1.000 q_above_half=2186 marked=0.355 mark_density=0.562 exp_mean=8.2 addr_spec=2.263 addr_random=1.848 addr_full=0.0772 correct=14
+  mpx-20 traj: trials=30000 wall=5s knowledge=0.8054 reliable=168 spec=7.02 pop=1679
+  mpx-20 diag: trials=30000 micro=2161 pop_spec=8.43 spec_max=20 q_mean=0.642 q_max=1.000 q_above_half=1270 marked=0.323 mark_density=0.618 exp_mean=17.1 addr_spec=2.443 addr_random=1.685 addr_full=0.1394 correct=29
+  mpx-20 traj: trials=40000 wall=6s knowledge=0.8943 reliable=168 spec=6.68 pop=1261
+  mpx-20 diag: trials=40000 micro=1782 pop_spec=7.34 spec_max=20 q_mean=0.638 q_max=1.000 q_above_half=912 marked=0.308 mark_density=0.682 exp_mean=28.0 addr_spec=2.456 addr_random=1.469 addr_full=0.1491 correct=38
+  mpx-20 traj: trials=50000 wall=7s knowledge=0.9420 reliable=136 spec=6.07 pop=903
+  mpx-20 diag: trials=50000 micro=1479 pop_spec=6.88 spec_max=20 q_mean=0.653 q_max=1.000 q_above_half=693 marked=0.313 mark_density=0.714 exp_mean=45.1 addr_spec=2.626 addr_random=1.376 addr_full=0.1916 correct=48
+  mpx-20 traj: trials=60000 wall=7s knowledge=0.9728 reliable=131 spec=6.16 pop=749
+  mpx-20 diag: trials=60000 micro=1351 pop_spec=6.25 spec_max=20 q_mean=0.653 q_max=1.000 q_above_half=542 marked=0.350 mark_density=0.759 exp_mean=58.0 addr_spec=2.581 addr_random=1.251 addr_full=0.1976 correct=53
+  mpx-20 traj: trials=70000 wall=7s knowledge=0.9762 reliable=126 spec=6.04 pop=709
+  mpx-20 diag: trials=70000 micro=1323 pop_spec=5.93 spec_max=20 q_mean=0.645 q_max=1.000 q_above_half=493 marked=0.337 mark_density=0.763 exp_mean=74.1 addr_spec=2.604 addr_random=1.186 addr_full=0.2144 correct=59
+  mpx-20 traj: trials=80000 wall=8s knowledge=0.9961 reliable=132 spec=6.17 pop=647
+  mpx-20 diag: trials=80000 micro=1305 pop_spec=5.62 spec_max=20 q_mean=0.645 q_max=1.000 q_above_half=470 marked=0.371 mark_density=0.778 exp_mean=93.4 addr_spec=2.590 addr_random=1.125 addr_full=0.2087 correct=62
+  mpx-20 traj: trials=90000 wall=8s knowledge=0.9928 reliable=127 spec=5.95 pop=664
+  mpx-20 diag: trials=90000 micro=1295 pop_spec=5.36 spec_max=20 q_mean=0.639 q_max=1.000 q_above_half=461 marked=0.380 mark_density=0.785 exp_mean=106.4 addr_spec=2.578 addr_random=1.071 addr_full=0.1807 correct=61
+  mpx-20 traj: trials=100000 wall=9s knowledge=0.9956 reliable=114 spec=5.88 pop=564
+  mpx-20 diag: trials=100000 micro=1220 pop_spec=5.52 spec_max=20 q_mean=0.644 q_max=1.000 q_above_half=399 marked=0.351 mark_density=0.778 exp_mean=132.7 addr_spec=2.663 addr_random=1.104 addr_full=0.1915 correct=61
+  mpx-20 traj: trials=110000 wall=9s knowledge=0.9995 reliable=105 spec=5.47 pop=543
+  mpx-20 diag: trials=110000 micro=1222 pop_spec=5.15 spec_max=20 q_mean=0.649 q_max=1.000 q_above_half=384 marked=0.413 mark_density=0.783 exp_mean=153.6 addr_spec=2.394 addr_random=1.029 addr_full=0.1750 correct=63
+  mpx-20 traj: trials=120000 wall=10s knowledge=1.0000 reliable=102 spec=5.42 pop=624
+  mpx-20 diag: trials=120000 micro=1272 pop_spec=5.03 spec_max=20 q_mean=0.628 q_max=1.000 q_above_half=428 marked=0.404 mark_density=0.788 exp_mean=145.5 addr_spec=2.530 addr_random=1.006 addr_full=0.1747 correct=63
+  mpx-20 repeat 0: SUCCESS trials=120000 knowledge=1.0000 reliable=102 spec=5.42/21 peak_macro=6049 peak_rss=0.00GB wall=9.6s
+  mpx-20 verdict agreement across 1 repeats: ALL AGREE
