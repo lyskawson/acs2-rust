@@ -96,6 +96,24 @@ want the summaries:
 uv run python run_pyalcs_maze.py Maze4-v0 2>/dev/null | grep -E "===|summary|###"
 ```
 
+## ACS2ER differential fixture
+
+`dump_acs2er_differential.py` is the oracle for the ACS2ER (experience replay)
+agent. It runs the unmodified pyalcs `ACS2ER` explore loop on a deterministic
+environment and emits `fixtures/acs2er_differential.json`, consumed by
+`acs2-core/tests/p11_acs2er_differential.rs`.
+
+```bash
+uv run python dump_acs2er_differential.py
+```
+
+Output is byte-stable across runs: action selection is scripted and every draw
+from `random` is recorded, so re-running it should leave the fixture unchanged.
+Like the other dumpers it instruments pyalcs **in-process only** and never
+modifies it. It also counts ALP deletions, because those trigger the pyalcs
+mid-iteration skip that would invalidate an end-to-end population comparison;
+the gate configuration uses `theta_i = 0` so the count must stay at 0.
+
 ## Notes / caveats
 
 - **Reproducibility is best-effort** (PROJECT_CONTEXT §5). `random`, `numpy`,

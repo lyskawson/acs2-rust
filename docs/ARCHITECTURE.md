@@ -797,3 +797,154 @@ reading meaningless crossings. Colour follows the seed rather than its rank, map
 every seed in the CSV so that filtering never repaints survivors. A run cut off by its
 time cap gets a hollow end marker and an explicit footnote: truncation is a budget
 artifact and must never read as a failure to converge.
+
+## ACS2ER — ACS2 with experience replay
+
+Added on `feature/acs2er`. Reference implementation (source of truth):
+`pyalcs/lcs/agents/acs2er/` (`ACS2ER.py`, `ReplayMemory.py`,
+`ReplayMemorySample.py`, `Configuration.py`). The accompanying MSc thesis
+(Ł. Śmierzchała, supervisor O. Unold, PWr 2022, ch. 4–5) motivates the
+extension; where the text and the code disagree, the code wins — the
+divergences found are listed at the end of this section.
+
+### NAMED HAZARD — ACS2ER deletes current-step learning
+
+**In ACS2ER the learning on the current step is REMOVED. All learning goes
+exclusively through replay from the buffer.**
+
+This contradicts the intuition that "ER adds replay *on top of* ordinary
+learning", and that intuition produces a wrong implementation. `ACS2ER.py:44-99`
+does only `form_match_set` → action selection → `env.step` →
+`replay_memory.update(...)` → the replay block. There is **no `apply_alp` /
+`apply_reinforcement_learning` / `apply_ga` on the current transition at all.**
+
+Consequences that the implementation must exhibit, and that
+`tests/p10_acs2er.rs` pins:
+
+- While the buffer holds fewer than `min_samples` samples the agent **does not
+  learn at all** — the population stays empty through the whole warmup window.
+- Learning on a sample is **immediate**: match set from `sample.state`, action
+  set from `sample.action`, next match set from `sample.next_state`. It is
+  **not** deferred by one step the way `Agent::run_explore_trial` defers it.
+  The deferred ACS2 loop was deliberately **not** reused or generalised —
+  ACS2ER has a different structure and sharing that loop would be wrong.
+- The timestamp handed to ALP and GA for every replayed sample is the
+  **current** `time + steps`, never the time at which the sample was stored.
+- `random.sample(range(0, len(buffer)), er_samples_number)` draws indices
+  **without replacement**; `ReplayMemory::sample_indices` reproduces that with
+  rejection redraws (the same selection-set strategy CPython uses at these
+  `k ≪ n` sizes), not sampling with replacement.
+- `_run_trial_exploit` is **identical** to ACS2's — no replay. It is therefore
+  shared code, not a copy (see below).
+
+### `LearningAgent` — the agent abstraction
+
+`acs2-core::trial` holds what both agents share: `TrialMetrics`, the
+`LearningAgent<N>` trait (`run_explore_trial`, `run_exploit_trial`,
+`population()`, `config()`) and the free `run_exploit_trial` function that is
+the single implementation of the exploitation loop. `Agent` (ACS2) and
+`Acs2ErAgent` both implement the trait and both delegate exploitation to it.
+
+`Agent`'s previous inherent methods were **moved** into its trait impl rather
+than kept alongside it. Keeping both would have made every call site silently
+resolve to the inherent method (inherent beats trait in method resolution),
+so the trait could rot without any call site noticing. Call sites gained a
+`use acs2_core::trial::LearningAgent;` import and nothing else; the P9 gate
+confirms the move changed no behaviour.
+
+The trait has generic methods (`E`, `S`, `B`), so it is **not object-safe** and
+cannot be boxed. This is deliberate: the alloc-free `(&Population<N>,
+&[ClassifierRef])` seams are worth more than `dyn` dispatch, and the benches
+need static dispatch anyway. Agent choice therefore resolves in a `match` over
+`AgentChoice` at construction, with the experiment body written once as a
+function generic over `A: LearningAgent<N>`. This composes with the existing
+`match size` monomorphisation in `run_reach_dispatch` without multiplying it:
+size dispatch stays four arms, and the agent branch lives inside the
+per-`N` function.
+
+### ER configuration is a separate type, not new `Configuration` fields
+
+`ReplayConfiguration { buffer_size, min_samples, samples_number }` lives in
+`acs2-core::acs2er::replay`; `Configuration` is **untouched**.
+
+pyalcs models this by inheritance (`acs2er.Configuration` extends
+`acs2.Configuration`). The Rust equivalent of that is composition, and it is
+also the safer choice here: invariant 1 of this branch is that ACS2 behaviour
+stays bit-identical, and a `Configuration` that cannot grow an ER field cannot
+leak one into an ACS2 code path. It is Interface Segregation applied literally
+— ACS2 does not depend on parameters it never reads. Defaults
+(`10000 / 1000 / 3`) match `acs2er/Configuration.py`; the thesis calls the same
+three knobs `N`, `N_warmup` and `m`.
+
+### Replay memory
+
+`ReplayMemory<N>` is a `VecDeque<ReplaySample<N>>` bounded by `max_size`, with
+`update` evicting the front (oldest) before pushing, matching
+`ReplayMemory.update`'s `pop(0)` exactly. Index `0` is the oldest sample on both
+sides, so replayed indices mean the same thing. `ReplaySample<N>` is `Copy`
+(`Perception<N>` already is), so replaying a sample does not clone the buffer.
+
+All index draws go through the injected `RandomSource` (invariant: no
+`thread_rng`, no global state). `sample_indices` clamps the request to the
+buffer length instead of panicking; pyalcs would raise `ValueError` there, and
+the clamp is unreachable in any configuration with
+`min_samples >= samples_number`.
+
+### Cost of the deliberate re-derive
+
+`replay_learning_step` re-derives the next match set with
+`form_match_set` after `apply_alp`, exactly as `Agent::run_explore_trial` does,
+rather than using the set `apply_alp` maintains in place. The two are provably
+equal (`apply_alp` appends every new `p1`-matcher and remaps deletions, and the
+input set already held every other matcher), so this costs one extra population
+scan per replayed sample and buys consistency with the documented deletion
+contract above. Given that ER already performs three `form_match_set` calls per
+sample, the deviation was not worth the divergence in style between two agents
+that must be read side by side.
+
+### What the differential covers
+
+`baseline/dump_acs2er_differential.py` + `acs2-core/tests/p11_acs2er_differential.rs`
+run the same 60-trial, 886-step explore experiment on both implementations and
+compare the final population field for field. Both sources of randomness in the
+pyalcs path (the replay index draw, and `PMark.get_differences`' position pick)
+are recorded as one chronological event log and served back to Rust through its
+`RandomSource`; action selection is scripted on both sides. The test asserts
+Rust consumed exactly as many draws, with the same bounds, as pyalcs did —
+so a structural divergence fails on the RNG stream even before the population
+is compared.
+
+The gate configuration sets `theta_i = 0`. ALP deletion is the only trigger for
+the pyalcs mid-iteration skip documented above, and that bug would make an
+end-to-end population comparison meaningless. The dumper counts deletions
+regardless and the Rust test refuses to compare when the count is non-zero.
+ALP deletion itself is covered by the P8 differential, which is unaffected.
+
+`do_ga = false` in the gate, so the GA path through `replay_learning_step`
+(including its `sample.done` empty-match-set gating) is **not** differentially
+covered — it is transcribed from `ACS2ER.py:83-99` and reviewed, not proven.
+
+### Reference code vs the thesis text
+
+- **§5.3 calls the eviction policy "LIFO"** ("usunięcie najstarszego w buforze
+  (ang. Last In First Out, LIFO)"). The prose is right and the label is wrong:
+  dropping the oldest entry is FIFO, and `ReplayMemory.update`'s `pop(0)`
+  drops the oldest. Implemented as FIFO, per the code.
+- **Algorithm 5 shows no `done` handling in the replay block.** The code gates
+  both the RL bootstrap (`0 if sample.done else ...get_maximum_fitness()`) and
+  the GA match set (`ClassifiersList() if sample.done else er_next_match_set`)
+  on the stored `done` flag. Implemented per the code; the algorithm listing is
+  incomplete here.
+- **§5.3's iteration-count formula, `n * m − N_warmup`,** does not follow from
+  the loop. Learning runs on every step from the `N_warmup`-th onward, giving
+  `m * (n − N_warmup + 1)` applications. Presentational only — no code depends
+  on it.
+- `_run_trial_explore` draws `env.action_space.sample()` into `action` before
+  the loop and immediately overwrites it. Dead code in pyalcs that consumes a
+  draw from the environment's RNG; not reproduced, and irrelevant here because
+  the two implementations already draw from different streams (see the P9
+  methodology note above).
+- `TrialMetrics.reward` is the **total** episode reward in the Rust port and
+  the **last** step's reward in pyalcs. This is a pre-existing convention of
+  the Rust `Agent`, kept for `Acs2ErAgent` so both agents behind the trait
+  report comparable metrics. No benchmark reads it.
