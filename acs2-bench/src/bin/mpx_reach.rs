@@ -1,7 +1,11 @@
 use std::mem::size_of;
 use std::time::{Duration, Instant};
 
-use acs2_bench::{parse_u_max_mode, parse_variant, resolve_u_max, variant_label, UMaxMode};
+use acs2_bench::{
+    parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
+    UMaxMode,
+};
+use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
 use acs2_core::trial::LearningAgent;
@@ -248,29 +252,25 @@ fn population_diagnostics<const N: usize>(population: &Population<N>) -> Populat
     }
 }
 
-fn run_reach_repeat<const N: usize>(
-    size: usize,
+struct ReachLimits {
     trials_cap: u64,
     time_cap: Duration,
-    seed: u64,
-    gen: GenConfig,
     eval_interval: u64,
     log_trajectory: bool,
     log_diagnostics: bool,
     log_coverage: bool,
-) -> ReachOutcome {
-    let mut config = Configuration::mpx();
-    config.epsilon = EXPLORE_EPSILON;
-    config.do_ga = gen.do_ga;
-    config.u_max = gen.u_max;
-    config.alp_gen_variant = gen.alp_gen_variant;
+}
 
-    let mut env = Multiplexer::<N>::new(Box::new(ChaChaRandomSource::from_seed(seed)));
-    let mut agent = Agent::<N, _>::new(config, ChaChaRandomSource::from_seed(seed));
-    let selector = EpsilonGreedy {
-        number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
-        epsilon: EXPLORE_EPSILON,
-    };
+fn run_reach_protocol<const N: usize, A>(
+    agent: &mut A,
+    env: &mut Multiplexer<N>,
+    selector: &EpsilonGreedy,
+    size: usize,
+    limits: &ReachLimits,
+) -> ReachOutcome
+where
+    A: LearningAgent<N>,
+{
     let bootstrap = MaxFitnessBootstrap;
     let theta_r = agent.config().theta_r;
 
@@ -284,7 +284,7 @@ fn run_reach_repeat<const N: usize>(
 
     let verdict = loop {
         for _ in 0..TIME_CHECK_BATCH {
-            let metrics = agent.run_explore_trial(&mut env, &selector, &bootstrap, time);
+            let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
             time += metrics.steps as u64;
             trials_used += 1;
             trials_since_eval += 1;
@@ -296,13 +296,14 @@ fn run_reach_repeat<const N: usize>(
         if peak_rss > RSS_CAP_BYTES {
             break Verdict::MemoryLimited;
         }
-        if start.elapsed() > time_cap {
+        if start.elapsed() > limits.time_cap {
             break Verdict::TimeLimited;
         }
-        if trials_since_eval >= eval_interval {
+        if trials_since_eval >= limits.eval_interval {
             trials_since_eval = 0;
-            final_knowledge = evaluate_knowledge(agent.population(), theta_r, SAMPLE_INPUTS, SAMPLE_SEED);
-            if log_trajectory {
+            final_knowledge =
+                evaluate_knowledge(agent.population(), theta_r, SAMPLE_INPUTS, SAMPLE_SEED);
+            if limits.log_trajectory {
                 let (reliable, spec_sum) = agent
                     .population()
                     .iter()
@@ -317,7 +318,7 @@ fn run_reach_repeat<const N: usize>(
                     agent.population().len(),
                 );
             }
-            if log_diagnostics {
+            if limits.log_diagnostics {
                 let diagnostics = population_diagnostics(agent.population());
                 println!(
                     "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1} addr_spec={:.3} addr_random={:.3} addr_full={:.4} correct={}",
@@ -336,7 +337,7 @@ fn run_reach_repeat<const N: usize>(
                     diagnostics.structurally_correct,
                 );
             }
-            if log_coverage {
+            if limits.log_coverage {
                 let breakdown = knowledge_breakdown(agent.population(), theta_r);
                 println!(
                     "  mpx-{size} cover: trials={trials_used} overall={:.4} a0_nochange={:.4} a0_change={:.4} a1_nochange={:.4} a1_change={:.4} matched_but_wrong={}",
@@ -352,7 +353,7 @@ fn run_reach_repeat<const N: usize>(
                 break Verdict::Success;
             }
         }
-        if trials_used >= trials_cap {
+        if trials_used >= limits.trials_cap {
             break Verdict::TrialsLimited;
         }
     };
@@ -382,22 +383,53 @@ fn run_reach_repeat<const N: usize>(
     }
 }
 
-fn run_reach_dispatch(
+fn run_reach_repeat<const N: usize>(
     size: usize,
-    trials_cap: u64,
-    time_cap: Duration,
     seed: u64,
     gen: GenConfig,
-    eval_interval: u64,
-    log_trajectory: bool,
-    log_diagnostics: bool,
-    log_coverage: bool,
+    agent_options: AgentOptions,
+    limits: &ReachLimits,
+) -> ReachOutcome {
+    let mut config = Configuration::mpx();
+    config.epsilon = EXPLORE_EPSILON;
+    config.do_ga = gen.do_ga;
+    config.u_max = gen.u_max;
+    config.alp_gen_variant = gen.alp_gen_variant;
+
+    let mut env = Multiplexer::<N>::new(Box::new(ChaChaRandomSource::from_seed(seed)));
+    let selector = EpsilonGreedy {
+        number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
+        epsilon: EXPLORE_EPSILON,
+    };
+
+    match agent_options.agent {
+        AgentChoice::Acs2 => {
+            let mut agent = Agent::<N, _>::new(config, ChaChaRandomSource::from_seed(seed));
+            run_reach_protocol(&mut agent, &mut env, &selector, size, limits)
+        }
+        AgentChoice::Acs2Er => {
+            let mut agent = Acs2ErAgent::<N, _>::new(
+                config,
+                agent_options.replay,
+                ChaChaRandomSource::from_seed(seed),
+            );
+            run_reach_protocol(&mut agent, &mut env, &selector, size, limits)
+        }
+    }
+}
+
+fn run_reach_dispatch(
+    size: usize,
+    seed: u64,
+    gen: GenConfig,
+    agent_options: AgentOptions,
+    limits: &ReachLimits,
 ) -> ReachOutcome {
     match size {
-        37 => run_reach_repeat::<38>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
-        70 => run_reach_repeat::<71>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
-        135 => run_reach_repeat::<136>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
-        20 => run_reach_repeat::<21>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
+        37 => run_reach_repeat::<38>(size, seed, gen, agent_options, limits),
+        70 => run_reach_repeat::<71>(size, seed, gen, agent_options, limits),
+        135 => run_reach_repeat::<136>(size, seed, gen, agent_options, limits),
+        20 => run_reach_repeat::<21>(size, seed, gen, agent_options, limits),
         other => panic!("reach not configured for {other}-bit multiplexer"),
     }
 }
@@ -439,6 +471,7 @@ struct Options {
     log_trajectory: bool,
     log_diagnostics: bool,
     log_coverage: bool,
+    agent: AgentOptions,
 }
 
 impl Options {
@@ -455,6 +488,7 @@ impl Options {
             log_trajectory: false,
             log_diagnostics: false,
             log_coverage: false,
+            agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -491,7 +525,11 @@ impl Options {
                 "--log-trajectory" => options.log_trajectory = true,
                 "--log-diagnostics" => options.log_diagnostics = true,
                 "--log-coverage" => options.log_coverage = true,
-                other => panic!("unknown flag {other}"),
+                other => {
+                    if !options.agent.try_parse_flag(other, &mut args) {
+                        panic!("unknown flag {other}")
+                    }
+                }
             }
         }
         options
@@ -501,7 +539,8 @@ impl Options {
 fn main() {
     let options = Options::parse();
     println!(
-        "acs2-bench mpx-reach: sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={}",
+        options.agent.describe(),
         options.sizes,
         options.n_exp,
         options.seed,
@@ -528,18 +567,21 @@ fn main() {
         println!("  mpx-{size} trials_cap={trials_cap} (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max={u_max}");
 
         let mut verdicts: Vec<Verdict> = Vec::new();
-        let time_cap = Duration::from_secs(options.time_cap_secs);
+        let limits = ReachLimits {
+            trials_cap,
+            time_cap: Duration::from_secs(options.time_cap_secs),
+            eval_interval: options.eval_interval,
+            log_trajectory: options.log_trajectory,
+            log_diagnostics: options.log_diagnostics,
+            log_coverage: options.log_coverage,
+        };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
                 size,
-                trials_cap,
-                time_cap,
                 options.seed + repeat as u64,
                 gen,
-                options.eval_interval,
-                options.log_trajectory,
-                options.log_diagnostics,
-                options.log_coverage,
+                options.agent,
+                &limits,
             );
             verdicts.push(outcome.verdict);
             println!(

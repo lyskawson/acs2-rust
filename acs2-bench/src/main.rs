@@ -1,11 +1,14 @@
 use std::time::Instant;
 
+use acs2_bench::{AgentChoice, AgentOptions};
+use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
-use acs2_core::trial::LearningAgent;
 use acs2_core::config::Configuration;
+use acs2_core::environment::Environment;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::trial::LearningAgent;
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze_data::{geometry_by_id, MazeGeometry, MAZE_GEOMETRIES};
 
@@ -20,6 +23,7 @@ struct Options {
     exploit_trials: u32,
     exploit_phases: u32,
     out: String,
+    agent: AgentOptions,
 }
 
 impl Options {
@@ -33,6 +37,7 @@ impl Options {
             exploit_trials: 200,
             exploit_phases: 3,
             out: "reports/bench_rust.csv".to_string(),
+            agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -52,7 +57,11 @@ impl Options {
                 "--exploit-trials" => options.exploit_trials = args.next().unwrap().parse().unwrap(),
                 "--exploit-phases" => options.exploit_phases = args.next().unwrap().parse().unwrap(),
                 "--out" => options.out = args.next().unwrap(),
-                other => panic!("unknown flag {other}"),
+                other => {
+                    if !options.agent.try_parse_flag(other, &mut args) {
+                        panic!("unknown flag {other}")
+                    }
+                }
             }
         }
         options
@@ -91,25 +100,22 @@ fn population_std(values: &[f64]) -> f64 {
     variance.sqrt()
 }
 
-fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatResult {
-    let mut config = Configuration::default_protocol();
-    config.do_ga = options.do_ga;
-    config.epsilon = EXPLORE_EPSILON;
-
-    let mut env = Maze::from_geometry(geometry, Box::new(ChaChaRandomSource::from_seed(seed)));
-    let mut agent =
-        Agent::<MAZE_PERCEPTION_LEN, _>::new(config, ChaChaRandomSource::from_seed(seed));
-    let selector = EpsilonGreedy {
-        number_of_possible_actions: agent.config().number_of_possible_actions,
-        epsilon: EXPLORE_EPSILON,
-    };
+fn run_protocol<const N: usize, A, E>(
+    agent: &mut A,
+    env: &mut E,
+    selector: &EpsilonGreedy,
+    options: &Options,
+) -> RepeatResult
+where
+    A: LearningAgent<N>,
+    E: Environment<N>,
+{
     let bootstrap = MaxFitnessBootstrap;
-
     let mut time: u64 = 0;
 
     let explore_start = Instant::now();
     for _ in 0..options.explore_trials {
-        let metrics = agent.run_explore_trial(&mut env, &selector, &bootstrap, time);
+        let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
         time += metrics.steps as u64;
     }
     let explore_seconds = explore_start.elapsed().as_secs_f64();
@@ -119,7 +125,7 @@ fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatRe
     for phase in 0..options.exploit_phases {
         let mut phase_steps: Vec<f64> = Vec::with_capacity(options.exploit_trials as usize);
         for _ in 0..options.exploit_trials {
-            let metrics = agent.run_exploit_trial(&mut env, &bootstrap, time);
+            let metrics = agent.run_exploit_trial(env, &bootstrap, time);
             time += metrics.steps as u64;
             phase_steps.push(metrics.steps as f64);
         }
@@ -137,6 +143,36 @@ fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatRe
         reliable: population.reliable_count(agent.config().theta_r),
         explore_seconds,
         exploit_seconds,
+    }
+}
+
+fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatResult {
+    let mut config = Configuration::default_protocol();
+    config.do_ga = options.do_ga;
+    config.epsilon = EXPLORE_EPSILON;
+
+    let mut env = Maze::from_geometry(geometry, Box::new(ChaChaRandomSource::from_seed(seed)));
+    let selector = EpsilonGreedy {
+        number_of_possible_actions: config.number_of_possible_actions,
+        epsilon: EXPLORE_EPSILON,
+    };
+
+    match options.agent.agent {
+        AgentChoice::Acs2 => {
+            let mut agent = Agent::<MAZE_PERCEPTION_LEN, _>::new(
+                config,
+                ChaChaRandomSource::from_seed(seed),
+            );
+            run_protocol(&mut agent, &mut env, &selector, options)
+        }
+        AgentChoice::Acs2Er => {
+            let mut agent = Acs2ErAgent::<MAZE_PERCEPTION_LEN, _>::new(
+                config,
+                options.agent.replay,
+                ChaChaRandomSource::from_seed(seed),
+            );
+            run_protocol(&mut agent, &mut env, &selector, options)
+        }
     }
 }
 
@@ -201,7 +237,8 @@ fn main() {
     let mut lines = vec![csv_header()];
 
     println!(
-        "acs2-bench: n_exp={} seed={} do_ga={} explore={} exploit={}x{}",
+        "acs2-bench: {} n_exp={} seed={} do_ga={} explore={} exploit={}x{}",
+        options.agent.describe(),
         options.n_exp,
         options.seed,
         options.do_ga,
