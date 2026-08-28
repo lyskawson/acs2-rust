@@ -8,7 +8,6 @@ use acs2_bench::{
 use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
-use acs2_core::trial::LearningAgent;
 use acs2_core::classifier::Classifier;
 use acs2_core::condition::Condition;
 use acs2_core::config::{AlpGenVariant, Configuration};
@@ -17,6 +16,7 @@ use acs2_core::mark::Mark;
 use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::trial::LearningAgent;
 use acs2_envs::multiplexer::{control_bits_for, evaluate_knowledge, sampled_transitions, Multiplexer};
 
 const EXPLORE_EPSILON: f64 = 0.8;

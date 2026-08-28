@@ -1,9 +1,9 @@
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
-use acs2_core::trial::LearningAgent;
 use acs2_core::config::Configuration;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::trial::LearningAgent;
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze_data::geometry_by_id;
 use serde_json::Value;
