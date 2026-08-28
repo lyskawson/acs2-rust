@@ -68,7 +68,7 @@ knowledge):
 
 | Crate | Kind | Purpose |
 |---|---|---|
-| `acs2-core` | lib | Pure ACS2 domain: classifier, population, ALP, RL, GA, action selection, config, injected RNG, and the shared trial loop. |
+| `acs2-core` | lib | Pure ACS2 domain: classifier, population, ALP, RL, GA, action selection, config, injected RNG, the shared trial loop, and the two agents (`agent::Agent` = ACS2, `acs2er::Acs2ErAgent` = ACS2 with experience replay) behind the `trial::LearningAgent` trait. |
 | `acs2-envs` | lib | The `Environment` (Gymnasium-style) trait impl: the 8-sensor maze plus geometry definitions in `mazes/` — the 5 canonical pyalcs mazes ported from `gym_maze` (the default run) and 22 additional ounold/ALCS mazes (opt-in via `--mazes`). |
 | `acs2-bench` | bin | Runs the maze suite under the benchmark protocol, computes metrics + timing, emits CSV. |
 
@@ -100,10 +100,46 @@ With no flags the runner uses the pinned protocol: all five mazes
 
 Flags (all optional): `--mazes <a,b,...>`, `--n-exp <k>`, `--seed <s>`,
 `--do-ga` (turns GA on — must match the baseline for a valid comparison),
-`--explore-trials`, `--exploit-trials`, `--exploit-phases`, `--out <path>`.
+`--explore-trials`, `--exploit-trials`, `--exploit-phases`, `--out <path>`,
+plus the agent-selection flags below.
 
 > Always time the **release** binary. A debug build can read slower than CPython
 > and would invert the result.
+
+### Comparing ACS2 against ACS2ER
+
+Both agents run the **same experiment code**; only the agent is swapped. Select
+it with `--agent acs2|acs2er` (**default `acs2`**, so every existing command line
+keeps its current behaviour). It is accepted by `acs2-bench` and `mpx_reach`.
+
+```bash
+./target/release/acs2-bench --agent acs2   --out /tmp/maze_acs2.csv
+```
+
+```bash
+./target/release/acs2-bench --agent acs2er --out /tmp/maze_acs2er.csv
+```
+
+The two CSVs share the schema of `reports/bench_rust.csv`, so they can be diffed
+or joined column by column. The same works for the MPX reach experiment:
+
+```bash
+./target/release/mpx_reach --agent acs2er --sizes 20 --n-exp 3
+```
+
+ACS2ER adds three flags, defaulting to the values in `acs2er/Configuration.py`
+(the thesis's `N`, `N_warmup` and `m`):
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--er-buffer-size` | `10000` | Replay buffer capacity; the oldest sample is evicted first. |
+| `--er-min-samples` | `1000` | Warmup: below this many buffered samples the agent does not learn **at all**. |
+| `--er-samples-number` | `3` | Samples replayed per environment step, drawn without replacement. |
+
+Note that ACS2ER performs `--er-samples-number` learning applications per step
+and none on the current transition, so per-trial wall time is roughly that
+multiple of ACS2's. Long comparison runs belong on the cluster
+(`slurm/`), not on a workstation.
 
 ### Python baseline (pyalcs)
 
@@ -165,9 +201,16 @@ cargo test --release
 ```
 
 This runs the fixture-backed unit tests (P3–P6: matching, population, learning
-core, agent loop), the maze-parity tests against dumped `gym_maze` probes, and the
-**differential tests** (`p8_differential.rs`, `episode_differential.rs`) that
-replay the pyalcs-instrumented fixtures.
+core, agent loop), the maze-parity tests against dumped `gym_maze` probes, the
+ACS2ER replay/warmup/determinism tests (`p10_acs2er.rs`), and the **differential
+tests** (`p8_differential.rs`, `episode_differential.rs`,
+`p11_acs2er_differential.rs`) that replay the pyalcs-instrumented fixtures.
+
+Regenerating the ACS2ER fixture (needs the pinned `baseline/` environment):
+
+```bash
+cd baseline && uv run python dump_acs2er_differential.py
+```
 
 ---
 
