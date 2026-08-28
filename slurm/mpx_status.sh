@@ -20,7 +20,7 @@ printf "%-34s %-14s %10s %8s %9s %5s %6s %7s\n" log state trials wall knowledge 
 # Prefer the git clone over the legacy rsync tree when both hold the same log,
 # and skip archived runs (.cancelled./.partial.) which are history, not status.
 declare -A seen
-for f in ~/acs2-rust-repo/reports/slurm_mpx*.out ~/acs2-rust/reports/slurm_mpx*.out; do
+for f in ~/mpx_runs/slurm_mpx*.out ~/acs2-rust-repo/reports/slurm_mpx*.out ~/acs2-rust/reports/slurm_mpx*.out; do
   [ -f "$f" ] || continue
   name=$(basename "$f" .out)
   case "$name" in *.cancelled|*.partial) continue;; esac
