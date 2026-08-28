@@ -12,7 +12,7 @@ use acs2_core::mark::Mark;
 use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
-use acs2_envs::multiplexer::{control_bits_for, evaluate_knowledge, Multiplexer};
+use acs2_envs::multiplexer::{control_bits_for, evaluate_knowledge, sampled_transitions, Multiplexer};
 
 const EXPLORE_EPSILON: f64 = 0.8;
 const SAMPLE_INPUTS: usize = 50_000;
@@ -80,6 +80,75 @@ struct GenConfig {
     do_ga: bool,
     u_max: u32,
     alp_gen_variant: AlpGenVariant,
+}
+
+struct KnowledgeBreakdown {
+    covered: [usize; 4],
+    total: [usize; 4],
+    matched_but_wrong: usize,
+}
+
+impl KnowledgeBreakdown {
+    fn fraction(&self, cell: usize) -> f64 {
+        if self.total[cell] == 0 {
+            0.0
+        } else {
+            self.covered[cell] as f64 / self.total[cell] as f64
+        }
+    }
+
+    fn overall(&self) -> f64 {
+        let covered: usize = self.covered.iter().sum();
+        let total: usize = self.total.iter().sum();
+        if total == 0 {
+            0.0
+        } else {
+            covered as f64 / total as f64
+        }
+    }
+}
+
+fn knowledge_breakdown<const N: usize>(
+    population: &Population<N>,
+    theta_r: f64,
+) -> KnowledgeBreakdown {
+    let reliable: Vec<&Classifier<N>> = population
+        .iter()
+        .filter(|classifier| classifier.is_reliable(theta_r))
+        .collect();
+
+    let mut breakdown = KnowledgeBreakdown {
+        covered: [0; 4],
+        total: [0; 4],
+        matched_but_wrong: 0,
+    };
+
+    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED) {
+        let changes = transition.p1 != transition.p0;
+        let cell = (transition.action << 1) | usize::from(changes);
+        breakdown.total[cell] += 1;
+
+        let mut matched = false;
+        let mut predicted = false;
+        for classifier in &reliable {
+            if classifier.action != Some(transition.action) || !classifier.does_match(&transition.p0)
+            {
+                continue;
+            }
+            matched = true;
+            if classifier.does_anticipate_correctly(&transition.p0, &transition.p1) {
+                predicted = true;
+                break;
+            }
+        }
+        if predicted {
+            breakdown.covered[cell] += 1;
+        } else if matched {
+            breakdown.matched_but_wrong += 1;
+        }
+    }
+
+    breakdown
 }
 
 struct PopulationDiagnostics {
@@ -187,6 +256,7 @@ fn run_reach_repeat<const N: usize>(
     eval_interval: u64,
     log_trajectory: bool,
     log_diagnostics: bool,
+    log_coverage: bool,
 ) -> ReachOutcome {
     let mut config = Configuration::mpx();
     config.epsilon = EXPLORE_EPSILON;
@@ -265,6 +335,18 @@ fn run_reach_repeat<const N: usize>(
                     diagnostics.structurally_correct,
                 );
             }
+            if log_coverage {
+                let breakdown = knowledge_breakdown(agent.population(), theta_r);
+                println!(
+                    "  mpx-{size} cover: trials={trials_used} overall={:.4} a0_nochange={:.4} a0_change={:.4} a1_nochange={:.4} a1_change={:.4} matched_but_wrong={}",
+                    breakdown.overall(),
+                    breakdown.fraction(0),
+                    breakdown.fraction(1),
+                    breakdown.fraction(2),
+                    breakdown.fraction(3),
+                    breakdown.matched_but_wrong,
+                );
+            }
             if final_knowledge >= 1.0 {
                 break Verdict::Success;
             }
@@ -308,12 +390,13 @@ fn run_reach_dispatch(
     eval_interval: u64,
     log_trajectory: bool,
     log_diagnostics: bool,
+    log_coverage: bool,
 ) -> ReachOutcome {
     match size {
-        37 => run_reach_repeat::<38>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
-        70 => run_reach_repeat::<71>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
-        135 => run_reach_repeat::<136>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
-        20 => run_reach_repeat::<21>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics),
+        37 => run_reach_repeat::<38>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
+        70 => run_reach_repeat::<71>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
+        135 => run_reach_repeat::<136>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
+        20 => run_reach_repeat::<21>(size, trials_cap, time_cap, seed, gen, eval_interval, log_trajectory, log_diagnostics, log_coverage),
         other => panic!("reach not configured for {other}-bit multiplexer"),
     }
 }
@@ -354,6 +437,7 @@ struct Options {
     eval_interval: u64,
     log_trajectory: bool,
     log_diagnostics: bool,
+    log_coverage: bool,
 }
 
 impl Options {
@@ -369,6 +453,7 @@ impl Options {
             eval_interval: DEFAULT_KNOWLEDGE_EVAL_INTERVAL,
             log_trajectory: false,
             log_diagnostics: false,
+            log_coverage: false,
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -404,6 +489,7 @@ impl Options {
                 }
                 "--log-trajectory" => options.log_trajectory = true,
                 "--log-diagnostics" => options.log_diagnostics = true,
+                "--log-coverage" => options.log_coverage = true,
                 other => panic!("unknown flag {other}"),
             }
         }
@@ -452,6 +538,7 @@ fn main() {
                 options.eval_interval,
                 options.log_trajectory,
                 options.log_diagnostics,
+                options.log_coverage,
             );
             verdicts.push(outcome.verdict);
             println!(

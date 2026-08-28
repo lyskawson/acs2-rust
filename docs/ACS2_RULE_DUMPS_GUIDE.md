@@ -72,8 +72,11 @@ To 8 sąsiadów agenta (nie jego współrzędne!). Wartości: `0` = ścieżka,
 jest brana pod uwagę przy wyborze akcji. Selektor `BestAction`/`EpsilonGreedy`
 dodatkowo filtruje po `does_anticipate_change()` — reguła z `effect` w całości
 wildcardowym (przewiduje "brak zmiany") jest **zawsze pomijana** przy wyborze
-najlepszej akcji, nawet jeśli jest `reliable` i ma sensowne `q`. Widać to w obu
-zrzutach jako osobną, liczną grupę reguł z `fit ≈ 0`.
+najlepszej akcji, nawet jeśli jest `reliable` i ma sensowne `q`.
+
+Uwaga: w MPX ta grupa ma dodatkowo `fit ≈ 0`, ale **w labiryncie nie** — tam jej
+`r` jest niemal takie samo jak reguł ruchu. Filtr `does_anticipate_change()` jest
+więc jedynym powodem pominięcia (szczegóły w sekcji 4).
 
 ## 3. Przykład 1 — Multiplekser `a=2`, `N=7`
 
@@ -172,16 +175,42 @@ condition  act  dir  effect     q       r       num  exp   fit
 
 Podobnie jak w MPX, w populacji labiryntu jest wyraźna druga grupa:
 
-| Grupa | Liczba reguł (przybliżona) | `effect` | Sens |
-|---|---:|---|---|
-| ruch skuteczny | ok. 230 | zmienia część/wszystkie pozycje | Reguła prowadzi do realnego przesunięcia agenta. |
-| odbicie od ściany | ok. 63 | `########` | Reguła poprawnie przewiduje "ta akcja tu nic nie zmieni" (ściana). |
+| Grupa | Liczba reguł | `effect` | `r` średnie | `r` zakres |
+|---|---:|---|---:|---|
+| ruch skuteczny | 228 | zmienia część/wszystkie pozycje | 836.35 | 753.66 – 1000.00 |
+| odbicie od ściany | 63 | `########` | **838.82** | 765.84 – 949.90 |
 
-To dokładnie ten sam mechanizm co w MPX: grupa "odbicie od ściany" jest
-`reliable`, ale ma niskie `r` → niski `fit` → jest pomijana przez
-`does_anticipate_change()` przy wyborze najlepszej akcji. Agent "unika" ścian
-nie przez twardą blokadę, tylko przez to, że nauczony model tej akcji
-wypada z puli kandydatów.
+Filtr jest ten sam co w MPX — grupa "odbicie od ściany" jest `reliable`, a mimo to
+`does_anticipate_change()` wyklucza ją z wyboru akcji.
+
+**Ale `r` zachowuje się inaczej niż w MPX i wcześniejsza wersja tej notatki mówiła
+tu nieprawdę.** Nie jest tak, że reguły ścianowe mają niskie `r` → niski `fit` →
+dlatego są pomijane. W labiryncie ich `r` jest **praktycznie takie samo** jak reguł
+ruchu (838.82 wobec 836.35).
+
+Powód jest mechaniczny: odbicie od ściany **nie kończy epizodu**. Agent zostaje
+w tej samej komórce, z której nadal może dojść do celu, więc bootstrap jest brany
+z match setu *tej samej* komórki i zawiera dobre reguły ruchu:
+
+```text
+r_sciana ≈ gamma * (wartosc komorki) = 1000 * 0.95^d
+
+d=1..5  ->  przewidywane 773.78 .. 950.00
+            zmierzone    765.84 .. 949.90     (maksimum trafia w 950 z bledem 0.01)
+```
+
+W MPX jest odwrotnie, bo błędna odpowiedź **kończy** epizod z nagrodą 0 i bootstrapem
+0 — tam `r` faktycznie zbiega do zera (zmierzone: 0.33, zakres 0.00–1.91).
+
+Wniosek jest więc **mocniejszy**: w labiryncie wykluczenie reguł ścianowych opiera się
+*wyłącznie* na filtrze. Gdyby filtr zniknął, agent regularnie wybierałby wejście
+w ścianę — bo obiecuje niemal tyle samo, co ruch. Agent "unika" ścian nie przez twardą
+blokadę ani przez niską wartość, tylko przez to, że nauczona o nich wiedza jest dla
+selektora niewidoczna.
+
+> Liczby zmierzone na `Maze4-v0`, 3000 prób eksploracyjnych, ε=0.8, seed 42,
+> `do_ga=false`. Odtworzenie: `acs2-primer/experiments/rprobe`,
+> `cargo run --release --bin popdump -- maze Maze4-v0 3000 42`.
 
 `r` w labiryncie dodatkowo dobrze pokazuje propagację nagrody wstecz przez
 `gamma=0.95`: reguła bezpośrednio prowadząca do celu ma `r≈1000`, a reguły
