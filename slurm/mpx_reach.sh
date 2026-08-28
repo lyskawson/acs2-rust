@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
-#SBATCH --output=/home/alelys2099/acs2-rust-repo/reports/slurm-%j.wrapper
+#SBATCH --output=/home/alelys2099/mpx_runs/slurm-%j.wrapper
 
 set -euo pipefail
 
@@ -15,7 +15,12 @@ TIME_CAP="${3:-600000}"
 shift 3 2>/dev/null || shift $#
 
 REPO="$HOME/acs2-rust-repo"
-OUT="$REPO/reports/slurm_mpx${SIZE}_s${SEED}${TAG:+_$TAG}.out"
+# Results land OUTSIDE the checkout: the repo also carries committed copies of
+# past logs, and writing live output into a tracked directory makes every
+# git pull collide with a running job.
+RUNS="${MPX_RUNS_DIR:-$HOME/mpx_runs}"
+mkdir -p "$RUNS"
+OUT="$RUNS/slurm_mpx${SIZE}_s${SEED}${TAG:+_$TAG}.out"
 
 cd "$REPO"
 exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
