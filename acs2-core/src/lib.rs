@@ -13,5 +13,7 @@ pub mod action_selection;
 pub mod config;
 pub mod rng;
 pub mod environment;
+pub mod trial;
 pub mod agent;
+pub mod acs2er;
 pub mod knowledge;

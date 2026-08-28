@@ -267,6 +267,7 @@ mod tests {
     use super::*;
     use acs2_core::action_selection::EpsilonGreedy;
     use acs2_core::agent::Agent;
+    use acs2_core::trial::LearningAgent;
     use acs2_core::classifier::Classifier;
     use acs2_core::config::Configuration;
     use acs2_core::knowledge::anticipation_fraction;

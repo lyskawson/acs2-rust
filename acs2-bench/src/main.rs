@@ -2,6 +2,7 @@ use std::time::Instant;
 
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
+use acs2_core::trial::LearningAgent;
 use acs2_core::config::Configuration;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
