@@ -928,7 +928,28 @@ warunek mniejszej specyficzności w `does_subsume`
 (`acs2-core/src/subsumption.rs:13-18`, `acs2-core/src/classifier.rs:115-117`). Czytanie
 samej metody `Condition::subsumes` daje więc mylący obraz relacji.
 
-## 15. Skrót do odświeżenia przed rozmową
+## 15. Pomysły z ExSTraCS warte przetestowania w ACS2
+
+1. **Lokalna ważność atrybutów** — osobny ranking dla akcji lub niszy; podnosić
+   ważność pozycji, które Mark wskazał jako potrzebne do rozróżnienia przejść.
+2. **Kierowane uogólnianie** — gdy trzeba wstawić `#`, usuwać najpierw najmniej ważny
+   atrybut przewidujący brak zmiany, zamiast wybierać pozycję losowo.
+3. **Osobny limit GA** — pozostawić `alp_u_max` dla potomków ALP, a dodać
+   `ga_max_condition_specificity` kontrolowany po mutacji i crossoverze.
+4. **Cel miękki i limit twardy** — lekko karać reguły ponad wartością docelową, ale
+   wymuszać skrócenie dopiero ponad limitem; nie usuwa to reguł przejściowych zbyt wcześnie.
+5. **Ochrona młodych reguł** — mocno uogólniać dopiero reguły z wysokim `q`, odpowiednim
+   `exp` i pustym Markiem.
+
+Sugerowana kolejność wdrażania: ranking lokalny → kierowane uogólnianie → limit po
+crossoverze → cel miękki/limit twardy → bramka `q/exp/mark`.
+
+Nie przenosić wprost: mutacji GA `# → symbol`, losowego coveringu z dokładnie `u_max`
+symbolami, jednego globalnego rankingu dla MPX ani jednego wspólnego limitu dla ALP i GA.
+W ACS2 specjalizację wykonuje już ALP; GA powinno przede wszystkim bezpiecznie
+generalizować.
+
+## 16. Skrót do odświeżenia przed rozmową
 
 1. `condition` mówi **kiedy**, `action` mówi **co zrobić**, `effect` mówi **co się
    zmieni**, `mark` pomaga znaleźć **po czym rozdzielić konteksty**.
