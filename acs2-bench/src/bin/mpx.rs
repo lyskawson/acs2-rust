@@ -3,6 +3,7 @@ use std::time::Instant;
 use acs2_bench::{parse_u_max_mode, parse_variant, resolve_u_max, variant_label, UMaxMode};
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
+use acs2_core::trial::LearningAgent;
 use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
