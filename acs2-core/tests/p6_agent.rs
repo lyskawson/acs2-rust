@@ -1,12 +1,12 @@
 use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
-use acs2_core::trial::LearningAgent;
 use acs2_core::config::Configuration;
 use acs2_core::environment::{Environment, StepOutcome};
 use acs2_core::perception::Perception;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::symbol::Symbol;
+use acs2_core::trial::LearningAgent;
 
 fn state(values: [u8; 4]) -> Perception<4> {
     Perception {
