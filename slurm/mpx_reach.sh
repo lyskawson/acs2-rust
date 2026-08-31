@@ -30,6 +30,7 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --time-cap-secs "$TIME_CAP" \
   --u-max "${U_MAX:-derived}" \
   --alp-gen-variant pyalcs \
+  --agent "${AGENT:-acs2}" \
   --log-trajectory \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   "$@" \
