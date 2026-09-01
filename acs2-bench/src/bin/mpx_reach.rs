@@ -87,6 +87,55 @@ struct GenConfig {
     alp_gen_variant: AlpGenVariant,
 }
 
+struct QuadrantDetail {
+    covered_by_any: [usize; 4],
+    best_quality: [f64; 4],
+    total: [usize; 4],
+}
+
+impl QuadrantDetail {
+    fn fraction(&self, cell: usize) -> f64 {
+        if self.total[cell] == 0 {
+            0.0
+        } else {
+            self.covered_by_any[cell] as f64 / self.total[cell] as f64
+        }
+    }
+}
+
+fn quadrant_detail<const N: usize>(population: &Population<N>) -> QuadrantDetail {
+    let mut detail = QuadrantDetail {
+        covered_by_any: [0; 4],
+        best_quality: [0.0; 4],
+        total: [0; 4],
+    };
+
+    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED) {
+        let changes = transition.p1 != transition.p0;
+        let cell = (transition.action << 1) | usize::from(changes);
+        detail.total[cell] += 1;
+
+        let mut predicted = false;
+        for classifier in population.iter() {
+            if classifier.action != Some(transition.action)
+                || !classifier.does_match(&transition.p0)
+                || !classifier.does_anticipate_correctly(&transition.p0, &transition.p1)
+            {
+                continue;
+            }
+            predicted = true;
+            if classifier.q > detail.best_quality[cell] {
+                detail.best_quality[cell] = classifier.q;
+            }
+        }
+        if predicted {
+            detail.covered_by_any[cell] += 1;
+        }
+    }
+
+    detail
+}
+
 struct KnowledgeBreakdown {
     covered: [usize; 4],
     total: [usize; 4],
@@ -259,6 +308,7 @@ struct ReachLimits {
     log_trajectory: bool,
     log_diagnostics: bool,
     log_coverage: bool,
+    log_quadrant_detail: bool,
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -347,6 +397,16 @@ where
                     breakdown.fraction(2),
                     breakdown.fraction(3),
                     breakdown.matched_but_wrong,
+                );
+            }
+            if limits.log_quadrant_detail {
+                let detail = quadrant_detail(agent.population());
+                println!(
+                    "  mpx-{size} qdetail: trials={trials_used} a0nc_any={:.4} a0nc_q={:.3} a0c_any={:.4} a0c_q={:.3} a1nc_any={:.4} a1nc_q={:.3} a1c_any={:.4} a1c_q={:.3}",
+                    detail.fraction(0), detail.best_quality[0],
+                    detail.fraction(1), detail.best_quality[1],
+                    detail.fraction(2), detail.best_quality[2],
+                    detail.fraction(3), detail.best_quality[3],
                 );
             }
             if final_knowledge >= 1.0 {
@@ -471,6 +531,7 @@ struct Options {
     log_trajectory: bool,
     log_diagnostics: bool,
     log_coverage: bool,
+    log_quadrant_detail: bool,
     agent: AgentOptions,
 }
 
@@ -488,6 +549,7 @@ impl Options {
             log_trajectory: false,
             log_diagnostics: false,
             log_coverage: false,
+            log_quadrant_detail: false,
             agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
@@ -525,6 +587,7 @@ impl Options {
                 "--log-trajectory" => options.log_trajectory = true,
                 "--log-diagnostics" => options.log_diagnostics = true,
                 "--log-coverage" => options.log_coverage = true,
+                "--log-quadrant-detail" => options.log_quadrant_detail = true,
                 other => {
                     if !options.agent.try_parse_flag(other, &mut args) {
                         panic!("unknown flag {other}")
@@ -574,6 +637,7 @@ fn main() {
             log_trajectory: options.log_trajectory,
             log_diagnostics: options.log_diagnostics,
             log_coverage: options.log_coverage,
+            log_quadrant_detail: options.log_quadrant_detail,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
