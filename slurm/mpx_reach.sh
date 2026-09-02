@@ -34,6 +34,7 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --encoding "${ENCODING:-flip}" \
   --epsilon "${EPSILON:-0.8}" \
   --log-trajectory \
+  --log-accuracy \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   "$@" \
   >"$OUT" 2>&1
