@@ -31,6 +31,7 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --u-max "${U_MAX:-derived}" \
   --alp-gen-variant pyalcs \
   --agent "${AGENT:-acs2}" \
+  --encoding "${ENCODING:-flip}" \
   --log-trajectory \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   "$@" \
