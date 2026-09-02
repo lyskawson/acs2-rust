@@ -6,7 +6,7 @@ use acs2_bench::{
     UMaxMode,
 };
 use acs2_core::acs2er::Acs2ErAgent;
-use acs2_core::action_selection::EpsilonGreedy;
+use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
 use acs2_core::agent::Agent;
 use acs2_core::classifier::Classifier;
 use acs2_core::condition::Condition;
@@ -88,6 +88,48 @@ struct GenConfig {
     do_ga: bool,
     u_max: u32,
     alp_gen_variant: AlpGenVariant,
+}
+
+/// Task performance: how often greedy action choice answers correctly.
+///
+/// `knowledge` asks whether the population anticipates every transition, including
+/// the null ones a wrong answer produces. Choosing correctly needs only the
+/// change-anticipating side, so accuracy can be high while knowledge is capped --
+/// and accuracy is what the multiplexer literature reports, so it is the number
+/// that makes these runs comparable to published results.
+fn answer_accuracy<const N: usize>(
+    population: &Population<N>,
+    number_of_possible_actions: usize,
+    encoding: Encoding,
+) -> f64 {
+    let selector = BestAction {
+        number_of_possible_actions,
+    };
+    // a private RNG: evaluation must not disturb the agent's stream
+    let mut rng = ChaChaRandomSource::from_seed(SAMPLE_SEED);
+
+    let mut asked = 0usize;
+    let mut correct = 0usize;
+    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED, encoding) {
+        if transition.action != 0 {
+            continue;
+        }
+        let match_set = population.form_match_set(&transition.p0);
+        let chosen = selector.select(population, &match_set, &mut rng);
+        // we only walk the action-0 transitions, so correctness of that
+        // transition tells us directly which answer was the right one
+        let right_answer = if transition_is_correct(&transition) { 0 } else { 1 };
+        asked += 1;
+        if chosen == right_answer {
+            correct += 1;
+        }
+    }
+
+    if asked == 0 {
+        0.0
+    } else {
+        correct as f64 / asked as f64
+    }
 }
 
 struct QuadrantDetail {
@@ -315,6 +357,7 @@ struct ReachLimits {
     log_quadrant_detail: bool,
     encoding: Encoding,
     epsilon: f64,
+    log_accuracy: bool,
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -420,6 +463,14 @@ where
                     detail.fraction(2), detail.best_quality[2],
                     detail.fraction(3), detail.best_quality[3],
                 );
+            }
+            if limits.log_accuracy {
+                let accuracy = answer_accuracy(
+                    agent.population(),
+                    Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
+                    limits.encoding,
+                );
+                println!("  mpx-{size} acc: trials={trials_used} accuracy={accuracy:.4}");
             }
             if final_knowledge >= 1.0 {
                 break Verdict::Success;
@@ -547,6 +598,7 @@ struct Options {
     log_quadrant_detail: bool,
     encoding: Encoding,
     epsilon: f64,
+    log_accuracy: bool,
     agent: AgentOptions,
 }
 
@@ -567,6 +619,7 @@ impl Options {
             log_quadrant_detail: false,
             encoding: Encoding::Flip,
             epsilon: EXPLORE_EPSILON,
+            log_accuracy: false,
             agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
@@ -606,6 +659,7 @@ impl Options {
                 "--log-coverage" => options.log_coverage = true,
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
                 "--epsilon" => options.epsilon = args.next().unwrap().parse().unwrap(),
+                "--log-accuracy" => options.log_accuracy = true,
                 "--encoding" => {
                     options.encoding = parse_encoding(&args.next().expect("--encoding needs flip|outcome"))
                 }
@@ -662,6 +716,7 @@ fn main() {
             log_quadrant_detail: options.log_quadrant_detail,
             encoding: options.encoding,
             epsilon: options.epsilon,
+            log_accuracy: options.log_accuracy,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
