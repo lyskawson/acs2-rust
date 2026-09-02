@@ -7,7 +7,7 @@ use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::trial::LearningAgent;
-use acs2_envs::multiplexer::{evaluate_knowledge, Multiplexer};
+use acs2_envs::multiplexer::{evaluate_knowledge, Encoding, Multiplexer};
 
 const EXPLORE_EPSILON: f64 = 0.8;
 const SAMPLE_INPUTS: u64 = 50_000;
@@ -145,7 +145,13 @@ fn run_repeat<const N: usize>(explore_trials: u32, options: &Options, seed: u64)
     let knowledge = if options.skip_knowledge {
         f64::NAN
     } else {
-        evaluate_knowledge(agent.population(), theta_r, SAMPLE_INPUTS as usize, SAMPLE_SEED)
+        evaluate_knowledge(
+            agent.population(),
+            theta_r,
+            SAMPLE_INPUTS as usize,
+            SAMPLE_SEED,
+            Encoding::Flip,
+        )
     };
 
     RepeatResult {

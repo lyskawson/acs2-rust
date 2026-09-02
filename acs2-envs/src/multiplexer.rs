@@ -6,11 +6,56 @@ use acs2_core::symbol::Symbol;
 
 const DIGIT_ZERO: u8 = b'0';
 const VALIDATION_CLEAR: u8 = 0;
+const VALIDATION_UNSET: u8 = 2;
 const VALIDATION_SET: u8 = 1;
 const REWARD_CORRECT: f64 = 1000.0;
 const REWARD_WRONG: f64 = 0.0;
 const NUMBER_OF_POSSIBLE_ACTIONS: usize = 2;
 const EXHAUSTIVE_INPUT_BITS_LIMIT: usize = 20;
+
+/// How the multiplexer reports the outcome of an action in the perception.
+///
+/// `Flip` is the canonical encoding: the validation bit starts cleared and is set
+/// only when the answer is correct, so a wrong answer leaves the perception
+/// unchanged. That makes the two outcomes structurally unlike each other -- a rule
+/// for a wrong answer must anticipate identity, which is every classifier's default
+/// effect and therefore has to be narrowed rather than built.
+///
+/// `Outcome` removes that asymmetry: the validation bit starts unset and takes a
+/// distinct value for correct and for wrong, so both outcomes change the perception.
+/// It is a diagnostic encoding -- results under it are NOT comparable to the
+/// multiplexer literature, which uses `Flip`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Encoding {
+    #[default]
+    Flip,
+    Outcome,
+}
+
+impl Encoding {
+    fn initial_validation(self) -> u8 {
+        match self {
+            Encoding::Flip => VALIDATION_CLEAR,
+            Encoding::Outcome => VALIDATION_UNSET,
+        }
+    }
+
+    fn validation_after(self, correct: bool) -> u8 {
+        match (self, correct) {
+            (_, true) => VALIDATION_SET,
+            (Encoding::Flip, false) => VALIDATION_CLEAR,
+            (Encoding::Outcome, false) => VALIDATION_CLEAR,
+        }
+    }
+}
+
+pub fn parse_encoding(value: &str) -> Encoding {
+    match value {
+        "flip" => Encoding::Flip,
+        "outcome" => Encoding::Outcome,
+        other => panic!("unknown encoding {other} (expected flip or outcome)"),
+    }
+}
 
 pub const fn control_bits_for(perception_length: usize) -> usize {
     let mut control_bits = 0usize;
@@ -37,6 +82,7 @@ pub fn get_correct_answer(input_bits: &[u8], control_bits: usize) -> usize {
 pub struct Multiplexer<const N: usize> {
     perception: [Symbol; N],
     rng: Box<dyn RandomSource>,
+    encoding: Encoding,
 }
 
 impl<const N: usize> Multiplexer<N> {
@@ -45,10 +91,15 @@ impl<const N: usize> Multiplexer<N> {
     pub const NUMBER_OF_POSSIBLE_ACTIONS: usize = NUMBER_OF_POSSIBLE_ACTIONS;
 
     pub fn new(rng: Box<dyn RandomSource>) -> Self {
+        Self::with_encoding(rng, Encoding::Flip)
+    }
+
+    pub fn with_encoding(rng: Box<dyn RandomSource>, encoding: Encoding) -> Self {
         let _ = Self::CONTROL_BITS;
         Self {
             perception: [Symbol::Token(DIGIT_ZERO); N],
             rng,
+            encoding,
         }
     }
 
@@ -71,17 +122,14 @@ impl<const N: usize> Environment<N> for Multiplexer<N> {
             let bit = self.rng.gen_range(2) as u8;
             self.perception[index] = Symbol::Token(DIGIT_ZERO + bit);
         }
-        self.perception[N - 1] = Symbol::Token(DIGIT_ZERO + VALIDATION_CLEAR);
+        self.perception[N - 1] = Symbol::Token(DIGIT_ZERO + self.encoding.initial_validation());
         Perception::new(self.perception)
     }
 
     fn step(&mut self, action: usize) -> StepOutcome<N> {
-        let reward = if action == self.correct_answer() {
-            self.perception[N - 1] = Symbol::Token(DIGIT_ZERO + VALIDATION_SET);
-            REWARD_CORRECT
-        } else {
-            REWARD_WRONG
-        };
+        let correct = action == self.correct_answer();
+        self.perception[N - 1] = Symbol::Token(DIGIT_ZERO + self.encoding.validation_after(correct));
+        let reward = if correct { REWARD_CORRECT } else { REWARD_WRONG };
 
         StepOutcome {
             observation: Perception::new(self.perception),
@@ -101,22 +149,35 @@ fn decode_input<const N: usize>(value: usize, input_bits: usize) -> [u8; N] {
     input
 }
 
-fn make_transition<const N: usize>(input: &[u8; N], action: usize, correct_answer: usize) -> Transition<N> {
+fn make_transition<const N: usize>(
+    input: &[u8; N],
+    action: usize,
+    correct_answer: usize,
+    encoding: Encoding,
+) -> Transition<N> {
     let mut p0 = [Symbol::Token(DIGIT_ZERO); N];
     for index in 0..N - 1 {
         p0[index] = Symbol::Token(DIGIT_ZERO + input[index]);
     }
-    p0[N - 1] = Symbol::Token(DIGIT_ZERO + VALIDATION_CLEAR);
+    p0[N - 1] = Symbol::Token(DIGIT_ZERO + encoding.initial_validation());
 
     let mut p1 = p0;
-    if action == correct_answer {
-        p1[N - 1] = Symbol::Token(DIGIT_ZERO + VALIDATION_SET);
-    }
+    p1[N - 1] = Symbol::Token(DIGIT_ZERO + encoding.validation_after(action == correct_answer));
 
     Transition::new(Perception::new(p0), action, Perception::new(p1))
 }
 
-pub fn exhaustive_transitions<const N: usize>() -> impl Iterator<Item = Transition<N>> {
+/// Whether the action taken in this transition was the correct answer.
+///
+/// Both encodings mark a correct answer with the same validation symbol, so this
+/// works for either. Under `Flip` it coincides with "the perception changed";
+/// under `Outcome` both answers change the perception, so correctness is the only
+/// split that stays meaningful.
+pub fn transition_is_correct<const N: usize>(transition: &Transition<N>) -> bool {
+    transition.p1.symbols[N - 1] == Symbol::Token(DIGIT_ZERO + VALIDATION_SET)
+}
+
+pub fn exhaustive_transitions<const N: usize>(encoding: Encoding) -> impl Iterator<Item = Transition<N>> {
     let control_bits = control_bits_for(N);
     let input_bits = N - 1;
     let total_inputs = 1usize << input_bits;
@@ -125,11 +186,15 @@ pub fn exhaustive_transitions<const N: usize>() -> impl Iterator<Item = Transiti
         let correct_answer = get_correct_answer(&input[..input_bits], control_bits);
         [0usize, 1usize]
             .into_iter()
-            .map(move |action| make_transition::<N>(&input, action, correct_answer))
+            .map(move |action| make_transition::<N>(&input, action, correct_answer, encoding))
     })
 }
 
-pub fn sampled_transitions<const N: usize>(sample_inputs: usize, seed: u64) -> Vec<Transition<N>> {
+pub fn sampled_transitions<const N: usize>(
+    sample_inputs: usize,
+    seed: u64,
+    encoding: Encoding,
+) -> Vec<Transition<N>> {
     let control_bits = control_bits_for(N);
     let input_bits = N - 1;
     let mut rng = ChaChaRandomSource::from_seed(seed);
@@ -141,7 +206,7 @@ pub fn sampled_transitions<const N: usize>(sample_inputs: usize, seed: u64) -> V
         }
         let correct_answer = get_correct_answer(&input[..input_bits], control_bits);
         for action in 0..NUMBER_OF_POSSIBLE_ACTIONS {
-            transitions.push(make_transition::<N>(&input, action, correct_answer));
+            transitions.push(make_transition::<N>(&input, action, correct_answer, encoding));
         }
     }
     transitions
@@ -233,15 +298,26 @@ pub fn evaluate_knowledge<const N: usize>(
     theta_r: f64,
     sample_inputs: usize,
     sample_seed: u64,
+    encoding: Encoding,
 ) -> f64 {
-    if N - 1 <= EXHAUSTIVE_INPUT_BITS_LIMIT {
-        exhaustive_knowledge::<N>(population, theta_r)
-    } else {
-        acs2_core::knowledge::anticipation_fraction(
+    // `exhaustive_knowledge` walks conditions directly and bakes in the Flip
+    // encoding's shortcuts, so anything else goes through the transition path.
+    match encoding {
+        Encoding::Flip if N - 1 <= EXHAUSTIVE_INPUT_BITS_LIMIT => {
+            exhaustive_knowledge::<N>(population, theta_r)
+        }
+        Encoding::Outcome if N - 1 <= EXHAUSTIVE_INPUT_BITS_LIMIT => {
+            acs2_core::knowledge::anticipation_fraction(
+                population,
+                theta_r,
+                exhaustive_transitions::<N>(encoding),
+            )
+        }
+        _ => acs2_core::knowledge::anticipation_fraction(
             population,
             theta_r,
-            sampled_transitions::<N>(sample_inputs, sample_seed),
-        )
+            sampled_transitions::<N>(sample_inputs, sample_seed, encoding),
+        ),
     }
 }
 
@@ -380,9 +456,9 @@ mod tests {
         let population = half_coverage_population::<N>();
         let theta_r = 0.9;
 
-        let exhaustive = anticipation_fraction(&population, theta_r, exhaustive_transitions::<N>());
+        let exhaustive = anticipation_fraction(&population, theta_r, exhaustive_transitions::<N>(Encoding::Flip));
         let sampled =
-            anticipation_fraction(&population, theta_r, sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED));
+            anticipation_fraction(&population, theta_r, sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED, Encoding::Flip));
 
         assert!(
             (exhaustive - 0.5).abs() < 1e-12,
@@ -417,7 +493,7 @@ mod tests {
     fn fast_exhaustive_matches_naive_on_trained_population() {
         let (population, theta_r) = train_population::<7>(8_000, 42);
         let fast = exhaustive_knowledge::<7>(&population, theta_r);
-        let naive = anticipation_fraction(&population, theta_r, exhaustive_transitions::<7>());
+        let naive = anticipation_fraction(&population, theta_r, exhaustive_transitions::<7>(Encoding::Flip));
         assert_eq!(fast, naive);
     }
 
@@ -425,7 +501,7 @@ mod tests {
     fn fast_exhaustive_matches_naive_on_synthetic_population() {
         let population = half_coverage_population::<12>();
         let fast = exhaustive_knowledge::<12>(&population, 0.9);
-        let naive = anticipation_fraction(&population, 0.9, exhaustive_transitions::<12>());
+        let naive = anticipation_fraction(&population, 0.9, exhaustive_transitions::<12>(Encoding::Flip));
         assert_eq!(fast, naive);
         assert_eq!(fast, 0.5);
     }
