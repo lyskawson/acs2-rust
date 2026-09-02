@@ -314,6 +314,7 @@ struct ReachLimits {
     log_coverage: bool,
     log_quadrant_detail: bool,
     encoding: Encoding,
+    epsilon: f64,
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -462,7 +463,7 @@ fn run_reach_repeat<const N: usize>(
     limits: &ReachLimits,
 ) -> ReachOutcome {
     let mut config = Configuration::mpx();
-    config.epsilon = EXPLORE_EPSILON;
+    config.epsilon = limits.epsilon;
     config.do_ga = gen.do_ga;
     config.u_max = gen.u_max;
     config.alp_gen_variant = gen.alp_gen_variant;
@@ -471,7 +472,7 @@ fn run_reach_repeat<const N: usize>(
         Multiplexer::<N>::with_encoding(Box::new(ChaChaRandomSource::from_seed(seed)), limits.encoding);
     let selector = EpsilonGreedy {
         number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
-        epsilon: EXPLORE_EPSILON,
+        epsilon: limits.epsilon,
     };
 
     match agent_options.agent {
@@ -545,6 +546,7 @@ struct Options {
     log_coverage: bool,
     log_quadrant_detail: bool,
     encoding: Encoding,
+    epsilon: f64,
     agent: AgentOptions,
 }
 
@@ -564,6 +566,7 @@ impl Options {
             log_coverage: false,
             log_quadrant_detail: false,
             encoding: Encoding::Flip,
+            epsilon: EXPLORE_EPSILON,
             agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
@@ -602,6 +605,7 @@ impl Options {
                 "--log-diagnostics" => options.log_diagnostics = true,
                 "--log-coverage" => options.log_coverage = true,
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
+                "--epsilon" => options.epsilon = args.next().unwrap().parse().unwrap(),
                 "--encoding" => {
                     options.encoding = parse_encoding(&args.next().expect("--encoding needs flip|outcome"))
                 }
@@ -619,7 +623,7 @@ impl Options {
 fn main() {
     let options = Options::parse();
     println!(
-        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={}",
         options.agent.describe(),
         options.sizes,
         options.n_exp,
@@ -628,6 +632,7 @@ fn main() {
         options.time_cap_secs,
         options.do_ga,
         variant_label(options.alp_gen_variant),
+        options.epsilon,
     );
 
     for &size in &options.sizes {
@@ -656,6 +661,7 @@ fn main() {
             log_coverage: options.log_coverage,
             log_quadrant_detail: options.log_quadrant_detail,
             encoding: options.encoding,
+            epsilon: options.epsilon,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
