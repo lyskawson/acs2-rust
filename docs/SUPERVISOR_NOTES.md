@@ -70,8 +70,27 @@ na MPX-20 (wartości 5–10) i MPX-37 (6–12) **każda** próbowana wartość r
 przy idealnej specyficzności. Wyprowadzona wartość jest tylko najszybsza. `u_max` jest
 obojętny tam, gdzie zadanie jest wykonalne, i rozstrzygający tam, gdzie nie jest.
 
+## Sprostowanie do maila z 1.09.2026
+
+W mailu napisałem, że wariant ACS2ER z jednym odtworzeniem uczy się wolniej od
+podstawowego ACS2. **Nasze dane tego nie potwierdzają** — opierałem się na jednym
+porównaniu. Przy k=70: ziarno 42 dało ER szybszy (12,12 vs 17,88 mln prób), ziarno 43
+wolniejszy (22,86 vs 17,82 mln). Średnie praktycznie równe. Przy zmierzonym rozrzucie
+ziaren 3,73x dwa ziarna niczego nie rozstrzygają. Właściwe sformułowanie: przy równym
+nakładzie obliczeń różnicy na razie nie widać.
+
+## Obraz sufitu jest szerszy, niż napisałem
+
+W mailu podałem, że brakuje jednej klasy. Pełniejszy obraz: głodzone są **obie klasy
+błędnej odpowiedzi**. Ziarno 42 jako jedyne wypełniło jedną z nich — stąd 0,75. Ziarna
+43, 44 i 45 mają obie na zerze i zmierzają do 0,50. Wynik 0,75 jest więc **odstępstwem,
+nie normą**, i tak trzeba go przedstawić.
+
 ## Co dalej
 
-Zaimplementowany jest już ACS2ER (Experience Replay) w Rust, zwalidowany różnicowo
-przeciw pyalcs. Następny krok: porównanie ACS2 vs ACS2ER na MPX-135, z pytaniem, czy samo
-odtwarzanie doświadczeń wypełni głodzoną klasę przejść.
+ACS2ER jest zaimplementowany i zwalidowany różnicowo przeciw pyalcs. Trwają
+eksperymenty rozstrzygające, czy głodzenie bierze się z kodowania problemu (błędna
+odpowiedź nie zmienia percepcji, więc jej reguła musi być zawężana, a nie budowana),
+czy z obciążenia eksploracji (zachłanna gałąź ACS2 wybiera akcje antycypujące zmianę,
+czyli omija błędne odpowiedzi). Osobno mierzona jest **dokładność odpowiedzi** —
+metryka, którą raportuje literatura, w odróżnieniu od naszego surowszego `knowledge`.

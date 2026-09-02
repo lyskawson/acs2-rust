@@ -1,18 +1,33 @@
-# acs2-rust — an idiomatic Rust port of canonical ACS2
+# acs2-rust — an ACS2 implementation and scaling platform
 
-This is a Rust implementation of **ACS2** (an Anticipatory Learning Classifier
-System, Butz & Stolzmann). Its port target is the **pyalcs** library
-(`hendrykik/acs2vcp-python`, the `lcs/agents/acs2` core), which is treated as the
-source of truth for behaviour.
+An independent Rust implementation of **ACS2** (an Anticipatory Learning Classifier
+System, Butz & Stolzmann), written for a master's thesis on sample selection in
+anticipatory classifier systems.
 
-The purpose is to **measure how much faster a Rust ACS2 runs than the Python
-reference** on the same mazes, same protocol, same machine — a baseline to decide
-whether to commit to Rust before a possible Actor-Critic extension of ACS2.
+**pyalcs is a reference, not a target.** The library
+(`hendrykik/acs2vcp-python`, the `lcs/agents/acs2` core) serves two roles: a
+**correctness oracle**, against which this implementation is validated vector by
+vector (761/761 deterministic cases, zero divergence), and a **performance
+baseline** for the timing comparison. Neither role makes this a transcription —
+where pyalcs and canonical ACS2 disagree, the deviation is recorded and justified
+in `ARCHITECTURE.md`.
 
-**This phase is baseline-only.** Actor-Critic is **not** implemented. The
-architecture only leaves clean seams for it: an `ActionSelector` trait (the actor
-seam) and an injected RL bootstrap value (the critic seam). See
-`ARCHITECTURE.md` and `PROJECT_CONTEXT.md` §7.
+**Defaults match pyalcs on purpose.** Differential validation and a fair timing
+comparison both require an identical configuration on the two sides, so the shipped
+defaults are pyalcs's: GA off, `u_max = 100000` (which leaves the ALP
+generalization branch dormant), the pinned maze protocol. Every one of those is a
+flag, and the multiplexer work routinely overrides them — sweeping `u_max` from 5
+to 24, turning GA on, selecting between two ALP-generalization variants, swapping
+the problem encoding, varying the exploration epsilon, and running a second agent.
+
+**What the platform currently carries:** two agents (ACS2 and ACS2ER, the latter
+also differentially validated against pyalcs), the maze and multiplexer
+environments, and the diagnostic instrumentation the multiplexer scaling study
+needed. Actor-Critic is **not** implemented; the architecture leaves seams for it
+(an `ActionSelector` trait and an injected RL bootstrap value).
+
+Current research state and the decision tree live in `docs/AGENT_HANDOFF.md`; the
+scientific narrative is `reports/MPX_final.md`.
 
 ---
 
@@ -77,11 +92,21 @@ The Python reference (pyalcs baseline + dump/compare scripts) lives under
 evidence. Figure generation for the MPX experiments is a **separate** Python
 project under `tools/` (see `tools/README.md`) precisely so that plotting
 dependencies never perturb that pinned environment. Cluster job scripts are in
-`slurm/`. Start with [`docs/ACS2_PRIMER.md`](docs/ACS2_PRIMER.md) for a code-anchored explanation of ACS2
-from first principles. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
-`BUILD_PLAN.md`, `ARCHITECTURE.md`; the live experiment state and decision tree
-are in `docs/AGENT_HANDOFF.md`. Generated artefacts and reports are in
-`reports/` (figures in `reports/figures/`); golden vectors in `fixtures/`.
+`slurm/`. New to ACS2? Start with [`docs/ACS2_PRIMER.md`](docs/ACS2_PRIMER.md), a code-anchored
+explanation from first principles, and [`docs/ACS2_RULE_DUMPS_GUIDE.md`](docs/ACS2_RULE_DUMPS_GUIDE.md)
+for reading a learned population.
+
+| Document | Read it for |
+|---|---|
+| [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | What the project is, the pinned protocol, and the fidelity rules |
+| [`docs/SPEC_PYALCS.md`](docs/SPEC_PYALCS.md) | The reference semantics the oracle enforces |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Implementation decisions and the named hazards |
+| [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) | Live experiment state and the decision tree |
+| [`reports/MPX_final.md`](reports/MPX_final.md) | The multiplexer scaling results, as a narrative |
+| [`docs/archive/`](docs/archive/README.md) | Closed phases, kept for traceability |
+
+Generated artefacts and reports are in `reports/` (figures in `reports/figures/`);
+golden vectors in `fixtures/`.
 
 ---
 
