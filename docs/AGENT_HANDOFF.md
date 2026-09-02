@@ -94,13 +94,60 @@ Two things that cost days before:
   runs `--mem=32G`. Its population grows with the replay count and each rule carries
   an N-slot mark.
 
-## 6. What to do next
+## 6. Experiments in flight
 
-1. **Read the running experiments** (`./slurm/mpx_status.sh`): the `outcome` encoding
-   and `epsilon = 1` runs at k=135 test the two competing explanations for the
-   starved class — that wrong answers produce no perceptual change, versus that the
-   greedy branch under-visits them. Accuracy runs say whether the task is already
-   solved at knowledge 0.75.
+Nineteen jobs, all `bem2-cpu-normal`, all with a 600,000 s internal cap. Check with
+`./slurm/mpx_status.sh`; logs are in `~/mpx_runs/`, named
+`slurm_mpx<size>_s<seed>[_<TAG>].out`.
+
+| Tag / jobs | Question it answers |
+|---|---|
+| `u11cover` seeds 43–45, `cov135u11` | Does the 0.75 ceiling reproduce, or do these seeds cap at 0.50? Three of them already show **both** wrong-answer classes at zero. |
+| `u10long` | Is the 10-vs-11 boundary real or a budget artifact? At 94.7 M trials it has 2 reliable rules, so `u_max`=10 is very slow rather than dead. |
+| `qdetail_u11`, `qdetail_u12` | Never-created vs never-reliable, per class. Already answered at `u_max`=11: nothing is created. |
+| `outcome_u11` seeds 42/43, `outcome` at k=70 | **The supervisor's suggestion.** Does the starvation vanish when a wrong answer also changes the perception? |
+| `eps1_u11` seeds 42/43 | Does it vanish when the greedy bias that avoids wrong answers is removed? |
+| `acc_u11`, `acc_u12` | Is the task already solved at knowledge 0.75, by the literature's criterion? |
+| `erfine_u11`, `erfine_u12` | ACS2ER at k=135, eval interval sized to ER throughput rather than ACS2's. |
+| `er70_m8b`, `er70_m13b` | Does replay *volume* help the starved class or only the easy ones? Rerun at `--mem=32G` after m=13 died OUT_OF_MEMORY. |
+| `er70`, `er1_*` | Uniform replay against ACS2 at matched learning work. |
+
+## 7. Claims corrected during the session — do not re-inherit them
+
+Every one of these came from generalising a single seed or a short window. The
+pattern is the failure mode to watch for.
+
+- **Mark density is not the discriminator.** It looked decisive at 390 k trials; by
+  10.35 M the solvable k=70 run had risen to 0.914 against k=135's 0.935.
+- **The 40,000 s cap on k=70 seeds 43/44 was not too small.** Both would have
+  finished inside it (13,692 s and 28,988 s). The restart was insurance those two
+  did not need; only seed 46 (46,266 s) required the larger budget. A mid-climb lag
+  ratio does not extrapolate, and condensation makes trials cheaper as a run
+  proceeds.
+- **ACS2ER with m=1 is not measurably slower than ACS2.** One k=37 comparison said
+  it was; with more data k=70 seed 42 has ER *faster* (12.12 M vs 17.88 M) and seed
+  43 slower (22.86 M vs 17.82 M). At the measured 3.73x seed variance, two seeds
+  settle nothing. **This wrong claim is in the email already sent** — see
+  `SUPERVISOR_NOTES.md`.
+- **It is not one starved class but two.** Seed 42 at `u_max`=11 filled one of the
+  two wrong-answer classes, which is why it reads 0.75; seeds 43–45 have both at
+  zero. Seed 42 is the outlier. The sent email says "the fourth class", which
+  understates it.
+- **The k=135 ACS2ER runs were cancelled too early.** They looked dead at one
+  evaluation point per day, but the eval interval had been sized for ACS2's
+  throughput. The one point they did produce showed ER touching the starved class
+  (`a0_nochange` = 0.0136 where ACS2 sits at exactly zero) — with
+  `matched_but_wrong` = 4549, so possibly with bad rules. Relaunched as `erfine_*`.
+
+## 8. What to do next
+
+1. **Read the running experiments** (§6). The `outcome` encoding and `epsilon = 1`
+   runs at k=135 test the two competing explanations for the starved class — that
+   wrong answers produce no perceptual change, versus that the greedy branch
+   under-visits them (it selects among change-anticipating classifiers, which under
+   this encoding means correct answers, costing the wrong classes 10 points of
+   visits). Accuracy runs say whether the task is already solved at knowledge 0.75.
+   The four outcomes are all informative: encoding only, epsilon only, both, neither.
 2. **If the encoding fixes it**, the starvation is an artifact of the canonical
    encoding and belongs in the thesis as a mechanism finding — but results under the
    alternative encoding are **not comparable to the multiplexer literature**.
@@ -109,7 +156,22 @@ Two things that cost days before:
    criterion targeted at the measured gap** — the starved transition class — rather
    than a generic TD-error rule imported from deep RL.
 
-## 7. Standing rules
+## 9. Working with the user
+
+- Polish in conversation; code, comments, commits and docs in English.
+- He reads the code and catches real things — the `port`-vs-`implementation` framing,
+  the ambiguity in "quadrant", `specyficzność` vs "condition length", the need for an
+  accuracy metric. Treat his questions as signal, not as requests for reassurance.
+- He stopped a run that was about to execute an MPX experiment on his laptop. Bench
+  gates (tests, maze P9) are fine locally; **experiments go to the cluster**.
+- Cancelling jobs, new experiment phases and anything sent to the supervisor are his
+  calls. Execution inside an agreed phase is yours.
+- The supervisor thread is kept locally in `docs/SUPERVISOR_CORRESPONDENCE.md`,
+  **gitignored on purpose** — the repository is public. Do not commit it, quote it
+  into tracked files, or recreate it. Its operative directives are already reflected
+  in §8 here and in `PROJECT_CONTEXT.md`.
+
+## 10. Standing rules
 
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
