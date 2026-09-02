@@ -31,7 +31,16 @@ done
 for name in $(printf '%s\n' "${!seen[@]}" | sort); do
   f="${seen[$name]}"
   verdict=$(grep -oE 'repeat 0: [A-Z-]+' "$f" 2>/dev/null | tail -1 | awk '{print $3}')
-  state=${verdict:-running}
+  # SLURM job names do not match log names, so judge liveness by write activity:
+  # a live run appends evaluation points, a cancelled one stopped writing. The
+  # threshold is generous because the slowest runs evaluate only a few times a day.
+  if [ -n "$verdict" ]; then
+    state="$verdict"
+  elif [ -n "$(find "$f" -mmin -720 2>/dev/null)" ]; then
+    state="running"
+  else
+    state="stale?"
+  fi
 
   # a finished log ends with the verdict-agreement footer, so read the last
   # trajectory point rather than the last line
