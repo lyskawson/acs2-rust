@@ -11,3 +11,6 @@ baseline/cpusingle/alcs_sandbox/
 
 # SLURM wrapper-level diagnostics (job stderr, not measurements)
 reports/slurm-*.wrapper
+
+# Private: supervisor correspondence, kept locally only
+docs/SUPERVISOR_CORRESPONDENCE.md
