@@ -17,7 +17,10 @@ use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::trial::LearningAgent;
-use acs2_envs::multiplexer::{control_bits_for, evaluate_knowledge, sampled_transitions, Multiplexer};
+use acs2_envs::multiplexer::{
+    control_bits_for, evaluate_knowledge, parse_encoding, sampled_transitions, transition_is_correct,
+    Encoding, Multiplexer,
+};
 
 const EXPLORE_EPSILON: f64 = 0.8;
 const SAMPLE_INPUTS: usize = 50_000;
@@ -103,16 +106,16 @@ impl QuadrantDetail {
     }
 }
 
-fn quadrant_detail<const N: usize>(population: &Population<N>) -> QuadrantDetail {
+fn quadrant_detail<const N: usize>(population: &Population<N>, encoding: Encoding) -> QuadrantDetail {
     let mut detail = QuadrantDetail {
         covered_by_any: [0; 4],
         best_quality: [0.0; 4],
         total: [0; 4],
     };
 
-    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED) {
-        let changes = transition.p1 != transition.p0;
-        let cell = (transition.action << 1) | usize::from(changes);
+    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED, encoding) {
+        let correct = transition_is_correct(&transition);
+        let cell = (transition.action << 1) | usize::from(correct);
         detail.total[cell] += 1;
 
         let mut predicted = false;
@@ -165,6 +168,7 @@ impl KnowledgeBreakdown {
 fn knowledge_breakdown<const N: usize>(
     population: &Population<N>,
     theta_r: f64,
+    encoding: Encoding,
 ) -> KnowledgeBreakdown {
     let reliable: Vec<&Classifier<N>> = population
         .iter()
@@ -177,9 +181,9 @@ fn knowledge_breakdown<const N: usize>(
         matched_but_wrong: 0,
     };
 
-    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED) {
-        let changes = transition.p1 != transition.p0;
-        let cell = (transition.action << 1) | usize::from(changes);
+    for transition in sampled_transitions::<N>(SAMPLE_INPUTS, SAMPLE_SEED, encoding) {
+        let correct = transition_is_correct(&transition);
+        let cell = (transition.action << 1) | usize::from(correct);
         breakdown.total[cell] += 1;
 
         let mut matched = false;
@@ -309,6 +313,7 @@ struct ReachLimits {
     log_diagnostics: bool,
     log_coverage: bool,
     log_quadrant_detail: bool,
+    encoding: Encoding,
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -352,7 +357,13 @@ where
         if trials_since_eval >= limits.eval_interval {
             trials_since_eval = 0;
             final_knowledge =
-                evaluate_knowledge(agent.population(), theta_r, SAMPLE_INPUTS, SAMPLE_SEED);
+                evaluate_knowledge(
+                agent.population(),
+                theta_r,
+                SAMPLE_INPUTS,
+                SAMPLE_SEED,
+                limits.encoding,
+            );
             if limits.log_trajectory {
                 let (reliable, spec_sum) = agent
                     .population()
@@ -388,7 +399,7 @@ where
                 );
             }
             if limits.log_coverage {
-                let breakdown = knowledge_breakdown(agent.population(), theta_r);
+                let breakdown = knowledge_breakdown(agent.population(), theta_r, limits.encoding);
                 println!(
                     "  mpx-{size} cover: trials={trials_used} overall={:.4} a0_nochange={:.4} a0_change={:.4} a1_nochange={:.4} a1_change={:.4} matched_but_wrong={}",
                     breakdown.overall(),
@@ -400,7 +411,7 @@ where
                 );
             }
             if limits.log_quadrant_detail {
-                let detail = quadrant_detail(agent.population());
+                let detail = quadrant_detail(agent.population(), limits.encoding);
                 println!(
                     "  mpx-{size} qdetail: trials={trials_used} a0nc_any={:.4} a0nc_q={:.3} a0c_any={:.4} a0c_q={:.3} a1nc_any={:.4} a1nc_q={:.3} a1c_any={:.4} a1c_q={:.3}",
                     detail.fraction(0), detail.best_quality[0],
@@ -456,7 +467,8 @@ fn run_reach_repeat<const N: usize>(
     config.u_max = gen.u_max;
     config.alp_gen_variant = gen.alp_gen_variant;
 
-    let mut env = Multiplexer::<N>::new(Box::new(ChaChaRandomSource::from_seed(seed)));
+    let mut env =
+        Multiplexer::<N>::with_encoding(Box::new(ChaChaRandomSource::from_seed(seed)), limits.encoding);
     let selector = EpsilonGreedy {
         number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
         epsilon: EXPLORE_EPSILON,
@@ -532,6 +544,7 @@ struct Options {
     log_diagnostics: bool,
     log_coverage: bool,
     log_quadrant_detail: bool,
+    encoding: Encoding,
     agent: AgentOptions,
 }
 
@@ -550,6 +563,7 @@ impl Options {
             log_diagnostics: false,
             log_coverage: false,
             log_quadrant_detail: false,
+            encoding: Encoding::Flip,
             agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
@@ -588,6 +602,9 @@ impl Options {
                 "--log-diagnostics" => options.log_diagnostics = true,
                 "--log-coverage" => options.log_coverage = true,
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
+                "--encoding" => {
+                    options.encoding = parse_encoding(&args.next().expect("--encoding needs flip|outcome"))
+                }
                 other => {
                     if !options.agent.try_parse_flag(other, &mut args) {
                         panic!("unknown flag {other}")
@@ -638,6 +655,7 @@ fn main() {
             log_diagnostics: options.log_diagnostics,
             log_coverage: options.log_coverage,
             log_quadrant_detail: options.log_quadrant_detail,
+            encoding: options.encoding,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
