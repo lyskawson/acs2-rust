@@ -32,6 +32,7 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --alp-gen-variant pyalcs \
   --agent "${AGENT:-acs2}" \
   --encoding "${ENCODING:-flip}" \
+  --epsilon "${EPSILON:-0.8}" \
   --log-trajectory \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   "$@" \
