@@ -1,151 +1,119 @@
-# Agent onboarding — ACS2 Rust / MPX scaling (continuation)
+# Agent onboarding — ACS2 Rust, multiplexer scaling and experience replay
 
-You are a research + implementation agent for a master's-thesis ACS2 project
-(supervisor: prof. Olgierd Unold, PWr). This document is the complete handoff from the
-previous session. Read it fully, then check experiment results (section 4) and follow
-the decision tree (section 5).
+Handoff for a fresh session. Read `docs/PROJECT_CONTEXT.md` for what the project is,
+`docs/ARCHITECTURE.md` for how it is built, and `reports/MPX_final.md` for the
+scientific narrative. This file carries only the **live state**.
 
-## 1. Project state
+## 1. Where the research stands
 
-Rust port of canonical ACS2 (pyalcs semantics), differentially validated against pyalcs
-(761/761 cases). Working dir: `~/Desktop/acs2-rust`, branch `feature/mpx`, provenance
-commits: `2f8111c` (code: canonical u_max ALP-generalization + bench trajectory logging),
-`3454ddf` (docs/reports). Read `docs/ARCHITECTURE.md` first; supervisor-facing narrative
-in `reports/MPX_final.md`; literature survey in `reports/MPX_literature_review.md`.
+**MPX-70 is solved** at knowledge = 1.0 on all five seeds tried (17.8 M–66.4 M
+trials, 268–277 reliable rules at the ideal specificity 7). Published ACS/ACS2
+results stop at 20–37 bits.
 
-The MPX arc so far:
-- M1 specialize-only: caps ~k=11. M2a GA-on: knowledge=1.0 up to k=37, freeze at k>=70.
-- M2b: canonical u_max branch (dormant in pyalcs at u_max=100000) activated; breaks the
-  freeze. Two variants of the underspecified expected-case generalization: `pyalcs`
-  (parent, unchanging-count, correct threshold u_max=a+2) and `butz` (child, full-count,
-  needs a+3). Freeze-break is variant-independent.
-- M3/E1 headline: **k=70 SOLVED at knowledge=1.0** — seed 42, pyalcs @ derived u_max=8,
-  GA on, 17,880,000 trials, 6105 s on M1, 277 reliable rules at spec 7.04 (ideal).
-  Log: `reports/mpx_m3_e1_traj70_pyalcs.log`. This exceeds every published ACS/ACS2
-  result (literature max ~37-bit; only ExSTraCS 2.0 ever solved 135-bit directly —
-  see the literature review). Butz variant is ~3x slower per wall-clock (bigger
-  populations); **standard config is pyalcs @ --u-max derived** from now on.
-- The trajectory is an S-curve: slow accumulation -> apparent plateau ~0.6 -> population
-  condensation (~5k -> ~1.2k rules) -> sprint to 1.0. Never diagnose a plateau from a
-  short run.
+**MPX-135 is partially solved and diagnosed.** At the canonical derived
+`u_max` = a+2 = 9 it produces no reliable rule in 105.6 M trials. Loosening the
+limit breaks that: `u_max` = 11 reaches 0.7499, `u_max` = 12 reaches 0.50 on two
+seeds. The ceilings are exact fractions because whole **wrong-answer classes** are
+never covered — see §3.
+
+**ACS2ER exists and is validated** differentially against pyalcs (`p11_acs2er`).
+First comparisons say uniform replay trades compute for episodes rather than
+improving efficiency; at matched learning applications no advantage is measurable.
 
 ## 2. Hard invariants (do not violate)
 
-- Maze path untouched: maze config keeps u_max=100000 (ALP-gen branch dead). Before any
-  acs2-core change lands: `cargo test --workspace` green (59 tests) and the P8/P9 maze
-  gates must stay byte-identical.
-- Determinism from seed, injected RNG. Verified cross-architecture (M1 vs Xeon produce
-  identical trajectories) — so "trials to SUCCESS" is the machine-independent metric;
-  wall-clock is machine-specific color.
-- Knowledge metric: exhaustive for k<=20, sampled (50,000 inputs, fixed eval seed) for
-  k>=37 — always state this caveat in reports.
-- Thesis provenance: every claim cited, every measurement reproducible (params + seeds
-  + commit hash). No overclaiming: k=70 was 1 seed until seeds 43/44 confirm.
-- Repetition policy: gates high-n, boundary probes low-n (1-3 seeds). The user's M1
-  overheats — anything >30 min runs on WCSS, not the laptop.
-- Supervisor emails: Polish, plain language (he dislikes AI-jargon), user sends them.
+- Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
+  dead. Before any core change lands: `cargo test --workspace --release` green
+  (**73 tests**) and the P9 maze learning columns byte-identical to
+  `reports/bench_rust.csv`.
+- Determinism from an injected RNG, verified cross-architecture. **Trials-to-success
+  is the machine-independent metric**; wall-clock is machine-specific colour.
+- Every diagnostic is read-only over the population and off by default. Proof that
+  this holds: with and without instrumentation, seed 42 solves k=70 at exactly
+  17,880,000 trials.
+- Knowledge is exhaustive for k ≤ 20 and **sampled** (50,000 inputs, fixed eval seed)
+  for k ≥ 37 — state this caveat in reports.
+- The user's laptop overheats; anything longer than a few minutes runs on WCSS.
+- Supervisor emails: Polish, plain language, no AI jargon, **the user sends them**.
 
-## 3. WCSS cluster (Bem2) — access and rules
+## 3. The k=135 diagnosis, in the order it was established
 
-- SSH: `ssh -i ~/.ssh/id_rsa_wcss alelys2099@ui.wcss.pl`. Scheduler: SLURM.
-- **Critical**: login node has newer glibc than compute nodes — always build
-  `cargo build --release --target x86_64-unknown-linux-musl` (static). A glibc build
-  fails on compute nodes with `GLIBC_2.30 not found`.
-- Partitions: `bem2-cpu-short` (3-day limit), `bem2-cpu-normal` (21-day). Jobs are
-  1 core / 8G / single task; sbatch scripts in `~/acs2-rust/slurm/` on the cluster.
-- Two checkouts on the cluster: `~/acs2-rust` (rsynced tree the current jobs run from;
-  verified byte-identical to commit 3454ddf) and `~/acs2-rust-repo` (proper git clone
-  of feature/mpx) — **run future work from the clone via git pull**.
-- Rust toolchain installed via rustup in `~/.cargo`.
+1. Population specificity sits at the ideal (~8.0), so "specialization outruns
+   generalization" does **not** explain it. Mark density does not either — the
+   solvable k=70 run ends at 0.914 against k=135's 0.935.
+2. Splitting knowledge by action × correctness: the **wrong-answer** classes starve.
+   Seed 42 at `u_max` = 11 filled one of the two (hence 3/4); seeds 43, 44 and 45
+   have **both** at exactly zero (heading for 1/2). It is not tied to an action
+   index, so swapping action labels would test nothing.
+3. Scanning the whole population, not just reliable rules: at `u_max` = 11 the
+   starved class has **no classifier of any quality** — rules are never created
+   there. At `u_max` = 12 both failure modes appear side by side: one wrong class
+   fully covered but stuck at best quality 0.670, the other empty.
+4. Working hypothesis, **being tested now**: under the canonical encoding a wrong
+   answer leaves the perception unchanged, so its rule must anticipate identity —
+   every classifier's default effect, which has to be *narrowed*, whereas
+   correct-answer rules are built directly by ALP's unexpected case.
 
-## 4. Experiments in flight (check these first)
+## 4. Instrumentation available (all off by default)
 
-**All jobs finished 2026-08-05. Nothing is in flight.** Results (logs pulled into
-`reports/`, reduced into `reports/mpx_{trajectory,verdicts}.csv`):
+| Flag | Emits | Answers |
+|---|---|---|
+| `--log-trajectory` | `traj:` | the S-curve: knowledge, reliable count, specificity, population |
+| `--log-diagnostics` | `diag:` | population-wide specificity, quality spread, mark density, experience, address-bit enrichment against a blind-choice baseline |
+| `--log-coverage` | `cover:` | knowledge split into four action × correctness classes, plus matched-but-mispredicted |
+| `--log-quadrant-detail` | `qdetail:` | per class, the share covered by **any** classifier and the best quality among them — separates "never created" from "never reliable" |
+| `--log-accuracy` | `acc:` | how often greedy choice answers correctly — the metric the literature reports |
 
-| Job | What | Verdict | Trials | Wall |
-|---|---|---|---|---|
-| 5552394 | k=70, seed 43 | **SUCCESS** | 17,820,000 | 13,692 s |
-| 5552395 | k=70, seed 44 | **SUCCESS** | 44,580,000 | 28,988 s |
-| 5552396 | k=70, seed 45 | **SUCCESS** | 21,300,000 | 11,529 s |
-| 5552397 | k=70, seed 46 | **SUCCESS** | 66,420,000 | 46,266 s |
-| 5551654 | k=135, seed 42 | TIME-LIMITED | 105,621,000 | 250,000 s |
+Experiment knobs: `--u-max derived|<int>`, `--alp-gen-variant pyalcs|butz`,
+`--agent acs2|acs2er`, `--er-{buffer-size,min-samples,samples-number}`,
+`--encoding flip|outcome`, `--epsilon <f64>`, `--eval-interval`.
 
-k=70 is confirmed on 5/5 seeds at knowledge = 1.0, all converging on 268–277 reliable
-rules at the ideal specificity 7. k=135 produced **zero** reliable rules across all 1,760
-evaluation points with a stationary population — a mechanism boundary, not a budget one.
-Full analysis in `reports/MPX_final.md` §"Act IV".
+**`accuracy` vs `knowledge` matters for reporting.** Knowledge demands anticipating
+every transition, including the null ones a wrong answer produces; choosing correctly
+needs only the change-anticipating side. The literature (ExSTraCS accuracy, ACS2ER
+reward) scores task performance, so knowledge is a strictly harder criterion and the
+numbers are not comparable without accuracy alongside.
 
-Status of any future runs: `./slurm/mpx_status.sh`. Submit with
-`sbatch --job-name=<n> ~/acs2-rust-repo/slurm/mpx_reach.sh <size> <seed> <time_cap_secs>`.
+## 5. Cluster
 
-### 4a. The budget correction, and what it got wrong (read before trusting any projection)
+`ssh -i ~/.ssh/id_rsa_wcss alelys2099@ui.wcss.pl`, SLURM, partitions
+`bem2-cpu-short` (3 d) / `bem2-cpu-normal` (21 d), MaxJobs 150. **Build
+`--target x86_64-unknown-linux-musl`** — the login node's glibc is newer than the
+compute nodes'. Run from the git clone `~/acs2-rust-repo`.
 
-The k=70 seeds were first submitted with a 40,000 s cap calibrated on seed 42 (17.88 M
-trials, 6105 s on the M1), then cancelled ~1.5 h in and resubmitted at 600,000 s, because
-seeds 43/44 sat at knowledge 0.26 at 4.2 M trials where seed 42 had been at 0.62 — an
-apparent ~2.5x lag projecting to ~45 M trials, against a cap estimated to buy only
-~27-36 M.
+Submit: `sbatch [--mem=32G] --export=ALL,TAG=<tag>,U_MAX=..,AGENT=..,ENCODING=..,EPSILON=..,EVAL_INTERVAL=.. slurm/mpx_reach.sh <size> <seed> <time_cap_secs> [extra flags]`
 
-**The outcome contradicted that projection, and the error is worth keeping.** Actuals:
-seed 43 finished at 17.82 M trials / 13,692 s and seed 44 at 44.58 M / 28,988 s — *both
-inside the original 40,000 s cap*. The restart was insurance that the two original seeds
-did not need. Only seed 46 (66.42 M trials, 46,266 s), which was added later, actually
-required the larger cap.
+Status: `./slurm/mpx_status.sh`. Output lands in `~/mpx_runs/`, **outside** the
+checkout — writing into the tracked `reports/` made every `git pull` collide with a
+running job.
 
-Two specific lessons:
+Two things that cost days before:
+- **Budget generously.** Nodes run packed, so throughput is ~2.7x below the M1 and
+  degrades within a run. There is no checkpointing; a cut-off run restarts from zero.
+- **ACS2ER is memory-bound.** m = 13 at k=70 died OUT_OF_MEMORY at 8.4 GB. Give ER
+  runs `--mem=32G`. Its population grows with the replay count and each rule carries
+  an N-slot mark.
 
-- **Early trajectory position does not predict trials-to-success.** Seed 43 was far
-  behind seed 42 at 4.2 M trials and still finished at essentially the same total
-  (17.82 M vs 17.88 M). The S-curve's sprint phase compresses; a lag measured mid-climb
-  extrapolates badly. Do not size budgets from a lag ratio.
-- **Throughput projections must account for condensation speeding the run up.** The
-  estimate assumed the observed ~650 trials/s would hold; actual whole-run averages were
-  1,301-1,847 trials/s, because a condensed population makes trials cheap. The measured
-  in-run slowdown (1395 -> 648 trials/s) reverses once condensation starts.
+## 6. What to do next
 
-What does hold: nodes run fully packed (`CPUAlloc=48/48`), so cluster wall-clock is
-contention-polluted and ~2.7x below the M1 pre-condensation, and **trials-to-success
-varies 3.73x across seeds** (17.82 M-66.42 M, median 21.30 M). Budget from the observed
-maximum, not from a projection, and prefer one over-generous cap to a second attempt.
+1. **Read the running experiments** (`./slurm/mpx_status.sh`): the `outcome` encoding
+   and `epsilon = 1` runs at k=135 test the two competing explanations for the
+   starved class — that wrong answers produce no perceptual change, versus that the
+   greedy branch under-visits them. Accuracy runs say whether the task is already
+   solved at knowledge 0.75.
+2. **If the encoding fixes it**, the starvation is an artifact of the canonical
+   encoding and belongs in the thesis as a mechanism finding — but results under the
+   alternative encoding are **not comparable to the multiplexer literature**.
+3. **Then the thesis core**: prioritised experience replay. The contribution is not
+   ER itself (ACS2ER exists and its limits are known) but a **prioritisation
+   criterion targeted at the measured gap** — the starved transition class — rather
+   than a generic TD-error rule imported from deep RL.
 
-Methodological point that stands: a seed truncated by a cap tuned on the fastest seed is
-a measurement artifact, not a failed confirmation. Diagnose by specificity and
-reliable-count, not knowledge alone. Partial 40 k-cap logs kept as
-`reports/slurm_mpx70_s4{3,4}.cap40k.cancelled.out`.
+## 7. Standing rules
 
-Bench binary flags (`mpx_reach`): `--sizes 70,135` `--n-exp` `--seed`
-`--time-cap-secs` `--u-max derived|<int>` `--alp-gen-variant pyalcs|butz`
-`--log-trajectory` `--eval-interval <trials>` (evals are pure — no agent-RNG impact).
-
-## 5. Decision tree after results
-
-1. **k=70 seeds 43/44 SUCCESS** -> reach claim confirmed on 3 seeds. Update
-   `reports/MPX_final.md` with an M3 section (trials-to-success per seed, trajectory
-   shape), commit, and draft the supervisor update (Polish).
-2. **k=135 SUCCESS** -> first direct 135-bit solution by any anticipatory LCS (verify
-   phrasing against the literature review before claiming). Queue 2 confirmation seeds
-   on WCSS. This likely closes the "beat the MPX boundary" phase.
-3. **k=135 TIME-LIMITED** -> read the trajectory: if still pre-condensation (population
-   large, knowledge climbing), resubmit on `bem2-cpu-normal` with a longer cap —
-   budget, not mechanism, is the first lever (that is the k=70 lesson). If genuinely
-   plateaued (knowledge flat >10M trials with condensed population), investigate churn
-   (reliable-count oscillation) before touching parameters.
-4. **A k=70 confirmation seed fails** -> treat as real: analyze its trajectory vs seed
-   42, report honestly (seed variance is a finding, not an embarrassment).
-5. **After reach closes**: (a) u_max sweep (a+1..a+4, k=20/37, low-n) — the honesty
-   ledger flags that derived u_max bakes in solution knowledge; a sweep de-fangs that
-   critique; (b) then the thesis core: prioritized experience replay (supervisor's
-   original topic). The empirical motivation is already written: ALP-gen remains
-   action-set-revisitation-bound; ER/prioritization attacks exactly that. Start from
-   supervisor's ER papers (ACS2ER: dl.acm.org/doi/10.1145/3520304.3533996, ACS2HER:
-   arxiv.org/abs/2601.09400, diversity-based ER: arxiv.org/abs/2410.20487).
-
-## 6. Standing rules
-
-Idiomatic Rust, SOLID, no code comments, English identifiers/commits, injected RNG.
-Anything touching the measured core path goes behind a flag with defaults preserving
-current behavior. Commit + push to `feature/mpx` after each completed step (user has
-approved this workflow); reports live in `reports/`, implementation record in
-`docs/ARCHITECTURE.md`. Ask the user only for scope decisions (new experiment phases,
-supervisor communication) — execution decisions are yours.
+Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
+injected RNG. Anything touching the measured path goes behind a flag with defaults
+preserving current behaviour. Commit and push to `feature/mpx` after each completed
+step. Reports live in `reports/`, implementation record in `docs/ARCHITECTURE.md`.
+Ask the user only for scope decisions — new experiment phases, supervisor
+communication, cancelling running jobs; execution decisions are yours.

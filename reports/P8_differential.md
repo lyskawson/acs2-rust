@@ -82,7 +82,7 @@ order-of-magnitude sanity only.
 | Woods1-v0 | 1 / 1 / 0 | 11 / 8 / 0 |
 | Maze4-v0 | 50 / 26 / 0 | 50 / 38 / 0 |
 
-`knowledge` (the third metric named in BUILD_PLAN P8) is **0 on both sides** after a
+`knowledge` (the third metric named in `docs/archive/BUILD_PLAN.md`, P8) is **0 on both sides** after a
 single explore trial — it requires ≥1 reliable classifier predicting ground-truth
 transitions, and both show `reliable=0`. Computing it properly needs Rust
 transition-enumeration that does not exist yet; the substantive knowledge comparison

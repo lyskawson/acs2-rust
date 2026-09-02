@@ -1,27 +1,48 @@
-# PROJECT_CONTEXT.md — Rust ACS2 (canonical, pyalcs-based)
+# PROJECT_CONTEXT.md — what this project is and what it must honour
 
-Master context for any fresh AI chat or coding-agent session. Paste this file first,
-together with `SPEC_PYALCS.md`, before issuing build prompts.
+The standing context for the project: what it is for, which rules the implementation
+must not break, and the protocol every measurement runs under. Read it with
+`SPEC_PYALCS.md` (the reference semantics) and `ARCHITECTURE.md` (what was built and
+why). For where the research currently stands, read `AGENT_HANDOFF.md`.
 
 ---
 
 ## 0. Mission
 
-The thesis goal is **a potential Actor-Critic extension of ACS2**. There is currently
-no ACS2 implementation owned by the author. The supervisor proposed building one in
-**Rust** and measuring how much faster it is than a Python reference, to justify
-committing to Rust before extending it.
+The thesis is about **sample selection in anticipatory classifier systems** —
+prioritising which stored experiences an ACS2 agent replays. That needs an ACS2
+implementation the author owns and can modify; none existed, so this project builds
+one in **Rust**, chosen because the experiments are compute-bound.
 
-**This project phase delivers ONLY the baseline: a correct, idiomatic Rust
-implementation of canonical ACS2, plus a like-for-like speed comparison against a
-Python reference.** Actor-Critic is NOT implemented in this phase. The architecture
-must leave clean seams for it (see §7).
+**pyalcs is a reference, not a target.** It plays two roles and no others:
+
+- a **correctness oracle** — the implementation is validated against it vector by
+  vector (761/761 deterministic cases, zero divergence), which is what licenses any
+  claim that results here describe ACS2 rather than a lookalike;
+- a **performance baseline** — the like-for-like timing comparison that justified
+  committing to Rust.
+
+Neither role makes this a transcription. Where pyalcs and canonical ACS2 disagree,
+the deviation is recorded and justified (§4 and the ARCHITECTURE fidelity ledger),
+and mechanisms dormant in pyalcs's defaults have been activated and studied here.
+
+**Why the defaults still match pyalcs.** Differential validation and a fair timing
+comparison both require an identical configuration on both sides, so the shipped
+defaults are pyalcs's: GA off, `u_max = 100000` (leaving the ALP generalization
+branch dormant), the pinned maze protocol of §5. Each is a flag rather than a
+constant, and the multiplexer work overrides them routinely — `u_max` swept 5 to 24,
+GA on, two ALP-generalization variants, an alternative problem encoding, a varied
+exploration epsilon, and a second agent (ACS2ER). Treat the defaults as the
+**measurement baseline**, not as a limit on what the implementation can do.
+
+Actor-Critic is **not** implemented. The architecture leaves seams for it (see §7):
+an `ActionSelector` trait and an injected RL bootstrap value.
 
 ---
 
 ## 1. Decisions already made (do not re-litigate)
 
-1. **Port target = pyalcs** (`hendrykik/acs2vcp-python`, the `lcs/agents/acs2` core),
+1. **Reference = pyalcs** (`hendrykik/acs2vcp-python`, the `lcs/agents/acs2` core),
    NOT the supervisor's ALCS `cpu_single`/`*CPU3` backend.
    - Rationale: pyalcs is canonical ACS2 (Butz & Stolzmann), uses standard 8-sensor
      wall perception, has clean Actor-Critic attachment points (pluggable
@@ -35,7 +56,7 @@ must leave clean seams for it (see §7).
      an actor-critic to. These quirks are fine for reproducing its own paper numbers,
      but hostile as an AC foundation.
 
-2. **No Actor-Critic in this phase.** Baseline first. Architecture leaves seams.
+2. **No Actor-Critic yet.** The architecture leaves seams; see §7.
 
 3. **Modern stack.**
    - The Rust environment is written natively and follows **Gymnasium** conventions
