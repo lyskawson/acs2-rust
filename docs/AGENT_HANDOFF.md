@@ -49,10 +49,21 @@ improving efficiency; at matched learning applications no advantage is measurabl
    starved class has **no classifier of any quality** — rules are never created
    there. At `u_max` = 12 both failure modes appear side by side: one wrong class
    fully covered but stuck at best quality 0.670, the other empty.
-4. Working hypothesis, **being tested now**: under the canonical encoding a wrong
-   answer leaves the perception unchanged, so its rule must anticipate identity —
-   every classifier's default effect, which has to be *narrowed*, whereas
-   correct-answer rules are built directly by ALP's unexpected case.
+4. **Confirmed at k=70.** The hypothesis was that under the canonical encoding a
+   wrong answer leaves the perception unchanged, so its rule must anticipate
+   identity — every classifier's default effect, which has to be *narrowed*, whereas
+   correct-answer rules are built directly by ALP's unexpected case. Running k=70
+   under `--encoding outcome`, where both answers change the perception, **removes
+   the starvation entirely and solves the problem 3.8x faster**: 4,680,000 trials
+   against 17,880,000, at the same final structure (276 vs 277 reliable rules, spec
+   7.01 vs 7.04). Under the canonical encoding `a1_wrong` sits at exactly 0.0000
+   from 120 k to 5.88 M trials; under `outcome` all four classes climb together from
+   the start. The starved class is an **artifact of the encoding**, not a limit of
+   the learning mechanism. Results under `outcome` are **not comparable to the
+   multiplexer literature** — it is a different problem.
+5. Whether the same holds at k=135 is **still open**; those runs are young
+   (2.4 M trials). `epsilon = 1` also appears to help, which was not expected — see
+   §6.
 
 ## 4. Instrumentation available (all off by default)
 
