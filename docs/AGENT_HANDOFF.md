@@ -10,11 +10,29 @@ scientific narrative. This file carries only the **live state**.
 trials, 268–277 reliable rules at the ideal specificity 7). Published ACS/ACS2
 results stop at 20–37 bits.
 
-**MPX-135 is partially solved and diagnosed.** At the canonical derived
-`u_max` = a+2 = 9 it produces no reliable rule in 105.6 M trials. Loosening the
-limit breaks that: `u_max` = 11 reaches 0.7499, `u_max` = 12 reaches 0.50 on two
-seeds. The ceilings are exact fractions because whole **wrong-answer classes** are
-never covered — see §3.
+**MPX-135 is solved.** Two results, and the distinction between them is the whole
+story:
+
+- **By the criterion the literature uses, ACS2 solves it under the canonical
+  encoding.** At `u_max` = 11 the agent reaches **answer accuracy 1.0000** while
+  `knowledge` sits at its 0.7499 ceiling. Knowledge additionally demands
+  anticipating the *null* transitions a wrong answer produces, which is a strictly
+  harder, anticipation-specific criterion — ExSTraCS scores classification
+  accuracy, ACS2ER scores reward. Report accuracy alongside knowledge or the result
+  reads as weaker than it is.
+- **By the anticipatory criterion, it needs the encoding fixed.** Under
+  `--encoding outcome`, knowledge reaches **1.0000 on both seeds tried** —
+  43.2 M and 46.8 M trials, both ending at **exactly 539 reliable rules and
+  specificity 8.00** (ideal `a+1`). Trials-to-success differ by 8%, against the
+  3.73x spread seen at k=70 under the canonical encoding: the encoding does not
+  merely enable the solution, it makes it reproducible.
+
+Canonical-encoding ceilings, four seeds, all TIME-LIMITED: 0.7499 (seed 42, which
+filled one wrong-answer class) and 0.4980 / 0.4980 / 0.4918 (seeds 43–45, which
+filled none). Seed 42 is the outlier — see §3.
+
+`epsilon = 1` also lifts a seed a whole class: seed 43 caps at 0.4980 canonically
+but reaches 0.7481 with the greedy bias removed.
 
 **ACS2ER exists and is validated** differentially against pyalcs (`p11_acs2er`).
 First comparisons say uniform replay trades compute for episodes rather than
