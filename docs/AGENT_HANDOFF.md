@@ -109,7 +109,15 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 Experiment knobs: `--u-max derived|<int>`, `--alp-gen-variant pyalcs|butz`,
 `--agent acs2|acs2er`, `--er-{buffer-size,min-samples,samples-number}`,
-`--encoding flip|outcome`, `--epsilon <f64>`, `--eval-interval`.
+`--encoding flip|outcome`, `--epsilon <f64>`, `--eval-interval`,
+`--rss-cap-gb <f64>`.
+
+**`--rss-cap-gb` matters more than it looks** (`bd88cc2`). The RSS ceiling used to be a
+compile-time 5.6 GB constant. It never fired on the cluster while `ru_maxrss` was
+misread, so it was invisible; now that `f93b71e` reads it correctly the cap is live and
+would abort a k=264 run long before its memory curve is measurable. The default is
+still 5.6 GB, so every earlier run's behaviour is unchanged — raise it explicitly for
+anything at 264 bits.
 
 **`accuracy` vs `knowledge` matters for reporting.** Knowledge demands anticipating
 every transition, including the null ones a wrong answer produces; choosing correctly
@@ -166,6 +174,38 @@ sshare -U -u alelys2099 -o RawUsage -n
 squeue -u alelys2099 -h -o "%i|%j|%t|%L|%C"
 ```
 
+**Resolved on 2026-09-08.** Four jobs were cancelled with the user's approval —
+`encU9_s43` (pending), `enc135_s44`, `acc135u11`, `acc135u12` — freeing 341 h.
+Commitment is now **390 h against 630 h**, so there is ~240 h of headroom and no
+submission deadline. Their final readings are preserved in §6; the logs are archived
+on the cluster as `*.cancelled`, which the status script deliberately hides.
+
+### Limits — read them from SLURM, not from the documentation
+
+The user could not find these documented anywhere. They are not; SLURM is the source.
+
+```
+sinfo -o "%20P %10l"                       # TIMELIMIT per partition
+scontrol show partition bem2-cpu-normal    # MaxTime=21-00:00:00
+sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
+  format=Name,GrpTRESMins,GrpTRESRunMins,MaxWall,Flags
+```
+
+- `bem2-cpu-short` 3 d, **`bem2-cpu-normal` 21 d**, `bem2-cpu-interactive` 6 h.
+- The 5000 h **is SLURM-enforced**: `GrpTRESMins=cpu=300000` with flags
+  `DenyOnLimit,NoDecay`. `NoDecay` is why `RawUsage` is the lifetime total.
+  `DenyOnLimit` means exhaustion makes **`sbatch` reject new jobs**; running jobs are
+  not killed, because `GrpTRESRunMins` is unset.
+- **`slurm/mpx_reach.sh` self-limits to 7.5 days** (`#SBATCH --time=7-12:00:00`, plus
+  the 600,000 s internal cap = 6.94 d). The "167 h per long run" figure is our own
+  choice, not a cluster constraint — the queue allows **504 h per job**. Three times
+  the trials in one job, no checkpointing needed, at three times the budget per job.
+- **Lem is available to us and is far larger**: `lem-cpu-normal` has 17,920 CPUs
+  against Bem2's 2,304, same 21-day limit. Verified with
+  `sbatch --test-only --partition=lem-cpu-normal` — accepted, planned start six days
+  out (Lem is contended; Bem2 starts next day). Never used. A one-hour benchmark would
+  say whether its cores are faster.
+
 Three things that cost days before:
 - **Budget wall-clock generously.** Nodes run packed, so throughput is ~2.7x below the
   M1 and degrades within a run. There is no checkpointing; a cut-off run restarts from
@@ -195,6 +235,16 @@ Readings taken 2026-09-08 — the two marked **new** move claims made elsewhere 
 | `encU9_s42` | 0.0023, **5 reliable**, spec 11.80, pop 24 281 at 3.84 M trials | The control. Canonical encoding at `u_max` = 9 gave a hard zero across 105.6 M; `outcome` does create rules, but it is not converging. Preliminary read: **the encoding alone does not rescue `u_max` = 9**, so the `u_max` sweep was not merely treating a symptom. |
 | `encU9_s43` | PENDING | Second seed of the control above. |
 | `er70_m8`, `er70m8b`, `er70m13b` | running | Does replay *volume* help the starved class or only the easy ones? |
+| `probe264` (5851940) | submitted 2026-09-08, `bem2-cpu-short`, 12 h internal cap, 64 GB, `--rss-cap-gb 56`, `--encoding outcome --u-max 12` | **The measurement the WCSS application is waiting on.** Real throughput and peak RSS at k=264, replacing the extrapolation from a 500-trial probe. Costs at most 13 h. |
+
+**Cancelled 2026-09-08, final readings preserved here** (logs archived as `*.cancelled`):
+
+| Job | Last reading |
+|---|---|
+| `acc135u11` | 325.8 M trials, knowledge 0.7499, **accuracy 1.0000**, 392 reliable, spec 8.00; classes 0.0000 / 1.0 / 1.0 / 1.0 |
+| `acc135u12` | 169.6 M trials, knowledge 0.4821, accuracy 0.9821, 255 reliable, spec 8.16; both `nochange` classes 0.0000 |
+| `enc135_s44` | 4.8 M trials, knowledge 0.1583, accuracy 0.6495, 423 reliable, **spec 10.92, pop 64 579**, `matched_but_wrong` 144 |
+| `encU9_s43` | never started |
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
@@ -248,15 +298,25 @@ the live decision:
 1. **Sizes are not continuous.** `k = a + 2^a`, so after 135 the next is **264**, then
    521. At 264 a classifier is 7504 B against 3896 B, and a complete solution needs
    1024 reliable rules against 512. `264` is now wired into the dispatch (`f93b71e`);
-   it previously panicked. A 500-trial probe on the M1 gave ~10 trials/s and 0.42 GB.
-2. **Checkpointing is the blocker.** Extrapolating, one k=264 seed is 700–1200 CPU-hours
-   — beyond the 21-day queue limit, with no checkpointing, so a cut-off run loses
+   it previously panicked. A 500-trial probe on the M1 gives ~14 trials/s, 0.35 GB and
+   a population of 8107.
+2. **Measuring is done — `probe264` is running** (§6), so the application's numbers
+   stop being extrapolations from 500 trials. This was decoupled from checkpointing:
+   a 12-hour measurement needs no save/restore, only the real run does.
+3. **Checkpointing is still the blocker for the real run.** Extrapolating, one k=264
+   seed is 700–1200 CPU-hours — beyond the 21-day queue limit, so a cut-off run loses
    everything. Save/restore of the population is the enabling change. It touches the
-   core, so it goes behind a flag with the P8/P9 gates intact.
-3. **Then measure, then apply.** A few-hour k=264 run gives real throughput and memory,
-   which is what the extension request to WCSS should be sized on. The original
-   application understates RAM (`< 1 GB`) and wall-time (`>= 48h`) badly; both need
-   correcting alongside the hours.
+   core, so it goes behind a flag with the P8/P9 gates intact. Note the queue allows
+   504 h per job against the 167 h we currently take (§5), which shortens how far
+   checkpointing has to stretch.
+4. **The WCSS application.** Drafted in the scratchpad, waiting on `probe264`. The ask
+   is 10,000 CPU-hours against ~8000 h of costed work. Four declarations in the
+   original application are now demonstrably false and must be corrected, not just the
+   hours: RAM (`< 1 GB` against 8–32 GB measured and one OOM at 8.4 GB), per-run time
+   (`2–48 h` against 167 h routinely), queue (`>= 48 h` against 21 days needed), and
+   SLURM Job Arrays (declared, never used). Unknown and worth one question to WCSS
+   support: whether this is an increase to the existing service, which runs to
+   2027-07-24, or a fresh application.
 
 After that, the thesis core: prioritised experience replay. The contribution is not ER
 itself (ACS2ER exists and its limits are measured) but a **prioritisation criterion
