@@ -38,7 +38,10 @@ fn peak_rss_bytes() -> u64 {
     if status != 0 {
         return 0;
     }
-    usage.ru_maxrss as u64
+    // ru_maxrss is bytes on macOS and kilobytes on Linux; treating the Linux value
+    // as bytes silently disabled the RSS cap on the cluster by a factor of 1024.
+    let scale: u64 = if cfg!(target_os = "linux") { 1024 } else { 1 };
+    (usage.ru_maxrss as u64).saturating_mul(scale)
 }
 
 fn trials_cap_for(size: usize) -> u64 {
@@ -553,6 +556,7 @@ fn run_reach_dispatch(
         37 => run_reach_repeat::<38>(size, seed, gen, agent_options, limits),
         70 => run_reach_repeat::<71>(size, seed, gen, agent_options, limits),
         135 => run_reach_repeat::<136>(size, seed, gen, agent_options, limits),
+        264 => run_reach_repeat::<265>(size, seed, gen, agent_options, limits),
         20 => run_reach_repeat::<21>(size, seed, gen, agent_options, limits),
         other => panic!("reach not configured for {other}-bit multiplexer"),
     }
@@ -579,6 +583,7 @@ fn report_component_memory(size: usize) {
         37 => component_memory::<38>(size),
         70 => component_memory::<71>(size),
         135 => component_memory::<136>(size),
+        264 => component_memory::<265>(size),
         other => panic!("no memory layout for {other}"),
     }
 }
