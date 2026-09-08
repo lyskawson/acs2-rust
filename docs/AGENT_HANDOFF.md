@@ -217,7 +217,34 @@ targeted at the measured gap** rather than a generic TD-error rule from deep RL.
   into tracked files, or recreate it. Its operative directives are already reflected
   in §8 here and in `PROJECT_CONTEXT.md`.
 
-## 10. Standing rules
+## 10. Escalating to a stronger model
+
+The user has access to a stronger model and will relay a question to it. Ask for that
+when you are genuinely stuck — but the bar matters in both directions.
+
+**Escalate when:**
+- Evidence contradicts itself and you cannot reconcile it.
+- A decision is expensive to get wrong — days of cluster time, a core change that would
+  break a gate, or anything going to the supervisor — and the codebase does not settle it.
+- You are choosing between designs with real trade-offs and no measurement can decide,
+  because the trade-off is about what the thesis should *argue*, not about what the code
+  *does*.
+
+**Do not escalate when:**
+- A measurement would answer it. This project's whole method is measure-then-conclude;
+  nearly every wrong turn in §7 came from reasoning where a run would have settled it.
+  Run the experiment.
+- Reading the source would answer it. The code is the authority on what the code does.
+- You have a defensible recommendation and want it validated. Give the recommendation,
+  say what you are unsure about, and let the user decide.
+
+**The escalation prompt must stand alone.** The other model has none of this context.
+Include: the specific question, the numbers behind it, what you already tried and ruled
+out, and what you think the answer is and why you are not confident. Without the
+"already ruled out" part you will get back suggestions this project has spent days
+eliminating. Write it to the scratchpad and hand the user the file.
+
+## 11. Standing rules
 
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
