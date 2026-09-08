@@ -25,7 +25,7 @@ use acs2_envs::multiplexer::{
 const EXPLORE_EPSILON: f64 = 0.8;
 const SAMPLE_INPUTS: usize = 50_000;
 const SAMPLE_SEED: u64 = 0x6D70_7831;
-const RSS_CAP_BYTES: u64 = 5_600_000_000;
+const DEFAULT_RSS_CAP_BYTES: u64 = 5_600_000_000;
 const DEFAULT_TIME_CAP_SECS: u64 = 600;
 const TIME_CHECK_BATCH: u32 = 500;
 const DEFAULT_KNOWLEDGE_EVAL_INTERVAL: u64 = 6_000;
@@ -361,6 +361,7 @@ struct ReachLimits {
     encoding: Encoding,
     epsilon: f64,
     log_accuracy: bool,
+    rss_cap_bytes: u64,
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -395,7 +396,7 @@ where
         peak_macro_population = peak_macro_population.max(agent.population().len());
         peak_rss = peak_rss.max(peak_rss_bytes());
 
-        if peak_rss > RSS_CAP_BYTES {
+        if peak_rss > limits.rss_cap_bytes {
             break Verdict::MemoryLimited;
         }
         if start.elapsed() > limits.time_cap {
@@ -562,12 +563,12 @@ fn run_reach_dispatch(
     }
 }
 
-fn component_memory<const N: usize>(size: usize) {
+fn component_memory<const N: usize>(size: usize, rss_cap_bytes: u64) {
     let condition = size_of::<Condition<N>>();
     let effect = size_of::<Effect<N>>();
     let mark = size_of::<Mark<N>>();
     let classifier = size_of::<Classifier<N>>();
-    let pop_threshold = RSS_CAP_BYTES / classifier as u64;
+    let pop_threshold = rss_cap_bytes / classifier as u64;
     println!(
         "  mem mpx-{size} (N={N}): condition={condition}B effect={effect}B mark={mark}B (stack) \
          classifier={classifier}B  mark/classifier={:.1}%  rss-cap pop-threshold={pop_threshold}",
@@ -575,15 +576,15 @@ fn component_memory<const N: usize>(size: usize) {
     );
 }
 
-fn report_component_memory(size: usize) {
+fn report_component_memory(size: usize, rss_cap_bytes: u64) {
     match size {
-        6 => component_memory::<7>(size),
-        11 => component_memory::<12>(size),
-        20 => component_memory::<21>(size),
-        37 => component_memory::<38>(size),
-        70 => component_memory::<71>(size),
-        135 => component_memory::<136>(size),
-        264 => component_memory::<265>(size),
+        6 => component_memory::<7>(size, rss_cap_bytes),
+        11 => component_memory::<12>(size, rss_cap_bytes),
+        20 => component_memory::<21>(size, rss_cap_bytes),
+        37 => component_memory::<38>(size, rss_cap_bytes),
+        70 => component_memory::<71>(size, rss_cap_bytes),
+        135 => component_memory::<136>(size, rss_cap_bytes),
+        264 => component_memory::<265>(size, rss_cap_bytes),
         other => panic!("no memory layout for {other}"),
     }
 }
@@ -604,6 +605,7 @@ struct Options {
     encoding: Encoding,
     epsilon: f64,
     log_accuracy: bool,
+    rss_cap_bytes: u64,
     agent: AgentOptions,
 }
 
@@ -625,6 +627,7 @@ impl Options {
             encoding: Encoding::Flip,
             epsilon: EXPLORE_EPSILON,
             log_accuracy: false,
+            rss_cap_bytes: DEFAULT_RSS_CAP_BYTES,
             agent: AgentOptions::default(),
         };
         let mut args = std::env::args().skip(1);
@@ -665,6 +668,15 @@ impl Options {
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
                 "--epsilon" => options.epsilon = args.next().unwrap().parse().unwrap(),
                 "--log-accuracy" => options.log_accuracy = true,
+                "--rss-cap-gb" => {
+                    let gb: f64 = args
+                        .next()
+                        .expect("--rss-cap-gb needs a value")
+                        .parse()
+                        .expect("--rss-cap-gb must be a number");
+                    assert!(gb > 0.0, "--rss-cap-gb must be positive");
+                    options.rss_cap_bytes = (gb * 1e9) as u64;
+                }
                 "--encoding" => {
                     options.encoding = parse_encoding(&args.next().expect("--encoding needs flip|outcome"))
                 }
@@ -687,7 +699,7 @@ fn main() {
         options.sizes,
         options.n_exp,
         options.seed,
-        RSS_CAP_BYTES as f64 / 1e9,
+        options.rss_cap_bytes as f64 / 1e9,
         options.time_cap_secs,
         options.do_ga,
         variant_label(options.alp_gen_variant),
@@ -696,7 +708,7 @@ fn main() {
 
     for &size in &options.sizes {
         let trials_cap = trials_cap_for(size);
-        report_component_memory(size);
+        report_component_memory(size, options.rss_cap_bytes);
         let u_max = resolve_u_max(
             options.u_max_mode,
             Configuration::mpx().u_max,
@@ -722,6 +734,7 @@ fn main() {
             encoding: options.encoding,
             epsilon: options.epsilon,
             log_accuracy: options.log_accuracy,
+            rss_cap_bytes: options.rss_cap_bytes,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
