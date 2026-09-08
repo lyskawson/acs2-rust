@@ -79,9 +79,15 @@ improving efficiency; at matched learning applications no advantage is measurabl
    the start. The starved class is an **artifact of the encoding**, not a limit of
    the learning mechanism. Results under `outcome` are **not comparable to the
    multiplexer literature** — it is a different problem.
-5. Whether the same holds at k=135 is **still open**; those runs are young
-   (2.4 M trials). `epsilon = 1` also appears to help, which was not expected — see
-   §6.
+5. **Confirmed at k=135 as well**, on three seeds: 43.2 M, 46.8 M and 30.2 M trials
+   to knowledge 1.0, ending at 539/539/535 reliable rules and specificity 8.00–8.01.
+   Note the k=70 picture is more mixed — the encoding is not uniformly faster there
+   (seed 43 goes 17.8 M -> 62.3 M) — so at 70 bits it changes the cost distribution
+   while at 135 it changes whether the problem closes at all.
+6. `epsilon = 1` also lifts a seed a whole class (43: 0.4980 -> 0.7481), which was not
+   expected: the greedy branch selects among change-anticipating classifiers, i.e.
+   correct answers under this encoding, so it under-visits the starving class by
+   about 10 points.
 
 ## 4. Instrumentation available (all off by default)
 
@@ -116,30 +122,35 @@ Status: `./slurm/mpx_status.sh`. Output lands in `~/mpx_runs/`, **outside** the
 checkout — writing into the tracked `reports/` made every `git pull` collide with a
 running job.
 
-Two things that cost days before:
-- **Budget generously.** Nodes run packed, so throughput is ~2.7x below the M1 and
-  degrades within a run. There is no checkpointing; a cut-off run restarts from zero.
-- **ACS2ER is memory-bound.** m = 13 at k=70 died OUT_OF_MEMORY at 8.4 GB. Give ER
-  runs `--mem=32G`. Its population grows with the replay count and each rule carries
-  an N-slot mark.
+**The grant is finite and roughly two thirds spent.** 5000 CPU-hours, granted
+2026-07-23 to 2027-07-24, 200 GB disk. Estimated consumption is ~3250 h (from run
+wall-times; `sacct` returns no accounting for this user, so this is not an official
+figure). Long runs cost 167 h each at the 600,000 s cap. **Check the budget before
+launching a batch of long jobs.**
+
+Three things that cost days before:
+- **Budget wall-clock generously.** Nodes run packed, so throughput is ~2.7x below the
+  M1 and degrades within a run. There is no checkpointing; a cut-off run restarts from
+  zero.
+- **ACS2ER is memory-bound.** m = 13 at k=70 died OUT_OF_MEMORY at 8.4 GB. Give ER runs
+  `--mem=32G`.
+- **RSS reporting was broken until 2026-09.** `ru_maxrss` is bytes on macOS and
+  kilobytes on Linux; the code assumed bytes, so cluster runs printed `0.00GB` and the
+  internal RSS cap never fired. Fixed in `f93b71e`. Peak-memory figures logged before
+  that commit are meaningless.
 
 ## 6. Experiments in flight
 
-Nineteen jobs, all `bem2-cpu-normal`, all with a 600,000 s internal cap. Check with
-`./slurm/mpx_status.sh`; logs are in `~/mpx_runs/`, named
-`slurm_mpx<size>_s<seed>[_<TAG>].out`.
+Eleven jobs, `bem2-cpu-normal`, 600,000 s internal cap. `./slurm/mpx_status.sh`; logs in
+`~/mpx_runs/` as `slurm_mpx<size>_s<seed>[_<TAG>].out`.
 
-| Tag / jobs | Question it answers |
+| Jobs | Question |
 |---|---|
-| `u11cover` seeds 43–45, `cov135u11` | Does the 0.75 ceiling reproduce, or do these seeds cap at 0.50? Three of them already show **both** wrong-answer classes at zero. |
-| `u10long` | Is the 10-vs-11 boundary real or a budget artifact? At 94.7 M trials it has 2 reliable rules, so `u_max`=10 is very slow rather than dead. |
-| `qdetail_u11`, `qdetail_u12` | Never-created vs never-reliable, per class. Already answered at `u_max`=11: nothing is created. |
-| `outcome_u11` seeds 42/43, `outcome` at k=70 | **The supervisor's suggestion.** Does the starvation vanish when a wrong answer also changes the perception? |
-| `eps1_u11` seeds 42/43 | Does it vanish when the greedy bias that avoids wrong answers is removed? |
-| `acc_u11`, `acc_u12` | Is the task already solved at knowledge 0.75, by the literature's criterion? |
-| `erfine_u11`, `erfine_u12` | ACS2ER at k=135, eval interval sized to ER throughput rather than ACS2's. |
-| `er70_m8b`, `er70_m13b` | Does replay *volume* help the starved class or only the easy ones? Rerun at `--mem=32G` after m=13 died OUT_OF_MEMORY. |
-| `er70`, `er1_*` | Uniform replay against ACS2 at matched learning work. |
+| `enc135_s44`, `enc135_s45` | Two more seeds for the k=135 `outcome` result (three already solved). |
+| `encU9_s42`, `encU9_s43` | **The most interesting one.** Does the encoding alone rescue the *canonical* `u_max` = 9? At 1.32 M trials it already had 4 reliable rules where canonical encoding gave zero across 105.6 M. If it succeeds, the `u_max` sweep treated a symptom and the encoding was the cause — which would change how the whole `u_max` story is reported. |
+| `acc135u11`, `acc135u12` | Accuracy against knowledge at the canonical ceilings. `u11` already reads accuracy 1.0000 at knowledge 0.7499. |
+| `eps135_s42`, `eps135_s43` | `epsilon = 1` at k=135. |
+| `er70_m8`, `er70m8b`, `er70m13b` | Does replay *volume* help the starved class or only the easy ones? The `b` pair is the `--mem=32G` rerun after m=13 was OOM-killed. |
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
@@ -170,20 +181,26 @@ pattern is the failure mode to watch for.
 
 ## 8. What to do next
 
-1. **Read the running experiments** (§6). The `outcome` encoding and `epsilon = 1`
-   runs at k=135 test the two competing explanations for the starved class — that
-   wrong answers produce no perceptual change, versus that the greedy branch
-   under-visits them (it selects among change-anticipating classifiers, which under
-   this encoding means correct answers, costing the wrong classes 10 points of
-   visits). Accuracy runs say whether the task is already solved at knowledge 0.75.
-   The four outcomes are all informative: encoding only, epsilon only, both, neither.
-2. **If the encoding fixes it**, the starvation is an artifact of the canonical
-   encoding and belongs in the thesis as a mechanism finding — but results under the
-   alternative encoding are **not comparable to the multiplexer literature**.
-3. **Then the thesis core**: prioritised experience replay. The contribution is not
-   ER itself (ACS2ER exists and its limits are known) but a **prioritisation
-   criterion targeted at the measured gap** — the starved transition class — rather
-   than a generic TD-error rule imported from deep RL.
+The supervisor wants to attack a larger multiplexer and asked whether to reserve
+cluster resources. Answering that responsibly needs three things first, and this is
+the live decision:
+
+1. **Sizes are not continuous.** `k = a + 2^a`, so after 135 the next is **264**, then
+   521. At 264 a classifier is 7504 B against 3896 B, and a complete solution needs
+   1024 reliable rules against 512. `264` is now wired into the dispatch (`f93b71e`);
+   it previously panicked. A 500-trial probe on the M1 gave ~10 trials/s and 0.42 GB.
+2. **Checkpointing is the blocker.** Extrapolating, one k=264 seed is 700–1200 CPU-hours
+   — beyond the 21-day queue limit, with no checkpointing, so a cut-off run loses
+   everything. Save/restore of the population is the enabling change. It touches the
+   core, so it goes behind a flag with the P8/P9 gates intact.
+3. **Then measure, then apply.** A few-hour k=264 run gives real throughput and memory,
+   which is what the extension request to WCSS should be sized on. The original
+   application understates RAM (`< 1 GB`) and wall-time (`>= 48h`) badly; both need
+   correcting alongside the hours.
+
+After that, the thesis core: prioritised experience replay. The contribution is not ER
+itself (ACS2ER exists and its limits are measured) but a **prioritisation criterion
+targeted at the measured gap** rather than a generic TD-error rule from deep RL.
 
 ## 9. Working with the user
 
