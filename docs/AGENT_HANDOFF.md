@@ -20,19 +20,25 @@ story:
   harder, anticipation-specific criterion — ExSTraCS scores classification
   accuracy, ACS2ER scores reward. Report accuracy alongside knowledge or the result
   reads as weaker than it is.
-- **By the anticipatory criterion, it needs the encoding fixed.** Under
-  `--encoding outcome`, knowledge reaches **1.0000 on both seeds tried** —
-  43.2 M and 46.8 M trials, both ending at **exactly 539 reliable rules and
-  specificity 8.00** (ideal `a+1`). Trials-to-success differ by 8%, against the
-  3.73x spread seen at k=70 under the canonical encoding: the encoding does not
-  merely enable the solution, it makes it reproducible.
+- **By the anticipatory criterion, the encoding change closes it on most seeds.**
+  Under `--encoding outcome`, knowledge reaches **1.0000 on three of five seeds** —
+  43.2 M (s42), 46.8 M (s43) and 30.2 M (s46) trials, ending at 539 / 539 / 535
+  reliable rules and specificity 8.00–8.01 (ideal `a+1`). Seed 45 sits at 0.9981 and
+  is closing. **Seed 44 is not**: it is in a bloated, over-specialised regime
+  (pop 64 579, spec 10.92, ~9x slower) and will not converge in its budget. Do not
+  repeat the earlier "the encoding makes it reproducible" claim — see §7.
 
 Canonical-encoding ceilings, four seeds, all TIME-LIMITED: 0.7499 (seed 42, which
 filled one wrong-answer class) and 0.4980 / 0.4980 / 0.4918 (seeds 43–45, which
 filled none). Seed 42 is the outlier — see §3.
 
-`epsilon = 1` also lifts a seed a whole class: seed 43 caps at 0.4980 canonically
-but reaches 0.7481 with the greedy bias removed.
+**`epsilon = 1` may close k=135 on the canonical encoding — this is the live headline.**
+Seed 43 caps at 0.4980 canonically; with the greedy bias removed it has reached
+**0.9685 at 414 M trials and is still climbing**, with both wrong-answer classes
+filling (0.9942 and 0.8796). Canonical-encoding results are the ones comparable to
+the multiplexer literature, so closing this beats the `outcome` result scientifically.
+The run dies on its wall limit within ~30 h and there is no checkpointing. Seed 42
+under the same setting is stuck at 0.7350, so it is not a universal fix.
 
 **ACS2ER exists and is validated** differentially against pyalcs (`p11_acs2er`).
 First comparisons say uniform replay trades compute for episodes rather than
@@ -84,10 +90,12 @@ improving efficiency; at matched learning applications no advantage is measurabl
    Note the k=70 picture is more mixed — the encoding is not uniformly faster there
    (seed 43 goes 17.8 M -> 62.3 M) — so at 70 bits it changes the cost distribution
    while at 135 it changes whether the problem closes at all.
-6. `epsilon = 1` also lifts a seed a whole class (43: 0.4980 -> 0.7481), which was not
-   expected: the greedy branch selects among change-anticipating classifiers, i.e.
-   correct answers under this encoding, so it under-visits the starving class by
-   about 10 points.
+6. `epsilon = 1` lifts a seed clean out of the ceiling (43: 0.4980 -> 0.9685 and
+   rising), which was not expected: the greedy branch selects among change-anticipating
+   classifiers, i.e. correct answers under this encoding, so it under-visits the
+   starving class. The starvation is therefore **partly an exploration artifact as well
+   as an encoding artifact** — two independent interventions each relieve it. Seed 42
+   does not respond the same way (0.7350), so the two are not interchangeable.
 
 ## 4. Instrumentation available (all off by default)
 
@@ -122,11 +130,41 @@ Status: `./slurm/mpx_status.sh`. Output lands in `~/mpx_runs/`, **outside** the
 checkout — writing into the tracked `reports/` made every `git pull` collide with a
 running job.
 
-**The grant is finite and roughly two thirds spent.** 5000 CPU-hours, granted
-2026-07-23 to 2027-07-24, 200 GB disk. Estimated consumption is ~3250 h (from run
-wall-times; `sacct` returns no accounting for this user, so this is not an official
-figure). Long runs cost 167 h each at the 600,000 s cap. **Check the budget before
-launching a batch of long jobs.**
+### Budget — read this before submitting anything
+
+Grant: 5000 CPU-hours, 2026-07-23 to 2027-07-24, 200 GB disk (27 MB used; disk is a
+non-issue).
+
+**Measured on 2026-09-08: 4367 h consumed, 633 h left.** The authoritative reading is
+
+```
+sshare -U -u alelys2099 -o RawUsage -n     # CPU-seconds; /3600 for hours
+```
+
+which is the **undecayed lifetime total** here — `scontrol show config` reports
+`PriorityDecayHalfLife = 00:00:00` and `PriorityUsageResetPeriod = NONE`, so nothing
+ages out of it. Confirm the decay settings before trusting the number again.
+
+`sacct` **does** work, contrary to what this file said before. It rejects wide date
+ranges with `Too wide of a date range in query`; query a month at a time. Retention
+starts **2026-08-18**, so it cannot see the earliest runs — summing `CPUTimeRAW` from
+that date gives 4264 h, which corroborates the 4367 h lifetime figure.
+
+Two consequences that bite:
+
+- **Burn rate is the whole story.** Jobs are 1 CPU each, so ten concurrent jobs spend
+  10 CPU-hours per wall-clock hour. 633 h remaining is **under three days** at that rate,
+  not months.
+- **The live queue is already over budget.** Summing `squeue`'s `TIME_LEFT` on
+  2026-09-08 gives **732 h of remaining commitment against 633 h left.** Something has to
+  be cancelled or the grant runs dry mid-queue.
+
+Check both before a batch:
+
+```
+sshare -U -u alelys2099 -o RawUsage -n
+squeue -u alelys2099 -h -o "%i|%j|%t|%L|%C"
+```
 
 Three things that cost days before:
 - **Budget wall-clock generously.** Nodes run packed, so throughput is ~2.7x below the
@@ -144,13 +182,19 @@ Three things that cost days before:
 Eleven jobs, `bem2-cpu-normal`, 600,000 s internal cap. `./slurm/mpx_status.sh`; logs in
 `~/mpx_runs/` as `slurm_mpx<size>_s<seed>[_<TAG>].out`.
 
-| Jobs | Question |
-|---|---|
-| `enc135_s44`, `enc135_s45` | Two more seeds for the k=135 `outcome` result (three already solved). |
-| `encU9_s42`, `encU9_s43` | **The most interesting one.** Does the encoding alone rescue the *canonical* `u_max` = 9? At 1.32 M trials it already had 4 reliable rules where canonical encoding gave zero across 105.6 M. If it succeeds, the `u_max` sweep treated a symptom and the encoding was the cause — which would change how the whole `u_max` story is reported. |
-| `acc135u11`, `acc135u12` | Accuracy against knowledge at the canonical ceilings. `u11` already reads accuracy 1.0000 at knowledge 0.7499. |
-| `eps135_s42`, `eps135_s43` | `epsilon = 1` at k=135. |
-| `er70_m8`, `er70m8b`, `er70m13b` | Does replay *volume* help the starved class or only the easy ones? The `b` pair is the `--mem=32G` rerun after m=13 was OOM-killed. |
+Readings taken 2026-09-08 — the two marked **new** move claims made elsewhere in this file.
+
+| Job | Live reading | Verdict so far |
+|---|---|---|
+| `eps135_s43` | knowledge **0.9685** at 414.0 M trials, 518 reliable, spec 8.06; classes 0.9942 / 1.0 / 0.8796 / 1.0 | **new — the most valuable job in the queue.** `epsilon = 1` under the **canonical** encoding is filling *both* wrong-answer classes and still climbing. If it closes, k=135 is solved on the literature-comparable encoding. ~30 h of wall-time left and no checkpointing, so it will most likely die short of 1.0. |
+| `eps135_s42` | 0.7350 at 252.2 M, `a0_nochange` still 0.0000 | `epsilon = 1` does not lift every seed. Seed 42 is stuck at the same ceiling. |
+| `acc135u11` | knowledge 0.7499, **accuracy 1.0000** held over 325.1 M trials | Settled. Nothing more to learn from it. |
+| `acc135u12` | knowledge 0.4822, accuracy 0.9854 | Accuracy 1.0 is a property of `u_max` = 11, **not** of the canonical ceiling generally. |
+| `enc135_s45` | 0.9981, 528 reliable, spec 8.01, accuracy 1.0000 | Essentially solved; 4th `outcome` seed. |
+| `enc135_s44` | 0.1583 at 4.8 M trials, **pop 64 579, spec 10.92**, 17 trials/s | **new — a counterexample.** Under `outcome` this seed is in a bloated, over-specialised regime, ~9x slower than seed 45. It will not converge in its remaining 100 h. |
+| `encU9_s42` | 0.0023, **5 reliable**, spec 11.80, pop 24 281 at 3.84 M trials | The control. Canonical encoding at `u_max` = 9 gave a hard zero across 105.6 M; `outcome` does create rules, but it is not converging. Preliminary read: **the encoding alone does not rescue `u_max` = 9**, so the `u_max` sweep was not merely treating a symptom. |
+| `encU9_s43` | PENDING | Second seed of the control above. |
+| `er70_m8`, `er70m8b`, `er70m13b` | running | Does replay *volume* help the starved class or only the easy ones? |
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
@@ -173,6 +217,22 @@ pattern is the failure mode to watch for.
   two wrong-answer classes, which is why it reads 0.75; seeds 43–45 have both at
   zero. Seed 42 is the outlier. The sent email says "the fourth class", which
   understates it.
+- **The grant was not two-thirds spent, it was seven-eighths spent.** This file carried
+  "~3250 h of 5000, `sacct` returns no accounting". Both halves were wrong: `sacct`
+  works on a narrow date range, and the real figure on 2026-09-08 is **4367 h**. The
+  estimate-from-wall-times method was low by a third. Measure, do not extrapolate —
+  §5 has the commands.
+- **The `outcome` encoding does not make k=135 reproducible.** §1 said the seeds end at
+  "exactly 539 reliable rules and specificity 8.00" and that the encoding "makes it
+  reproducible". That held for seeds 42, 43 and 46, and seed 45 is joining them — but
+  **seed 44 is in a bloated regime** (pop 64 579, spec 10.92, 17 trials/s) and will not
+  converge. Four seeds agreeing is not five. The honest claim is that `outcome` closes
+  the problem on most seeds, with one seed so far behaving differently.
+- **`epsilon = 1` at k=135 seed 43 does not cap at 0.7481.** That was a mid-run reading
+  reported as a ceiling — the same mistake as the 0.75 ceiling at k=70. It has since
+  passed **0.9685** under the canonical encoding and is still rising. It is now the
+  strongest live result in the project, because canonical-encoding numbers are the ones
+  comparable to the literature.
 - **The k=135 ACS2ER runs were cancelled too early.** They looked dead at one
   evaluation point per day, but the eval interval had been sized for ACS2's
   throughput. The one point they did produce showed ER touching the starved class
