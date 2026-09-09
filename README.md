@@ -164,3 +164,8 @@ machine-independent metric; wall-clock is not.
 Actor-Critic is **not** implemented; the architecture leaves seams for it. Prioritised
 replay — the thesis contribution — is not implemented either: ACS2ER provides uniform
 replay and the measurements a prioritisation criterion has to beat.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). If you build on this for your own thesis or paper, a
+citation is appreciated but not required.
