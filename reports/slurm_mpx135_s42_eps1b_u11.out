@@ -528,3 +528,27 @@ acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_
   mpx-135 traj: trials=21000000 wall=39242s knowledge=0.0183 reliable=77 spec=12.82 pop=9595
   mpx-135 cover: trials=21000000 overall=0.0183 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0731 matched_but_wrong=5
   mpx-135 acc: trials=21000000 accuracy=0.5247
+  mpx-135 traj: trials=21120000 wall=39505s knowledge=0.0190 reliable=83 spec=12.71 pop=10669
+  mpx-135 cover: trials=21120000 overall=0.0190 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0760 matched_but_wrong=8
+  mpx-135 acc: trials=21120000 accuracy=0.5263
+  mpx-135 traj: trials=21240000 wall=39854s knowledge=0.0203 reliable=97 spec=12.62 pop=11567
+  mpx-135 cover: trials=21240000 overall=0.0203 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0810 matched_but_wrong=8
+  mpx-135 acc: trials=21240000 accuracy=0.5226
+  mpx-135 traj: trials=21360000 wall=40143s knowledge=0.0203 reliable=90 spec=12.63 pop=11449
+  mpx-135 cover: trials=21360000 overall=0.0203 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0813 matched_but_wrong=1
+  mpx-135 acc: trials=21360000 accuracy=0.5237
+  mpx-135 traj: trials=21480000 wall=40427s knowledge=0.0218 reliable=104 spec=12.71 pop=10632
+  mpx-135 cover: trials=21480000 overall=0.0218 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0872 matched_but_wrong=19
+  mpx-135 acc: trials=21480000 accuracy=0.5248
+  mpx-135 traj: trials=21600000 wall=40713s knowledge=0.0242 reliable=115 spec=12.58 pop=10921
+  mpx-135 cover: trials=21600000 overall=0.0242 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0967 matched_but_wrong=24
+  mpx-135 acc: trials=21600000 accuracy=0.5295
+  mpx-135 traj: trials=21720000 wall=40998s knowledge=0.0250 reliable=124 spec=12.50 pop=11950
+  mpx-135 cover: trials=21720000 overall=0.0250 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.1000 matched_but_wrong=53
+  mpx-135 acc: trials=21720000 accuracy=0.5255
+  mpx-135 traj: trials=21840000 wall=41291s knowledge=0.0259 reliable=118 spec=12.53 pop=12147
+  mpx-135 cover: trials=21840000 overall=0.0259 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.1037 matched_but_wrong=25
+  mpx-135 acc: trials=21840000 accuracy=0.5300
+  mpx-135 traj: trials=21960000 wall=41596s knowledge=0.0277 reliable=130 spec=12.54 pop=12663
+  mpx-135 cover: trials=21960000 overall=0.0277 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.1107 matched_but_wrong=24
+  mpx-135 acc: trials=21960000 accuracy=0.5452
