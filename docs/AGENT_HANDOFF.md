@@ -72,7 +72,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**73 tests**) and the P9 maze learning columns byte-identical to
+  (**76 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -440,7 +440,8 @@ failure mode. This file carries the research state; that one carries the habits.
 
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
-preserving current behaviour. Commit and push to `feature/mpx` after each completed
-step. Reports live in `reports/`, implementation record in `docs/ARCHITECTURE.md`.
+preserving current behaviour. Commit and push to `feature/mpx264` after each completed
+group. Measurements live in `reports/`, review/fix reports in `scratchpad/`, and the
+implementation record in `docs/ARCHITECTURE.md`.
 Ask the user only for scope decisions — new experiment phases, supervisor
 communication, cancelling running jobs; execution decisions are yours.

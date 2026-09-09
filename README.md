@@ -16,7 +16,7 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --release                                  # 73 tests, ~1 s
+cargo test --workspace --release                      # 76 tests, including reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```

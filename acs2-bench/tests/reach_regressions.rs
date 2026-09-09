@@ -1,4 +1,4 @@
-include!("../acs2-bench/src/bin/mpx_reach.rs");
+include!("../src/bin/mpx_reach.rs");
 
 #[cfg(test)]
 mod regression {

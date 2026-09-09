@@ -29,7 +29,9 @@ and are worth archiving.
 ## Gates — before any change to the core
 
 ```bash
-cargo test --workspace --release          # 73 tests
+cargo test --workspace --release          # 76 tests, including reach regressions
+uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 13 tests
+cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
 ```
 
@@ -39,6 +41,9 @@ file afterwards so timing noise is not committed.
 
 Anything touching the measured path goes behind a flag whose default preserves
 current behaviour.
+
+Review and fix reports go in `scratchpad/`, outside the measurement archive in
+`reports/`. Commit the requested report with the fixes so another agent can retrieve it.
 
 ## Standing rules
 

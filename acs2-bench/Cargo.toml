@@ -7,3 +7,7 @@ edition = "2021"
 acs2-core = { path = "../acs2-core" }
 acs2-envs = { path = "../acs2-envs" }
 libc = "0.2"
+
+[[test]]
+name = "reach_regressions"
+path = "tests/reach_regressions.rs"

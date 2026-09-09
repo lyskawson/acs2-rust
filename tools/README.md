@@ -196,19 +196,21 @@ Header-only logs have no measurement rows, but are still archived and committed.
 The historical diagnostic `correct` remains a complete-address structural proxy,
 not a complete test for all correct minimal MPX rules.
 
-Run the existing 73 workspace tests, the expanded archive/plot regressions, and
-isolated runner checks (synthetic populations, no learning experiments):
+Run the 76 workspace tests (including the three reach regressions) and the
+13 Python archive/plot regressions:
 
 ```bash
 cargo test --workspace --release
 uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'
-python3 tools/check_reach_protocol.py
 ```
 
-The last command builds a temporary Rust test harness against the production runner.
-It checks verdict timing, post-evaluation resource limits, and fresh-process RSS.
-The normal workspace gate keeps its original 73 tests, with additional assertions
-for the Butz counter and invalid replay/GA boundaries in existing tests.
+`acs2-bench/tests/reach_regressions.rs` is a registered Cargo integration-test target.
+It includes the production runner source to exercise its private reach loop with
+frozen synthetic populations, and checks verdict timing, post-evaluation resource
+limits, and fresh-process RSS. It runs automatically in the workspace command.
+Run it alone with `cargo test -p acs2-bench --test reach_regressions --release`.
+The original 73 tests remain, including the expanded Butz and replay/GA boundary
+assertions. The Python project no longer contains a separate Rust harness or compiler driver.
 
 Rebuild the seven committed figure pairs with explicit source choices:
 
