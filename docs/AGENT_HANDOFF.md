@@ -6,9 +6,19 @@ project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is th
 scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
 file carries only the **live state**.
 
-**Branch: `feature/mpx264`**, cut from `main` on 2026-09-09. `main` and `develop` are
-level with it; `feature/mpx`, `feature/acs2er` and `feature/cpuSingleComp` were merged
-and deleted. The cluster clone `~/acs2-rust-repo` tracks `feature/mpx264` too.
+**Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10, which is where the
+next step lives (§8). `main` is level with it. `develop` was retired: it never differed
+from `main` in a solo workflow and was one more thing to keep in sync. `feature/mpx`,
+`feature/mpx264`, `feature/acs2er` and `feature/cpuSingleComp` were merged and deleted.
+The cluster clone `~/acs2-rust-repo` tracks `feature/checkpointing` too.
+
+**Git history was rewritten on 2026-09-09** to drop agent co-author trailers, and every
+commit is authored solely by the user. Check before any merge to `main` — repairing it
+later means another force-push:
+
+```
+git log --oneline --grep="Co-Authored-By" --all | wc -l     # must be 0
+```
 
 **The repository is public and about to be handed to other students of the supervisor.**
 He asked for it as a base for their work and the user agreed. That raises the bar on
@@ -458,7 +468,7 @@ failure mode. This file carries the research state; that one carries the habits.
 
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
-preserving current behaviour. Commit and push to `feature/mpx264` after each completed
+preserving current behaviour. Commit and push to `feature/checkpointing` after each completed
 group. Measurements live in `reports/`, review/fix reports in `scratchpad/`, and the
 implementation record in `docs/ARCHITECTURE.md`.
 Ask the user only for scope decisions — new experiment phases, supervisor
