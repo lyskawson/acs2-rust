@@ -1,0 +1,11 @@
+run-provenance: commit=d97b718 job=5856652 tag=eps1b_u11 size=135 seed=42 time_cap=1080000s partition=bem2-cpu-normal host=r22c01b03.bem2.kdm.wcss.pl started=2026-09-09T13:43:49+02:00
+run-argv: --log-coverage 
+acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_cap=1080000s do_ga=true alp_gen_variant=pyalcs epsilon=1 encoding=flip eval_interval=120000
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=11
+  mpx-135 traj: trials=120000 wall=323s knowledge=0.0000 reliable=0 spec=0.00 pop=4570
+  mpx-135 cover: trials=120000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=120000 accuracy=0.5006
+  mpx-135 traj: trials=240000 wall=539s knowledge=0.0000 reliable=0 spec=0.00 pop=4922
+  mpx-135 cover: trials=240000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=240000 accuracy=0.5032

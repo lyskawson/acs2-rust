@@ -4,10 +4,13 @@ Wygenerowane przez `tools/summarize_mpx.py` z `reports/mpx_verdicts.csv`
 i `reports/mpx_trajectory.csv`. **Nie edytować ręcznie** — przebudować po
 każdym ściągnięciu logów z klastra.
 
-Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu: liczby są
-z ostatniego punktu pomiarowego, nie z wyniku końcowego. `a0_nc` i `a1_nc` to
-klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75 albo
-0,50 w kolumnie knowledge czyta się właśnie tam.
+Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu, a `cancelled`
+albo `partial`, że został zatrzymany — w obu wypadkach liczby pochodzą
+z ostatniego punktu pomiarowego, nie z wyniku końcowego.
+
+`a0_nc` i `a1_nc` to klasy błędnej odpowiedzi. To one głodzą, więc sufit
+w kolumnie knowledge czyta się właśnie tam: dwie klasy puste dają 0,50,
+jedna 0,75. Pusta kolumna znaczy, że przebieg biegł bez `--log-coverage`.
 
 ## Kodowanie kanoniczne (flip) · epsilon = 0.8
 
@@ -20,10 +23,10 @@ klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75
 | 42 | 8 | TIME-LIMITED | 1 625 500 | 0.2406 | - | 110 | 8.63 | - | - | - | - | 0.2 | 2709 | `mpx_m2b_reach70.log` |
 | 43 | 8 | **SUCCESS** | 17 820 000 | 1.0000 | - | 269 | 7.00 | - | - | - | - | 3.8 | 1301 | `70_s43` |
 | 43 | 8 | **SUCCESS** | 17 820 000 | 1.0000 | - | 269 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.7 | 1355 | `70_s43_cover` |
-| 43 | 8 | running | 4 740 000 | 0.2885 | - | 89 | 7.92 | - | - | - | - | 1.5 | 890 | `70_s43.cap40k.cancelled` |
+| 43 | 8 | cancelled | 4 740 000 | 0.2885 | - | 89 | 7.92 | - | - | - | - | 1.5 | 890 | `70_s43.cap40k.cancelled` |
 | 43 | 8 | TIME-LIMITED | 1 555 000 | 0.1349 | - | 75 | 9.20 | - | - | - | - | 0.2 | 2591 | `mpx_m2b_reach70.log` |
 | 44 | 8 | **SUCCESS** | 44 580 000 | 1.0000 | - | 274 | 7.00 | - | - | - | - | 8.1 | 1538 | `70_s44` |
-| 44 | 8 | running | 5 280 000 | 0.2932 | - | 90 | 7.87 | - | - | - | - | 1.5 | 988 | `70_s44.cap40k.cancelled` |
+| 44 | 8 | cancelled | 5 280 000 | 0.2932 | - | 90 | 7.87 | - | - | - | - | 1.5 | 988 | `70_s44.cap40k.cancelled` |
 | 44 | 8 | TIME-LIMITED | 1 503 000 | 0.1419 | - | 91 | 9.79 | - | - | - | - | 0.2 | 2505 | `mpx_m2b_reach70.log` |
 | 45 | 8 | **SUCCESS** | 21 300 000 | 1.0000 | - | 271 | 7.00 | - | - | - | - | 3.2 | 1847 | `70_s45` |
 | 46 | 8 | **SUCCESS** | 66 420 000 | 1.0000 | - | 268 | 7.00 | - | - | - | - | 12.9 | 1436 | `70_s46` |
@@ -49,4 +52,5 @@ klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75
 
 - przebiegów w archiwum: **21**
 - rozwiązanych (knowledge = 1,0): **15**
-- najtańsze rozwiązanie: ziarno 42, 3 960 000 prób, kodowanie flip, 160.1 h
+- najmniej prób: ziarno 42, 3 960 000 prób, 160.1 h, kodowanie flip, epsilon 0.8, acs2er
+- najkrótszy czas: ziarno 42, 4 680 000 prób, 0.6 h, kodowanie outcome, epsilon 0.8, acs2

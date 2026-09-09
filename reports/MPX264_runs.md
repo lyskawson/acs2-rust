@@ -4,10 +4,13 @@ Wygenerowane przez `tools/summarize_mpx.py` z `reports/mpx_verdicts.csv`
 i `reports/mpx_trajectory.csv`. **Nie edytować ręcznie** — przebudować po
 każdym ściągnięciu logów z klastra.
 
-Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu: liczby są
-z ostatniego punktu pomiarowego, nie z wyniku końcowego. `a0_nc` i `a1_nc` to
-klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75 albo
-0,50 w kolumnie knowledge czyta się właśnie tam.
+Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu, a `cancelled`
+albo `partial`, że został zatrzymany — w obu wypadkach liczby pochodzą
+z ostatniego punktu pomiarowego, nie z wyniku końcowego.
+
+`a0_nc` i `a1_nc` to klasy błędnej odpowiedzi. To one głodzą, więc sufit
+w kolumnie knowledge czyta się właśnie tam: dwie klasy puste dają 0,50,
+jedna 0,75. Pusta kolumna znaczy, że przebieg biegł bez `--log-coverage`.
 
 ## Kodowanie zmienione (outcome) · epsilon = 0.8
 

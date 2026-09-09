@@ -80,6 +80,23 @@ Three log-format traps it handles, all of which have bitten this project:
 - **Older logs predate `u_max` and `alp_gen_variant`**, and one file may hold
   several runs behind banner lines. A header line resets the parse context.
 
+## Sync — run this after every batch
+
+Nothing copies a cluster run into the repo on its own. `slurm/mpx_reach.sh` writes
+only to `~/mpx_runs/` on the cluster, deliberately outside any checkout, so until
+this runs the cluster home is the **single copy** of a result that cost days.
+
+```bash
+./tools/sync_runs.sh            # pull, rebuild the CSVs and tables, report
+./tools/sync_runs.sh --commit   # the same, then commit
+```
+
+It prints what is new or changed, then lists every solved run in the archive — if a
+run you remember solving is missing from that list, its log never left the cluster.
+
+This gap has already bitten once: 32 logs existed only on the cluster, and five
+were committed as zero-byte stubs, so the repo *looked* like it had them.
+
 ## Summarise
 
 Turns one size into a page a person can scan, in-flight runs included:

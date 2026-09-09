@@ -7,9 +7,10 @@ because a run only gets a verdict line when it stops.
 
 Each row is one repeat. The state column distinguishes a finished run from a live
 one: SUCCESS / TIME-LIMITED / MEMORY-LIMITED come from the verdict line, `running`
-means trajectory points with no verdict yet, and `cancelled` is a log archived under
-that suffix -- for both of the latter the numbers are that run's last evaluation
-point, not a final result.
+means trajectory points with no verdict yet, and `cancelled` / `partial` come from
+the archive marker in the log name -- which appears as a suffix on some files and
+infix on others, so it is matched anywhere. For everything but a verdict the numbers
+are that run's last evaluation point, not a final result.
 
 The four coverage columns are the diagnostic this project actually turns on: at
 k=135 the wrong-answer classes (`a0_nc`, `a1_nc`) are what starve, so a run whose
@@ -23,6 +24,14 @@ from pathlib import Path
 
 RUN_KEY = ("source", "seed", "repeat")
 COVERAGE = ("a0_nochange", "a0_change", "a1_nochange", "a1_change")
+
+
+def archived_state(source):
+    """`cancelled` and `partial` mark a stopped run, as a suffix or an infix."""
+    for marker in ("cancelled", "partial"):
+        if f".{marker}" in source:
+            return marker
+    return "running"
 
 
 def load(path):
@@ -62,12 +71,7 @@ def collect(trajectory, verdicts, size):
             last_point[key] = row
 
     for key, point in last_point.items():
-        stopped = point["source"].endswith(".cancelled")
-        records[key] = {
-            **point,
-            "state": "cancelled" if stopped else "running",
-            "final": False,
-        }
+        records[key] = {**point, "state": archived_state(point["source"]), "final": False}
 
     for row in verdicts:
         if int(row["size"]) != size:
@@ -98,10 +102,13 @@ def render(records, size):
         "i `reports/mpx_trajectory.csv`. **Nie edytować ręcznie** — przebudować po",
         "każdym ściągnięciu logów z klastra.",
         "",
-        "Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu: liczby są",
-        "z ostatniego punktu pomiarowego, nie z wyniku końcowego. `a0_nc` i `a1_nc` to",
-        "klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75 albo",
-        "0,50 w kolumnie knowledge czyta się właśnie tam.",
+        "Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu, a `cancelled`",
+        "albo `partial`, że został zatrzymany — w obu wypadkach liczby pochodzą",
+        "z ostatniego punktu pomiarowego, nie z wyniku końcowego.",
+        "",
+        "`a0_nc` i `a1_nc` to klasy błędnej odpowiedzi. To one głodzą, więc sufit",
+        "w kolumnie knowledge czyta się właśnie tam: dwie klasy puste dają 0,50,",
+        "jedna 0,75. Pusta kolumna znaczy, że przebieg biegł bez `--log-coverage`.",
         "",
     ]
 
@@ -142,13 +149,19 @@ def render(records, size):
         f"- rozwiązanych (knowledge = 1,0): **{len(solved)}**",
     ]
     if solved:
-        cheapest = min(solved, key=lambda r: int(r["trials"]))
-        trials = f"{int(cheapest['trials']):,}".replace(",", " ")
-        lines.append(
-            f"- najtańsze rozwiązanie: ziarno {cheapest['seed']}, {trials} prób, "
-            f"kodowanie {cheapest['encoding']}, "
-            f"{float(cheapest['wall_s']) / 3600:.1f} h"
-        )
+        def describe(row):
+            trials = f"{int(row['trials']):,}".replace(",", " ")
+            agent = row["agent"] or "acs2"
+            return (
+                f"ziarno {row['seed']}, {trials} prób, {float(row['wall_s']) / 3600:.1f} h, "
+                f"kodowanie {row['encoding']}, epsilon {row['epsilon']}, {agent}"
+            )
+
+        fewest = min(solved, key=lambda r: int(r["trials"]))
+        fastest = min(solved, key=lambda r: float(r["wall_s"]))
+        lines.append(f"- najmniej prób: {describe(fewest)}")
+        if fastest is not fewest:
+            lines.append(f"- najkrótszy czas: {describe(fastest)}")
     return "\n".join(lines) + "\n"
 
 

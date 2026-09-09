@@ -4,10 +4,13 @@ Wygenerowane przez `tools/summarize_mpx.py` z `reports/mpx_verdicts.csv`
 i `reports/mpx_trajectory.csv`. **Nie edytować ręcznie** — przebudować po
 każdym ściągnięciu logów z klastra.
 
-Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu: liczby są
-z ostatniego punktu pomiarowego, nie z wyniku końcowego. `a0_nc` i `a1_nc` to
-klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75 albo
-0,50 w kolumnie knowledge czyta się właśnie tam.
+Stan `running` znaczy, że przebieg nie ma jeszcze linii werdyktu, a `cancelled`
+albo `partial`, że został zatrzymany — w obu wypadkach liczby pochodzą
+z ostatniego punktu pomiarowego, nie z wyniku końcowego.
+
+`a0_nc` i `a1_nc` to klasy błędnej odpowiedzi. To one głodzą, więc sufit
+w kolumnie knowledge czyta się właśnie tam: dwie klasy puste dają 0,50,
+jedna 0,75. Pusta kolumna znaczy, że przebieg biegł bez `--log-coverage`.
 
 ## Kodowanie kanoniczne (flip) · epsilon = 0.8
 
@@ -51,13 +54,14 @@ klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75
 | ziarno | u_max | stan | próby | knowledge | accuracy | reguły | spec | a0_nc | a0_c | a1_nc | a1_c | godz. | prób/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 42 | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | - | 393 | 8.01 | 0.0000 | 0.9773 | 1.0000 | 1.0000 | 166.7 | 502 | `135_s42_eps1_u11` |
+| 42 | 11 | running | 240 000 | 0.0000 | 0.5032 | 0 | 0.00 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.1 | 445 | `135_s42_eps1b_u11` |
 | 43 | 11 | **SUCCESS** | 427 920 000 | 1.0000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
 
 ## Kodowanie zmienione (outcome) · epsilon = 0.8
 
 | ziarno | u_max | stan | próby | knowledge | accuracy | reguły | spec | a0_nc | a0_c | a1_nc | a1_c | godz. | prób/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | 9 | running | 12 840 000 | 0.1525 | - | 91 | 8.25 | 0.0000 | 0.6101 | 0.0000 | 0.0000 | 26.6 | 134 | `135_s42_outcome_u9` |
+| 42 | 9 | running | 13 440 000 | 0.1616 | 0.7485 | 100 | 8.47 | 0.0000 | 0.6465 | 0.0000 | 0.0000 | 27.5 | 136 | `135_s42_outcome_u9` |
 | 42 | 11 | **SUCCESS** | 43 200 000 | 1.0000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 50.5 | 238 | `135_s42_outcome_u11` |
 | 43 | 11 | **SUCCESS** | 46 800 000 | 1.0000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 78.8 | 165 | `135_s43_outcome_u11` |
 | 44 | 11 | cancelled | 4 800 000 | 0.1583 | 0.6495 | 423 | 10.92 | 0.0918 | 0.3379 | 0.1092 | 0.0944 | 79.0 | 17 | `135_s44_outcome_u11.cancelled` |
@@ -66,6 +70,7 @@ klasy błędnej odpowiedzi — przy 135 bitach to one głodzą, więc sufit 0,75
 
 ## Podsumowanie
 
-- przebiegów w archiwum: **35**
+- przebiegów w archiwum: **36**
 - rozwiązanych (knowledge = 1,0): **5**
-- najtańsze rozwiązanie: ziarno 46, 30 240 000 prób, kodowanie outcome, 57.6 h
+- najmniej prób: ziarno 46, 30 240 000 prób, 57.6 h, kodowanie outcome, epsilon 0.8, acs2
+- najkrótszy czas: ziarno 42, 43 200 000 prób, 50.5 h, kodowanie outcome, epsilon 0.8, acs2
