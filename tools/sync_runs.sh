@@ -19,25 +19,35 @@ trap 'rm -rf "$STAGE"' EXIT
 
 cd "$REPO"
 
-echo "==> pulling ~/mpx_runs from the cluster"
-rsync -az -e "ssh -i $KEY -o ConnectTimeout=30" "$REMOTE:~/mpx_runs/" "$STAGE/"
+commit=false
+local_only=false
+for arg in "$@"; do
+  case "$arg" in
+    --commit) commit=true ;;
+    --local) local_only=true ;;
+    *) echo "unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
 
-# .wrapper files are SLURM's own stderr, not measurements, and are gitignored.
 new=0
 updated=0
-for file in "$STAGE"/*.out "$STAGE"/*.cancelled; do
-  [ -f "$file" ] || continue
-  name="$(basename "$file")"
-  if [ ! -f "reports/$name" ]; then
-    new=$((new + 1))
-    echo "    new     $name"
-  elif ! cmp -s "$file" "reports/$name"; then
-    updated=$((updated + 1))
-    echo "    updated $name"
-  fi
-  cp "$file" "reports/$name"
-done
-echo "==> $new new, $updated updated"
+if ! $local_only; then
+  echo "==> pulling ~/mpx_runs from the cluster"
+  rsync -az -e "ssh -i $KEY -o ConnectTimeout=30" "$REMOTE:~/mpx_runs/" "$STAGE/"
+  for file in "$STAGE"/*.out "$STAGE"/*.cancelled; do
+    [ -f "$file" ] || continue
+    name="$(basename "$file")"
+    if [ ! -f "reports/$name" ]; then
+      new=$((new + 1))
+      echo "    new     $name"
+    elif ! cmp -s "$file" "reports/$name"; then
+      updated=$((updated + 1))
+      echo "    updated $name"
+    fi
+    cp "$file" "reports/$name"
+  done
+  echo "==> $new new, $updated updated"
+fi
 
 echo "==> rebuilding the CSV archive"
 python3 tools/parse_mpx_logs.py reports/slurm_*.out reports/*.cancelled \
@@ -49,8 +59,8 @@ python3 tools/rebuild_tables.py
 echo "==> runs that reached knowledge 1.0"
 python3 tools/list_solved.py
 
-if [ "${1:-}" = "--commit" ]; then
-  if git diff --quiet -- reports/ && git diff --cached --quiet -- reports/; then
+if $commit; then
+  if [ -z "$(git status --porcelain --untracked-files=all -- reports/)" ]; then
     echo "==> nothing changed, no commit"
   else
     git add reports/

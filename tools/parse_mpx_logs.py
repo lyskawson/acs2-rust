@@ -66,18 +66,26 @@ VERDICT = re.compile(
 )
 ACCURACY = re.compile(r"^\s*mpx-(?P<size>\d+) acc:\s*(?P<fields>.*)")
 COVERAGE = re.compile(r"^\s*mpx-(?P<size>\d+) cover:\s*(?P<fields>.*)")
+QUADRANT_DETAIL = re.compile(r"^\s*mpx-(?P<size>\d+) qdetail:\s*(?P<fields>.*)")
 PROVENANCE = re.compile(r"^run-provenance:\s*(?P<fields>.*)")
 
+REPLAY_COLUMNS = ["er_buffer_size", "er_min_samples", "er_samples_number"]
 PROVENANCE_COLUMNS = [
     "encoding", "encoding_source", "epsilon", "agent", "eval_interval", "commit", "tag",
+    "do_ga", *REPLAY_COLUMNS,
 ]
-IDENTITY_COLUMNS = ["source", "size", "seed", "variant", "u_max", "repeat"] + PROVENANCE_COLUMNS
+IDENTITY_COLUMNS = ["source", "block", "size", "seed", "variant", "u_max", "repeat"] + PROVENANCE_COLUMNS
 COVERAGE_COLUMNS = [
     "a0_nochange", "a0_change", "a1_nochange", "a1_change", "matched_but_wrong",
 ]
+QUADRANT_COLUMNS = [
+    f"{cell}_{metric}"
+    for cell in ("a0nc", "a0c", "a1nc", "a1c")
+    for metric in ("any", "q")
+]
 TRAJECTORY_COLUMNS = IDENTITY_COLUMNS + [
     "trials", "wall_s", "knowledge", "reliable", "spec", "pop", "accuracy",
-] + COVERAGE_COLUMNS
+] + COVERAGE_COLUMNS + QUADRANT_COLUMNS
 DIAGNOSTIC_COLUMNS = IDENTITY_COLUMNS + [
     "trials",
     "micro", "pop_spec", "spec_max", "q_mean", "q_max", "q_above_half",
@@ -140,7 +148,9 @@ def encoding_from_name(source):
 class RunContext:
     """Header-scoped state: what every record in this run block inherits."""
 
-    def __init__(self, fields, source="", provenance=None):
+    def __init__(self, fields, source="", provenance=None, block=0):
+        self.block = block
+        self.learning_config = {key: fields.get(key, "") for key in ("do_ga", *REPLAY_COLUMNS)}
         self.base_seed = int(fields.get("seed", 0))
         self.variant = fields.get("alp_gen_variant", "")
         if fields.get("encoding"):
@@ -160,6 +170,7 @@ class RunContext:
 
     def provenance(self):
         return {
+            **self.learning_config,
             "encoding": self.encoding,
             "encoding_source": self.encoding_source,
             "epsilon": self.epsilon,
@@ -179,6 +190,7 @@ def parse_log(path):
     trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
     provenance = {}
     context = RunContext({}, source)
+    block = 0
 
     def point_for(size, trials):
         """The trajectory point at this trial count, created if new.
@@ -198,7 +210,8 @@ def parse_log(path):
 
         header = HEADER.search(line)
         if header:
-            context = RunContext(parse_fields(header.group("fields")), source, provenance)
+            block += 1
+            context = RunContext(parse_fields(header.group("fields")), source, provenance, block)
             continue
 
         config = CONFIG.match(line)
@@ -234,6 +247,13 @@ def parse_log(path):
             for key in COVERAGE_COLUMNS:
                 if key in fields:
                     point[key] = fields[key]
+            continue
+
+        detail = QUADRANT_DETAIL.match(line)
+        if detail:
+            fields = parse_fields(detail.group("fields"))
+            point = point_for(detail.group("size"), int(fields["trials"]))
+            point.update({key: fields[key] for key in QUADRANT_COLUMNS if key in fields})
             continue
 
         diagnostic = DIAGNOSTIC.match(line)
@@ -296,6 +316,7 @@ def identity(context, source, size, repeat):
     """The columns every record in a run block carries, provenance included."""
     return {
         "source": source,
+        "block": context.block,
         "size": int(size),
         "seed": context.seed_for(repeat),
         "variant": context.variant,

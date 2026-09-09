@@ -24,7 +24,7 @@ the CSVs are small, reviewable, and committed. **Nothing downstream reads a log.
 ## Setup
 
 ```bash
-cd tools && uv sync
+uv sync --project tools
 ```
 
 ## Parse
@@ -33,29 +33,34 @@ Run from the repo root. Accepts any mix of laptop `.log`/`.txt` and cluster
 `.out` files:
 
 ```bash
-python3 tools/parse_mpx_logs.py reports/mpx_m3_e1_traj70_pyalcs.log reports/slurm_mpx70_*.out
+./tools/sync_runs.sh --local    # rebuild the complete local archive
 ```
 
 Needs no venv (standard library only). Writes `reports/mpx_trajectory.csv` (one
 row per evaluation point, with accuracy and the four coverage classes merged in),
 `reports/mpx_diagnostics.csv` and `reports/mpx_verdicts.csv` (one row per repeat);
-override with `--trajectory-csv` / `--diagnostic-csv` / `--verdict-csv`.
+override all three outputs with `--trajectory-csv` / `--diagnostic-csv` /
+`--verdict-csv` when parsing a subset. Never overwrite the archive from a subset.
+The complete input set is `reports/slurm_*.out`, `reports/*.cancelled`,
+`reports/mpx_m2b_reach*.log`, and `reports/mpx_m3_e1_traj70_*.log`.
+`qdetail:` candidate coverage and best quality are merged into the trajectory row.
 
 To rebuild the whole archive after pulling the cluster logs:
 
 ```bash
-rsync -az -e "ssh -i ~/.ssh/id_rsa_wcss" alelys2099@ui.wcss.pl:'~/mpx_runs/' /tmp/mpx_logs/
-cp /tmp/mpx_logs/*.out /tmp/mpx_logs/*.cancelled reports/
-python3 tools/parse_mpx_logs.py reports/slurm_*.out reports/*.cancelled \
-    reports/mpx_m2b_reach*.log reports/mpx_m3_e1_traj70_*.log
+./tools/sync_runs.sh
 ```
 
 ### What makes a row reproducible
 
 Every row carries the configuration that determines the result: `size`, `seed`,
-`u_max`, `variant`, `encoding`, `epsilon`, `agent`, `eval_interval`, plus
+`u_max`, `variant`, `encoding`, `epsilon`, `agent`, `do_ga`, `er_buffer_size`,
+`er_min_samples`, `er_samples_number`, `eval_interval`, plus
 `commit` and `tag` for runs submitted after the wrapper started recording them.
-Two runs that agree on all of these should agree trial for trial.
+Missing header values remain empty. `source`, one-based header `block`, `size`, and
+`repeat` identify each run, even when one file repeats an identical configuration.
+Equal seeds and complete learning configurations reproduce learning at equal trial
+counts on the tested 64-bit platforms, independent of diagnostic overhead.
 
 `encoding_source` is the honest part. The header only carries `encoding` from the
 commit that added it, so for older logs the value is reconstructed and this column
@@ -91,6 +96,9 @@ this runs the cluster home is the **single copy** of a result that cost days.
 ./tools/sync_runs.sh --commit   # the same, then commit
 ```
 
+Use `--local` to skip the cluster pull. `--commit` detects untracked logs as well
+as tracked modifications, including header-only logs without CSV rows.
+
 It prints what is new or changed, then lists every solved run in the archive — if a
 run you remember solving is missing from that list, its log never left the cluster.
 
@@ -105,7 +113,7 @@ Turns one size into a page a person can scan, in-flight runs included:
 python3 tools/summarize_mpx.py --size 135     # writes reports/MPX135_runs.md
 ```
 
-Grouped by experimental arm (encoding, epsilon, agent), one row per repeat, with
+Grouped by experimental arm (encoding, epsilon, agent, GA, replay parameters), one row per repeat, with
 the four coverage classes alongside knowledge -- at k=135 a ceiling of 0.75 or 0.50
 is read in those columns, not in the knowledge column.
 

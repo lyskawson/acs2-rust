@@ -108,8 +108,8 @@ runs, a result exists only on the cluster.
 Optional, needs [`uv`](https://docs.astral.sh/uv/):
 
 ```bash
-python3 tools/parse_mpx_logs.py reports/slurm_*.out    # logs -> CSVs
-python3 tools/rebuild_tables.py                        # CSVs -> reports/MPX<k>_runs.md
+./tools/sync_runs.sh --local     # full local archive -> CSVs and tables
+# Omit --local to pull current cluster logs first.
 uv run --project tools python tools/plot_mpx.py --size 135 \
     --encoding flip --epsilon 1 --u-max 11 --suffix _canonical_eps1
 ```
