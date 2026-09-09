@@ -1,8 +1,21 @@
 # Agent onboarding — ACS2 Rust, multiplexer scaling and experience replay
 
-Handoff for a fresh session. Read `docs/PROJECT_CONTEXT.md` for what the project is,
-`docs/ARCHITECTURE.md` for how it is built, and `reports/MPX_final.md` for the
-scientific narrative. This file carries only the **live state**.
+Handoff for a fresh session. `CLAUDE.md` at the repo root carries the operational rules
+and loads automatically — read it, then this. `docs/PROJECT_CONTEXT.md` says what the
+project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is the
+scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
+file carries only the **live state**.
+
+**Branch: `feature/mpx264`**, cut from `main` on 2026-09-09. `main` and `develop` are
+level with it; `feature/mpx`, `feature/acs2er` and `feature/cpuSingleComp` were merged
+and deleted. The cluster clone `~/acs2-rust-repo` tracks `feature/mpx264` too.
+
+**The repository is public and about to be handed to other students of the supervisor.**
+He asked for it as a base for their work and the user agreed. That raises the bar on
+README and `reports/MPX_final.md`, both rewritten for that audience on 2026-09-09.
+`docs/SUPERVISOR_CORRESPONDENCE.md` and `docs/SUPERVISOR_NOTES.md` are gitignored and
+must stay that way — the first never entered the repository at all, the second was
+untracked on 2026-09-09 but remains in history before that commit.
 
 ## 1. Where the research stands
 
@@ -33,7 +46,7 @@ filled one wrong-answer class) and 0.4980 / 0.4980 / 0.4918 (seeds 43–45, whic
 filled none). Seed 42 is the outlier — see §3.
 
 **`epsilon = 1` CLOSES k=135 on the canonical encoding. This is the strongest result
-in the project.** Seed 43 caps at 0.4980 canonically; with the greedy bias removed it
+in the project, and it rests on one seed until `eps135_s42b` finishes (§6).** Seed 43 caps at 0.4980 canonically; with the greedy bias removed it
 reached **knowledge 1.0000 at 427,920,000 trials**, 532 reliable rules at specificity
 8.02, all four coverage classes at 1.0000, in 152.3 h. Canonical-encoding results are
 the ones comparable to the multiplexer literature, so this beats the `outcome` result
@@ -186,15 +199,17 @@ running job.
 Grant: 5000 CPU-hours, 2026-07-23 to 2027-07-24, 200 GB disk (27 MB used; disk is a
 non-issue).
 
-**Measured on 2026-09-08: 4367 h consumed, 633 h left.** The authoritative reading is
+**Measured 2026-09-09: 4457 h consumed, 543 h left, 476 h of it already committed to
+running jobs — roughly 67 h genuinely free.** A new grant application is being filed;
+until it lands, submit nothing that is not already planned. The authoritative reading is
 
 ```
 sshare -U -u alelys2099 -o RawUsage -n     # CPU-seconds; /3600 for hours
 ```
 
-which is the **undecayed lifetime total** here — `scontrol show config` reports
-`PriorityDecayHalfLife = 00:00:00` and `PriorityUsageResetPeriod = NONE`, so nothing
-ages out of it. Confirm the decay settings before trusting the number again.
+which is the **undecayed lifetime total** here — the QOS carries `NoDecay`, confirmed by
+`scontrol show config` (`PriorityDecayHalfLife = 00:00:00`). Confirm that before trusting
+the number again.
 
 `sacct` **does** work, contrary to what this file said before. It rejects wide date
 ranges with `Too wide of a date range in query`; query a month at a time. Retention
@@ -262,32 +277,19 @@ Three things that cost days before:
 
 ## 6. Experiments in flight
 
-Eleven jobs, `bem2-cpu-normal`, 600,000 s internal cap. `./slurm/mpx_status.sh`; logs in
-`~/mpx_runs/` as `slurm_mpx<size>_s<seed>[_<TAG>].out`.
+Four jobs as of 2026-09-09. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
+into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-Readings taken 2026-09-08 — the two marked **new** move claims made elsewhere in this file.
-
-| Job | Live reading | Verdict so far |
+| Job | What it is | Why it matters |
 |---|---|---|
-| `eps135_s43` | knowledge **0.9685** at 414.0 M trials, 518 reliable, spec 8.06; classes 0.9942 / 1.0 / 0.8796 / 1.0 | **new — the most valuable job in the queue.** `epsilon = 1` under the **canonical** encoding is filling *both* wrong-answer classes and still climbing. If it closes, k=135 is solved on the literature-comparable encoding. ~30 h of wall-time left and no checkpointing, so it will most likely die short of 1.0. |
-| `eps135_s42` | 0.7350 at 252.2 M, `a0_nochange` still 0.0000 | `epsilon = 1` does not lift every seed. Seed 42 is stuck at the same ceiling. |
-| `acc135u11` | knowledge 0.7499, **accuracy 1.0000** held over 325.1 M trials | Settled. Nothing more to learn from it. |
-| `acc135u12` | knowledge 0.4822, accuracy 0.9854 | Accuracy 1.0 is a property of `u_max` = 11, **not** of the canonical ceiling generally. |
-| `enc135_s45` | 0.9981, 528 reliable, spec 8.01, accuracy 1.0000 | Essentially solved; 4th `outcome` seed. |
-| `enc135_s44` | 0.1583 at 4.8 M trials, **pop 64 579, spec 10.92**, 17 trials/s | **new — a counterexample.** Under `outcome` this seed is in a bloated, over-specialised regime, ~9x slower than seed 45. It will not converge in its remaining 100 h. |
-| `encU9_s42` | 0.0023, **5 reliable**, spec 11.80, pop 24 281 at 3.84 M trials | The control. Canonical encoding at `u_max` = 9 gave a hard zero across 105.6 M; `outcome` does create rules, but it is not converging. Preliminary read: **the encoding alone does not rescue `u_max` = 9**, so the `u_max` sweep was not merely treating a symptom. |
-| `encU9_s43` | PENDING | Second seed of the control above. |
-| `er70_m8`, `er70m8b`, `er70m13b` | running | Does replay *volume* help the starved class or only the easy ones? |
-| `probe264` (5851940) | submitted 2026-09-08, `bem2-cpu-short`, 12 h internal cap, 64 GB, `--rss-cap-gb 56`, `--encoding outcome --u-max 12` | **The measurement the WCSS application is waiting on.** Real throughput and peak RSS at k=264, replacing the extrapolation from a 500-trial probe. Costs at most 13 h. |
+| `eps135_s42b` (5856652) | k=135, canonical, `u_max` 11, `epsilon` 1, seed 42, 300 h cap, ~13 days wall | **The one that matters.** Seed 42 previously reached 0.7442 and was cut at 301.4 M trials — 100 M short of where seed 43's second class opened. This run has budget for ~540 M. If it closes, the canonical k=135 result is two seeds instead of one. Free bonus: the first 301 M trials must reproduce exactly, so it doubles as a determinism check. |
+| `encU9_s42` | k=135, `outcome`, canonical `u_max` = 9 | Does the encoding alone rescue the canonical `u_max`? It is climbing — 0.15 knowledge, 88 reliable rules, specificity 8.2 — where the canonical encoding gave a hard zero across 105.6 M trials. Not converging yet. |
+| `er70m8b`, `er70m13b` | k=70 ACS2ER, m = 8 and 13, `--mem=32G` | Does replay *volume* reach the starved class or only the easy ones? Both end within a day. |
 
-**Cancelled 2026-09-08, final readings preserved here** (logs archived as `*.cancelled`):
-
-| Job | Last reading |
-|---|---|
-| `acc135u11` | 325.8 M trials, knowledge 0.7499, **accuracy 1.0000**, 392 reliable, spec 8.00; classes 0.0000 / 1.0 / 1.0 / 1.0 |
-| `acc135u12` | 169.6 M trials, knowledge 0.4821, accuracy 0.9821, 255 reliable, spec 8.16; both `nochange` classes 0.0000 |
-| `enc135_s44` | 4.8 M trials, knowledge 0.1583, accuracy 0.6495, 423 reliable, **spec 10.92, pop 64 579**, `matched_but_wrong` 144 |
-| `encU9_s43` | never started |
+Finished this session, already in the archive: `eps135_s43` (SUCCESS, the headline),
+`enc135_s45` (SUCCESS, 4th `outcome` seed), `probe264` (the k=264 measurement).
+Cancelled with their readings preserved: `acc135u11`, `acc135u12`, `enc135_s44`,
+`encU9_s43`.
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
@@ -342,36 +344,34 @@ pattern is the failure mode to watch for.
 
 ## 8. What to do next
 
-The supervisor wants to attack a larger multiplexer and asked whether to reserve
-cluster resources. Answering that responsibly needs three things first, and this is
-the live decision:
+The supervisor approved going after k=264 ("Koniecznie!") and asked whether the
+implementation can be shared as a base for his other students — so **the repository is
+now a public teaching artefact as well as a thesis codebase**. Keep it that way: README
+and `reports/MPX_final.md` are the two documents an outsider reads first, and both were
+rewritten for that audience.
 
-1. **Sizes are not continuous.** `k = a + 2^a`, so after 135 the next is **264**, then
-   521. At 264 a classifier is 7504 B against 3896 B, and a complete solution needs
-   1024 reliable rules against 512. `264` is now wired into the dispatch (`f93b71e`);
-   it previously panicked. A 500-trial probe on the M1 gives ~14 trials/s, 0.35 GB and
-   a population of 8107.
-2. **Measuring is done — `probe264` is running** (§6), so the application's numbers
-   stop being extrapolations from 500 trials. This was decoupled from checkpointing:
-   a 12-hour measurement needs no save/restore, only the real run does.
-3. **Checkpointing is still the blocker for the real run.** Extrapolating, one k=264
-   seed is 700–1200 CPU-hours — beyond the 21-day queue limit, so a cut-off run loses
-   everything. Save/restore of the population is the enabling change. It touches the
-   core, so it goes behind a flag with the P8/P9 gates intact. Note the queue allows
-   504 h per job against the 167 h we currently take (§5), which shortens how far
-   checkpointing has to stretch.
-4. **The WCSS application.** Drafted in the scratchpad, waiting on `probe264`. The ask
-   is 10,000 CPU-hours against ~8000 h of costed work. Four declarations in the
-   original application are now demonstrably false and must be corrected, not just the
-   hours: RAM (`< 1 GB` against 8–32 GB measured and one OOM at 8.4 GB), per-run time
-   (`2–48 h` against 167 h routinely), queue (`>= 48 h` against 21 days needed), and
-   SLURM Job Arrays (declared, never used). Unknown and worth one question to WCSS
-   support: whether this is an increase to the existing service, which runs to
-   2027-07-24, or a fresh application.
+In order:
 
-After that, the thesis core: prioritised experience replay. The contribution is not ER
-itself (ACS2ER exists and its limits are measured) but a **prioritisation criterion
-targeted at the measured gap** rather than a generic TD-error rule from deep RL.
+1. **The new WCSS grant.** The user is filing for 10,000 CPU-hours. Until it lands there
+   are ~67 free hours, so no new batches. The application's costed basis: ~700 h to finish
+   current work, ~1000 h to close k=135 canonically on three seeds, ~4000-5000 h for k=264
+   on three seeds with controls, ~2000 h for the replay experiments. Correct the original
+   application's RAM figure — it declared `< 1 GB`, ACS2ER measured 8-32 GB, but the k=264
+   probe measured only **0.86 GB**, so the driver is ACS2ER, not problem size. Wall-time
+   declared `>= 48h` against 21 days actually needed.
+2. **Checkpointing.** The blocker for k=264 and now measured rather than argued: one seed
+   is 700-4500 CPU-hours against a 504 h queue limit. Save/restore of the population is the
+   enabling change. It touches the core, so it goes behind a flag with the P8/P9 gates
+   intact. Note the queue allows 504 h per job against the 167 h we habitually request
+   (§5), which shortens how far checkpointing has to stretch.
+3. **k=264 itself**, on the new grant, under `--encoding outcome` — the user's decision,
+   stated to the supervisor: canonical is ~10x more expensive and looks out of reach. The
+   cost is comparability with the multiplexer literature, which the supervisor was told
+   explicitly.
+4. **Then the thesis core: prioritised experience replay.** The contribution is not replay
+   itself — ACS2ER exists and its limits are measured — but a **prioritisation criterion
+   aimed at the measured gap**: specific classes of transition starve while the rest
+   converge. A generic TD-error rule imported from deep RL is not that.
 
 ## 9. Working with the user
 
