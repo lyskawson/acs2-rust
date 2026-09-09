@@ -42,8 +42,10 @@ file afterwards so timing noise is not committed.
 Anything touching the measured path goes behind a flag whose default preserves
 current behaviour.
 
-Review and fix reports go in `scratchpad/`, outside the measurement archive in
-`reports/`. Commit the requested report with the fixes so another agent can retrieve it.
+One-off reports — code reviews, fix summaries, handover notes for a single task — are
+not committed. `reports/` holds measurements; a document *about* the repository is not
+one, and this repository is public. Write them outside the checkout and hand the user
+the file. The commits and the docs they corrected are the durable record.
 
 ## Standing rules
 
