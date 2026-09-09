@@ -14,11 +14,11 @@ mechanism boundary.
 
 **Why the multiplexer.** The k-bit multiplexer is the standard LCS scaling benchmark: `a`
 address bits select one of `2^a` data bits, so the perception is `N = a + 2^a + 1` bits
-(the `+1` is a validation/answer bit that flips on a correct action). The *ideal* rule
-specifies exactly `a + 1` bits (the `a` address bits + the one selected data bit) and
-wildcards the rest — so **reliable-condition specificity converging to `a+1` is the direct,
-measurable signature of correct generalization**, and the size of the reliable population
-measures compactness. Knowledge = fraction of the `2^k × 2` (input, action) pairs the
+(the `+1` is a validation/answer bit that flips on a correct action). A standard compact rule
+specifies `a + 1` bits (the `a` address bits + the selected data bit) and wildcards
+the rest. Other minimal rules can omit address bits when candidate data bits agree.
+Specificity near `a+1` measures compactness; correctness requires checking predictions,
+not specificity alone. The reliable population size is another compactness measure. Knowledge = fraction of the `2^k × 2` (input, action) pairs the
 reliable population anticipates correctly; at k ≤ 20 it is computed EXHAUSTIVELY (every
 pair), so "knowledge = 1.0" means literally every pair, not a sample.
 
@@ -107,7 +107,7 @@ as theory predicts for a directional (vs random) generalization operator.
 ### The k=70 boundary changes CHARACTER: race-lost → compact-but-time-bound
 
 This is the M2b headline. At k=70, GA-alone froze fully-specialized with knowledge ≈ 0.
-ALP-gen keeps reliables COMPACT near the ideal a+1 = 8 and lifts knowledge by two orders of
+ALP-gen keeps reliables COMPACT near the ideal a+1 = 7 and lifts knowledge by two orders of
 magnitude — though it remains TIME-LIMITED short of 1.0 in the 600 s cap:
 
 **Reach delta vs the GA-on k=37 baseline (verdicts are 3-seed, ALL AGREE unless noted):**
@@ -262,8 +262,8 @@ one that succeeds — so the "specialization outruns generalization" reading car
 from M2a does **not** explain k=135. Mark density is likewise not the discriminator: the
 k=70 run ends at 0.914 and solves, against k=135's 0.935.
 
-The discriminator is *which* attributes get specialized. For MPX-k a correct rule must
-specify the `a` address bits plus the data bit those bits select. Measuring how many
+One diagnostic is *which* attributes get specialized. A standard compact MPX rule
+specifies the `a` address bits plus the data bit those bits select. Measuring how many
 address positions each classifier specifies, against `specificity x a / k` — what the same
 classifier would hit choosing attributes uniformly — gives a signal with a built-in null
 hypothesis:
@@ -272,27 +272,29 @@ hypothesis:
 |---|---|---|
 | address-bit enrichment over blind choice | 1.12x -> **8.0x** | **0.81–1.08x, no trend** |
 | share of population holding a complete address | 0 -> **0.227** | **0.0000 at every point** |
-| structurally correct rules (`a+1` spec, right bits) | 0 -> **256** | **0 always** |
+| standard complete-address rules (`correct`, `a+1` spec) | 0 -> **256** | **0 at sampled points** |
 | mean classifier experience | 2.9 -> **9,245.8** | **2.8, flat** |
 
 At k=70 ALP's attribute choice is enriched eightfold over chance and a fifth of the
 population ends up holding a complete address. At k=135 the enrichment never leaves the
-blind-choice line, and across 9.51 M trials **not one classifier in the population ever
-specifies all seven address bits** (`reports/figures/mpx_specialization_signal.pdf`).
+blind-choice line, and **no classifier specifies all seven address bits at the sampled
+evaluations through 9.51 M trials** (`reports/figures/mpx_specialization_signal.pdf`).
 
-That closes the chain: ALP specializes blindly -> no rule assembles a complete address ->
-none can anticipate correctly -> quality tops out near 0.79, under `theta_r` = 0.9 -> the
-rule is replaced before accumulating experience (mean 2.8) -> `reliable` = 0 forever.
+The historical `correct` column retains its original complete-address predicate. It
+does not count every correct minimal rule: in MPX-6, address `0#` and data `00##`
+always imply answer 0 with specificity 3 = `a+1`. A rule can leave an address bit
+unspecified if both candidate data bits agree. Thus zero `addr_full` or `correct`
+does not establish the absence of correct rules. The observed low experience and
+quality below `theta_r` = 0.9 describe this finite probe, not permanent failure.
 
-**What remains open.** The measurement establishes that ALP has no signal at k=135; it
-does not establish *why*. Two candidates are entangled and this data cannot separate them:
+**What remains open.** The measurement shows no address enrichment in this k=135 probe;
+it does not establish the cause. Two candidates are entangled and this data cannot separate them:
 a mark too saturated to indicate which attribute matters, and rules too short-lived for
 the mark to sharpen — each feeds the other. Separating them needs a further experiment.
 
-What the diagnosis does supply is a target. The failure is that rules never accumulate
-the repeated evidence a correct specialization would need, while waiting on the
-environment to revisit the relevant action set — which is exactly what prioritized
-experience replay attacks.
+This suggests testing whether replay helps candidate rules accumulate reliable evidence.
+The present measurements do not distinguish insufficient reinforcement from inaccurate
+generalization, replacement, or conflicting updates.
 
 ### The `u_max` limit is one of two causes
 
@@ -300,8 +302,8 @@ The diagnosis pointed at its own test. Population specificity at k=135 sits at 8
 against a derived `u_max` of 9 — rules were resting *on the limit*, so the limit itself
 was a candidate cause: a blindly specializing rule may need to hold surplus attributes
 before the right ones are among them, and `u_max` = 9 generalizes it back first. Sweeping
-`u_max` at k=135 (seed 42) confirms the limit matters, and long runs give the ceiling each
-value reaches:
+`u_max` at k=135 (seed 42) confirms the limit matters. The following are last sampled
+readings from finite runs, not established ceilings:
 
 | `u_max` | trials | knowledge | reliable | specificity |
 |---|---|---|---|---|
@@ -316,8 +318,8 @@ value reaches:
 | 24 | 1.59 M | 0.0000 | 0 | — |
 
 The canonical `a+2` = 9 is too tight at 135 attributes; 11 is the best value tried. But
-the ceilings it exposes — 0.7499 and 0.5000, suspiciously exact fractions — are the real
-finding, and they are not about `u_max` at all.
+the readings near 0.75 and 0.50 motivate the class-level diagnosis below. These
+time-limited runs do not isolate every interaction with `u_max`.
 
 ### The exact fractions are missing classes, not partial learning
 
@@ -331,11 +333,17 @@ those fractions into a structural statement. At `u_max` = 11, seed 42:
 | action 1, no change | 1.0000 |
 | **action 0, no change** | **0.0000, at every evaluation across 583.8 M trials** |
 
-Three of four classes complete, one empty: 0.75. Seeds 43, 44 and 45 have *both*
-no-change classes at zero and sit at 0.4980–0.5000. Scanning the whole population, not
-just the reliable rules, the starved class contains **no classifier of any quality** —
-rules are never created there. It is a discovery failure, not a reliability-threshold
-failure.
+Three of four classes have reliable sampled coverage, one has none: approximately
+0.75. Seeds 43, 44 and 45 have both no-change classes at zero reliable coverage in
+these runs and finish near 0.50.
+
+Candidate classifiers do exist in the starved class. Across the **4,865** `qdetail:`
+points in `slurm_mpx135_s42_qdetail_u11.out`, `a0nc_any` is zero only **16** times,
+partial **2,600** times, and prints **1.0000 at 2,249** evaluations. The best quality
+ever recorded in that class is **0.823**, below `theta_r = 0.9`. This is a failure to
+reach reliability despite frequent candidate coverage, not evidence that candidate
+rules are never discovered. Coverage and quality are logged at finite precision;
+they do not establish that the same candidates persist between evaluations.
 
 The no-change classes are exactly the wrong answers. Under the canonical encoding a wrong
 answer leaves the perception unchanged, so its rule must anticipate identity — every
@@ -383,9 +391,9 @@ At k=135 it closes the problem outright, on four of five seeds:
 | 43 | 46.8 M | 539 | 8.00 | 78.8 h |
 | 45 | 55.6 M | 532 | 8.00 | 80.9 h |
 | 46 | 30.2 M | 535 | 8.01 | 57.6 h |
-| 44 | — | — | — | did not converge; population bloated to 64 579 at specificity 10.9 |
+| 44 | — | — | — | cancelled before success; an earlier reading had population 64 579 at specificity 10.9 |
 
-Seed 44 is a genuine exception and is reported as one. **Results under `outcome` are not
+Seed 44 remains unfinished; its eventual convergence is unknown. **Results under `outcome` are not
 comparable to the multiplexer literature** — it is a different problem.
 
 ### Route 2 — stop the exploration bias from avoiding the starved class
@@ -422,13 +430,18 @@ alone until that finishes.
 right answer needs only the change-anticipating half. The literature scores the latter —
 ExSTraCS reports classification accuracy, ACS2ER reports reward.
 
-At k=135, canonical encoding, `u_max` = 11, the agent holds **answer accuracy 1.0000 across
-325.8 M trials while knowledge sits at its 0.7499 ceiling.** By the criterion the
-literature uses, that configuration solves the 135-bit multiplexer; by the anticipatory
-criterion it does not. Both numbers are true and reporting either alone misleads.
+At k=135, canonical encoding, `u_max` = 11, the accuracy log spans **325.8 M trials**.
+Its first reading is **0.4989**; only **769 of 2,715 evaluations (28.3%)** print
+**1.0000**. The last sub-1.0000 reading occurs at **299,160,000 trials**, with an
+uninterrupted sequence of printed 1.0000 readings starting at 299,280,000. Near the
+end, knowledge is approximately 0.7499. There was no 325.8-million-trial plateau
+at accuracy 1.0000.
 
-Accuracy 1.0 is not automatic at the ceiling: at `u_max` = 12 it stalls at 0.982 while
-knowledge sits at 0.4821. It is a property of that configuration, not of the plateau.
+This is **rounded sampled accuracy**, not an exact zero-error result: **49,999 of
+50,000** correct answers also prints **1.0000** at four decimal places. Report it
+beside knowledge without claiming exact or exhaustive classification success.
+At `u_max` = 12 the final sampled accuracy is about 0.982 while knowledge is 0.4821;
+high accuracy is not automatic when reliable coverage stalls.
 
 ### k=264 — measured, not extrapolated
 
@@ -462,7 +475,8 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
   rule and corrects one-redundant: **Pyalcs `u_max = a+2`, Butz `u_max = a+3`** (Butz's full
   count includes the changing validation bit in the condition, which pyalcs's unchanging
   count excludes — hence one higher). This bakes in knowledge of the answer; a `u_max`
-  **sweep is a separate study**, not part of this work. The maze path keeps `u_max = 100000`.
+  sweep was outside the original M2b phase; this report now includes the later k=135
+  sweep explicitly. The maze path keeps `u_max = 100000`.
 - **The A/B `u_max` confound — checked and resolved.** Because Pyalcs ran at `a+2` and Butz
   at `a+3`, the raw A-vs-B gap conflated the generalization target (parent vs child) with the
   `u_max` value. A confound-controlled k=70 isolation (both variants at both thresholds, seed
@@ -509,22 +523,24 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
    tried** (17.8 M–66.4 M trials, median 21.3 M; 268–277 reliable rules at the ideal `a+1`
    specificity) — beyond every published ACS/ACS2 result. The earlier "does not pass k=37"
    reading was a budget artifact of 600-second probes, not a property of the mechanism.
-4. **k=135 is solved, and the thing that blocked it was never the budget.** Whole classes of
-   transition — the wrong answers, which under the canonical encoding produce no perceptual
-   change — were never populated with a classifier of any quality. Two independent
-   interventions each relieve it: giving the wrong answer an observable effect
+4. **k=135 reaches sampled knowledge 1.0, with strong configuration and budget dependence.**
+   Wrong-answer classes can lack reliable coverage even while candidates cover much or
+   all of the sampled class; in the seed-42 `u_max=11` diagnostic run their best recorded
+   quality stays below `theta_r`. Two interventions relieve reliable-coverage starvation:
+   giving the wrong answer an observable effect
    (`--encoding outcome`, 4 of 5 seeds, 30.2–55.6 M trials) and removing the greedy
    exploration bias that avoids those transitions (`epsilon = 1`, knowledge 1.0000 at
-   427.9 M trials **under the canonical encoding**, one seed so far). That two unrelated
-   levers both work is the evidence that the diagnosis is right.
+   427.9 M trials **under the canonical encoding**, one seed so far). Seed 42's canonical
+   epsilon-1 run was cut at 301.4 M; its eventual outcome is unknown. These interventions
+   support an exploration/encoding dependence, without identifying a unique cause.
 5. **Report `accuracy` beside `knowledge` or the result reads as weaker than it is.** At
-   k=135 the agent holds answer accuracy 1.0000 while knowledge sits at 0.7499: solved by
-   the criterion ExSTraCS and ACS2ER use, unsolved by the stricter anticipatory one.
+   k=135 later evaluations print sampled answer accuracy 1.0000 while knowledge is near
+   0.7499. Four-decimal rounding prevents an exact zero-error claim.
 6. **The motivation for prioritised replay survives, sharpened.** The failure was never
-   uniform slowness; it was specific classes of transition receiving no useful experience
-   while the rest converged. A prioritisation criterion aimed at *that* — rather than a
-   generic TD-error rule imported from deep RL — is what the measurements now point to, and
-   ACS2ER with uniform replay is the baseline it has to beat.
+   uniform slowness; candidate coverage and reliable coverage diverge in particular
+   transition classes. Test whether prioritisation improves candidate quality, retention,
+   and reliable coverage at matched learning applications. The data does not yet prove
+   which sampling criterion will do so; uniform ACS2ER is the baseline it has to beat.
 7. The **pyalcs-vs-Butz (parent- vs child-generalization) divergence** is a first-class
    implementation finding, but a confound-controlled isolation shows the freeze-break itself
    is variant-INDEPENDENT (knowledge ~0.25 either way); the separable variant differences are

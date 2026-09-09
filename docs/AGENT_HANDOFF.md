@@ -26,31 +26,27 @@ results stop at 20–37 bits.
 **MPX-135 is solved.** Two results, and the distinction between them is the whole
 story:
 
-- **By the criterion the literature uses, ACS2 solves it under the canonical
-  encoding.** At `u_max` = 11 the agent reaches **answer accuracy 1.0000** while
-  `knowledge` sits at its 0.7499 ceiling. Knowledge additionally demands
-  anticipating the *null* transitions a wrong answer produces, which is a strictly
-  harder, anticipation-specific criterion — ExSTraCS scores classification
-  accuracy, ACS2ER scores reward. Report accuracy alongside knowledge or the result
-  reads as weaker than it is.
-- **By the anticipatory criterion, the encoding change closes it on most seeds.**
-  Under `--encoding outcome`, knowledge reaches **1.0000 on three of five seeds** —
-  43.2 M (s42), 46.8 M (s43) and 30.2 M (s46) trials, ending at 539 / 539 / 535
-  reliable rules and specificity 8.00–8.01 (ideal `a+1`). Seed 45 sits at 0.9981 and
-  is closing. **Seed 44 is not**: it is in a bloated, over-specialised regime
-  (pop 64 579, spec 10.92, ~9x slower) and will not converge in its budget. Do not
-  repeat the earlier "the encoding makes it reproducible" claim — see §7.
+- **Task performance and anticipatory knowledge differ.** The canonical seed-42
+  `u_max=11` accuracy log contains 2,715 points over 325.8 M trials, beginning at
+  0.4989. Only 769 points (28.3%) print 1.0000; the last lower reading is at
+  299,160,000 trials. Later readings print 1.0000 while knowledge is near 0.7499.
+  This is rounded sampled accuracy: 49,999/50,000 also prints 1.0000, so it does
+  not establish exact zero error.
+- **Under `--encoding outcome`, four of five seeds reached sampled knowledge 1.0:**
+  s42 at 43.2 M, s43 at 46.8 M, s45 at **55,560,000**, and s46 at 30.2 M trials,
+  with 539 / 539 / 532 / 535 reliable rules at specificity 8.00–8.01. Seed 44 was
+  cancelled before success. Its earlier bloated population is not evidence that
+  it could never converge.
 
-Canonical-encoding ceilings, four seeds, all TIME-LIMITED: 0.7499 (seed 42, which
-filled one wrong-answer class) and 0.4980 / 0.4980 / 0.4918 (seeds 43–45, which
-filled none). Seed 42 is the outlier — see §3.
+At canonical encoding and epsilon 0.8, four time-limited runs ended at last sampled
+knowledge 0.7499 (s42) and 0.4980 / 0.4980 / 0.4918 (s43–45). These are finite-run
+readings, not ceilings. The class-level diagnosis is in §3.
 
-**`epsilon = 1` CLOSES k=135 on the canonical encoding. This is the strongest result
-in the project, and it rests on one seed until `eps135_s42b` finishes (§6).** Seed 43 caps at 0.4980 canonically; with the greedy bias removed it
-reached **knowledge 1.0000 at 427,920,000 trials**, 532 reliable rules at specificity
-8.02, all four coverage classes at 1.0000, in 152.3 h. Canonical-encoding results are
-the ones comparable to the multiplexer literature, so this beats the `outcome` result
-scientifically — the encoding change turns out not to be necessary.
+**`epsilon = 1` reaches sampled knowledge 1.0 at k=135 under canonical encoding.**
+Seed 43 reached it at **427,920,000 trials**, with 532 reliable rules at specificity
+8.02 and all four sampled coverage classes at 1.0000, in 152.3 h. This result rests
+on one seed in the committed archive. Seed 42's first run hit its wall-clock cap at
+301.4 M trials; the longer rerun is listed in the dated queue snapshot (§6).
 
 **The mechanism, measured on both seeds — one class opens early, the other waits.**
 Under `epsilon = 1` each seed fills one wrong-answer class quickly and leaves the other
@@ -78,11 +74,13 @@ improving efficiency; at matched learning applications no advantage is measurabl
   dead. Before any core change lands: `cargo test --workspace --release` green
   (**73 tests**) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
-- Determinism from an injected RNG, verified cross-architecture. **Trials-to-success
+- Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
+  No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
   is the machine-independent metric**; wall-clock is machine-specific colour.
-- Every diagnostic is read-only over the population and off by default. Proof that
-  this holds: with and without instrumentation, seed 42 solves k=70 at exactly
-  17,880,000 trials.
+- Every diagnostic is read-only over the population and off by default. Learning
+  is identical at equal trial counts: with and without instrumentation, seed 42
+  solves k=70 at 17,880,000 trials. Evaluation overhead can change the trial count
+  reached before a wall-clock cap.
 - Knowledge is exhaustive for k ≤ 20 and **sampled** (50,000 inputs, fixed eval seed)
   for k ≥ 37 — state this caveat in reports.
 - The user's laptop overheats; anything longer than a few minutes runs on WCSS.
@@ -97,10 +95,13 @@ improving efficiency; at matched learning applications no advantage is measurabl
    Seed 42 at `u_max` = 11 filled one of the two (hence 3/4); seeds 43, 44 and 45
    have **both** at exactly zero (heading for 1/2). It is not tied to an action
    index, so swapping action labels would test nothing.
-3. Scanning the whole population, not just reliable rules: at `u_max` = 11 the
-   starved class has **no classifier of any quality** — rules are never created
-   there. At `u_max` = 12 both failure modes appear side by side: one wrong class
-   fully covered but stuck at best quality 0.670, the other empty.
+3. Scanning all classifiers at `u_max=11` contradicts the former discovery-failure
+   claim. Of **4,865** qdetail points, `a0nc_any` is zero at **16**, partial at
+   **2,600**, and prints **1.0000 at 2,249**. Candidate rules often cover the
+   sampled class, but their best recorded quality never exceeds **0.823**, below
+   `theta_r=0.9`. The deficit is reliable coverage, not absence of candidates.
+   These aggregates do not identify whether candidates persist, receive conflicting
+   updates, generalize incorrectly, or disappear before becoming reliable.
 4. **Confirmed at k=70.** The hypothesis was that under the canonical encoding a
    wrong answer leaves the perception unchanged, so its rule must anticipate
    identity — every classifier's default effect, which has to be *narrowed*, whereas
@@ -113,17 +114,21 @@ improving efficiency; at matched learning applications no advantage is measurabl
    the start. The starved class is an **artifact of the encoding**, not a limit of
    the learning mechanism. Results under `outcome` are **not comparable to the
    multiplexer literature** — it is a different problem.
-5. **Confirmed at k=135 as well**, on three seeds: 43.2 M, 46.8 M and 30.2 M trials
-   to knowledge 1.0, ending at 539/539/535 reliable rules and specificity 8.00–8.01.
-   Note the k=70 picture is more mixed — the encoding is not uniformly faster there
-   (seed 43 goes 17.8 M -> 62.3 M) — so at 70 bits it changes the cost distribution
-   while at 135 it changes whether the problem closes at all.
-6. `epsilon = 1` lifts a seed clean out of the ceiling (43: 0.4980 -> 0.9685 and
-   rising), which was not expected: the greedy branch selects among change-anticipating
-   classifiers, i.e. correct answers under this encoding, so it under-visits the
-   starving class. The starvation is therefore **partly an exploration artifact as well
-   as an encoding artifact** — two independent interventions each relieve it. Seed 42
-   does not respond the same way (0.7350), so the two are not interchangeable.
+5. Under `outcome`, k=135 reaches sampled knowledge 1.0 on four seeds (42, 43,
+   45, 46), in 30.2–55.6 M trials; seed 44 was cancelled. At k=70 the cost is
+   mixed: seed 43 goes from 17.8 M to 62.3 M. Encoding changes the cost distribution;
+   canonical epsilon-1 success shows it is not required for k=135 closure.
+6. `epsilon=1` removes the greedy preference for change-anticipating rules and
+   reaches knowledge 1.0 on seed 43 at 427.92 M trials. Seed 42 also fills one
+   previously starved class, but stops at 301.4 M, before the comparable second
+   class opens on seed 43. This supports an exploration dependence; it does not
+   show a seed-specific inability to respond or guarantee eventual success.
+
+The historical diagnostic `correct` counts standard complete-address rules only.
+It is kept unchanged for archive comparability. Correct specificity-`a+1` rules
+can omit an address bit when both possible selected data bits agree (MPX-6:
+address `0#`, data `00##`, answer 0). Zero `correct` or `addr_full` does not prove
+that no correct candidate exists.
 
 ## 4. Instrumentation available (all off by default)
 
@@ -143,7 +148,7 @@ Experiment knobs: `--u-max derived|<int>`, `--alp-gen-variant pyalcs|butz`,
 ### The archive — where results live, and what makes a row reproducible
 
 `reports/mpx_{verdicts,trajectory,diagnostics}.csv` is the machine-readable archive
-(79 verdict rows, 68,209 trajectory points as of 2026-09-09), rebuilt by
+(79 verdict rows, 68,340 trajectory points after the 2026-09-09 archive sync), rebuilt by
 `tools/parse_mpx_logs.py`. `reports/MPX{70,135,264}_runs.md` is the same data rendered
 to be read, by `tools/summarize_mpx.py --size <k>` — grouped by arm, in-flight runs
 included, coverage classes beside knowledge.
@@ -277,7 +282,8 @@ Three things that cost days before:
 
 ## 6. Experiments in flight
 
-Four jobs as of 2026-09-09. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
+Historical queue snapshot recorded on 2026-09-09; re-check status before treating
+these jobs as live. Four jobs were listed: `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
 | Job | What it is | Why it matters |
@@ -293,8 +299,8 @@ Cancelled with their readings preserved: `acc135u11`, `acc135u12`, `enc135_s44`,
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
-Every one of these came from generalising a single seed or a short window. The
-pattern is the failure mode to watch for.
+These corrections include overgeneralising finite runs and misreading diagnostic
+columns. Check the raw evidence and distinguish candidates from reliable rules.
 
 - **Mark density is not the discriminator.** It looked decisive at 390 k trials; by
   10.35 M the solvable k=70 run had risen to 0.914 against k=135's 0.935.
@@ -325,17 +331,20 @@ pattern is the failure mode to watch for.
   works on a narrow date range, and the real figure on 2026-09-08 is **4367 h**. The
   estimate-from-wall-times method was low by a third. Measure, do not extrapolate —
   §5 has the commands.
-- **The `outcome` encoding does not make k=135 reproducible.** §1 said the seeds end at
-  "exactly 539 reliable rules and specificity 8.00" and that the encoding "makes it
-  reproducible". That held for seeds 42, 43 and 46, and seed 45 is joining them — but
-  **seed 44 is in a bloated regime** (pop 64 579, spec 10.92, 17 trials/s) and will not
-  converge. Four seeds agreeing is not five. The honest claim is that `outcome` closes
-  the problem on most seeds, with one seed so far behaving differently.
-- **`epsilon = 1` at k=135 seed 43 does not cap at 0.7481.** That was a mid-run reading
-  reported as a ceiling — the same mistake as the 0.75 ceiling at k=70. It has since
-  passed **0.9685** under the canonical encoding and is still rising. It is now the
-  strongest live result in the project, because canonical-encoding numbers are the ones
-  comparable to the literature.
+- **The `outcome` encoding does not guarantee closure on every seed.** Four seeds
+  reached SUCCESS, including seed 45 at 55,560,000 trials; seed 44 was cancelled
+  before success. Neither inevitable convergence nor permanent failure is established.
+- **`epsilon = 1` at k=135 seed 43 does not cap at 0.7481.** It reached sampled
+  knowledge 1.0000 at 427,920,000 trials. The earlier 0.9685 in-flight status is obsolete.
+- **The starved class is not devoid of classifiers of any quality.** At seed 42,
+  `u_max=11`, only 16/4,865 qdetail points show zero candidate coverage; 2,600 are
+  partial and 2,249 print 1.0000. Best recorded quality is 0.823, below 0.9.
+  Withdraw the discovery-failure claim and target the candidate-to-reliable gap.
+- **Accuracy did not stay at 1.0000 for 325.8 M trials.** Only 769/2,715 logged
+  points print 1.0000, and four-decimal rounding can hide one error in 50,000.
+- **A complete address is not necessary for every correct minimal MPX rule.** The
+  historical `correct` diagnostic is a narrower structural proxy, not a completeness
+  test for correct candidates.
 - **The k=135 ACS2ER runs were cancelled too early.** They looked dead at one
   evaluation point per day, but the eval interval had been sized for ACS2's
   throughput. The one point they did produce showed ER touching the starved class
@@ -370,8 +379,12 @@ In order:
    explicitly.
 4. **Then the thesis core: prioritised experience replay.** The contribution is not replay
    itself — ACS2ER exists and its limits are measured — but a **prioritisation criterion
-   aimed at the measured gap**: specific classes of transition starve while the rest
-   converge. A generic TD-error rule imported from deep RL is not that.
+   aimed at the measured gap**: candidates cover a transition class yet stay below
+   the reliability threshold. Measure candidate quality and retention as well as
+   reliable coverage, and compare at matched learning applications. Test whether
+   prioritisation helps candidates become reliable; the current data does not
+   establish whether insufficient reinforcement, conflicting updates, or replacement
+   is the cause, or which replay criterion will work.
 
 ## 9. Working with the user
 

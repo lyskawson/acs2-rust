@@ -45,7 +45,7 @@ current behaviour.
 - Conversation in Polish. Code, comments, commits, docs and identifiers in English.
 - No comments in code.
 - Idiomatic Rust, SOLID, injected RNG, determinism from the seed.
-- Commit and push to `feature/mpx` after each completed step.
+- Commit and push to `feature/mpx264` after each completed group.
 - Experiments run on the cluster, never on the user's laptop — it overheats. Test
   gates locally are fine.
 - **Check the grant before submitting anything.** `sshare -U -u alelys2099 -o

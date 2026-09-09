@@ -248,7 +248,7 @@ acs2/                      (Cargo workspace)
 │   ├── rng                 trait abstraction over rand::Rng (injected)
 │   └── agent               single shared trial loop (explore / exploit)
 │                           bootstrap value is a parameter  <-- CRITIC SEAM
-├── acs2-envs/   (lib)     Environment trait (Gymnasium-style) + Maze
+├── acs2-envs/   (lib)     Maze + Multiplexer implement acs2-core's Environment trait
 │   ├── environment         trait: reset, step -> (obs, reward, terminated, truncated)
 │   ├── maze                8-sensor perception, compass actions, reward scheme
 │   ├── maze_data           re-export shim (MazeGeometry, geometry_by_id, MAZE_GEOMETRIES)
