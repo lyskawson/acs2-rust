@@ -32,13 +32,28 @@ Canonical-encoding ceilings, four seeds, all TIME-LIMITED: 0.7499 (seed 42, whic
 filled one wrong-answer class) and 0.4980 / 0.4980 / 0.4918 (seeds 43–45, which
 filled none). Seed 42 is the outlier — see §3.
 
-**`epsilon = 1` may close k=135 on the canonical encoding — this is the live headline.**
-Seed 43 caps at 0.4980 canonically; with the greedy bias removed it has reached
-**0.9685 at 414 M trials and is still climbing**, with both wrong-answer classes
-filling (0.9942 and 0.8796). Canonical-encoding results are the ones comparable to
-the multiplexer literature, so closing this beats the `outcome` result scientifically.
-The run dies on its wall limit within ~30 h and there is no checkpointing. Seed 42
-under the same setting is stuck at 0.7350, so it is not a universal fix.
+**`epsilon = 1` CLOSES k=135 on the canonical encoding. This is the strongest result
+in the project.** Seed 43 caps at 0.4980 canonically; with the greedy bias removed it
+reached **knowledge 1.0000 at 427,920,000 trials**, 532 reliable rules at specificity
+8.02, all four coverage classes at 1.0000, in 152.3 h. Canonical-encoding results are
+the ones comparable to the multiplexer literature, so this beats the `outcome` result
+scientifically — the encoding change turns out not to be necessary.
+
+**The mechanism, measured on both seeds — one class opens early, the other waits.**
+Under `epsilon = 1` each seed fills one wrong-answer class quickly and leaves the other
+at *exactly* 0.0000 for hundreds of millions of trials, until it opens abruptly and the
+run closes within ~23 M trials:
+
+| seed | first class opens | second class opens | verdict |
+|---|---|---|---|
+| 43 | `a0_nochange` at 20.2 M | `a1_nochange` at **404.5 M** | SUCCESS at 427.9 M |
+| 42 | `a1_nochange` at 80.6 M | `a0_nochange` still 0 at 301.4 M | cut by the wall limit |
+
+Seed 42 is **not** a seed that fails to respond — it was stopped 100 M trials before the
+point where seed 43's second class opened. A run sitting at 0.7442 with one class at
+exactly zero is mid-climb, not converged. Re-running seed 42 with a cap past ~430 M
+trials is the highest-probability route to a second full closure, well above a fresh
+seed of unknown cost.
 
 **ACS2ER exists and is validated** differentially against pyalcs (`p11_acs2er`).
 First comparisons say uniform replay trades compute for episodes rather than
@@ -111,6 +126,34 @@ Experiment knobs: `--u-max derived|<int>`, `--alp-gen-variant pyalcs|butz`,
 `--agent acs2|acs2er`, `--er-{buffer-size,min-samples,samples-number}`,
 `--encoding flip|outcome`, `--epsilon <f64>`, `--eval-interval`,
 `--rss-cap-gb <f64>`.
+
+### The archive — where results live, and what makes a row reproducible
+
+`reports/mpx_{verdicts,trajectory,diagnostics}.csv` is the machine-readable archive
+(79 verdict rows, 68,209 trajectory points as of 2026-09-09), rebuilt by
+`tools/parse_mpx_logs.py`. `reports/MPX{70,135,264}_runs.md` is the same data rendered
+to be read, by `tools/summarize_mpx.py --size <k>` — grouped by arm, in-flight runs
+included, coverage classes beside knowledge.
+
+Rebuild after pulling from the cluster; `tools/README.md` carries the exact commands.
+
+Three traps the archive now guards, all of which had already cost something:
+
+- **A log did not record its encoding.** Two runs differing only in `--encoding` were
+  indistinguishable. Fixed: the header records `encoding` and `eval_interval`, and the
+  SLURM wrapper prepends commit, job id, tag and argv. For older logs the value is
+  reconstructed and `encoding_source` says how — only `header` is a record, everything
+  else is inference. It caught `probe264`, which every filename rule would have
+  mislabelled `flip`.
+- **`peak_rss_gb = 0` on a cluster log means unmeasured**, not zero — the `ru_maxrss`
+  bug, fixed in `f93b71e`.
+- **Plots spliced arms.** `plot_mpx.py` grouped by seed alone; at k=135 seed 42 spans
+  fourteen arms, so a "seed 42" curve was several unrelated runs concatenated. It now
+  takes `--encoding` / `--epsilon` / `--u-max` and refuses a mixed selection.
+
+`epsilon` is backfilled to 0.8 where absent, and that one is safe: the flag and the
+header field landed in the same commit (`0bc6bd0`), so those runs had no other
+reachable value.
 
 **`--rss-cap-gb` matters more than it looks** (`bd88cc2`). The RSS ceiling used to be a
 compile-time 5.6 GB constant. It never fired on the cluster while `ru_maxrss` was
@@ -267,6 +310,14 @@ pattern is the failure mode to watch for.
   two wrong-answer classes, which is why it reads 0.75; seeds 43–45 have both at
   zero. Seed 42 is the outlier. The sent email says "the fourth class", which
   understates it.
+- **`epsilon = 1` does not "work on seed 43 and do nothing for seed 42".** Claimed
+  during this session from seed 42's final coverage line (`a0_nochange` = 0.0000) read
+  as a property of the seed. It is a mid-run state: seed 43 sat at exactly 0.0000 on
+  *its* second class until 404.5 M trials and closed at 427.9 M, while seed 42 was cut
+  at 301.4 M. Same trajectory, different stopping point. The §1 table has the numbers.
+  Third time a mid-run reading has been reported as a ceiling in this project.
+- **A single seed at k=135 under `outcome` is not "the encoding failing".** Seed 44 is
+  in a bloated regime, but seeds 42, 43, 45 and 46 all close. Report it as 4 of 5.
 - **The grant was not two-thirds spent, it was seven-eighths spent.** This file carried
   "~3250 h of 5000, `sacct` returns no accounting". Both halves were wrong: `sacct`
   works on a narrow date range, and the real figure on 2026-09-08 is **4367 h**. The
