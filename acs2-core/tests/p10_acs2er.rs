@@ -150,6 +150,12 @@ fn replay_memory_drops_the_oldest_sample_when_full() {
 
 #[test]
 fn replay_memory_never_exceeds_its_bound() {
+    assert!(std::panic::catch_unwind(|| ReplayMemory::<2>::new(0)).is_err());
+    let mut smallest = ReplayMemory::<2>::new(1);
+    smallest.update(sample(1));
+    smallest.update(sample(2));
+    assert_eq!(smallest.len(), 1);
+    assert_eq!(smallest.get(0).action, 2);
     let mut memory = ReplayMemory::<2>::new(4);
     for action in 0..50 {
         memory.update(sample(action));

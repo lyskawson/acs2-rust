@@ -49,9 +49,9 @@ on one seed in the committed archive. Seed 42's first run hit its wall-clock cap
 301.4 M trials; the longer rerun is listed in the dated queue snapshot (§6).
 
 **The mechanism, measured on both seeds — one class opens early, the other waits.**
-Under `epsilon = 1` each seed fills one wrong-answer class quickly and leaves the other
-at *exactly* 0.0000 for hundreds of millions of trials, until it opens abruptly and the
-run closes within ~23 M trials:
+Under `epsilon = 1` both seeds fill one wrong-answer class while the other stays
+without reliable coverage for hundreds of millions of trials. Only seed 43 is observed
+to open the second class and close within ~23 M further trials:
 
 | seed | first class opens | second class opens | verdict |
 |---|---|---|---|
@@ -167,7 +167,8 @@ Three traps the archive now guards, all of which had already cost something:
   bug, fixed in `f93b71e`.
 - **Plots spliced arms.** `plot_mpx.py` grouped by seed alone; at k=135 seed 42 spans
   fourteen arms, so a "seed 42" curve was several unrelated runs concatenated. It now
-  takes `--encoding` / `--epsilon` / `--u-max` and refuses a mixed selection.
+  takes encoding, epsilon, `u_max`, agent, GA and replay filters, and refuses both
+  mixed arms and independent runs sharing a seed. Use `--source` and `--block`.
 
 `epsilon` is backfilled to 0.8 where absent, and that one is safe: the flag and the
 header field landed in the same commit (`0bc6bd0`), so those runs had no other
@@ -177,7 +178,9 @@ reachable value.
 compile-time 5.6 GB constant. It never fired on the cluster while `ru_maxrss` was
 misread, so it was invisible; now that `f93b71e` reads it correctly the cap is live and
 would abort a k=264 run long before its memory curve is measurable. The default is
-still 5.6 GB, so every earlier run's behaviour is unchanged — raise it explicitly for
+still 5.6 GB. New `--isolate-repeats` gives each repeat a fresh process and RSS peak;
+`--strict-resource-limits` checks again after evaluation. Both default off for legacy
+compatibility. Raise the cap explicitly for
 anything at 264 bits.
 
 **`accuracy` vs `knowledge` matters for reporting.** Knowledge demands anticipating
@@ -226,9 +229,9 @@ Two consequences that bite:
 - **Burn rate is the whole story.** Jobs are 1 CPU each, so ten concurrent jobs spend
   10 CPU-hours per wall-clock hour. 633 h remaining is **under three days** at that rate,
   not months.
-- **The live queue is already over budget.** Summing `squeue`'s `TIME_LEFT` on
-  2026-09-08 gives **732 h of remaining commitment against 633 h left.** Something has to
-  be cancelled or the grant runs dry mid-queue.
+- **The queue was over budget on 2026-09-08.** Summing `squeue`'s `TIME_LEFT` on
+  2026-09-08 gives **732 h of remaining commitment against 633 h left.** This prompted
+  the cancellations below; use the 2026-09-09 snapshot above for the later balance.
 
 Check both before a batch:
 
@@ -239,8 +242,8 @@ squeue -u alelys2099 -h -o "%i|%j|%t|%L|%C"
 
 **Resolved on 2026-09-08.** Four jobs were cancelled with the user's approval —
 `encU9_s43` (pending), `enc135_s44`, `acc135u11`, `acc135u12` — freeing 341 h.
-Commitment is now **390 h against 630 h**, so there is ~240 h of headroom and no
-submission deadline. Their final readings are preserved in §6; the logs are archived
+Immediately after those cancellations, commitment was **390 h against 630 h**,
+leaving ~240 h. This is a historical snapshot, superseded by the dated reading above. Their final readings are preserved in §6; the logs are archived
 on the cluster as `*.cancelled`, which the status script deliberately hides.
 
 ### Limits — read them from SLURM, not from the documentation
@@ -322,7 +325,7 @@ columns. Check the raw evidence and distinguish candidates from reliable rules.
   during this session from seed 42's final coverage line (`a0_nochange` = 0.0000) read
   as a property of the seed. It is a mid-run state: seed 43 sat at exactly 0.0000 on
   *its* second class until 404.5 M trials and closed at 427.9 M, while seed 42 was cut
-  at 301.4 M. Same trajectory, different stopping point. The §1 table has the numbers.
+  at 301.4 M. Similar class-level pattern, different stopping point; eventual closure is not guaranteed. The §1 table has the numbers.
   Third time a mid-run reading has been reported as a ceiling in this project.
 - **A single seed at k=135 under `outcome` is not "the encoding failing".** Seed 44 is
   in a bloated regime, but seeds 42, 43, 45 and 46 all close. Report it as 4 of 5.

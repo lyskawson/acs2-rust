@@ -143,6 +143,7 @@ fn delete_classifiers<const N: usize>(
     config: &Configuration,
     rng: &mut dyn RandomSource,
 ) {
+    assert!(insize <= config.theta_as as usize, "theta_as cannot fit the GA offspring");
     while insize as u32 + action_set_numerosity(population, action_set) > config.theta_as {
         let mut victim: Option<ClassifierRef> = None;
         while victim.is_none() {

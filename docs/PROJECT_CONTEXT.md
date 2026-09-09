@@ -245,11 +245,11 @@ acs2/                      (Cargo workspace)
 │   ├── action_selection    trait ActionSelector  <-- ACTOR SEAM
 │   │                       impls: EpsilonGreedy, BestAction, RandomAction
 │   ├── config              Configuration (all parameters above)
+│   ├── environment         trait: reset, step -> StepOutcome
 │   ├── rng                 trait abstraction over rand::Rng (injected)
 │   └── agent               single shared trial loop (explore / exploit)
 │                           bootstrap value is a parameter  <-- CRITIC SEAM
 ├── acs2-envs/   (lib)     Maze + Multiplexer implement acs2-core's Environment trait
-│   ├── environment         trait: reset, step -> (obs, reward, terminated, truncated)
 │   ├── maze                8-sensor perception, compass actions, reward scheme
 │   ├── maze_data           re-export shim (MazeGeometry, geometry_by_id, MAZE_GEOMETRIES)
 │   └── mazes               geometry defs, one file per maze, tagged by MazeSource

@@ -3,10 +3,11 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
-from parse_mpx_logs import parse_log
+from parse_mpx_logs import parse_log, TRAJECTORY_COLUMNS, VERDICT_COLUMNS
 from summarize_mpx import collect, render
 
 
@@ -57,6 +58,56 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(rows[0]["er_samples_number"], "")
         self.assertEqual(rows[0]["encoding_source"], "wrapper-default")
 
+    def test_header_flushes_unfinished_trajectory_and_diagnostics(self):
+        trajectory, diagnostics, verdicts = self.parse(
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs\n"
+            "mpx-37 trials_cap=1000 u_max=7\n"
+            "mpx-37 traj: trials=500 knowledge=0.5 reliable=2 pop=3\n"
+            "mpx-37 diag: trials=500 micro=3\n"
+            "acs2-bench mpx-reach: seed=90 alp_gen_variant=butz\n"
+            "mpx-37 trials_cap=1000 u_max=8\n"
+            "mpx-37 traj: trials=500 knowledge=0.2 reliable=1 pop=2\n"
+        )
+        self.assertEqual([(r["seed"], r["block"], r["u_max"]) for r in trajectory],
+                         [(42, 1, "7"), (90, 2, "8")])
+        self.assertEqual(diagnostics[0]["seed"], 42)
+        self.assertEqual(verdicts, [])
+
+    def test_verdict_snapshot_provenance_and_missing_measurement(self):
+        trajectory, _, verdicts = self.parse(
+            "acs2-bench mpx-reach: seed=42\n"
+            "mpx-37 traj: trials=500 knowledge=0.5 reliable=2 pop=3\n"
+            "mpx-37 acc: trials=500 accuracy=0.9\n"
+            "mpx-37 cover: trials=500 a0_nochange=0.7\n"
+            "mpx-37 repeat 0: TIME-LIMITED trials=1000 knowledge=0.5 reliable=4\n"
+            "mpx-37 repeat 1: TIME-LIMITED trials=500 knowledge=unmeasured "
+            "knowledge_trials=unmeasured reliable=3\n"
+            "mpx-37 repeat 2: SUCCESS trials=1500 knowledge=1 reliable=3\n"
+        )
+        self.assertEqual(verdicts[0]["knowledge_trials"], 500)
+        self.assertEqual(verdicts[0]["knowledge_status"], "stale")
+        self.assertEqual(verdicts[1]["knowledge"], "")
+        self.assertEqual(verdicts[1]["knowledge_status"], "unmeasured")
+        self.assertEqual(verdicts[2]["knowledge_trials"], 1500)
+        self.assertEqual(verdicts[2]["knowledge_status"], "at-verdict")
+        row = collect(trajectory, verdicts, 37)[0]
+        self.assertNotIn("accuracy", row)
+        self.assertNotIn("a0_nochange", row)
+
+    def test_selection_separates_replay_arms(self):
+        from mpx_selection import arm_of, selected
+        base = {"source": "run.out", "agent": "acs2er", "encoding": "flip", "epsilon": "1.0",
+                "u_max": "8", "do_ga": "true", "er_buffer_size": "10000",
+                "er_min_samples": "1000", "er_samples_number": "1"}
+        for key, value in (("agent", "acs2"), ("do_ga", "false"),
+                           ("er_buffer_size", "100"), ("er_min_samples", "10"),
+                           ("er_samples_number", "3")):
+            changed = {**base, key: value}
+            self.assertNotEqual(arm_of(base), arm_of(changed))
+            self.assertFalse(selected(changed, {key: base[key]}))
+        self.assertTrue(selected(base, {"epsilon": "1"}, ["run.out"]))
+        self.assertFalse(selected(base, sources=["other.out"]))
+
     def test_all_archived_verdicts_are_rendered(self):
         repo = Path(__file__).resolve().parents[1]
         with (repo / "reports/mpx_verdicts.csv").open() as handle:
@@ -69,7 +120,32 @@ class ArchiveTests(unittest.TestCase):
             self.assertEqual(sum(row["final"] for row in rows), expected)
         solved37 = [row for row in collect(trajectory, verdicts, 37)
                     if row["state"] == "SUCCESS"]
-        self.assertEqual(len(solved37), 18)
+        self.assertEqual(len(solved37), sum(row["size"] == "37" and row["verdict"] == "SUCCESS"
+                                           for row in verdicts))
+
+    def test_new_size_gets_a_table_before_its_first_verdict(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "tools").mkdir()
+            (root / "reports").mkdir()
+            for filename in ("rebuild_tables.py", "summarize_mpx.py", "mpx_selection.py"):
+                shutil.copy(Path(__file__).with_name(filename), root / "tools")
+            for filename, columns, rows in (
+                ("mpx_verdicts.csv", VERDICT_COLUMNS, []),
+                ("mpx_trajectory.csv", TRAJECTORY_COLUMNS, [{
+                    "source": "first.out", "block": 1, "size": 521, "seed": 42, "repeat": 0,
+                    "variant": "pyalcs", "trials": 500, "knowledge": 0.2, "pop": 5,
+                }]),
+            ):
+                with (root / "reports" / filename).open("w", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=columns)
+                    writer.writeheader()
+                    writer.writerows(rows)
+            subprocess.run([sys.executable, "tools/rebuild_tables.py"], cwd=root,
+                           capture_output=True, text=True, check=True)
+            rendered = (root / "reports/MPX521_runs.md").read_text()
+            self.assertIn("| running |", rendered)
+            self.assertIn("0.2000", rendered)
 
     def test_sync_commits_an_untracked_header_only_log(self):
         with tempfile.TemporaryDirectory() as directory:

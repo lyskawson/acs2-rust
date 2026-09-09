@@ -22,9 +22,8 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
-RUN_KEY = ("source", "block", "size", "seed", "repeat", "variant", "u_max",
-           "encoding", "epsilon", "agent", "do_ga",
-           "er_buffer_size", "er_min_samples", "er_samples_number")
+from mpx_selection import add_selection_arguments, arm_value, run_key, selected, selection_from
+
 COVERAGE = ("a0_nochange", "a0_change", "a1_nochange", "a1_change")
 
 
@@ -43,7 +42,7 @@ def load(path):
 
 def group_label(row):
     parts = [f"Encoding {row['encoding'] or '?'}", f"epsilon = {row['epsilon'] or '?'}",
-             f"agent = {row['agent'] or '?'}", f"GA = {row.get('do_ga') or '?'}"]
+             f"agent = {arm_value(row, 'agent')}", f"GA = {row.get('do_ga') or '?'}"]
     if row.get("agent") == "acs2er":
         parts.extend(f"{column} = {row.get(column) or '?'}" for column in
                      ("er_buffer_size", "er_min_samples", "er_samples_number"))
@@ -65,7 +64,7 @@ def collect(trajectory, verdicts, size):
     for row in trajectory:
         if int(row["size"]) != size:
             continue
-        key = tuple(row.get(column, "") for column in RUN_KEY)
+        key = run_key(row)
         previous = last_point.get(key)
         if previous is None or int(row["trials"]) >= int(previous["trials"]):
             last_point[key] = row
@@ -76,8 +75,11 @@ def collect(trajectory, verdicts, size):
     for row in verdicts:
         if int(row["size"]) != size:
             continue
-        key = tuple(row.get(column, "") for column in RUN_KEY)
-        merged = {**records.get(key, {}), **row}
+        key = run_key(row)
+        point = records.get(key, {})
+        if point and int(point["trials"]) != int(row["trials"]):
+            point = {}
+        merged = {**point, **row}
         merged["state"] = row["verdict"]
         merged["final"] = True
         records[key] = merged
@@ -90,10 +92,10 @@ def render(records, size):
         groups[group_label(record)].append(record)
 
     header = (
-        "| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec "
+        "| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec "
         "| a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |"
     )
-    rule = "|" + "---|" * 16
+    rule = "|" + "---|" * 17
 
     lines = [
         f"# MPX-{size} — all runs",
@@ -106,6 +108,9 @@ def render(records, size):
         "",
         "`a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.",
         "Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.",
+        "Knowledge trial identifies the population at its measurement; legacy final",
+        "knowledge can predate the verdict trial. Unknown timing is not a final measurement.",
+        "Accuracy and coverage appear on a verdict row only when measured at that same trial.",
         "Run identity includes the source log and header block; variant is explicit.",
         "Encoding provenance remains in the CSV's `encoding_source` column.",
         "",
@@ -121,8 +126,8 @@ def render(records, size):
         )
         lines += [f"## {label}", "", header, rule]
         for row in rows:
-            wall = float(row["wall_s"]) / 3600 if row.get("wall_s") else 0.0
-            rate = float(row["trials"]) / float(row["wall_s"]) if row.get("wall_s") else 0
+            wall = float(row["wall_s"]) / 3600 if row.get("wall_s") else None
+            rate = float(row["trials"]) / float(row["wall_s"]) if row.get("wall_s") and float(row["wall_s"]) else None
             cells = [
                 row["seed"],
                 row["variant"] or "-",
@@ -130,12 +135,13 @@ def render(records, size):
                 f"**{row['state']}**" if row["state"] == "SUCCESS" else row["state"],
                 f"{int(row['trials']):,}".replace(",", " "),
                 number(row.get("knowledge")),
+                row.get("knowledge_trials", row["trials"]) or "unknown",
                 number(row.get("accuracy")),
                 row.get("reliable", "-"),
                 number(row.get("spec"), 2),
                 *(number(row.get(column), 4) for column in COVERAGE),
-                f"{wall:.1f}",
-                f"{rate:.0f}",
+                number(wall, 1),
+                number(rate, 0),
                 f"`{row['source'].replace('slurm_mpx', '').replace('.out', '')}`",
             ]
             lines.append("| " + " | ".join(str(cell) for cell in cells) + " |")
@@ -172,9 +178,13 @@ def main():
     parser.add_argument("--trajectory-csv", type=Path, default=Path("reports/mpx_trajectory.csv"))
     parser.add_argument("--verdict-csv", type=Path, default=Path("reports/mpx_verdicts.csv"))
     parser.add_argument("--out", type=Path, default=None)
+    add_selection_arguments(parser)
+    parser.add_argument("--variant", default=None)
     args = parser.parse_args()
 
     records = collect(load(args.trajectory_csv), load(args.verdict_csv), args.size)
+    records = [row for row in records if selected(row, selection_from(args), args.source)
+               and (args.variant is None or row["variant"] == args.variant)]
     if not records:
         raise SystemExit(f"no runs at size {args.size}")
     out = args.out or Path(f"reports/MPX{args.size}_runs.md")

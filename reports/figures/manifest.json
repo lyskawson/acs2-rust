@@ -1,0 +1,107 @@
+{
+  "variant": "pyalcs",
+  "recipes": [
+    {
+      "figure": "reach",
+      "size": 70,
+      "suffix": "",
+      "sources": [
+        "slurm_mpx70_s42_addr.out",
+        "slurm_mpx70_s43.out",
+        "slurm_mpx70_s44.out",
+        "slurm_mpx70_s45.out",
+        "slurm_mpx70_s46.out"
+      ],
+      "arm": {
+        "encoding": "flip",
+        "epsilon": "0.8",
+        "u_max": "8",
+        "agent": "acs2"
+      }
+    },
+    {
+      "figure": "reach",
+      "size": 70,
+      "suffix": "_canonical",
+      "sources": [
+        "slurm_mpx70_s42_addr.out",
+        "slurm_mpx70_s43.out",
+        "slurm_mpx70_s44.out",
+        "slurm_mpx70_s45.out",
+        "slurm_mpx70_s46.out"
+      ],
+      "arm": {
+        "encoding": "flip",
+        "epsilon": "0.8",
+        "u_max": "8",
+        "agent": "acs2"
+      }
+    },
+    {
+      "figure": "anatomy",
+      "size": 70,
+      "seed": 42,
+      "sources": [
+        "slurm_mpx70_s42_addr.out"
+      ]
+    },
+    {
+      "figure": "anatomy",
+      "size": 70,
+      "seed": 46,
+      "sources": [
+        "slurm_mpx70_s46.out"
+      ]
+    },
+    {
+      "figure": "reach",
+      "size": 135,
+      "suffix": "_canonical_eps1",
+      "sources": [
+        "slurm_mpx135_s42_eps1_u11.out",
+        "slurm_mpx135_s43_eps1_u11.out"
+      ],
+      "arm": {
+        "encoding": "flip",
+        "epsilon": "1",
+        "u_max": "11",
+        "agent": "acs2"
+      }
+    },
+    {
+      "figure": "reach",
+      "size": 135,
+      "suffix": "_outcome_u11",
+      "sources": [
+        "slurm_mpx135_s42_outcome_u11.out",
+        "slurm_mpx135_s43_outcome_u11.out",
+        "slurm_mpx135_s45_outcome_u11.out",
+        "slurm_mpx135_s46_outcome_u11.out",
+        "slurm_mpx135_s44_outcome_u11.cancelled"
+      ],
+      "arm": {
+        "encoding": "outcome",
+        "epsilon": "0.8",
+        "u_max": "11",
+        "agent": "acs2"
+      }
+    },
+    {
+      "figure": "signal",
+      "sizes": [
+        70,
+        135
+      ],
+      "seed": 42,
+      "sources": [
+        "slurm_mpx70_s42_addr.out",
+        "slurm_mpx135_s42_addr.out"
+      ]
+    }
+  ],
+  "input_sha256": {
+    "reports/mpx_trajectory.csv": "f124cf2ed6f12661747d19d13838d5f13f3b3e26c7aab28e9c00fad657b85737",
+    "reports/mpx_diagnostics.csv": "043e032aab6c9fe865ab5a6a785435b9a240d322993e9a7e80522e4cd9674aed",
+    "reports/mpx_verdicts.csv": "a0fbc59b96fd0aae9eaaf1f1a7bc8a7e7d350bc9ab85eda3aecb2dc6ab9cbf7b"
+  }
+}

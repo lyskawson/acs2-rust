@@ -9,7 +9,7 @@ use acs2_core::ga::{apply_ga, generalizing_mutation, should_apply, two_point_cro
 use acs2_core::mark::Mark;
 use acs2_core::population::Population;
 use acs2_core::rl::{apply_reinforcement_learning, update_classifier};
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
 
 use common::{approx, assert_classifier_matches, classifier, effect, fixtures, mark, perception};
@@ -305,6 +305,34 @@ fn ga_two_point_crossover_preserves_combined_symbols() {
 
 #[test]
 fn ga_apply_runs_and_keeps_action_set_bounded() {
+    struct DistinctParents { draws: usize }
+    impl RandomSource for DistinctParents {
+        fn gen_bool(&mut self, probability: f64) -> bool { probability > 0.0 }
+        fn gen_range(&mut self, _: usize) -> usize { unreachable!() }
+        fn gen_unit(&mut self) -> f64 { self.draws += 1; if self.draws == 1 { 0.0 } else { 0.99 } }
+    }
+    for limit in [1, 2] {
+        let result = std::panic::catch_unwind(|| {
+            let mut population = Population::from_classifiers(vec![
+                ga_classifier([token(b'1'), token(b'0'), W, W], 0, 0.6, 1),
+                ga_classifier([token(b'1'), W, token(b'1'), W], 0, 0.7, 1),
+            ]);
+            let mut config = Configuration::default_protocol();
+            config.theta_as = limit;
+            config.mu = 0.0;
+            config.chi = 0.0;
+            let mut action_set = vec![0, 1];
+            apply_ga(500, &mut population, &mut vec![0, 1], &mut action_set,
+                &perception::<4>(&serde_json::json!(["1", "0", "1", "0"])),
+                &config, &mut DistinctParents { draws: 0 });
+            action_set.iter().map(|&reference| population.get(reference).num).sum::<u32>()
+        });
+        if limit == 1 {
+            assert!(result.is_err());
+        } else {
+            assert!(result.unwrap() <= limit);
+        }
+    }
     let mut population = Population::from_classifiers(vec![
         ga_classifier([token(b'1'), token(b'0'), W, W], 0, 0.6, 1),
         ga_classifier([token(b'1'), W, token(b'1'), W], 0, 0.7, 1),

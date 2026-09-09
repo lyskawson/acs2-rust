@@ -10,14 +10,17 @@ import sys
 from pathlib import Path
 
 VERDICTS = Path("reports/mpx_verdicts.csv")
+TRAJECTORY = Path("reports/mpx_trajectory.csv")
 
 
 def main():
     if not VERDICTS.exists():
         raise SystemExit(f"missing {VERDICTS}; run tools/parse_mpx_logs.py first")
-    with VERDICTS.open(newline="") as handle:
-        sizes = sorted({int(row["size"]) for row in csv.DictReader(handle)})
-    for size in sizes:
+    sizes = set()
+    for path in (VERDICTS, TRAJECTORY):
+        with path.open(newline="") as handle:
+            sizes.update(int(row["size"]) for row in csv.DictReader(handle))
+    for size in sorted(sizes):
         subprocess.run(
             [sys.executable, "tools/summarize_mpx.py", "--size", str(size)], check=True
         )

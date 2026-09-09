@@ -42,6 +42,7 @@ pub struct ReplayMemory<const N: usize> {
 
 impl<const N: usize> ReplayMemory<N> {
     pub fn new(max_size: usize) -> Self {
+        assert!(max_size > 0, "replay buffer_size must be positive");
         Self {
             samples: VecDeque::with_capacity(max_size.min(1_024)),
             max_size,

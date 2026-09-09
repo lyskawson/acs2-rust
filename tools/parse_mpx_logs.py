@@ -72,7 +72,7 @@ PROVENANCE = re.compile(r"^run-provenance:\s*(?P<fields>.*)")
 REPLAY_COLUMNS = ["er_buffer_size", "er_min_samples", "er_samples_number"]
 PROVENANCE_COLUMNS = [
     "encoding", "encoding_source", "epsilon", "agent", "eval_interval", "commit", "tag",
-    "do_ga", *REPLAY_COLUMNS,
+    "do_ga", *REPLAY_COLUMNS, "strict_resource_limits", "rss_scope",
 ]
 IDENTITY_COLUMNS = ["source", "block", "size", "seed", "variant", "u_max", "repeat"] + PROVENANCE_COLUMNS
 COVERAGE_COLUMNS = [
@@ -94,7 +94,7 @@ DIAGNOSTIC_COLUMNS = IDENTITY_COLUMNS + [
 ]
 VERDICT_COLUMNS = IDENTITY_COLUMNS + [
     "verdict", "trials", "knowledge", "reliable", "spec", "n_bits",
-    "peak_macro", "peak_rss_gb", "wall_s", "trials_per_s",
+    "peak_macro", "peak_rss_gb", "wall_s", "trials_per_s", "knowledge_trials", "knowledge_status",
 ]
 
 # ru_maxrss was read as bytes on Linux until f93b71e, so cluster logs written
@@ -150,7 +150,7 @@ class RunContext:
 
     def __init__(self, fields, source="", provenance=None, block=0):
         self.block = block
-        self.learning_config = {key: fields.get(key, "") for key in ("do_ga", *REPLAY_COLUMNS)}
+        self.learning_config = {key: fields.get(key, "") for key in ("do_ga", *REPLAY_COLUMNS, "strict_resource_limits", "rss_scope")}
         self.base_seed = int(fields.get("seed", 0))
         self.variant = fields.get("alp_gen_variant", "")
         if fields.get("encoding"):
@@ -192,6 +192,19 @@ def parse_log(path):
     context = RunContext({}, source)
     block = 0
 
+    def flush_pending():
+        for size, points in context.pending_diagnostics.items():
+            shared = identity(context, source, size, context.next_repeat.get(size, 0))
+            for point in points:
+                diagnostic_rows.append({**shared, **point})
+
+        for size, points in context.pending.items():
+            shared = identity(context, source, size, context.next_repeat.get(size, 0))
+            for point in points.values():
+                trajectory_rows.append({**shared, **point})
+        context.pending.clear()
+        context.pending_diagnostics.clear()
+
     def point_for(size, trials):
         """The trajectory point at this trial count, created if new.
 
@@ -210,6 +223,7 @@ def parse_log(path):
 
         header = HEADER.search(line)
         if header:
+            flush_pending()
             block += 1
             context = RunContext(parse_fields(header.group("fields")), source, provenance, block)
             continue
@@ -271,16 +285,38 @@ def parse_log(path):
         if verdict:
             size = verdict.group("size")
             repeat = int(verdict.group("repeat"))
+            if repeat < context.next_repeat.get(size, 0):
+                raise ValueError(f"duplicate/out-of-order repeat {repeat} in {source}, block {context.block}")
             fields = parse_fields(verdict.group("fields"))
             spec, n_bits = parse_spec(fields.get("spec", "0"))
             shared = identity(context, source, size, repeat)
             wall = float(fields.get("wall", 0))
             trials = int(fields["trials"])
+            knowledge = fields["knowledge"]
+            knowledge_trials = ""
+            if knowledge == "unmeasured":
+                knowledge = ""
+                knowledge_status = "unmeasured"
+            else:
+                knowledge = float(knowledge)
+                if fields.get("knowledge_trials", "").isdigit():
+                    knowledge_trials = int(fields["knowledge_trials"])
+                elif verdict.group("verdict") == "SUCCESS":
+                    knowledge_trials = trials
+                else:
+                    measured = [point["trials"] for point in context.pending.get(size, {}).values()
+                                if "knowledge" in point and point["trials"] <= trials]
+                    if measured:
+                        knowledge_trials = max(measured)
+                knowledge_status = ("legacy-unverified" if knowledge_trials == "" else
+                                    "at-verdict" if knowledge_trials == trials else "stale")
             verdict_rows.append({
                 **shared,
                 "verdict": verdict.group("verdict"),
                 "trials": trials,
-                "knowledge": float(fields["knowledge"]),
+                "knowledge": knowledge,
+                "knowledge_trials": knowledge_trials,
+                "knowledge_status": knowledge_status,
                 "reliable": int(fields["reliable"]),
                 "spec": spec,
                 "n_bits": n_bits if n_bits is not None else "",
@@ -296,18 +332,7 @@ def parse_log(path):
             context.next_repeat[size] = repeat + 1
             continue
 
-    # A run still in flight (or scancelled) leaves points unclosed. They are the
-    # live state of the cluster and must survive into the archive, so they are
-    # attributed to the repeat the next verdict line would have closed.
-    for size, points in context.pending_diagnostics.items():
-        shared = identity(context, source, size, context.next_repeat.get(size, 0))
-        for point in points:
-            diagnostic_rows.append({**shared, **point})
-
-    for size, points in context.pending.items():
-        shared = identity(context, source, size, context.next_repeat.get(size, 0))
-        for point in points.values():
-            trajectory_rows.append({**shared, **point})
+    flush_pending()
 
     return trajectory_rows, diagnostic_rows, verdict_rows
 
@@ -344,6 +369,8 @@ def main():
     args = parser.parse_args()
 
     trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
+    if len({path.name for path in args.logs}) != len(args.logs):
+        raise SystemExit("duplicate log basenames would collide; archive each source once under a unique name")
     for log in args.logs:
         if not log.is_file():
             raise SystemExit(f"not a file: {log}")

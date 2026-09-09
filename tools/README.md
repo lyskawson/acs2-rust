@@ -120,17 +120,20 @@ is read in those columns, not in the knowledge column.
 ## Plot
 
 ```bash
-uv run --project tools python tools/plot_mpx.py
+uv run --project tools python tools/plot_mpx.py --size 70 --figures anatomy \
+    --agent acs2 --source slurm_mpx70_s42_addr.out
 ```
 
-**Always narrow to one arm at k>=135.** A seed now has runs under both encodings,
-two epsilons and several `u_max` values; splicing them into one curve produces a
+**Always narrow to one arm and one source per seed.** A seed now has runs under both encodings,
+two epsilons, several `u_max` values, and different replay settings; splicing them into one curve produces a
 trajectory that never happened. The tool refuses to plot a mixed selection and
 names what is mixed:
 
 ```bash
 uv run --project tools python tools/plot_mpx.py --size 135 --figures reach \
-    --encoding flip --epsilon 1 --u-max 11 --suffix _canonical_eps1
+    --encoding flip --epsilon 1 --u-max 11 --agent acs2 \
+    --source slurm_mpx135_s43_eps1_u11.out \
+    --source slurm_mpx135_s42_eps1_u11.out --suffix _canonical_eps1
 ```
 
 Writes PDF (for LaTeX `\includegraphics`) and PNG (for previewing and README
@@ -163,3 +166,56 @@ embedding) into `reports/figures/`. Useful flags: `--size`, `--variant`,
 M2a GA-on vs M2b canonical `u_max`) both read `mpx_verdicts.csv`, which already
 carries what they need. They are not written yet because the k=70 confirmation
 seeds and the k=135 run are still in flight — see `docs/AGENT_HANDOFF.md` §4.
+
+## Review-fix protocol and checks
+
+`plot_mpx.py` and `summarize_mpx.py` share filters for agent, GA, replay capacity,
+warmup, replay count, encoding, epsilon, and `u_max`. `--source` is repeatable;
+`--block` selects a header occurrence. Plotting rejects independent runs sharing a
+seed, even if their learning parameters agree, and success markers must belong to
+that exact run. Signal plots apply the same filters plus `--variant` and
+`--signal-seed`. Legacy blank agent fields predate the shared `--agent` header
+(`a35a095`) and are treated as ACS2 by selection; the CSV preserves the raw field.
+
+`knowledge_trials` and `knowledge_status` describe verdict measurement timing.
+Historical values remain verbatim: SUCCESS is `at-verdict`; a known earlier
+trajectory evaluation makes the value `stale`; logs without enough timing evidence
+are `legacy-unverified`. New terminal `knowledge=unmeasured` becomes an empty CSV
+cell and status `unmeasured`. The readable tables show the knowledge trial separately
+and only attach accuracy/coverage measured at the verdict trial. No final population
+is reconstructed from a log.
+
+New headers carry `strict_resource_limits` and `rss_scope`. Empty historical values
+mean unrecorded; `--isolate-repeats` emits a separate header with the actual seed and
+repeat 0 for each fresh child process. `--strict-resource-limits` checks resources
+after evaluation before granting SUCCESS. Both options default off. The corrected
+Butz algorithm is `--alp-gen-variant butz-checked`; legacy `butz` is unchanged.
+
+`qdetail:`-only points and unfinished blocks at a subsequent header are retained.
+Header-only logs have no measurement rows, but are still archived and committed.
+The historical diagnostic `correct` remains a complete-address structural proxy,
+not a complete test for all correct minimal MPX rules.
+
+Run the existing 73 workspace tests, the expanded archive/plot regressions, and
+isolated runner checks (synthetic populations, no learning experiments):
+
+```bash
+cargo test --workspace --release
+uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'
+python3 tools/check_reach_protocol.py
+```
+
+The last command builds a temporary Rust test harness against the production runner.
+It checks verdict timing, post-evaluation resource limits, and fresh-process RSS.
+The normal workspace gate keeps its original 73 tests, with additional assertions
+for the Butz counter and invalid replay/GA boundaries in existing tests.
+
+Rebuild the seven committed figure pairs with explicit source choices:
+
+```bash
+uv run --project tools python tools/rebuild_figures.py
+```
+
+`reports/figures/manifest.json` records those choices and the input CSV hashes.
+The epsilon-1 figure uses seed 42's completed time-limited first run; its separate
+longer rerun is not spliced into that curve.

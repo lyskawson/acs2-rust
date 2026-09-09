@@ -8,70 +8,68 @@ come from filename markers. Such rows show the last evaluation, not a final resu
 
 `a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.
 Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.
+Knowledge trial identifies the population at its measurement; legacy final
+knowledge can predate the verdict trial. Unknown timing is not a final measurement.
+Accuracy and coverage appear on a verdict row only when measured at that same trial.
 Run identity includes the source log and header block; variant is explicit.
 Encoding provenance remains in the CSV's `encoding_source` column.
 
-## Encoding flip · epsilon = 0.8 · agent = ? · GA = true
-
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | TIME-LIMITED | 5 537 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 256 | `135_s42_u8` |
-| 42 | pyalcs | 9 | TIME-LIMITED | 105 621 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 69.4 | 422 | `135_s42` |
-| 42 | pyalcs | 9 | TIME-LIMITED | 9 509 500 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 440 | `135_s42_addr` |
-| 42 | pyalcs | 9 | TIME-LIMITED | 6 080 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 281 | `135_s42_u9` |
-| 42 | pyalcs | 9 | TIME-LIMITED | 324 500 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 0.1 | 901 | `mpx_m2b_reach135.log` |
-| 42 | pyalcs | 10 | TIME-LIMITED | 7 820 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 362 | `135_s42_u10` |
-| 42 | butz | 10 | TIME-LIMITED | 188 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 0.1 | 493 | `mpx_m2b_reach135.log` |
-| 42 | pyalcs | 11 | TIME-LIMITED | 655 383 500 | 0.7499 | - | 396 | 8.00 | - | - | - | - | 166.7 | 1092 | `135_s42_u11long` |
-| 42 | pyalcs | 11 | TIME-LIMITED | 533 668 500 | 0.7499 | - | 388 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 166.7 | 889 | `135_s42_u11cover` |
-| 42 | pyalcs | 12 | TIME-LIMITED | 339 107 500 | 0.5000 | - | 258 | 8.05 | - | - | - | - | 166.7 | 565 | `135_s42_u12long` |
-| 42 | pyalcs | 12 | TIME-LIMITED | 7 042 500 | 0.0129 | - | 226 | 13.33 | - | - | - | - | 6.0 | 326 | `135_s42_u12` |
-| 43 | pyalcs | 12 | TIME-LIMITED | 353 092 500 | 0.4985 | - | 261 | 8.05 | - | - | - | - | 166.7 | 588 | `135_s43_u12long` |
-| 42 | pyalcs | 13 | TIME-LIMITED | 158 236 000 | 0.4889 | - | 258 | 8.14 | - | - | - | - | 166.7 | 264 | `135_s42_u13long` |
-| 42 | pyalcs | 14 | TIME-LIMITED | 25 090 000 | 0.1628 | - | 6861 | 15.20 | - | - | - | - | 166.7 | 42 | `135_s42_u14long` |
-| 42 | pyalcs | 16 | TIME-LIMITED | 35 512 500 | 0.3242 | - | 8092 | 16.89 | - | - | - | - | 166.7 | 59 | `135_s42_u16long` |
-| 42 | pyalcs | 16 | TIME-LIMITED | 3 955 000 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 183 | `135_s42_u16` |
-| 42 | pyalcs | 24 | TIME-LIMITED | 1 594 500 | 0.0000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 74 | `135_s42_u24` |
-
 ## Encoding flip · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 10 | TIME-LIMITED | 294 775 500 | 0.2717 | - | 170 | 8.97 | 0.0000 | 0.5273 | 0.0000 | 0.5596 | 166.7 | 491 | `135_s42_u10long` |
-| 42 | pyalcs | 11 | TIME-LIMITED | 583 842 500 | 0.7499 | - | 395 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 166.7 | 973 | `135_s42_qdetail_u11` |
-| 42 | pyalcs | 11 | cancelled | 325 800 000 | 0.7499 | 1.0000 | 392 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 150.3 | 602 | `135_s42_acc_u11.cancelled` |
-| 43 | pyalcs | 11 | TIME-LIMITED | 281 210 000 | 0.4980 | - | 257 | 8.05 | 0.0000 | 1.0000 | 0.0000 | 0.9922 | 166.7 | 469 | `135_s43_u11cover` |
-| 44 | pyalcs | 11 | TIME-LIMITED | 256 199 500 | 0.4980 | - | 260 | 8.01 | 0.0000 | 1.0000 | 0.0000 | 0.9920 | 166.7 | 427 | `135_s44_u11cover` |
-| 45 | pyalcs | 11 | TIME-LIMITED | 233 203 500 | 0.4918 | - | 261 | 8.11 | 0.0000 | 0.9671 | 0.0000 | 1.0000 | 166.7 | 389 | `135_s45_u11cover` |
-| 42 | pyalcs | 12 | TIME-LIMITED | 366 848 000 | 0.5000 | - | 259 | 8.05 | 0.0000 | 1.0000 | 0.0000 | 1.0000 | 166.7 | 611 | `135_s42_qdetail_u12` |
-| 42 | pyalcs | 12 | cancelled | 169 560 000 | 0.4821 | 0.9821 | 255 | 8.16 | 0.0000 | 0.9702 | 0.0000 | 0.9584 | 150.3 | 313 | `135_s42_acc_u12.cancelled` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 8 | TIME-LIMITED | 5 537 000 | 0.0000 | 5520000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 256 | `135_s42_u8` |
+| 42 | pyalcs | 9 | TIME-LIMITED | 105 621 000 | 0.0000 | 105600000 | - | 0 | 0.00 | - | - | - | - | 69.4 | 422 | `135_s42` |
+| 42 | pyalcs | 9 | TIME-LIMITED | 9 509 500 | 0.0000 | 9480000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 440 | `135_s42_addr` |
+| 42 | pyalcs | 9 | TIME-LIMITED | 6 080 000 | 0.0000 | 6060000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 281 | `135_s42_u9` |
+| 42 | pyalcs | 9 | TIME-LIMITED | 324 500 | 0.0000 | unknown | - | 0 | 0.00 | - | - | - | - | 0.1 | 901 | `mpx_m2b_reach135.log` |
+| 42 | pyalcs | 10 | TIME-LIMITED | 294 775 500 | 0.2717 | 294720000 | - | 170 | 8.97 | - | - | - | - | 166.7 | 491 | `135_s42_u10long` |
+| 42 | pyalcs | 10 | TIME-LIMITED | 7 820 000 | 0.0000 | 7800000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 362 | `135_s42_u10` |
+| 42 | butz | 10 | TIME-LIMITED | 188 000 | 0.0000 | unknown | - | 0 | 0.00 | - | - | - | - | 0.1 | 493 | `mpx_m2b_reach135.log` |
+| 42 | pyalcs | 11 | TIME-LIMITED | 655 383 500 | 0.7499 | 655380000 | - | 396 | 8.00 | - | - | - | - | 166.7 | 1092 | `135_s42_u11long` |
+| 42 | pyalcs | 11 | TIME-LIMITED | 583 842 500 | 0.7499 | 583800000 | - | 395 | 8.00 | - | - | - | - | 166.7 | 973 | `135_s42_qdetail_u11` |
+| 42 | pyalcs | 11 | TIME-LIMITED | 533 668 500 | 0.7499 | 533640000 | - | 388 | 8.00 | - | - | - | - | 166.7 | 889 | `135_s42_u11cover` |
+| 42 | pyalcs | 11 | cancelled | 325 800 000 | 0.7499 | 325800000 | 1.0000 | 392 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 150.3 | 602 | `135_s42_acc_u11.cancelled` |
+| 43 | pyalcs | 11 | TIME-LIMITED | 281 210 000 | 0.4980 | 281160000 | - | 257 | 8.05 | - | - | - | - | 166.7 | 469 | `135_s43_u11cover` |
+| 44 | pyalcs | 11 | TIME-LIMITED | 256 199 500 | 0.4980 | 256080000 | - | 260 | 8.01 | - | - | - | - | 166.7 | 427 | `135_s44_u11cover` |
+| 45 | pyalcs | 11 | TIME-LIMITED | 233 203 500 | 0.4918 | 233160000 | - | 261 | 8.11 | - | - | - | - | 166.7 | 389 | `135_s45_u11cover` |
+| 42 | pyalcs | 12 | TIME-LIMITED | 366 848 000 | 0.5000 | 366840000 | - | 259 | 8.05 | - | - | - | - | 166.7 | 611 | `135_s42_qdetail_u12` |
+| 42 | pyalcs | 12 | TIME-LIMITED | 339 107 500 | 0.5000 | 339060000 | - | 258 | 8.05 | - | - | - | - | 166.7 | 565 | `135_s42_u12long` |
+| 42 | pyalcs | 12 | cancelled | 169 560 000 | 0.4821 | 169560000 | 0.9821 | 255 | 8.16 | 0.0000 | 0.9702 | 0.0000 | 0.9584 | 150.3 | 313 | `135_s42_acc_u12.cancelled` |
+| 42 | pyalcs | 12 | TIME-LIMITED | 7 042 500 | 0.0129 | 7020000 | - | 226 | 13.33 | - | - | - | - | 6.0 | 326 | `135_s42_u12` |
+| 43 | pyalcs | 12 | TIME-LIMITED | 353 092 500 | 0.4985 | 353040000 | - | 261 | 8.05 | - | - | - | - | 166.7 | 588 | `135_s43_u12long` |
+| 42 | pyalcs | 13 | TIME-LIMITED | 158 236 000 | 0.4889 | 158220000 | - | 258 | 8.14 | - | - | - | - | 166.7 | 264 | `135_s42_u13long` |
+| 42 | pyalcs | 14 | TIME-LIMITED | 25 090 000 | 0.1628 | 25080000 | - | 6861 | 15.20 | - | - | - | - | 166.7 | 42 | `135_s42_u14long` |
+| 42 | pyalcs | 16 | TIME-LIMITED | 35 512 500 | 0.3242 | 35460000 | - | 8092 | 16.89 | - | - | - | - | 166.7 | 59 | `135_s42_u16long` |
+| 42 | pyalcs | 16 | TIME-LIMITED | 3 955 000 | 0.0000 | 3900000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 183 | `135_s42_u16` |
+| 42 | pyalcs | 24 | TIME-LIMITED | 1 594 500 | 0.0000 | 1560000 | - | 0 | 0.00 | - | - | - | - | 6.0 | 74 | `135_s42_u24` |
 
 ## Encoding flip · epsilon = 0.8 · agent = acs2er · GA = true · er_buffer_size = 10000 · er_min_samples = 1000 · er_samples_number = 3
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 11 | TIME-LIMITED | 1 894 500 | 0.0902 | - | 1753 | 13.14 | 0.0066 | 0.1869 | 0.0063 | 0.1611 | 166.7 | 3 | `135_s42_erfine_u11` |
-| 42 | pyalcs | 12 | TIME-LIMITED | 1 235 500 | 0.0738 | - | 2530 | 13.86 | 0.0044 | 0.1406 | 0.0086 | 0.1414 | 166.7 | 2 | `135_s42_erfine_u12` |
-| 42 | pyalcs | 12 | running | 120 000 | 0.0478 | - | 1190 | 13.15 | 0.0136 | 0.0869 | 0.0085 | 0.0824 | 21.9 | 2 | `135_s42_er_u12` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 11 | TIME-LIMITED | 1 894 500 | 0.0902 | 1880000 | - | 1753 | 13.14 | - | - | - | - | 166.7 | 3 | `135_s42_erfine_u11` |
+| 42 | pyalcs | 12 | TIME-LIMITED | 1 235 500 | 0.0738 | 1220000 | - | 2530 | 13.86 | - | - | - | - | 166.7 | 2 | `135_s42_erfine_u12` |
+| 42 | pyalcs | 12 | running | 120 000 | 0.0478 | 120000 | - | 1190 | 13.15 | 0.0136 | 0.0869 | 0.0085 | 0.0824 | 21.9 | 2 | `135_s42_er_u12` |
 
 ## Encoding flip · epsilon = 1 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | - | 393 | 8.01 | 0.0000 | 0.9773 | 1.0000 | 1.0000 | 166.7 | 502 | `135_s42_eps1_u11` |
-| 42 | pyalcs | 11 | running | 11 520 000 | 0.0043 | 0.5079 | 4 | 10.25 | 0.0000 | 0.0000 | 0.0000 | 0.0173 | 5.8 | 553 | `135_s42_eps1b_u11` |
-| 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | 301440000 | - | 393 | 8.01 | - | - | - | - | 166.7 | 502 | `135_s42_eps1_u11` |
+| 42 | pyalcs | 11 | running | 11 520 000 | 0.0043 | 11520000 | 0.5079 | 4 | 10.25 | 0.0000 | 0.0000 | 0.0000 | 0.0173 | 5.8 | 553 | `135_s42_eps1b_u11` |
+| 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | 427920000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 9 | running | 17 040 000 | 0.1838 | 0.7630 | 103 | 8.20 | 0.0000 | 0.7356 | 0.0000 | 0.0000 | 33.1 | 143 | `135_s42_outcome_u9` |
-| 42 | pyalcs | 11 | **SUCCESS** | 43 200 000 | 1.0000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 50.5 | 238 | `135_s42_outcome_u11` |
-| 43 | pyalcs | 11 | **SUCCESS** | 46 800 000 | 1.0000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 78.8 | 165 | `135_s43_outcome_u11` |
-| 44 | pyalcs | 11 | cancelled | 4 800 000 | 0.1583 | 0.6495 | 423 | 10.92 | 0.0918 | 0.3379 | 0.1092 | 0.0944 | 79.0 | 17 | `135_s44_outcome_u11.cancelled` |
-| 45 | pyalcs | 11 | **SUCCESS** | 55 560 000 | 1.0000 | 1.0000 | 532 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 80.9 | 191 | `135_s45_outcome_u11` |
-| 46 | pyalcs | 11 | **SUCCESS** | 30 240 000 | 1.0000 | 1.0000 | 535 | 8.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 57.6 | 146 | `135_s46_outcome_u11` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 9 | running | 17 040 000 | 0.1838 | 17040000 | 0.7630 | 103 | 8.20 | 0.0000 | 0.7356 | 0.0000 | 0.0000 | 33.1 | 143 | `135_s42_outcome_u9` |
+| 42 | pyalcs | 11 | **SUCCESS** | 43 200 000 | 1.0000 | 43200000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 50.5 | 238 | `135_s42_outcome_u11` |
+| 43 | pyalcs | 11 | **SUCCESS** | 46 800 000 | 1.0000 | 46800000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 78.8 | 165 | `135_s43_outcome_u11` |
+| 44 | pyalcs | 11 | cancelled | 4 800 000 | 0.1583 | 4800000 | 0.6495 | 423 | 10.92 | 0.0918 | 0.3379 | 0.1092 | 0.0944 | 79.0 | 17 | `135_s44_outcome_u11.cancelled` |
+| 45 | pyalcs | 11 | **SUCCESS** | 55 560 000 | 1.0000 | 55560000 | 1.0000 | 532 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 80.9 | 191 | `135_s45_outcome_u11` |
+| 46 | pyalcs | 11 | **SUCCESS** | 30 240 000 | 1.0000 | 30240000 | 1.0000 | 535 | 8.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 57.6 | 146 | `135_s46_outcome_u11` |
 
 ## Summary
 

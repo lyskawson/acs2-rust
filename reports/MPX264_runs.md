@@ -8,14 +8,17 @@ come from filename markers. Such rows show the last evaluation, not a final resu
 
 `a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.
 Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.
+Knowledge trial identifies the population at its measurement; legacy final
+knowledge can predate the verdict trial. Unknown timing is not a final measurement.
+Accuracy and coverage appear on a verdict row only when measured at that same trial.
 Run identity includes the source log and header block; variant is explicit.
 Encoding provenance remains in the CSV's `encoding_source` column.
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 12 | TIME-LIMITED | 1 165 000 | 0.0000 | 0.5050 | 0 | 0.00 | - | - | - | - | 12.0 | 27 | `264_s42_probe264` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 12 | TIME-LIMITED | 1 165 000 | 0.0000 | 1160000 | - | 0 | 0.00 | - | - | - | - | 12.0 | 27 | `264_s42_probe264` |
 
 ## Summary
 

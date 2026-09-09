@@ -8,20 +8,23 @@ come from filename markers. Such rows show the last evaluation, not a final resu
 
 `a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.
 Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.
+Knowledge trial identifies the population at its measurement; legacy final
+knowledge can predate the verdict trial. Unknown timing is not a final measurement.
+Accuracy and coverage appear on a verdict row only when measured at that same trial.
 Run identity includes the source log and header block; variant is explicit.
 Encoding provenance remains in the CSV's `encoding_source` column.
 
-## Encoding flip · epsilon = 0.8 · agent = ? · GA = true
+## Encoding flip · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 5 | **SUCCESS** | 160 000 | 1.0000 | - | 95 | 5.00 | - | - | - | - | 0.0 | 9195 | `20_s42_u5` |
-| 42 | pyalcs | 6 | **SUCCESS** | 120 000 | 1.0000 | - | 93 | 5.00 | - | - | - | - | 0.0 | 15385 | `20_s42_addr` |
-| 42 | pyalcs | 6 | **SUCCESS** | 80 000 | 1.0000 | - | 108 | 5.09 | - | - | - | - | 0.0 | 11594 | `20_s42_u6` |
-| 42 | pyalcs | 7 | **SUCCESS** | 130 000 | 1.0000 | - | 92 | 5.01 | - | - | - | - | 0.0 | 12871 | `20_s42_u7` |
-| 42 | pyalcs | 8 | **SUCCESS** | 150 000 | 1.0000 | - | 94 | 5.15 | - | - | - | - | 0.0 | 14151 | `20_s42_u8` |
-| 42 | pyalcs | 9 | **SUCCESS** | 110 000 | 1.0000 | - | 105 | 5.30 | - | - | - | - | 0.0 | 12360 | `20_s42_u9` |
-| 42 | pyalcs | 10 | **SUCCESS** | 120 000 | 1.0000 | - | 102 | 5.42 | - | - | - | - | 0.0 | 12500 | `20_s42_u10` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 5 | **SUCCESS** | 160 000 | 1.0000 | 160000 | - | 95 | 5.00 | - | - | - | - | 0.0 | 9195 | `20_s42_u5` |
+| 42 | pyalcs | 6 | **SUCCESS** | 120 000 | 1.0000 | 120000 | - | 93 | 5.00 | - | - | - | - | 0.0 | 15385 | `20_s42_addr` |
+| 42 | pyalcs | 6 | **SUCCESS** | 80 000 | 1.0000 | 80000 | - | 108 | 5.09 | - | - | - | - | 0.0 | 11594 | `20_s42_u6` |
+| 42 | pyalcs | 7 | **SUCCESS** | 130 000 | 1.0000 | 130000 | - | 92 | 5.01 | - | - | - | - | 0.0 | 12871 | `20_s42_u7` |
+| 42 | pyalcs | 8 | **SUCCESS** | 150 000 | 1.0000 | 150000 | - | 94 | 5.15 | - | - | - | - | 0.0 | 14151 | `20_s42_u8` |
+| 42 | pyalcs | 9 | **SUCCESS** | 110 000 | 1.0000 | 110000 | - | 105 | 5.30 | - | - | - | - | 0.0 | 12360 | `20_s42_u9` |
+| 42 | pyalcs | 10 | **SUCCESS** | 120 000 | 1.0000 | 120000 | - | 102 | 5.42 | - | - | - | - | 0.0 | 12500 | `20_s42_u10` |
 
 ## Summary
 

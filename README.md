@@ -45,7 +45,10 @@ Sizes are not continuous: `k = a + 2^a` gives 6, 11, 20, 37, 70, 135, 264, 521. 
 | `--epsilon <f>` | `0.8` | Exploration rate. `1` removes the greedy bias and is what solves k=135 canonically. |
 | `--agent acs2\|acs2er` | `acs2` | Which agent. |
 | `--eval-interval <n>` | `6000` | Trials between knowledge evaluations. |
-| `--rss-cap-gb <f>` | `5.6` | Abort above this peak RSS. |
+| `--rss-cap-gb <f>` | `5.6` | Abort above process peak RSS; use `--isolate-repeats` for a fresh process per repeat. |
+| `--isolate-repeats` | off | Isolate each size/repeat so prior runs cannot contaminate its RSS peak or cap. |
+| `--strict-resource-limits` | off | Recheck time and RSS after evaluation and diagnostics, before SUCCESS. |
+| `--alp-gen-variant pyalcs\|butz\|butz-checked` | `pyalcs` | `butz-checked` fixes exhausted-condition counting; `butz` preserves historical trajectories. |
 
 Diagnostics are off by default and preserve population and learning RNG state: learning
 is identical at equal trial counts. Their evaluation cost can change when a wall-clock
@@ -53,6 +56,12 @@ cap stops a run.
 `--log-trajectory` (the S-curve), `--log-accuracy` (the metric the literature reports),
 `--log-coverage` (**start here when knowledge sticks near 0.75 or 0.50** — check for
 classes without reliable coverage), `--log-quadrant-detail`, `--log-diagnostics`.
+
+A terminal row prints `knowledge=unmeasured` when the final population has not been
+measured at that trial. It does not rerun evaluation after a resource cap. SUCCESS
+knowledge values are unchanged by this reporting correction. `--strict-resource-limits`
+and `--isolate-repeats` are explicit protocol changes and are recorded in new headers;
+without them, historical stopping/resource behavior remains available.
 
 ### Maze — `acs2-bench`
 
@@ -100,8 +109,9 @@ runs, a result exists only on the cluster.
 - **`seed = base_seed + repeat`** — an `n_exp=3` log at seed 42 holds seeds 42, 43 and 44.
 - **Knowledge is exhaustive only for k ≤ 20**; above that it is sampled over 50,000 inputs
   at a fixed evaluation seed. Say so when reporting.
-- **Narrow plots to one experimental arm** (`--encoding`, `--epsilon`, `--u-max`) at
-  k ≥ 135, or curves from unrelated runs get spliced together. The tool refuses to.
+- **Narrow plots to one experimental arm** (`--encoding`, `--epsilon`, `--u-max`,
+  `--agent`, `--do-ga`, `--er-*`) and one `--source` per seed. The plotter rejects
+  mixed arms and independent runs sharing a seed; use `--block` for repeated headers.
 
 ## Regenerating reports and figures
 
@@ -111,7 +121,9 @@ Optional, needs [`uv`](https://docs.astral.sh/uv/):
 ./tools/sync_runs.sh --local     # full local archive -> CSVs and tables
 # Omit --local to pull current cluster logs first.
 uv run --project tools python tools/plot_mpx.py --size 135 \
-    --encoding flip --epsilon 1 --u-max 11 --suffix _canonical_eps1
+    --figures reach --encoding flip --epsilon 1 --u-max 11 --agent acs2 \
+    --source slurm_mpx135_s43_eps1_u11.out \
+    --source slurm_mpx135_s42_eps1_u11.out --suffix _canonical_eps1
 ```
 
 The pyalcs comparison additionally needs the pinned baseline (Python 3.10,

@@ -8,57 +8,55 @@ come from filename markers. Such rows show the last evaluation, not a final resu
 
 `a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.
 Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.
+Knowledge trial identifies the population at its measurement; legacy final
+knowledge can predate the verdict trial. Unknown timing is not a final measurement.
+Accuracy and coverage appear on a verdict row only when measured at that same trial.
 Run identity includes the source log and header block; variant is explicit.
 Encoding provenance remains in the CSV's `encoding_source` column.
 
-## Encoding flip · epsilon = 0.8 · agent = ? · GA = true
-
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | - | 277 | 7.04 | - | - | - | - | 1.7 | 2929 | `mpx_m3_e1_traj70_pyalcs.log` |
-| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | - | 277 | 7.04 | - | - | - | - | 2.4 | 2104 | `70_s42_addr` |
-| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.2 | 2234 | `70_s42_cover` |
-| 42 | pyalcs | 8 | TIME-LIMITED | 1 625 500 | 0.2406 | - | 110 | 8.63 | - | - | - | - | 0.2 | 2709 | `mpx_m2b_reach70.log` |
-| 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | - | 269 | 7.00 | - | - | - | - | 3.8 | 1301 | `70_s43` |
-| 43 | pyalcs | 8 | cancelled | 4 740 000 | 0.2885 | - | 89 | 7.92 | - | - | - | - | 1.5 | 890 | `70_s43.cap40k.cancelled` |
-| 43 | pyalcs | 8 | TIME-LIMITED | 1 555 000 | 0.1349 | - | 75 | 9.20 | - | - | - | - | 0.2 | 2591 | `mpx_m2b_reach70.log` |
-| 44 | pyalcs | 8 | **SUCCESS** | 44 580 000 | 1.0000 | - | 274 | 7.00 | - | - | - | - | 8.1 | 1538 | `70_s44` |
-| 44 | pyalcs | 8 | cancelled | 5 280 000 | 0.2932 | - | 90 | 7.87 | - | - | - | - | 1.5 | 988 | `70_s44.cap40k.cancelled` |
-| 44 | pyalcs | 8 | TIME-LIMITED | 1 503 000 | 0.1419 | - | 91 | 9.79 | - | - | - | - | 0.2 | 2505 | `mpx_m2b_reach70.log` |
-| 45 | pyalcs | 8 | **SUCCESS** | 21 300 000 | 1.0000 | - | 271 | 7.00 | - | - | - | - | 3.2 | 1847 | `70_s45` |
-| 46 | pyalcs | 8 | **SUCCESS** | 66 420 000 | 1.0000 | - | 268 | 7.00 | - | - | - | - | 12.9 | 1436 | `70_s46` |
-| 42 | butz | 9 | TIME-LIMITED | 5 714 000 | 0.4001 | - | 114 | 7.21 | - | - | - | - | 2.0 | 793 | `mpx_m3_e1_traj70_butz.log` |
-| 42 | butz | 9 | TIME-LIMITED | 931 500 | 0.2562 | - | 215 | 8.58 | - | - | - | - | 0.2 | 1552 | `mpx_m2b_reach70.log` |
-| 43 | butz | 9 | TIME-LIMITED | 858 500 | 0.2677 | - | 203 | 8.52 | - | - | - | - | 0.2 | 1430 | `mpx_m2b_reach70.log` |
-| 44 | butz | 9 | TIME-LIMITED | 894 000 | 0.2081 | - | 223 | 8.75 | - | - | - | - | 0.2 | 1490 | `mpx_m2b_reach70.log` |
-
 ## Encoding flip · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.9 | 1696 | `70_s42_qdetail` |
-| 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | - | 269 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.7 | 1355 | `70_s43_cover` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | - | - | - | - | 1.7 | 2929 | `mpx_m3_e1_traj70_pyalcs.log` |
+| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | - | - | - | - | 2.4 | 2104 | `70_s42_addr` |
+| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.2 | 2234 | `70_s42_cover` |
+| 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.9 | 1696 | `70_s42_qdetail` |
+| 42 | pyalcs | 8 | TIME-LIMITED | 1 625 500 | 0.2406 | unknown | - | 110 | 8.63 | - | - | - | - | 0.2 | 2709 | `mpx_m2b_reach70.log` |
+| 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | 17820000 | - | 269 | 7.00 | - | - | - | - | 3.8 | 1301 | `70_s43` |
+| 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | 17820000 | - | 269 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.7 | 1355 | `70_s43_cover` |
+| 43 | pyalcs | 8 | cancelled | 4 740 000 | 0.2885 | 4740000 | - | 89 | 7.92 | - | - | - | - | 1.5 | 890 | `70_s43.cap40k.cancelled` |
+| 43 | pyalcs | 8 | TIME-LIMITED | 1 555 000 | 0.1349 | unknown | - | 75 | 9.20 | - | - | - | - | 0.2 | 2591 | `mpx_m2b_reach70.log` |
+| 44 | pyalcs | 8 | **SUCCESS** | 44 580 000 | 1.0000 | 44580000 | - | 274 | 7.00 | - | - | - | - | 8.1 | 1538 | `70_s44` |
+| 44 | pyalcs | 8 | cancelled | 5 280 000 | 0.2932 | 5280000 | - | 90 | 7.87 | - | - | - | - | 1.5 | 988 | `70_s44.cap40k.cancelled` |
+| 44 | pyalcs | 8 | TIME-LIMITED | 1 503 000 | 0.1419 | unknown | - | 91 | 9.79 | - | - | - | - | 0.2 | 2505 | `mpx_m2b_reach70.log` |
+| 45 | pyalcs | 8 | **SUCCESS** | 21 300 000 | 1.0000 | 21300000 | - | 271 | 7.00 | - | - | - | - | 3.2 | 1847 | `70_s45` |
+| 46 | pyalcs | 8 | **SUCCESS** | 66 420 000 | 1.0000 | 66420000 | - | 268 | 7.00 | - | - | - | - | 12.9 | 1436 | `70_s46` |
+| 42 | butz | 9 | TIME-LIMITED | 5 714 000 | 0.4001 | 5700000 | - | 114 | 7.21 | - | - | - | - | 2.0 | 793 | `mpx_m3_e1_traj70_butz.log` |
+| 42 | butz | 9 | TIME-LIMITED | 931 500 | 0.2562 | unknown | - | 215 | 8.58 | - | - | - | - | 0.2 | 1552 | `mpx_m2b_reach70.log` |
+| 43 | butz | 9 | TIME-LIMITED | 858 500 | 0.2677 | unknown | - | 203 | 8.52 | - | - | - | - | 0.2 | 1430 | `mpx_m2b_reach70.log` |
+| 44 | butz | 9 | TIME-LIMITED | 894 000 | 0.2081 | unknown | - | 223 | 8.75 | - | - | - | - | 0.2 | 1490 | `mpx_m2b_reach70.log` |
 
 ## Encoding flip · epsilon = 0.8 · agent = acs2er · GA = true · er_buffer_size = 10000 · er_min_samples = 1000 · er_samples_number = 1
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | **SUCCESS** | 12 120 000 | 1.0000 | - | 268 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 4.3 | 779 | `70_s42_er1` |
-| 43 | pyalcs | 8 | **SUCCESS** | 22 860 000 | 1.0000 | - | 270 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.8 | 1665 | `70_s43_er1` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 8 | **SUCCESS** | 12 120 000 | 1.0000 | 12120000 | - | 268 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 4.3 | 779 | `70_s42_er1` |
+| 43 | pyalcs | 8 | **SUCCESS** | 22 860 000 | 1.0000 | 22860000 | - | 270 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.8 | 1665 | `70_s43_er1` |
 
 ## Encoding flip · epsilon = 0.8 · agent = acs2er · GA = true · er_buffer_size = 10000 · er_min_samples = 1000 · er_samples_number = 3
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | **SUCCESS** | 3 960 000 | 1.0000 | - | 318 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 160.1 | 7 | `70_s42_er` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 8 | **SUCCESS** | 3 960 000 | 1.0000 | 3960000 | - | 318 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 160.1 | 7 | `70_s42_er` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 8 | **SUCCESS** | 4 680 000 | 1.0000 | - | 276 | 7.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.6 | 2171 | `70_s42_outcome` |
-| 43 | pyalcs | 8 | **SUCCESS** | 62 340 000 | 1.0000 | 1.0000 | 280 | 7.05 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.8 | 4532 | `70_s43_outcome` |
-| 44 | pyalcs | 8 | **SUCCESS** | 10 260 000 | 1.0000 | 1.0000 | 276 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.8 | 3596 | `70_s44_outcome` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 8 | **SUCCESS** | 4 680 000 | 1.0000 | 4680000 | - | 276 | 7.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.6 | 2171 | `70_s42_outcome` |
+| 43 | pyalcs | 8 | **SUCCESS** | 62 340 000 | 1.0000 | 62340000 | 1.0000 | 280 | 7.05 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.8 | 4532 | `70_s43_outcome` |
+| 44 | pyalcs | 8 | **SUCCESS** | 10 260 000 | 1.0000 | 10260000 | 1.0000 | 276 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.8 | 3596 | `70_s44_outcome` |
 
 ## Summary
 

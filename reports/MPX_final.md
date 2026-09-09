@@ -22,7 +22,7 @@ not specificity alone. The reliable population size is another compactness measu
 reliable population anticipates correctly; at k ≤ 20 it is computed EXHAUSTIVELY (every
 pair), so "knowledge = 1.0" means literally every pair, not a sample.
 
-**Protocol (identical across all phases).** Single-step episodes; reward **1000** on a
+**Baseline protocol (later arm overrides are stated below).** Single-step episodes; reward **1000** on a
 correct action, **0** otherwise; explore at ε = 0.8; the measured metric is taken on the
 frozen population. Reach runs use a 4-way verdict (SUCCESS / TRIALS- / MEMORY- /
 TIME-LIMITED) with RSS cap 5.6 GB and a trials cap = **M1-empirical specialize-only
@@ -407,9 +407,9 @@ uniform and removes that bias, changing nothing else.
 427,920,000 trials, 532 reliable rules at specificity 8.02, all four coverage classes at
 1.0000, in 152.3 h. Those numbers *are* comparable to the literature.
 
-The shape of the climb is the interesting part, and both seeds share it. One wrong-answer
-class opens early; the other holds at **exactly** 0.0000 for hundreds of millions of
-trials, then opens abruptly and the run finishes within ~23 M more:
+Both seeds fill one wrong-answer class while the other remains without reliable
+coverage for hundreds of millions of trials. On seed 43 the second class then opens
+abruptly and the run finishes within ~23 M more; seed 42 stops before that happens:
 
 | seed | first class opens | second class opens | outcome |
 |---|---|---|---|

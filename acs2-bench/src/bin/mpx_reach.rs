@@ -1,4 +1,5 @@
 use std::mem::size_of;
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 use acs2_bench::{
@@ -78,7 +79,7 @@ impl Verdict {
 struct ReachOutcome {
     verdict: Verdict,
     trials_used: u64,
-    final_knowledge: f64,
+    final_knowledge: Option<f64>,
     reliable_count: usize,
     mean_reliable_specificity: f64,
     peak_macro_population: usize,
@@ -362,6 +363,19 @@ struct ReachLimits {
     epsilon: f64,
     log_accuracy: bool,
     rss_cap_bytes: u64,
+    strict_resource_limits: bool,
+}
+
+impl ReachLimits {
+    fn resource_verdict(&self, elapsed: Duration, peak_rss: u64) -> Option<Verdict> {
+        if peak_rss > self.rss_cap_bytes {
+            Some(Verdict::MemoryLimited)
+        } else if elapsed > self.time_cap {
+            Some(Verdict::TimeLimited)
+        } else {
+            None
+        }
+    }
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -383,6 +397,7 @@ where
     let mut peak_macro_population = 0usize;
     let mut peak_rss = peak_rss_bytes();
     let mut final_knowledge = 0.0;
+    let mut knowledge_trials = None;
     let mut trials_since_eval: u64 = 0;
 
     let verdict = loop {
@@ -412,6 +427,7 @@ where
                 SAMPLE_SEED,
                 limits.encoding,
             );
+            knowledge_trials = Some(trials_used);
             if limits.log_trajectory {
                 let (reliable, spec_sum) = agent
                     .population()
@@ -476,6 +492,12 @@ where
                 );
                 println!("  mpx-{size} acc: trials={trials_used} accuracy={accuracy:.4}");
             }
+            if limits.strict_resource_limits {
+                peak_rss = peak_rss.max(peak_rss_bytes());
+                if let Some(verdict) = limits.resource_verdict(start.elapsed(), peak_rss) {
+                    break verdict;
+                }
+            }
             if final_knowledge >= 1.0 {
                 break Verdict::Success;
             }
@@ -501,7 +523,7 @@ where
     ReachOutcome {
         verdict,
         trials_used,
-        final_knowledge,
+        final_knowledge: knowledge_trials.filter(|&trial| trial == trials_used).map(|_| final_knowledge),
         reliable_count,
         mean_reliable_specificity,
         peak_macro_population,
@@ -614,6 +636,8 @@ struct Options {
     log_accuracy: bool,
     rss_cap_bytes: u64,
     agent: AgentOptions,
+    strict_resource_limits: bool,
+    isolate_repeats: bool,
 }
 
 impl Options {
@@ -636,6 +660,8 @@ impl Options {
             log_accuracy: false,
             rss_cap_bytes: DEFAULT_RSS_CAP_BYTES,
             agent: AgentOptions::default(),
+            strict_resource_limits: false,
+            isolate_repeats: false,
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -675,6 +701,8 @@ impl Options {
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
                 "--epsilon" => options.epsilon = args.next().unwrap().parse().unwrap(),
                 "--log-accuracy" => options.log_accuracy = true,
+                "--strict-resource-limits" => options.strict_resource_limits = true,
+                "--isolate-repeats" => options.isolate_repeats = true,
                 "--rss-cap-gb" => {
                     let gb: f64 = args
                         .next()
@@ -700,8 +728,28 @@ impl Options {
 
 fn main() {
     let options = Options::parse();
+    let isolated_worker = std::env::var_os("ACS2_REACH_REPEAT_WORKER").is_some();
+    if options.isolate_repeats && !isolated_worker {
+        let executable = std::env::current_exe().expect("cannot locate mpx_reach executable");
+        let original_args: Vec<_> = std::env::args_os().skip(1).collect();
+        for &size in &options.sizes {
+            for repeat in 0..options.n_exp {
+                let status = Command::new(&executable)
+                    .args(&original_args)
+                    .args(["--sizes", &size.to_string(), "--n-exp", "1", "--seed",
+                           &(options.seed + repeat as u64).to_string()])
+                    .env("ACS2_REACH_REPEAT_WORKER", "1")
+                    .status()
+                    .expect("cannot start isolated repeat");
+                if !status.success() {
+                    std::process::exit(status.code().unwrap_or(1));
+                }
+            }
+        }
+        return;
+    }
     println!(
-        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={} strict_resource_limits={} rss_scope={}",
         options.agent.describe(),
         options.sizes,
         options.n_exp,
@@ -713,6 +761,8 @@ fn main() {
         options.epsilon,
         encoding_label(options.encoding),
         options.eval_interval,
+        options.strict_resource_limits,
+        if options.isolate_repeats && isolated_worker { "repeat-process" } else { "process-lifetime" },
     );
 
     for &size in &options.sizes {
@@ -744,6 +794,7 @@ fn main() {
             epsilon: options.epsilon,
             log_accuracy: options.log_accuracy,
             rss_cap_bytes: options.rss_cap_bytes,
+            strict_resource_limits: options.strict_resource_limits,
         };
         for repeat in 0..options.n_exp {
             let outcome = run_reach_dispatch(
@@ -754,11 +805,16 @@ fn main() {
                 &limits,
             );
             verdicts.push(outcome.verdict);
+            let knowledge = outcome.final_knowledge
+                .map(|value| format!("{value:.4}"))
+                .unwrap_or_else(|| "unmeasured".to_string());
+            let knowledge_trials = outcome.final_knowledge
+                .map(|_| outcome.trials_used.to_string())
+                .unwrap_or_else(|| "unmeasured".to_string());
             println!(
-                "  mpx-{size} repeat {repeat}: {} trials={} knowledge={:.4} reliable={} spec={:.2}/{} peak_macro={} peak_rss={:.2}GB wall={:.1}s",
+                "  mpx-{size} repeat {repeat}: {} trials={} knowledge={knowledge} knowledge_trials={knowledge_trials} reliable={} spec={:.2}/{} peak_macro={} peak_rss={:.2}GB wall={:.1}s",
                 outcome.verdict.label(),
                 outcome.trials_used,
-                outcome.final_knowledge,
                 outcome.reliable_count,
                 outcome.mean_reliable_specificity,
                 size + 1,

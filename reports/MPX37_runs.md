@@ -8,46 +8,44 @@ come from filename markers. Such rows show the last evaluation, not a final resu
 
 `a0_nc` and `a1_nc` measure reliable coverage of wrong-answer classes.
 Empty cells mean unrecorded diagnostics. Accuracy is sampled and rounded.
+Knowledge trial identifies the population at its measurement; legacy final
+knowledge can predate the verdict trial. Unknown timing is not a final measurement.
+Accuracy and coverage appear on a verdict row only when measured at that same trial.
 Run identity includes the source log and header block; variant is explicit.
 Encoding provenance remains in the CSV's `encoding_source` column.
 
-## Encoding flip · epsilon = 0.8 · agent = ? · GA = true
-
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 6 | **SUCCESS** | 1 020 000 | 1.0000 | - | 151 | 6.00 | - | - | - | - | 0.1 | 4909 | `37_s42_u6` |
-| 42 | pyalcs | 7 | **SUCCESS** | 780 000 | 1.0000 | - | 148 | 6.00 | - | - | - | - | 0.0 | 6070 | `37_s42_addr` |
-| 42 | pyalcs | 7 | **SUCCESS** | 690 000 | 1.0000 | - | 151 | 6.03 | - | - | - | - | 0.0 | 4829 | `37_s42_u7` |
-| 42 | pyalcs | 7 | **SUCCESS** | 678 000 | 1.0000 | - | 144 | 6.03 | - | - | - | - | 0.0 | 9469 | `mpx_m2b_reach37.log` |
-| 43 | pyalcs | 7 | **SUCCESS** | 1 116 000 | 1.0000 | - | 156 | 6.05 | - | - | - | - | 0.0 | 11171 | `mpx_m2b_reach37.log` |
-| 44 | pyalcs | 7 | **SUCCESS** | 882 000 | 1.0000 | - | 144 | 6.01 | - | - | - | - | 0.0 | 11293 | `mpx_m2b_reach37.log` |
-| 42 | butz | 8 | **SUCCESS** | 1 140 000 | 1.0000 | - | 144 | 6.00 | - | - | - | - | 0.0 | 9686 | `mpx_m2b_reach37.log` |
-| 42 | pyalcs | 8 | **SUCCESS** | 900 000 | 1.0000 | - | 151 | 6.03 | - | - | - | - | 0.1 | 3600 | `37_s42_u8` |
-| 43 | butz | 8 | **SUCCESS** | 768 000 | 1.0000 | - | 152 | 6.00 | - | - | - | - | 0.0 | 9423 | `mpx_m2b_reach37.log` |
-| 44 | butz | 8 | **SUCCESS** | 684 000 | 1.0000 | - | 161 | 6.01 | - | - | - | - | 0.0 | 8486 | `mpx_m2b_reach37.log` |
-| 42 | pyalcs | 9 | **SUCCESS** | 900 000 | 1.0000 | - | 152 | 6.02 | - | - | - | - | 0.1 | 2150 | `37_s42_u9` |
-| 42 | pyalcs | 10 | **SUCCESS** | 810 000 | 1.0000 | - | 151 | 6.22 | - | - | - | - | 0.1 | 2286 | `37_s42_u10` |
-| 42 | pyalcs | 12 | **SUCCESS** | 900 000 | 1.0000 | - | 164 | 6.85 | - | - | - | - | 0.1 | 2361 | `37_s42_u12` |
-
 ## Encoding flip · epsilon = 0.8 · agent = acs2 · GA = true
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 7 | **SUCCESS** | 780 000 | 1.0000 | - | 148 | 6.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.0 | 6367 | `37_s42_cover` |
-| 42 | pyalcs | 11 | **SUCCESS** | 870 000 | 1.0000 | - | 148 | 6.24 | - | - | - | - | 0.2 | 1478 | `37_s42_u11` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 6 | **SUCCESS** | 1 020 000 | 1.0000 | 1020000 | - | 151 | 6.00 | - | - | - | - | 0.1 | 4909 | `37_s42_u6` |
+| 42 | pyalcs | 7 | **SUCCESS** | 780 000 | 1.0000 | 780000 | - | 148 | 6.00 | - | - | - | - | 0.0 | 6070 | `37_s42_addr` |
+| 42 | pyalcs | 7 | **SUCCESS** | 780 000 | 1.0000 | 780000 | - | 148 | 6.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.0 | 6367 | `37_s42_cover` |
+| 42 | pyalcs | 7 | **SUCCESS** | 690 000 | 1.0000 | 690000 | - | 151 | 6.03 | - | - | - | - | 0.0 | 4829 | `37_s42_u7` |
+| 42 | pyalcs | 7 | **SUCCESS** | 678 000 | 1.0000 | 678000 | - | 144 | 6.03 | - | - | - | - | 0.0 | 9469 | `mpx_m2b_reach37.log` |
+| 43 | pyalcs | 7 | **SUCCESS** | 1 116 000 | 1.0000 | 1116000 | - | 156 | 6.05 | - | - | - | - | 0.0 | 11171 | `mpx_m2b_reach37.log` |
+| 44 | pyalcs | 7 | **SUCCESS** | 882 000 | 1.0000 | 882000 | - | 144 | 6.01 | - | - | - | - | 0.0 | 11293 | `mpx_m2b_reach37.log` |
+| 42 | butz | 8 | **SUCCESS** | 1 140 000 | 1.0000 | 1140000 | - | 144 | 6.00 | - | - | - | - | 0.0 | 9686 | `mpx_m2b_reach37.log` |
+| 42 | pyalcs | 8 | **SUCCESS** | 900 000 | 1.0000 | 900000 | - | 151 | 6.03 | - | - | - | - | 0.1 | 3600 | `37_s42_u8` |
+| 43 | butz | 8 | **SUCCESS** | 768 000 | 1.0000 | 768000 | - | 152 | 6.00 | - | - | - | - | 0.0 | 9423 | `mpx_m2b_reach37.log` |
+| 44 | butz | 8 | **SUCCESS** | 684 000 | 1.0000 | 684000 | - | 161 | 6.01 | - | - | - | - | 0.0 | 8486 | `mpx_m2b_reach37.log` |
+| 42 | pyalcs | 9 | **SUCCESS** | 900 000 | 1.0000 | 900000 | - | 152 | 6.02 | - | - | - | - | 0.1 | 2150 | `37_s42_u9` |
+| 42 | pyalcs | 10 | **SUCCESS** | 810 000 | 1.0000 | 810000 | - | 151 | 6.22 | - | - | - | - | 0.1 | 2286 | `37_s42_u10` |
+| 42 | pyalcs | 11 | **SUCCESS** | 870 000 | 1.0000 | 870000 | - | 148 | 6.24 | - | - | - | - | 0.2 | 1478 | `37_s42_u11` |
+| 42 | pyalcs | 12 | **SUCCESS** | 900 000 | 1.0000 | 900000 | - | 164 | 6.85 | - | - | - | - | 0.1 | 2361 | `37_s42_u12` |
 
 ## Encoding flip · epsilon = 0.8 · agent = acs2er · GA = true · er_buffer_size = 10000 · er_min_samples = 1000 · er_samples_number = 1
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 7 | **SUCCESS** | 960 000 | 1.0000 | - | 144 | 6.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.1 | 3442 | `37_s42_er1` |
-| 43 | pyalcs | 7 | **SUCCESS** | 660 000 | 1.0000 | - | 160 | 6.05 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.1 | 2291 | `37_s43_er1` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 7 | **SUCCESS** | 960 000 | 1.0000 | 960000 | - | 144 | 6.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.1 | 3442 | `37_s42_er1` |
+| 43 | pyalcs | 7 | **SUCCESS** | 660 000 | 1.0000 | 660000 | - | 160 | 6.05 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 0.1 | 2291 | `37_s43_er1` |
 
 ## Encoding flip · epsilon = 0.8 · agent = acs2er · GA = true · er_buffer_size = 10000 · er_min_samples = 1000 · er_samples_number = 3
 
-| seed | variant | u_max | state | trials | knowledge | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 7 | **SUCCESS** | 300 000 | 1.0000 | - | 219 | 6.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.4 | 25 | `37_s42_er` |
+| seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 42 | pyalcs | 7 | **SUCCESS** | 300 000 | 1.0000 | 300000 | - | 219 | 6.01 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.4 | 25 | `37_s42_er` |
 
 ## Summary
 

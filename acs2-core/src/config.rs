@@ -2,6 +2,7 @@
 pub enum AlpGenVariant {
     Pyalcs,
     Butz,
+    ButzChecked,
 }
 
 #[derive(Clone, Debug)]

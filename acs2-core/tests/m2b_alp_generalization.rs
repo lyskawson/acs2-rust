@@ -7,7 +7,7 @@ use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::effect::Effect;
 use acs2_core::mark::Mark;
 use acs2_core::perception::Perception;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
 
 const W: Symbol = Symbol::Wildcard;
@@ -75,6 +75,29 @@ fn pyalcs_variant_generalizes_parent_and_leaves_child_specialized() {
 
 #[test]
 fn butz_variant_generalizes_child_and_leaves_parent_untouched() {
+    struct DifferenceFirst;
+    impl RandomSource for DifferenceFirst {
+        fn gen_bool(&mut self, _: f64) -> bool { false }
+        fn gen_range(&mut self, bound: usize) -> usize { assert!(bound > 0); 0 }
+        fn gen_unit(&mut self) -> f64 { 0.9 }
+    }
+    let p0 = Perception::new([token(1), token(1), token(1), token(1)]);
+    for (variant, expected_specificity) in [(AlpGenVariant::Butz, 2), (AlpGenVariant::ButzChecked, 1)] {
+        let mut parent = over_specialized_classifier();
+        let child = expected_case(&mut parent, &p0, 10, &config_with(variant, 1), &mut DifferenceFirst).unwrap();
+        assert_eq!(child.condition.specificity(), expected_specificity);
+        assert_eq!(parent.condition.specificity(), 3);
+    }
+    for seed in 0..128 {
+        for limit in 0..=4 {
+            let mut parent = over_specialized_classifier();
+            let child = expected_case(&mut parent, &p0, 10,
+                &config_with(AlpGenVariant::ButzChecked, limit),
+                &mut ChaChaRandomSource::from_seed(seed)).unwrap();
+            assert!(child.condition.specificity() <= limit as usize);
+            assert_eq!(parent.condition.specificity(), 3);
+        }
+    }
     let mut parent = over_specialized_classifier();
     let p0 = Perception::new([token(1), token(1), token(1), token(1)]);
     let config = config_with(AlpGenVariant::Butz, 1);
@@ -96,7 +119,7 @@ fn butz_variant_generalizes_child_and_leaves_parent_untouched() {
 
 #[test]
 fn disabled_u_max_leaves_both_parent_and_child_untouched_by_generalization() {
-    for variant in [AlpGenVariant::Pyalcs, AlpGenVariant::Butz] {
+    for variant in [AlpGenVariant::Pyalcs, AlpGenVariant::Butz, AlpGenVariant::ButzChecked] {
         let mut parent = over_specialized_classifier();
         let p0 = Perception::new([token(1), token(1), token(1), token(1)]);
         let config = config_with(variant, 100_000);

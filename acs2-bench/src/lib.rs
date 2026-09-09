@@ -13,6 +13,7 @@ pub fn parse_variant(value: &str) -> AlpGenVariant {
     match value {
         "pyalcs" => AlpGenVariant::Pyalcs,
         "butz" => AlpGenVariant::Butz,
+        "butz-checked" => AlpGenVariant::ButzChecked,
         other => panic!("unknown alp-gen-variant {other}"),
     }
 }
@@ -21,6 +22,7 @@ pub fn variant_label(variant: AlpGenVariant) -> &'static str {
     match variant {
         AlpGenVariant::Pyalcs => "pyalcs",
         AlpGenVariant::Butz => "butz",
+        AlpGenVariant::ButzChecked => "butz-checked",
     }
 }
 
@@ -28,7 +30,7 @@ pub fn derived_u_max(size: usize, variant: AlpGenVariant) -> u32 {
     let address_bits = control_bits_for(size + 1);
     let offset = match variant {
         AlpGenVariant::Pyalcs => 2,
-        AlpGenVariant::Butz => 3,
+        AlpGenVariant::Butz | AlpGenVariant::ButzChecked => 3,
     };
     (address_bits + offset) as u32
 }

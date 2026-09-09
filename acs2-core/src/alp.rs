@@ -81,6 +81,9 @@ pub fn expected_case<const N: usize>(
         AlpGenVariant::Butz => {
             generalize_over_specification_butz(&mut child, &mut difference, config.u_max, rng)
         }
+        AlpGenVariant::ButzChecked => {
+            generalize_over_specification_butz_checked(&mut child, &mut difference, config.u_max, rng)
+        }
     }
 
     child.condition.specialize_with(&difference);
@@ -148,6 +151,31 @@ fn generalize_over_specification_butz<const N: usize>(
         while spec + spec_new > u_max {
             difference.generalize_specific_attribute_randomly(rng);
             spec_new -= 1;
+        }
+    }
+}
+
+fn generalize_over_specification_butz_checked<const N: usize>(
+    child: &mut Classifier<N>,
+    difference: &mut Condition<N>,
+    u_max: u32,
+    rng: &mut dyn RandomSource,
+) {
+    let limit = u_max as usize;
+    if child.condition.specificity() >= limit {
+        child.condition.generalize_specific_attribute_randomly(rng);
+        while child.condition.specificity() + difference.specificity() > limit {
+            if difference.specificity() == 0
+                || (child.condition.specificity() > 0 && rng.gen_unit() < 0.5)
+            {
+                child.condition.generalize_specific_attribute_randomly(rng);
+            } else {
+                difference.generalize_specific_attribute_randomly(rng);
+            }
+        }
+    } else {
+        while child.condition.specificity() + difference.specificity() > limit {
+            difference.generalize_specific_attribute_randomly(rng);
         }
     }
 }

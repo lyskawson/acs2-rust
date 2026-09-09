@@ -28,6 +28,8 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
+from mpx_selection import add_selection_arguments, arm_of, arm_value, run_key, selected, selection_from
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -46,7 +48,7 @@ IDEAL_MARKER_SIZE = 26
 
 
 def address_bits(size):
-    """MPX-k has a address bits with k = a + 2**a; a correct rule specifies a+1."""
+    """MPX-k has a address bits with k = a + 2**a; a standard compact rule specifies a+1."""
     bits = 1
     while bits + 2**bits < size:
         bits += 1
@@ -137,45 +139,25 @@ def color_map(rows):
     return {seed: SERIES_COLORS[index] for index, seed in enumerate(seeds)}
 
 
-ARM_COLUMNS = ("encoding", "epsilon", "u_max")
-
-
-def arm_of(row):
-    """What makes two runs comparable. Curves from different arms must not merge."""
-    return tuple(row.get(column, "") for column in ARM_COLUMNS)
-
-
-def group_by_seed(rows, size, variant, arm=None):
-    """Trajectory points per seed, restricted to one experimental arm.
-
-    Filtering on size and variant alone was enough while `flip` at one `u_max`
-    was the only configuration. It is not any more: at k=135 a single seed has
-    runs under both encodings, two epsilons and six values of `u_max`, and
-    concatenating them sorts unrelated runs into one curve that never existed.
-    """
-    arm = arm or {}
+def group_by_seed(rows, size, variant, arm=None, sources=None):
     grouped = defaultdict(list)
     for row in rows:
-        if int(row["size"]) != size or row["variant"] != variant:
-            continue
-        if any(row.get(column, "") != value for column, value in arm.items()):
-            continue
-        grouped[int(row["seed"])].append(row)
-
-    mixed = {seed: {arm_of(row) for row in points} for seed, points in grouped.items()}
-    offenders = {seed: arms for seed, arms in mixed.items() if len(arms) > 1}
-    if offenders:
-        detail = "; ".join(
-            f"seed {seed}: " + ", ".join("/".join(a) for a in sorted(arms))
-            for seed, arms in sorted(offenders.items())
-        )
-        raise SystemExit(
-            "refusing to plot: one seed spans several arms and the curves would be "
-            f"spliced together -- {detail}. Narrow it with --encoding / --epsilon / --u-max."
-        )
-
-    for points in grouped.values():
-        points.sort(key=lambda row: row["trials"])
+        if int(row["size"]) == size and row["variant"] == variant and selected(row, arm, sources):
+            grouped[int(row["seed"])].append(row)
+    arms = {arm_of(row) for points in grouped.values() for row in points}
+    if len(arms) > 1:
+        raise SystemExit("refusing to plot mixed arms: " + repr(sorted(arms))
+                         + ". Select --agent, --do-ga, --er-* and encoding/epsilon/u-max.")
+    for seed, points in grouped.items():
+        runs = {run_key(row) for row in points}
+        if len(runs) > 1:
+            raise SystemExit(f"refusing to splice independent runs for seed {seed}: "
+                             + repr(sorted({row["source"] for row in points}))
+                             + ". Select one --source per seed and one header block per source.")
+        points.sort(key=lambda row: float(row["trials"]))
+        trials = [float(row["trials"]) for row in points]
+        if len(trials) != len(set(trials)):
+            raise SystemExit(f"duplicate trial counts in seed {seed}; check the input archive")
     return dict(sorted(grouped.items()))
 
 
@@ -188,17 +170,17 @@ def save(figure, out_dir, stem, formats):
     plt.close(figure)
 
 
-def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, suffix=""):
-    series = group_by_seed(trajectory, size, variant, arm)
+def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, suffix="", sources=None):
+    series = group_by_seed(trajectory, size, variant, arm, sources)
     if not series:
         raise SystemExit(f"no trajectory rows for size={size} variant={variant}")
     colors = color_map(trajectory)
 
+    selected_runs = {run_key(points[0]) for points in series.values()}
     solved = {
         int(row["seed"]): row["trials"]
         for row in verdicts
-        if int(row["size"]) == size and row["variant"] == variant and row["verdict"] == "SUCCESS"
-        and all(row.get(column, "") == value for column, value in (arm or {}).items())
+        if row["verdict"] == "SUCCESS" and run_key(row) in selected_runs
     }
 
     figure, axes = plt.subplots(figsize=(6.4, 3.8))
@@ -231,7 +213,9 @@ def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, 
     axes.set_ylim(0, 1.08)
     axes.set_xlim(left=0)
     axes.xaxis.set_major_formatter(FuncFormatter(millions))
-    axes.set_title(f"MPX-{size} knowledge acquisition ({variant} variant, GA on)", loc="left", pad=10)
+    first = next(iter(series.values()))[0]
+    axes.set_title(f"MPX-{size} knowledge acquisition ({variant}, {arm_value(first, 'agent')}, "
+                   f"GA {first.get('do_ga') or '?'})", loc="left", pad=10)
     axes.legend(loc="center right", ncol=1)
     if truncated:
         figure.text(0.0, -0.04,
@@ -242,8 +226,8 @@ def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, 
     save(figure, out_dir, f"mpx{size}_reach_{variant}{suffix}", formats)
 
 
-def plot_anatomy(trajectory, size, variant, seed, out_dir, formats, arm=None, suffix=""):
-    series = group_by_seed(trajectory, size, variant, arm)
+def plot_anatomy(trajectory, size, variant, seed, out_dir, formats, arm=None, suffix="", sources=None):
+    series = group_by_seed(trajectory, size, variant, arm, sources)
     if seed not in series:
         raise SystemExit(f"no trajectory for seed {seed} at size={size} variant={variant}")
     points = series[seed]
@@ -279,23 +263,22 @@ def plot_anatomy(trajectory, size, variant, seed, out_dir, formats, arm=None, su
     save(figure, out_dir, f"mpx{size}_anatomy_s{seed}_{variant}{suffix}", formats)
 
 
-def plot_signal(diagnostics, sizes, out_dir, formats):
+def plot_signal(diagnostics, sizes, out_dir, formats, variant="pyalcs", seed=42, arm=None, sources=None, suffix=""):
     """Enrichment of address-bit specialization over the blind-choice baseline.
 
     `addr_random` is what a classifier of the same specificity would hit by
     choosing attributes uniformly, so the ratio is 1.0 when ALP carries no signal
     about which attribute matters. The lower panel is the share of the population
-    holding a complete address -- the precondition for ever predicting correctly.
+    holding a complete address, a structural proxy that omits other correct rules.
     """
-    series = defaultdict(list)
-    for row in diagnostics:
-        size = int(row["size"])
-        if size in sizes and row["addr_random"]:
-            series[size].append(row)
+    series = {}
+    for size in sorted(sizes):
+        rows = [row for row in diagnostics if int(row["seed"]) == seed and row["addr_random"]]
+        grouped = group_by_seed(rows, size, variant, arm, sources)
+        if seed in grouped:
+            series[size] = grouped[seed]
     if not series:
-        raise SystemExit("no address diagnostics for the requested sizes")
-    for rows in series.values():
-        rows.sort(key=lambda row: row["trials"])
+        raise SystemExit("no address diagnostics for the requested selection")
 
     order = sorted(series)
     colors = {size: SERIES_COLORS[index] for index, size in enumerate(order)}
@@ -323,7 +306,7 @@ def plot_signal(diagnostics, sizes, out_dir, formats):
     bottom.set_xlim(left=0)
     bottom.xaxis.set_major_formatter(FuncFormatter(millions))
 
-    save(figure, out_dir, "mpx_specialization_signal", formats)
+    save(figure, out_dir, f"mpx_specialization_signal{suffix}", formats)
 
 
 def main():
@@ -338,21 +321,14 @@ def main():
     parser.add_argument("--formats", default="pdf,png", help="comma-separated: pdf, png, pgf, svg")
     parser.add_argument("--figures", default="reach,anatomy,signal")
     parser.add_argument("--signal-sizes", default="70,135")
-    parser.add_argument("--encoding", default=None, help="flip | outcome")
-    parser.add_argument("--epsilon", default=None)
-    parser.add_argument("--u-max", default=None)
+    parser.add_argument("--signal-seed", type=int, default=42)
+    add_selection_arguments(parser)
     parser.add_argument("--suffix", default="", help="appended to the figure file name")
     args = parser.parse_args()
 
-    arm = {
-        column: value
-        for column, value in (
-            ("encoding", args.encoding), ("epsilon", args.epsilon), ("u_max", args.u_max)
-        )
-        if value is not None
-    }
+    arm = selection_from(args)
 
-    trajectory = numeric(load(args.trajectory_csv), "trials", "wall_s", "knowledge", "reliable", "spec", "pop")
+    trajectory = numeric([row for row in load(args.trajectory_csv) if row.get("knowledge") != ""], "trials", "wall_s", "knowledge", "reliable", "spec", "pop")
     verdicts = numeric(load(args.verdict_csv), "trials", "knowledge", "reliable", "spec", "wall_s")
     formats = [item.strip() for item in args.formats.split(",") if item.strip()]
     figures = {item.strip() for item in args.figures.split(",") if item.strip()}
@@ -360,14 +336,15 @@ def main():
     apply_style()
     if "reach" in figures:
         plot_reach(trajectory, verdicts, args.size, args.variant, args.out_dir, formats,
-                   arm, args.suffix)
+                   arm, args.suffix, args.source)
     if "anatomy" in figures:
         plot_anatomy(trajectory, args.size, args.variant, args.anatomy_seed, args.out_dir,
-                     formats, arm, args.suffix)
+                     formats, arm, args.suffix, args.source)
     if "signal" in figures:
         diagnostics = numeric(load(args.diagnostic_csv), "trials", "addr_spec", "addr_random", "addr_full")
         sizes = {int(item) for item in args.signal_sizes.split(",") if item.strip()}
-        plot_signal(diagnostics, sizes, args.out_dir, formats)
+        plot_signal(diagnostics, sizes, args.out_dir, formats, args.variant,
+                    args.signal_seed, arm, args.source, args.suffix)
 
 
 if __name__ == "__main__":
