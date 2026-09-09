@@ -285,20 +285,35 @@ Three things that cost days before:
 
 ## 6. Experiments in flight
 
-Historical queue snapshot recorded on 2026-09-09; re-check status before treating
-these jobs as live. Four jobs were listed: `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
+Verified live on 2026-09-10. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-| Job | What it is | Why it matters |
-|---|---|---|
-| `eps135_s42b` (5856652) | k=135, canonical, `u_max` 11, `epsilon` 1, seed 42, 300 h cap, ~13 days wall | **The one that matters.** Seed 42 previously reached 0.7442 and was cut at 301.4 M trials — 100 M short of where seed 43's second class opened. This run has budget for ~540 M. If it closes, the canonical k=135 result is two seeds instead of one. Free bonus: the first 301 M trials must reproduce exactly, so it doubles as a determinism check. |
-| `encU9_s42` | k=135, `outcome`, canonical `u_max` = 9 | Does the encoding alone rescue the canonical `u_max`? It is climbing — 0.15 knowledge, 88 reliable rules, specificity 8.2 — where the canonical encoding gave a hard zero across 105.6 M trials. Not converging yet. |
-| `er70m8b`, `er70m13b` | k=70 ACS2ER, m = 8 and 13, `--mem=32G` | Does replay *volume* reach the starved class or only the easy ones? Both end within a day. |
+**Two jobs running. Grant: 4503 h of 5000 spent, 497 h left, of which ~441 h is already
+committed to these two.** Roughly 56 h genuinely free, so submit nothing new until the
+extension lands.
 
-Finished this session, already in the archive: `eps135_s43` (SUCCESS, the headline),
-`enc135_s45` (SUCCESS, 4th `outcome` seed), `probe264` (the k=264 measurement).
-Cancelled with their readings preserved: `acc135u11`, `acc135u12`, `enc135_s44`,
-`encU9_s43`.
+| Job | State on 2026-09-10 | Why it matters |
+|---|---|---|
+| `eps135_s42b` (5856652) | 21.96 M trials, knowledge 0.0277, 130 reliable, spec 12.54, pop 12 663; 12 d 12 h of wall left, 300 h internal cap | **The one that matters.** Seed 42 restarted from zero with a budget for ~570 M trials against the 428 M seed 43 needed. If it closes, the canonical k=135 result is two seeds instead of one. Early-run specificity of 12.5 against the ideal 8 is the normal bloat phase, not a warning sign. |
+| `encU9_s42` | 20.76 M trials, knowledge **0.2075**, 122 reliable, spec **8.21**; 5 d 21 h left | Climbing steadily — 0.0023 on 2026-09-08, 0.1502 on 09-09, 0.2075 on 09-10 — and specificity has settled at the ideal. Under the canonical encoding this configuration produced a hard zero across 105.6 M trials. So the encoding, not `u_max`, was the binding constraint at 135 bits. |
+
+### The replay-volume question is unanswered, and the naive approach is unaffordable
+
+`er70_m8`, `er70m8b` and `er70m13b` all ended **TIMEOUT at 7 d 12 h**, not out of memory,
+and all three logs contain **only the header**: not one evaluation point in ~180 h each.
+At `--eval-interval 60000` they never reached their first measurement, so throughput was
+under 0.09 trials/s against ~6.9 for m=3. **They cost roughly 540 CPU-hours and produced
+no data.**
+
+That is itself worth stating in the thesis: scaling replay by *volume* is computationally
+prohibitive well before it becomes informative, which is a direct empirical argument for
+prioritising *which* samples are replayed rather than *how many*. Before retrying, drop
+`--eval-interval` by an order of magnitude so something is recorded, add
+`--log-coverage`, and consider k=37 where m=8 is tractable.
+
+Finished and archived: `eps135_s43` (SUCCESS, the headline), `enc135_s45` (SUCCESS, 4th
+`outcome` seed), `probe264` (the k=264 measurement). Cancelled with readings preserved:
+`acc135u11`, `acc135u12`, `enc135_s44`, `encU9_s43`.
 
 ## 7. Claims corrected during the session — do not re-inherit them
 
@@ -339,6 +354,9 @@ columns. Check the raw evidence and distinguish candidates from reliable rules.
   before success. Neither inevitable convergence nor permanent failure is established.
 - **`epsilon = 1` at k=135 seed 43 does not cap at 0.7481.** It reached sampled
   knowledge 1.0000 at 427,920,000 trials. The earlier 0.9685 in-flight status is obsolete.
+- **Replay volume was never measured, despite three jobs and ~540 CPU-hours.** m=8 and
+  m=13 at k=70 timed out before their first evaluation point, leaving header-only logs.
+  Any statement about whether more replay reaches the starved class is unsupported.
 - **The starved class is not devoid of classifiers of any quality.** At seed 42,
   `u_max=11`, only 16/4,865 qdetail points show zero candidate coverage; 2,600 are
   partial and 2,249 print 1.0000. Best recorded quality is 0.823, below 0.9.
