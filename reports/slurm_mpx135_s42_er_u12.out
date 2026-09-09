@@ -1,0 +1,6 @@
+acs2-bench mpx-reach: agent=acs2er er_buffer_size=10000 er_min_samples=1000 er_samples_number=3 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_cap=600000s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=12
+  mpx-135 traj: trials=120000 wall=78692s knowledge=0.0478 reliable=1190 spec=13.15 pop=92942
+  mpx-135 diag: trials=120000 micro=93173 pop_spec=13.12 spec_max=25 q_mean=0.682 q_max=0.998 q_above_half=84004 marked=0.328 mark_density=0.904 exp_mean=5.6 addr_spec=0.651 addr_random=0.681 addr_full=0.0000 correct=0
+  mpx-135 cover: trials=120000 overall=0.0478 a0_nochange=0.0136 a0_change=0.0869 a1_nochange=0.0085 a1_change=0.0824 matched_but_wrong=4549

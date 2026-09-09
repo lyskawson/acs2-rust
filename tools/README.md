@@ -37,8 +37,37 @@ python3 tools/parse_mpx_logs.py reports/mpx_m3_e1_traj70_pyalcs.log reports/slur
 ```
 
 Needs no venv (standard library only). Writes `reports/mpx_trajectory.csv` (one
-row per evaluation point) and `reports/mpx_verdicts.csv` (one row per repeat);
-override with `--trajectory-csv` / `--verdict-csv`.
+row per evaluation point, with accuracy and the four coverage classes merged in),
+`reports/mpx_diagnostics.csv` and `reports/mpx_verdicts.csv` (one row per repeat);
+override with `--trajectory-csv` / `--diagnostic-csv` / `--verdict-csv`.
+
+To rebuild the whole archive after pulling the cluster logs:
+
+```bash
+rsync -az -e "ssh -i ~/.ssh/id_rsa_wcss" alelys2099@ui.wcss.pl:'~/mpx_runs/' /tmp/mpx_logs/
+cp /tmp/mpx_logs/*.out /tmp/mpx_logs/*.cancelled reports/
+python3 tools/parse_mpx_logs.py reports/slurm_*.out reports/*.cancelled \
+    reports/mpx_m2b_reach*.log reports/mpx_m3_e1_traj70_*.log
+```
+
+### What makes a row reproducible
+
+Every row carries the configuration that determines the result: `size`, `seed`,
+`u_max`, `variant`, `encoding`, `epsilon`, `agent`, `eval_interval`, plus
+`commit` and `tag` for runs submitted after the wrapper started recording them.
+Two runs that agree on all of these should agree trial for trial.
+
+`encoding_source` is the honest part. The header only carries `encoding` from the
+commit that added it, so for older logs the value is reconstructed and this column
+says how — `header` (stated by the run), `filename` (the tag convention), 
+`submission-record` (known from how the job was submitted, listed in
+`KNOWN_ENCODINGS`) or `wrapper-default` (inferred from the wrapper defaulting to
+`flip`). Anything but `header` is an inference; re-check it before it goes into a
+paper. The column exists because it immediately caught one run — the k=264 probe —
+that every other rule would have mislabelled.
+
+`peak_rss_gb = 0` on a cluster log means **unmeasured**, not zero: `ru_maxrss` was
+read as bytes on Linux until `f93b71e`.
 
 Three log-format traps it handles, all of which have bitten this project:
 

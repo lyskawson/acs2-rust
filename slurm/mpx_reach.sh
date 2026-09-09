@@ -23,6 +23,16 @@ mkdir -p "$RUNS"
 OUT="$RUNS/slurm_mpx${SIZE}_s${SEED}${TAG:+_$TAG}.out"
 
 cd "$REPO"
+
+# The log must be self-describing: an archived run has to be reproducible from
+# the file alone, without the submitting shell or the job name.
+{
+  echo "run-provenance: commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown) \
+job=${SLURM_JOB_ID:-none} tag=${TAG:-none} size=$SIZE seed=$SEED time_cap=${TIME_CAP}s \
+partition=${SLURM_JOB_PARTITION:-none} host=$(hostname) started=$(date -Is)"
+  echo "run-argv: $* "
+} >"$OUT"
+
 exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --sizes "$SIZE" \
   --n-exp 1 \
@@ -37,4 +47,4 @@ exec "$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach" \
   --log-accuracy \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   "$@" \
-  >"$OUT" 2>&1
+  >>"$OUT" 2>&1

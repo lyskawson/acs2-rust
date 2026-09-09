@@ -22,6 +22,30 @@ Three details of the log format that the state machine exists to handle:
     unfinished repeat.
   * Older logs predate `u_max` and `alp_gen_variant`, and a single file may hold
     several runs separated by banner lines. A header line resets the context.
+
+`encoding` and `epsilon` decide the outcome as strongly as `u_max` does, so a run
+without them recorded is not reproducible. The header carries them only from the
+commit that added them, so for earlier logs the value is reconstructed -- and
+`encoding_source` says which of three ways, because a reconstructed value is not
+a measured one:
+
+  header            the log states it; trustworthy
+  filename          the log name contains `outcome`/`enc`; the tag convention
+                    held for every such run, but the log itself does not say so
+  wrapper-default   neither; `slurm/mpx_reach.sh` defaults ENCODING to flip, and
+                    reaching `outcome` required a TAG that says so. Reliable, but
+                    it is an inference about how the job was submitted, not a
+                    record of what ran.
+
+  submission-record the log name says nothing and the wrapper default is wrong;
+                    the value comes from KNOWN_ENCODINGS below, which records what
+                    the job was actually submitted with
+
+Treat anything but `header` as evidence to re-check before it goes in a paper.
+
+Accuracy (`acc:`) and coverage (`cover:`) points are keyed by trial count and
+merged into the trajectory row for that evaluation point, since that is what they
+are -- the same point measured along another axis.
 """
 
 import argparse
@@ -36,22 +60,34 @@ DIAGNOSTIC = re.compile(r"^\s*mpx-(?P<size>\d+) diag:\s*(?P<fields>.*)")
 VERDICT = re.compile(
     r"^\s*mpx-(?P<size>\d+) repeat (?P<repeat>\d+):\s*(?P<verdict>[A-Z-]+)\s*(?P<fields>.*)"
 )
+ACCURACY = re.compile(r"^\s*mpx-(?P<size>\d+) acc:\s*(?P<fields>.*)")
+COVERAGE = re.compile(r"^\s*mpx-(?P<size>\d+) cover:\s*(?P<fields>.*)")
+PROVENANCE = re.compile(r"^run-provenance:\s*(?P<fields>.*)")
 
-TRAJECTORY_COLUMNS = [
-    "source", "size", "seed", "variant", "u_max", "repeat",
-    "trials", "wall_s", "knowledge", "reliable", "spec", "pop",
+PROVENANCE_COLUMNS = [
+    "encoding", "encoding_source", "epsilon", "agent", "eval_interval", "commit", "tag",
 ]
-DIAGNOSTIC_COLUMNS = [
-    "source", "size", "seed", "variant", "u_max", "repeat", "trials",
+IDENTITY_COLUMNS = ["source", "size", "seed", "variant", "u_max", "repeat"] + PROVENANCE_COLUMNS
+COVERAGE_COLUMNS = [
+    "a0_nochange", "a0_change", "a1_nochange", "a1_change", "matched_but_wrong",
+]
+TRAJECTORY_COLUMNS = IDENTITY_COLUMNS + [
+    "trials", "wall_s", "knowledge", "reliable", "spec", "pop", "accuracy",
+] + COVERAGE_COLUMNS
+DIAGNOSTIC_COLUMNS = IDENTITY_COLUMNS + [
+    "trials",
     "micro", "pop_spec", "spec_max", "q_mean", "q_max", "q_above_half",
     "marked", "mark_density", "exp_mean",
     "addr_spec", "addr_random", "addr_full", "correct",
 ]
-VERDICT_COLUMNS = [
-    "source", "size", "seed", "variant", "u_max", "repeat", "verdict",
-    "trials", "knowledge", "reliable", "spec", "n_bits",
-    "peak_macro", "peak_rss_gb", "wall_s",
+VERDICT_COLUMNS = IDENTITY_COLUMNS + [
+    "verdict", "trials", "knowledge", "reliable", "spec", "n_bits",
+    "peak_macro", "peak_rss_gb", "wall_s", "trials_per_s",
 ]
+
+# ru_maxrss was read as bytes on Linux until f93b71e, so cluster logs written
+# before that print 0.00GB. Zero is not a measurement; it is a missing value.
+RSS_FIX_COMMIT_NOTE = "peak_rss_gb=0 on a cluster log means unmeasured, not 0 GB"
 
 
 def parse_fields(text):
@@ -71,16 +107,60 @@ def parse_spec(value):
     return float(head), (int(tail) if tail else None)
 
 
+# Runs whose encoding is known from the submission record but appears nowhere in
+# the log: submitted with ENCODING=outcome under a tag that does not say so, and
+# before the header carried the field. Without this they read as `flip`, which is
+# how the wrapper defaults -- the exact silent mislabelling `encoding_source`
+# exists to expose.
+KNOWN_ENCODINGS = {
+    "slurm_mpx264_s42_probe264.out": "outcome",
+}
+
+
+def encoding_from_name(source):
+    """Reconstruct the encoding of a log written before the header carried it.
+
+    Returns (encoding, how) -- see the module docstring for what `how` means.
+    """
+    if source in KNOWN_ENCODINGS:
+        return KNOWN_ENCODINGS[source], "submission-record"
+    lowered = source.lower()
+    if "outcome" in lowered or "_enc" in lowered:
+        return "outcome", "filename"
+    return "flip", "wrapper-default"
+
+
 class RunContext:
     """Header-scoped state: what every record in this run block inherits."""
 
-    def __init__(self, fields):
+    def __init__(self, fields, source="", provenance=None):
         self.base_seed = int(fields.get("seed", 0))
         self.variant = fields.get("alp_gen_variant", "")
+        if fields.get("encoding"):
+            self.encoding, self.encoding_source = fields["encoding"], "header"
+        else:
+            self.encoding, self.encoding_source = encoding_from_name(source)
+        self.epsilon = fields.get("epsilon", "")
+        self.agent = fields.get("agent", "")
+        self.eval_interval = fields.get("eval_interval", "")
+        provenance = provenance or {}
+        self.commit = provenance.get("commit", "")
+        self.tag = provenance.get("tag", "")
         self.u_max = {}
         self.pending = {}
         self.pending_diagnostics = {}
         self.next_repeat = {}
+
+    def provenance(self):
+        return {
+            "encoding": self.encoding,
+            "encoding_source": self.encoding_source,
+            "epsilon": self.epsilon,
+            "agent": self.agent,
+            "eval_interval": self.eval_interval,
+            "commit": self.commit,
+            "tag": self.tag,
+        }
 
     def seed_for(self, repeat):
         return self.base_seed + repeat
@@ -90,12 +170,28 @@ def parse_log(path):
     """Return (trajectory_rows, diagnostic_rows, verdict_rows) for one log file."""
     source = path.name
     trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
-    context = RunContext({})
+    provenance = {}
+    context = RunContext({}, source)
+
+    def point_for(size, trials):
+        """The trajectory point at this trial count, created if new.
+
+        `traj:`, `acc:` and `cover:` are three views of one evaluation point and
+        the logs do not emit them in a fixed order, so they are merged by trial
+        count rather than by position.
+        """
+        points = context.pending.setdefault(size, {})
+        return points.setdefault(trials, {"trials": trials})
 
     for line in path.read_text(errors="replace").splitlines():
+        marker = PROVENANCE.match(line)
+        if marker:
+            provenance = parse_fields(marker.group("fields"))
+            continue
+
         header = HEADER.search(line)
         if header:
-            context = RunContext(parse_fields(header.group("fields")))
+            context = RunContext(parse_fields(header.group("fields")), source, provenance)
             continue
 
         config = CONFIG.match(line)
@@ -105,17 +201,32 @@ def parse_log(path):
 
         trajectory = TRAJECTORY.match(line)
         if trajectory:
-            size = trajectory.group("size")
             fields = parse_fields(trajectory.group("fields"))
             spec, _ = parse_spec(fields.get("spec", "0"))
-            context.pending.setdefault(size, []).append({
-                "trials": int(fields["trials"]),
+            point_for(trajectory.group("size"), int(fields["trials"])).update({
                 "wall_s": float(fields.get("wall", 0)),
                 "knowledge": float(fields["knowledge"]),
                 "reliable": int(fields["reliable"]),
                 "spec": spec,
                 "pop": int(fields["pop"]),
             })
+            continue
+
+        accuracy = ACCURACY.match(line)
+        if accuracy:
+            fields = parse_fields(accuracy.group("fields"))
+            point_for(accuracy.group("size"), int(fields["trials"]))["accuracy"] = float(
+                fields["accuracy"]
+            )
+            continue
+
+        coverage = COVERAGE.match(line)
+        if coverage:
+            fields = parse_fields(coverage.group("fields"))
+            point = point_for(coverage.group("size"), int(fields["trials"]))
+            for key in COVERAGE_COLUMNS:
+                if key in fields:
+                    point[key] = fields[key]
             continue
 
         diagnostic = DIAGNOSTIC.match(line)
@@ -125,7 +236,7 @@ def parse_log(path):
             context.pending_diagnostics.setdefault(size, []).append({
                 key: fields.get(key, "")
                 for key in DIAGNOSTIC_COLUMNS
-                if key not in ("source", "size", "seed", "variant", "u_max", "repeat")
+                if key not in IDENTITY_COLUMNS
             })
             continue
 
@@ -135,61 +246,56 @@ def parse_log(path):
             repeat = int(verdict.group("repeat"))
             fields = parse_fields(verdict.group("fields"))
             spec, n_bits = parse_spec(fields.get("spec", "0"))
-            shared = {
-                "source": source,
-                "size": int(size),
-                "seed": context.seed_for(repeat),
-                "variant": context.variant,
-                "u_max": context.u_max.get(size, ""),
-                "repeat": repeat,
-            }
+            shared = identity(context, source, size, repeat)
+            wall = float(fields.get("wall", 0))
+            trials = int(fields["trials"])
             verdict_rows.append({
                 **shared,
                 "verdict": verdict.group("verdict"),
-                "trials": int(fields["trials"]),
+                "trials": trials,
                 "knowledge": float(fields["knowledge"]),
                 "reliable": int(fields["reliable"]),
                 "spec": spec,
                 "n_bits": n_bits if n_bits is not None else "",
                 "peak_macro": int(fields.get("peak_macro", 0)),
                 "peak_rss_gb": float(fields.get("peak_rss", "0").rstrip("GB")),
-                "wall_s": float(fields.get("wall", 0)),
+                "wall_s": wall,
+                "trials_per_s": round(trials / wall, 2) if wall else "",
             })
-            for point in context.pending.pop(size, []):
+            for point in context.pending.pop(size, {}).values():
                 trajectory_rows.append({**shared, **point})
             for point in context.pending_diagnostics.pop(size, []):
                 diagnostic_rows.append({**shared, **point})
             context.next_repeat[size] = repeat + 1
             continue
 
-    # A run still in flight (or scancelled) leaves trajectory points unclosed.
+    # A run still in flight (or scancelled) leaves points unclosed. They are the
+    # live state of the cluster and must survive into the archive, so they are
+    # attributed to the repeat the next verdict line would have closed.
     for size, points in context.pending_diagnostics.items():
-        repeat = context.next_repeat.get(size, 0)
-        shared = {
-            "source": source,
-            "size": int(size),
-            "seed": context.seed_for(repeat),
-            "variant": context.variant,
-            "u_max": context.u_max.get(size, ""),
-            "repeat": repeat,
-        }
+        shared = identity(context, source, size, context.next_repeat.get(size, 0))
         for point in points:
             diagnostic_rows.append({**shared, **point})
 
     for size, points in context.pending.items():
-        repeat = context.next_repeat.get(size, 0)
-        shared = {
-            "source": source,
-            "size": int(size),
-            "seed": context.seed_for(repeat),
-            "variant": context.variant,
-            "u_max": context.u_max.get(size, ""),
-            "repeat": repeat,
-        }
-        for point in points:
+        shared = identity(context, source, size, context.next_repeat.get(size, 0))
+        for point in points.values():
             trajectory_rows.append({**shared, **point})
 
     return trajectory_rows, diagnostic_rows, verdict_rows
+
+
+def identity(context, source, size, repeat):
+    """The columns every record in a run block carries, provenance included."""
+    return {
+        "source": source,
+        "size": int(size),
+        "seed": context.seed_for(repeat),
+        "variant": context.variant,
+        "u_max": context.u_max.get(size, ""),
+        "repeat": repeat,
+        **context.provenance(),
+    }
 
 
 def write_csv(path, columns, rows):
@@ -218,7 +324,10 @@ def main():
         diagnostic_rows.extend(diagnostics)
         verdict_rows.extend(verdicts)
 
-    sort_key = lambda row: (row["size"], row["variant"], row["seed"], row["trials"])
+    sort_key = lambda row: (
+        row["size"], row["encoding"], row["variant"], row["seed"],
+        row["source"], row["trials"],
+    )
     write_csv(args.trajectory_csv, TRAJECTORY_COLUMNS, sorted(trajectory_rows, key=sort_key))
     write_csv(args.diagnostic_csv, DIAGNOSTIC_COLUMNS, sorted(diagnostic_rows, key=sort_key))
     write_csv(args.verdict_csv, VERDICT_COLUMNS, sorted(verdict_rows, key=sort_key))

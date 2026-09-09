@@ -1,0 +1,3 @@
+acs2-bench mpx-reach: agent=acs2er er_buffer_size=10000 er_min_samples=1000 er_samples_number=13 sizes=[70] n_exp=1 seed=42 rss_cap=5.6GB time_cap=600000s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-70 (N=71): condition=142B effect=142B mark=1704B (stack) classifier=2072B  mark/classifier=82.2%  rss-cap pop-threshold=2702702
+  mpx-70 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=8

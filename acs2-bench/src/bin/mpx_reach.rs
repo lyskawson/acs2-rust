@@ -576,6 +576,13 @@ fn component_memory<const N: usize>(size: usize, rss_cap_bytes: u64) {
     );
 }
 
+fn encoding_label(encoding: Encoding) -> &'static str {
+    match encoding {
+        Encoding::Flip => "flip",
+        Encoding::Outcome => "outcome",
+    }
+}
+
 fn report_component_memory(size: usize, rss_cap_bytes: u64) {
     match size {
         6 => component_memory::<7>(size, rss_cap_bytes),
@@ -694,7 +701,7 @@ impl Options {
 fn main() {
     let options = Options::parse();
     println!(
-        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={}",
         options.agent.describe(),
         options.sizes,
         options.n_exp,
@@ -704,6 +711,8 @@ fn main() {
         options.do_ga,
         variant_label(options.alp_gen_variant),
         options.epsilon,
+        encoding_label(options.encoding),
+        options.eval_interval,
     );
 
     for &size in &options.sizes {
