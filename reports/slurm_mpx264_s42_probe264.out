@@ -1,0 +1,121 @@
+acs2-bench mpx-reach: agent=acs2 sizes=[264] n_exp=1 seed=42 rss_cap=56GB time_cap=43200s do_ga=true alp_gen_variant=pyalcs epsilon=0.8
+  mem mpx-264 (N=265): condition=530B effect=530B mark=6360B (stack) classifier=7504B  mark/classifier=84.8%  rss-cap pop-threshold=7462686
+  mpx-264 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=12
+  mpx-264 traj: trials=20000 wall=224s knowledge=0.0000 reliable=0 spec=0.00 pop=7427
+  mpx-264 acc: trials=20000 accuracy=0.5020
+  mpx-264 traj: trials=40000 wall=451s knowledge=0.0000 reliable=0 spec=0.00 pop=9520
+  mpx-264 acc: trials=40000 accuracy=0.5001
+  mpx-264 traj: trials=60000 wall=680s knowledge=0.0000 reliable=0 spec=0.00 pop=10635
+  mpx-264 acc: trials=60000 accuracy=0.5038
+  mpx-264 traj: trials=80000 wall=953s knowledge=0.0000 reliable=0 spec=0.00 pop=12535
+  mpx-264 acc: trials=80000 accuracy=0.5004
+  mpx-264 traj: trials=100000 wall=1269s knowledge=0.0000 reliable=0 spec=0.00 pop=13394
+  mpx-264 acc: trials=100000 accuracy=0.5036
+  mpx-264 traj: trials=120000 wall=1615s knowledge=0.0000 reliable=0 spec=0.00 pop=14932
+  mpx-264 acc: trials=120000 accuracy=0.4977
+  mpx-264 traj: trials=140000 wall=2000s knowledge=0.0000 reliable=0 spec=0.00 pop=16498
+  mpx-264 acc: trials=140000 accuracy=0.5038
+  mpx-264 traj: trials=160000 wall=2450s knowledge=0.0000 reliable=0 spec=0.00 pop=18597
+  mpx-264 acc: trials=160000 accuracy=0.4988
+  mpx-264 traj: trials=180000 wall=2896s knowledge=0.0000 reliable=0 spec=0.00 pop=19948
+  mpx-264 acc: trials=180000 accuracy=0.5045
+  mpx-264 traj: trials=200000 wall=3361s knowledge=0.0000 reliable=0 spec=0.00 pop=21800
+  mpx-264 acc: trials=200000 accuracy=0.5017
+  mpx-264 traj: trials=220000 wall=3805s knowledge=0.0000 reliable=0 spec=0.00 pop=22389
+  mpx-264 acc: trials=220000 accuracy=0.4992
+  mpx-264 traj: trials=240000 wall=4237s knowledge=0.0000 reliable=0 spec=0.00 pop=22568
+  mpx-264 acc: trials=240000 accuracy=0.4996
+  mpx-264 traj: trials=260000 wall=4708s knowledge=0.0000 reliable=0 spec=0.00 pop=23731
+  mpx-264 acc: trials=260000 accuracy=0.5023
+  mpx-264 traj: trials=280000 wall=5211s knowledge=0.0000 reliable=0 spec=0.00 pop=25348
+  mpx-264 acc: trials=280000 accuracy=0.5012
+  mpx-264 traj: trials=300000 wall=5732s knowledge=0.0000 reliable=0 spec=0.00 pop=26718
+  mpx-264 acc: trials=300000 accuracy=0.5017
+  mpx-264 traj: trials=320000 wall=6397s knowledge=0.0000 reliable=0 spec=0.00 pop=26882
+  mpx-264 acc: trials=320000 accuracy=0.4965
+  mpx-264 traj: trials=340000 wall=6992s knowledge=0.0000 reliable=0 spec=0.00 pop=28297
+  mpx-264 acc: trials=340000 accuracy=0.4989
+  mpx-264 traj: trials=360000 wall=7599s knowledge=0.0000 reliable=0 spec=0.00 pop=28787
+  mpx-264 acc: trials=360000 accuracy=0.5035
+  mpx-264 traj: trials=380000 wall=8185s knowledge=0.0000 reliable=0 spec=0.00 pop=30270
+  mpx-264 acc: trials=380000 accuracy=0.5036
+  mpx-264 traj: trials=400000 wall=8775s knowledge=0.0000 reliable=0 spec=0.00 pop=31585
+  mpx-264 acc: trials=400000 accuracy=0.4996
+  mpx-264 traj: trials=420000 wall=9394s knowledge=0.0000 reliable=0 spec=0.00 pop=32380
+  mpx-264 acc: trials=420000 accuracy=0.5063
+  mpx-264 traj: trials=440000 wall=10016s knowledge=0.0000 reliable=0 spec=0.00 pop=33409
+  mpx-264 acc: trials=440000 accuracy=0.5044
+  mpx-264 traj: trials=460000 wall=10730s knowledge=0.0000 reliable=0 spec=0.00 pop=34628
+  mpx-264 acc: trials=460000 accuracy=0.5059
+  mpx-264 traj: trials=480000 wall=11425s knowledge=0.0000 reliable=0 spec=0.00 pop=35866
+  mpx-264 acc: trials=480000 accuracy=0.5022
+  mpx-264 traj: trials=500000 wall=12145s knowledge=0.0000 reliable=0 spec=0.00 pop=37509
+  mpx-264 acc: trials=500000 accuracy=0.5008
+  mpx-264 traj: trials=520000 wall=12961s knowledge=0.0000 reliable=0 spec=0.00 pop=38719
+  mpx-264 acc: trials=520000 accuracy=0.5030
+  mpx-264 traj: trials=540000 wall=13748s knowledge=0.0000 reliable=0 spec=0.00 pop=39537
+  mpx-264 acc: trials=540000 accuracy=0.5022
+  mpx-264 traj: trials=560000 wall=14582s knowledge=0.0000 reliable=0 spec=0.00 pop=40267
+  mpx-264 acc: trials=560000 accuracy=0.5000
+  mpx-264 traj: trials=580000 wall=15370s knowledge=0.0000 reliable=0 spec=0.00 pop=41238
+  mpx-264 acc: trials=580000 accuracy=0.5016
+  mpx-264 traj: trials=600000 wall=16123s knowledge=0.0000 reliable=0 spec=0.00 pop=42296
+  mpx-264 acc: trials=600000 accuracy=0.5029
+  mpx-264 traj: trials=620000 wall=16831s knowledge=0.0000 reliable=0 spec=0.00 pop=42984
+  mpx-264 acc: trials=620000 accuracy=0.4987
+  mpx-264 traj: trials=640000 wall=17576s knowledge=0.0000 reliable=0 spec=0.00 pop=44525
+  mpx-264 acc: trials=640000 accuracy=0.4999
+  mpx-264 traj: trials=660000 wall=18392s knowledge=0.0000 reliable=0 spec=0.00 pop=44925
+  mpx-264 acc: trials=660000 accuracy=0.5009
+  mpx-264 traj: trials=680000 wall=19165s knowledge=0.0000 reliable=0 spec=0.00 pop=46514
+  mpx-264 acc: trials=680000 accuracy=0.5050
+  mpx-264 traj: trials=700000 wall=20023s knowledge=0.0000 reliable=0 spec=0.00 pop=47486
+  mpx-264 acc: trials=700000 accuracy=0.4991
+  mpx-264 traj: trials=720000 wall=20874s knowledge=0.0000 reliable=0 spec=0.00 pop=47333
+  mpx-264 acc: trials=720000 accuracy=0.5038
+  mpx-264 traj: trials=740000 wall=21681s knowledge=0.0000 reliable=0 spec=0.00 pop=48494
+  mpx-264 acc: trials=740000 accuracy=0.5037
+  mpx-264 traj: trials=760000 wall=22592s knowledge=0.0000 reliable=0 spec=0.00 pop=49312
+  mpx-264 acc: trials=760000 accuracy=0.5050
+  mpx-264 traj: trials=780000 wall=23484s knowledge=0.0000 reliable=0 spec=0.00 pop=50330
+  mpx-264 acc: trials=780000 accuracy=0.5024
+  mpx-264 traj: trials=800000 wall=24433s knowledge=0.0000 reliable=0 spec=0.00 pop=50889
+  mpx-264 acc: trials=800000 accuracy=0.5039
+  mpx-264 traj: trials=820000 wall=25345s knowledge=0.0000 reliable=0 spec=0.00 pop=51221
+  mpx-264 acc: trials=820000 accuracy=0.5029
+  mpx-264 traj: trials=840000 wall=26293s knowledge=0.0000 reliable=0 spec=0.00 pop=52430
+  mpx-264 acc: trials=840000 accuracy=0.5032
+  mpx-264 traj: trials=860000 wall=27240s knowledge=0.0000 reliable=0 spec=0.00 pop=53448
+  mpx-264 acc: trials=860000 accuracy=0.5048
+  mpx-264 traj: trials=880000 wall=28219s knowledge=0.0000 reliable=0 spec=0.00 pop=54309
+  mpx-264 acc: trials=880000 accuracy=0.5028
+  mpx-264 traj: trials=900000 wall=29192s knowledge=0.0000 reliable=0 spec=0.00 pop=54196
+  mpx-264 acc: trials=900000 accuracy=0.5008
+  mpx-264 traj: trials=920000 wall=30124s knowledge=0.0000 reliable=0 spec=0.00 pop=54362
+  mpx-264 acc: trials=920000 accuracy=0.5004
+  mpx-264 traj: trials=940000 wall=31072s knowledge=0.0000 reliable=0 spec=0.00 pop=55171
+  mpx-264 acc: trials=940000 accuracy=0.4966
+  mpx-264 traj: trials=960000 wall=32093s knowledge=0.0000 reliable=0 spec=0.00 pop=56353
+  mpx-264 acc: trials=960000 accuracy=0.4996
+  mpx-264 traj: trials=980000 wall=33107s knowledge=0.0000 reliable=0 spec=0.00 pop=56812
+  mpx-264 acc: trials=980000 accuracy=0.5034
+  mpx-264 traj: trials=1000000 wall=34131s knowledge=0.0000 reliable=0 spec=0.00 pop=56871
+  mpx-264 acc: trials=1000000 accuracy=0.5017
+  mpx-264 traj: trials=1020000 wall=35186s knowledge=0.0000 reliable=0 spec=0.00 pop=58799
+  mpx-264 acc: trials=1020000 accuracy=0.5028
+  mpx-264 traj: trials=1040000 wall=36268s knowledge=0.0000 reliable=0 spec=0.00 pop=58100
+  mpx-264 acc: trials=1040000 accuracy=0.4999
+  mpx-264 traj: trials=1060000 wall=37335s knowledge=0.0000 reliable=0 spec=0.00 pop=59074
+  mpx-264 acc: trials=1060000 accuracy=0.4986
+  mpx-264 traj: trials=1080000 wall=38405s knowledge=0.0000 reliable=0 spec=0.00 pop=59165
+  mpx-264 acc: trials=1080000 accuracy=0.5005
+  mpx-264 traj: trials=1100000 wall=39470s knowledge=0.0000 reliable=0 spec=0.00 pop=59126
+  mpx-264 acc: trials=1100000 accuracy=0.5003
+  mpx-264 traj: trials=1120000 wall=40567s knowledge=0.0000 reliable=0 spec=0.00 pop=59556
+  mpx-264 acc: trials=1120000 accuracy=0.5023
+  mpx-264 traj: trials=1140000 wall=41662s knowledge=0.0000 reliable=0 spec=0.00 pop=59458
+  mpx-264 acc: trials=1140000 accuracy=0.5026
+  mpx-264 traj: trials=1160000 wall=42725s knowledge=0.0000 reliable=0 spec=0.00 pop=60222
+  mpx-264 acc: trials=1160000 accuracy=0.5050
+  mpx-264 repeat 0: TIME-LIMITED trials=1165000 knowledge=0.0000 reliable=0 spec=0.00/265 peak_macro=60366 peak_rss=0.86GB wall=43201.7s
+  mpx-264 verdict agreement across 1 repeats: ALL AGREE

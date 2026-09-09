@@ -1,0 +1,17 @@
+########## REACH pyalcs k=70 (cap 600s, n=3) ##########
+acs2-bench mpx-reach: sizes=[70] n_exp=3 seed=42 rss_cap=5.6GB time_cap=600s do_ga=true alp_gen_variant=pyalcs
+  mem mpx-70 (N=71): condition=142B effect=142B mark=1704B (stack) classifier=2072B  mark/classifier=82.2%  rss-cap pop-threshold=2702702
+  mpx-70 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=8
+  mpx-70 repeat 0: TIME-LIMITED trials=1625500 knowledge=0.2406 reliable=110 spec=8.63/71 peak_macro=10741 peak_rss=0.13GB wall=600.1s
+  mpx-70 repeat 1: TIME-LIMITED trials=1555000 knowledge=0.1349 reliable=75 spec=9.20/71 peak_macro=6951 peak_rss=0.13GB wall=600.1s
+  mpx-70 repeat 2: TIME-LIMITED trials=1503000 knowledge=0.1419 reliable=91 spec=9.79/71 peak_macro=12548 peak_rss=0.14GB wall=600.1s
+  mpx-70 verdict agreement across 3 repeats: ALL AGREE
+########## REACH butz k=70 (cap 600s, n=3) ##########
+acs2-bench mpx-reach: sizes=[70] n_exp=3 seed=42 rss_cap=5.6GB time_cap=600s do_ga=true alp_gen_variant=butz
+  mem mpx-70 (N=71): condition=142B effect=142B mark=1704B (stack) classifier=2072B  mark/classifier=82.2%  rss-cap pop-threshold=2702702
+  mpx-70 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=9
+  mpx-70 repeat 0: TIME-LIMITED trials=931500 knowledge=0.2562 reliable=215 spec=8.58/71 peak_macro=14773 peak_rss=0.11GB wall=600.0s
+  mpx-70 repeat 1: TIME-LIMITED trials=858500 knowledge=0.2677 reliable=203 spec=8.52/71 peak_macro=14247 peak_rss=0.11GB wall=600.3s
+  mpx-70 repeat 2: TIME-LIMITED trials=894000 knowledge=0.2081 reliable=223 spec=8.75/71 peak_macro=15958 peak_rss=0.12GB wall=600.2s
+  mpx-70 verdict agreement across 3 repeats: ALL AGREE
+K70_DONE

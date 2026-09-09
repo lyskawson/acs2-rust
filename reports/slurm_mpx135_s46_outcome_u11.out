@@ -1,0 +1,1013 @@
+acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=46 rss_cap=5.6GB time_cap=600000s do_ga=true alp_gen_variant=pyalcs epsilon=0.8
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=11
+  mpx-135 traj: trials=120000 wall=1043s knowledge=0.0000 reliable=0 spec=0.00 pop=17070
+  mpx-135 diag: trials=120000 micro=17130 pop_spec=10.90 spec_max=23 q_mean=0.539 q_max=0.808 q_above_half=11704 marked=0.373 mark_density=0.922 exp_mean=2.8 addr_spec=0.569 addr_random=0.565 addr_full=0.0000 correct=0
+  mpx-135 cover: trials=120000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=120000 accuracy=0.5025
+  mpx-135 traj: trials=240000 wall=3251s knowledge=0.0000 reliable=0 spec=0.00 pop=27553
+  mpx-135 diag: trials=240000 micro=27636 pop_spec=11.49 spec_max=23 q_mean=0.548 q_max=0.845 q_above_half=20248 marked=0.367 mark_density=0.917 exp_mean=2.8 addr_spec=0.630 addr_random=0.596 addr_full=0.0000 correct=0
+  mpx-135 cover: trials=240000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=240000 accuracy=0.5075
+  mpx-135 traj: trials=360000 wall=6603s knowledge=0.0000 reliable=0 spec=0.00 pop=37326
+  mpx-135 diag: trials=360000 micro=37393 pop_spec=11.84 spec_max=25 q_mean=0.552 q_max=0.844 q_above_half=28009 marked=0.368 mark_density=0.914 exp_mean=2.8 addr_spec=0.659 addr_random=0.614 addr_full=0.0000 correct=0
+  mpx-135 cover: trials=360000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=360000 accuracy=0.5121
+  mpx-135 traj: trials=480000 wall=10992s knowledge=0.0000 reliable=0 spec=0.00 pop=44477
+  mpx-135 diag: trials=480000 micro=44547 pop_spec=12.04 spec_max=25 q_mean=0.555 q_max=0.839 q_above_half=34047 marked=0.364 mark_density=0.913 exp_mean=2.7 addr_spec=0.680 addr_random=0.624 addr_full=0.0000 correct=0
+  mpx-135 cover: trials=480000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=480000 accuracy=0.5050
+  mpx-135 traj: trials=600000 wall=16278s knowledge=0.0000 reliable=0 spec=0.00 pop=50594
+  mpx-135 diag: trials=600000 micro=50693 pop_spec=12.19 spec_max=25 q_mean=0.557 q_max=0.897 q_above_half=38878 marked=0.365 mark_density=0.912 exp_mean=2.8 addr_spec=0.727 addr_random=0.632 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=600000 overall=0.0000 a0_nochange=0.0000 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=600000 accuracy=0.5130
+  mpx-135 traj: trials=720000 wall=21992s knowledge=0.0008 reliable=4 spec=11.00 pop=55647
+  mpx-135 diag: trials=720000 micro=55739 pop_spec=12.29 spec_max=25 q_mean=0.559 q_max=0.999 q_above_half=43202 marked=0.364 mark_density=0.911 exp_mean=2.8 addr_spec=0.754 addr_random=0.637 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=720000 overall=0.0008 a0_nochange=0.0031 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=720000 accuracy=0.5162
+  mpx-135 traj: trials=840000 wall=28372s knowledge=0.0012 reliable=9 spec=11.33 pop=57226
+  mpx-135 diag: trials=840000 micro=57351 pop_spec=12.41 spec_max=26 q_mean=0.560 q_max=1.000 q_above_half=44747 marked=0.366 mark_density=0.911 exp_mean=2.7 addr_spec=0.769 addr_random=0.643 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=840000 overall=0.0012 a0_nochange=0.0050 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=840000 accuracy=0.5102
+  mpx-135 traj: trials=960000 wall=34659s knowledge=0.0021 reliable=12 spec=10.92 pop=59761
+  mpx-135 diag: trials=960000 micro=59877 pop_spec=12.47 spec_max=26 q_mean=0.561 q_max=1.000 q_above_half=47030 marked=0.363 mark_density=0.910 exp_mean=2.8 addr_spec=0.797 addr_random=0.647 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=960000 overall=0.0021 a0_nochange=0.0084 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=960000 accuracy=0.5121
+  mpx-135 traj: trials=1080000 wall=41036s knowledge=0.0025 reliable=14 spec=10.93 pop=62971
+  mpx-135 diag: trials=1080000 micro=63084 pop_spec=12.55 spec_max=27 q_mean=0.563 q_max=1.000 q_above_half=49850 marked=0.362 mark_density=0.909 exp_mean=2.8 addr_spec=0.838 addr_random=0.651 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1080000 overall=0.0025 a0_nochange=0.0099 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=6
+  mpx-135 acc: trials=1080000 accuracy=0.5072
+  mpx-135 traj: trials=1200000 wall=47911s knowledge=0.0027 reliable=18 spec=11.11 pop=65024
+  mpx-135 diag: trials=1200000 micro=65140 pop_spec=12.64 spec_max=27 q_mean=0.564 q_max=1.000 q_above_half=51927 marked=0.362 mark_density=0.909 exp_mean=2.8 addr_spec=0.876 addr_random=0.655 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1200000 overall=0.0027 a0_nochange=0.0109 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=10
+  mpx-135 acc: trials=1200000 accuracy=0.5168
+  mpx-135 traj: trials=1320000 wall=55118s knowledge=0.0025 reliable=17 spec=11.35 pop=67801
+  mpx-135 diag: trials=1320000 micro=67935 pop_spec=12.67 spec_max=27 q_mean=0.564 q_max=1.000 q_above_half=53791 marked=0.362 mark_density=0.909 exp_mean=2.8 addr_spec=0.937 addr_random=0.657 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1320000 overall=0.0025 a0_nochange=0.0101 a0_change=0.0000 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=5
+  mpx-135 acc: trials=1320000 accuracy=0.5144
+  mpx-135 traj: trials=1440000 wall=62365s knowledge=0.0032 reliable=19 spec=11.00 pop=69267
+  mpx-135 diag: trials=1440000 micro=69393 pop_spec=12.73 spec_max=27 q_mean=0.564 q_max=1.000 q_above_half=55091 marked=0.364 mark_density=0.908 exp_mean=2.8 addr_spec=0.991 addr_random=0.660 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1440000 overall=0.0032 a0_nochange=0.0124 a0_change=0.0000 a1_nochange=0.0006 a1_change=0.0000 matched_but_wrong=19
+  mpx-135 acc: trials=1440000 accuracy=0.5123
+  mpx-135 traj: trials=1560000 wall=69898s knowledge=0.0047 reliable=20 spec=11.40 pop=71075
+  mpx-135 diag: trials=1560000 micro=71209 pop_spec=12.80 spec_max=27 q_mean=0.567 q_max=1.000 q_above_half=56922 marked=0.361 mark_density=0.908 exp_mean=2.8 addr_spec=1.078 addr_random=0.664 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1560000 overall=0.0047 a0_nochange=0.0136 a0_change=0.0000 a1_nochange=0.0027 a1_change=0.0026 matched_but_wrong=1
+  mpx-135 acc: trials=1560000 accuracy=0.5160
+  mpx-135 traj: trials=1680000 wall=77673s knowledge=0.0037 reliable=17 spec=11.71 pop=73080
+  mpx-135 diag: trials=1680000 micro=73204 pop_spec=12.88 spec_max=27 q_mean=0.568 q_max=1.000 q_above_half=58947 marked=0.359 mark_density=0.907 exp_mean=2.8 addr_spec=1.157 addr_random=0.668 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1680000 overall=0.0037 a0_nochange=0.0090 a0_change=0.0000 a1_nochange=0.0027 a1_change=0.0032 matched_but_wrong=0
+  mpx-135 acc: trials=1680000 accuracy=0.5148
+  mpx-135 traj: trials=1800000 wall=85118s knowledge=0.0054 reliable=28 spec=12.07 pop=74052
+  mpx-135 diag: trials=1800000 micro=74199 pop_spec=12.92 spec_max=27 q_mean=0.570 q_max=1.000 q_above_half=59767 marked=0.361 mark_density=0.907 exp_mean=2.8 addr_spec=1.218 addr_random=0.670 addr_full=0.0001 correct=1
+  mpx-135 cover: trials=1800000 overall=0.0054 a0_nochange=0.0101 a0_change=0.0000 a1_nochange=0.0050 a1_change=0.0064 matched_but_wrong=10
+  mpx-135 acc: trials=1800000 accuracy=0.5212
+  mpx-135 traj: trials=1920000 wall=92485s knowledge=0.0060 reliable=33 spec=12.09 pop=75547
+  mpx-135 diag: trials=1920000 micro=75690 pop_spec=12.98 spec_max=27 q_mean=0.572 q_max=1.000 q_above_half=61191 marked=0.366 mark_density=0.907 exp_mean=2.8 addr_spec=1.295 addr_random=0.673 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=1920000 overall=0.0060 a0_nochange=0.0110 a0_change=0.0000 a1_nochange=0.0050 a1_change=0.0080 matched_but_wrong=9
+  mpx-135 acc: trials=1920000 accuracy=0.5198
+  mpx-135 traj: trials=2040000 wall=100108s knowledge=0.0079 reliable=50 spec=12.14 pop=78885
+  mpx-135 diag: trials=2040000 micro=79017 pop_spec=13.02 spec_max=27 q_mean=0.573 q_max=1.000 q_above_half=64192 marked=0.363 mark_density=0.906 exp_mean=2.8 addr_spec=1.385 addr_random=0.675 addr_full=0.0001 correct=0
+  mpx-135 cover: trials=2040000 overall=0.0079 a0_nochange=0.0109 a0_change=0.0033 a1_nochange=0.0074 a1_change=0.0101 matched_but_wrong=53
+  mpx-135 acc: trials=2040000 accuracy=0.5228
+  mpx-135 traj: trials=2160000 wall=108253s knowledge=0.0117 reliable=60 spec=11.92 pop=78997
+  mpx-135 diag: trials=2160000 micro=79146 pop_spec=13.10 spec_max=27 q_mean=0.576 q_max=1.000 q_above_half=64730 marked=0.363 mark_density=0.906 exp_mean=2.8 addr_spec=1.472 addr_random=0.679 addr_full=0.0001 correct=1
+  mpx-135 cover: trials=2160000 overall=0.0117 a0_nochange=0.0150 a0_change=0.0050 a1_nochange=0.0099 a1_change=0.0168 matched_but_wrong=59
+  mpx-135 acc: trials=2160000 accuracy=0.5257
+  mpx-135 traj: trials=2280000 wall=116193s knowledge=0.0139 reliable=58 spec=11.84 pop=80078
+  mpx-135 diag: trials=2280000 micro=80264 pop_spec=13.17 spec_max=27 q_mean=0.579 q_max=1.000 q_above_half=66140 marked=0.365 mark_density=0.905 exp_mean=2.9 addr_spec=1.569 addr_random=0.683 addr_full=0.0001 correct=1
+  mpx-135 cover: trials=2280000 overall=0.0139 a0_nochange=0.0254 a0_change=0.0050 a1_nochange=0.0099 a1_change=0.0154 matched_but_wrong=5
+  mpx-135 acc: trials=2280000 accuracy=0.5314
+  mpx-135 traj: trials=2400000 wall=123029s knowledge=0.0174 reliable=73 spec=11.84 pop=81681
+  mpx-135 diag: trials=2400000 micro=81870 pop_spec=13.21 spec_max=27 q_mean=0.580 q_max=1.000 q_above_half=67462 marked=0.363 mark_density=0.905 exp_mean=2.9 addr_spec=1.661 addr_random=0.685 addr_full=0.0002 correct=1
+  mpx-135 cover: trials=2400000 overall=0.0174 a0_nochange=0.0359 a0_change=0.0056 a1_nochange=0.0116 a1_change=0.0162 matched_but_wrong=14
+  mpx-135 acc: trials=2400000 accuracy=0.5297
+  mpx-135 traj: trials=2520000 wall=129411s knowledge=0.0271 reliable=124 spec=11.48 pop=81689
+  mpx-135 diag: trials=2520000 micro=81922 pop_spec=13.27 spec_max=27 q_mean=0.582 q_max=1.000 q_above_half=67482 marked=0.370 mark_density=0.905 exp_mean=2.9 addr_spec=1.767 addr_random=0.688 addr_full=0.0003 correct=2
+  mpx-135 cover: trials=2520000 overall=0.0271 a0_nochange=0.0559 a0_change=0.0082 a1_nochange=0.0205 a1_change=0.0235 matched_but_wrong=46
+  mpx-135 acc: trials=2520000 accuracy=0.5333
+  mpx-135 traj: trials=2640000 wall=135601s knowledge=0.0306 reliable=117 spec=11.63 pop=81418
+  mpx-135 diag: trials=2640000 micro=81678 pop_spec=13.34 spec_max=27 q_mean=0.584 q_max=1.000 q_above_half=67531 marked=0.368 mark_density=0.904 exp_mean=3.0 addr_spec=1.875 addr_random=0.692 addr_full=0.0004 correct=1
+  mpx-135 cover: trials=2640000 overall=0.0306 a0_nochange=0.0641 a0_change=0.0060 a1_nochange=0.0246 a1_change=0.0277 matched_but_wrong=35
+  mpx-135 acc: trials=2640000 accuracy=0.5345
+  mpx-135 traj: trials=2760000 wall=141779s knowledge=0.0375 reliable=129 spec=11.69 pop=82050
+  mpx-135 diag: trials=2760000 micro=82320 pop_spec=13.37 spec_max=27 q_mean=0.585 q_max=1.000 q_above_half=68268 marked=0.367 mark_density=0.904 exp_mean=3.0 addr_spec=1.943 addr_random=0.693 addr_full=0.0004 correct=3
+  mpx-135 cover: trials=2760000 overall=0.0375 a0_nochange=0.0804 a0_change=0.0065 a1_nochange=0.0281 a1_change=0.0349 matched_but_wrong=47
+  mpx-135 acc: trials=2760000 accuracy=0.5376
+  mpx-135 traj: trials=2880000 wall=146762s knowledge=0.0456 reliable=138 spec=11.53 pop=81606
+  mpx-135 diag: trials=2880000 micro=81935 pop_spec=13.40 spec_max=27 q_mean=0.585 q_max=1.000 q_above_half=67875 marked=0.368 mark_density=0.904 exp_mean=3.0 addr_spec=1.983 addr_random=0.695 addr_full=0.0003 correct=3
+  mpx-135 cover: trials=2880000 overall=0.0456 a0_nochange=0.0894 a0_change=0.0151 a1_nochange=0.0267 a1_change=0.0512 matched_but_wrong=43
+  mpx-135 acc: trials=2880000 accuracy=0.5449
+  mpx-135 traj: trials=3000000 wall=151075s knowledge=0.0547 reliable=163 spec=11.60 pop=79253
+  mpx-135 diag: trials=3000000 micro=79652 pop_spec=13.46 spec_max=28 q_mean=0.586 q_max=1.000 q_above_half=65871 marked=0.372 mark_density=0.904 exp_mean=3.1 addr_spec=2.061 addr_random=0.698 addr_full=0.0004 correct=3
+  mpx-135 cover: trials=3000000 overall=0.0547 a0_nochange=0.1110 a0_change=0.0282 a1_nochange=0.0245 a1_change=0.0549 matched_but_wrong=50
+  mpx-135 acc: trials=3000000 accuracy=0.5471
+  mpx-135 traj: trials=3120000 wall=154977s knowledge=0.0705 reliable=191 spec=11.26 pop=77580
+  mpx-135 diag: trials=3120000 micro=77993 pop_spec=13.46 spec_max=28 q_mean=0.589 q_max=1.000 q_above_half=64543 marked=0.369 mark_density=0.904 exp_mean=3.2 addr_spec=2.179 addr_random=0.698 addr_full=0.0005 correct=9
+  mpx-135 cover: trials=3120000 overall=0.0705 a0_nochange=0.1438 a0_change=0.0423 a1_nochange=0.0249 a1_change=0.0707 matched_but_wrong=120
+  mpx-135 acc: trials=3120000 accuracy=0.5583
+  mpx-135 traj: trials=3240000 wall=158712s knowledge=0.0884 reliable=268 spec=11.29 pop=75842
+  mpx-135 diag: trials=3240000 micro=76343 pop_spec=13.47 spec_max=28 q_mean=0.592 q_max=1.000 q_above_half=63497 marked=0.370 mark_density=0.904 exp_mean=3.3 addr_spec=2.289 addr_random=0.698 addr_full=0.0007 correct=9
+  mpx-135 cover: trials=3240000 overall=0.0884 a0_nochange=0.1811 a0_change=0.0564 a1_nochange=0.0272 a1_change=0.0888 matched_but_wrong=181
+  mpx-135 acc: trials=3240000 accuracy=0.5660
+  mpx-135 traj: trials=3360000 wall=162376s knowledge=0.0991 reliable=290 spec=11.36 pop=74495
+  mpx-135 diag: trials=3360000 micro=75082 pop_spec=13.48 spec_max=28 q_mean=0.594 q_max=1.000 q_above_half=62372 marked=0.374 mark_density=0.904 exp_mean=3.5 addr_spec=2.406 addr_random=0.699 addr_full=0.0008 correct=11
+  mpx-135 cover: trials=3360000 overall=0.0991 a0_nochange=0.2003 a0_change=0.0592 a1_nochange=0.0266 a1_change=0.1103 matched_but_wrong=149
+  mpx-135 acc: trials=3360000 accuracy=0.5747
+  mpx-135 traj: trials=3480000 wall=165766s knowledge=0.1111 reliable=305 spec=11.22 pop=71935
+  mpx-135 diag: trials=3480000 micro=72545 pop_spec=13.45 spec_max=28 q_mean=0.597 q_max=1.000 q_above_half=60216 marked=0.372 mark_density=0.904 exp_mean=3.7 addr_spec=2.510 addr_random=0.698 addr_full=0.0010 correct=14
+  mpx-135 cover: trials=3480000 overall=0.1111 a0_nochange=0.2270 a0_change=0.0699 a1_nochange=0.0269 a1_change=0.1206 matched_but_wrong=114
+  mpx-135 acc: trials=3480000 accuracy=0.5773
+  mpx-135 traj: trials=3600000 wall=168941s knowledge=0.1394 reliable=378 spec=11.16 pop=69961
+  mpx-135 diag: trials=3600000 micro=70681 pop_spec=13.46 spec_max=28 q_mean=0.598 q_max=1.000 q_above_half=58699 marked=0.372 mark_density=0.904 exp_mean=3.9 addr_spec=2.579 addr_random=0.698 addr_full=0.0012 correct=16
+  mpx-135 cover: trials=3600000 overall=0.1394 a0_nochange=0.2875 a0_change=0.0809 a1_nochange=0.0359 a1_change=0.1532 matched_but_wrong=160
+  mpx-135 acc: trials=3600000 accuracy=0.5950
+  mpx-135 traj: trials=3720000 wall=171860s knowledge=0.1525 reliable=367 spec=11.14 pop=66501
+  mpx-135 diag: trials=3720000 micro=67330 pop_spec=13.51 spec_max=28 q_mean=0.601 q_max=1.000 q_above_half=56153 marked=0.372 mark_density=0.904 exp_mean=4.2 addr_spec=2.665 addr_random=0.700 addr_full=0.0013 correct=17
+  mpx-135 cover: trials=3720000 overall=0.1525 a0_nochange=0.2871 a0_change=0.0909 a1_nochange=0.0422 a1_change=0.1897 matched_but_wrong=104
+  mpx-135 acc: trials=3720000 accuracy=0.6071
+  mpx-135 traj: trials=3840000 wall=174526s knowledge=0.1669 reliable=360 spec=11.14 pop=65410
+  mpx-135 diag: trials=3840000 micro=66290 pop_spec=13.49 spec_max=28 q_mean=0.601 q_max=1.000 q_above_half=55047 marked=0.366 mark_density=0.904 exp_mean=4.4 addr_spec=2.717 addr_random=0.699 addr_full=0.0015 correct=18
+  mpx-135 cover: trials=3840000 overall=0.1669 a0_nochange=0.3039 a0_change=0.1113 a1_nochange=0.0481 a1_change=0.2042 matched_but_wrong=76
+  mpx-135 acc: trials=3840000 accuracy=0.6165
+  mpx-135 traj: trials=3960000 wall=177064s knowledge=0.1880 reliable=423 spec=11.17 pop=62090
+  mpx-135 diag: trials=3960000 micro=63029 pop_spec=13.52 spec_max=28 q_mean=0.603 q_max=1.000 q_above_half=52713 marked=0.366 mark_density=0.904 exp_mean=4.8 addr_spec=2.799 addr_random=0.701 addr_full=0.0018 correct=23
+  mpx-135 cover: trials=3960000 overall=0.1880 a0_nochange=0.3313 a0_change=0.1364 a1_nochange=0.0519 a1_change=0.2322 matched_but_wrong=97
+  mpx-135 acc: trials=3960000 accuracy=0.6314
+  mpx-135 traj: trials=4080000 wall=179357s knowledge=0.2085 reliable=438 spec=11.10 pop=59629
+  mpx-135 diag: trials=4080000 micro=60707 pop_spec=13.53 spec_max=28 q_mean=0.606 q_max=1.000 q_above_half=50597 marked=0.364 mark_density=0.904 exp_mean=5.1 addr_spec=2.879 addr_random=0.702 addr_full=0.0022 correct=30
+  mpx-135 cover: trials=4080000 overall=0.2085 a0_nochange=0.3622 a0_change=0.1610 a1_nochange=0.0577 a1_change=0.2530 matched_but_wrong=44
+  mpx-135 acc: trials=4080000 accuracy=0.6457
+  mpx-135 traj: trials=4200000 wall=181427s knowledge=0.2295 reliable=475 spec=11.01 pop=56202
+  mpx-135 diag: trials=4200000 micro=57374 pop_spec=13.54 spec_max=28 q_mean=0.607 q_max=1.000 q_above_half=47632 marked=0.363 mark_density=0.904 exp_mean=5.7 addr_spec=2.965 addr_random=0.702 addr_full=0.0030 correct=37
+  mpx-135 cover: trials=4200000 overall=0.2295 a0_nochange=0.3870 a0_change=0.1848 a1_nochange=0.0701 a1_change=0.2761 matched_but_wrong=70
+  mpx-135 acc: trials=4200000 accuracy=0.6580
+  mpx-135 traj: trials=4320000 wall=183271s knowledge=0.2538 reliable=502 spec=10.97 pop=52680
+  mpx-135 diag: trials=4320000 micro=53923 pop_spec=13.57 spec_max=28 q_mean=0.609 q_max=1.000 q_above_half=44687 marked=0.360 mark_density=0.904 exp_mean=6.2 addr_spec=3.031 addr_random=0.703 addr_full=0.0034 correct=42
+  mpx-135 cover: trials=4320000 overall=0.2538 a0_nochange=0.4274 a0_change=0.2134 a1_nochange=0.0719 a1_change=0.3024 matched_but_wrong=50
+  mpx-135 acc: trials=4320000 accuracy=0.6815
+  mpx-135 traj: trials=4440000 wall=184885s knowledge=0.2865 reliable=540 spec=10.83 pop=49418
+  mpx-135 diag: trials=4440000 micro=50796 pop_spec=13.59 spec_max=28 q_mean=0.614 q_max=1.000 q_above_half=42049 marked=0.356 mark_density=0.904 exp_mean=7.1 addr_spec=3.082 addr_random=0.705 addr_full=0.0044 correct=53
+  mpx-135 cover: trials=4440000 overall=0.2865 a0_nochange=0.4673 a0_change=0.2533 a1_nochange=0.0989 a1_change=0.3264 matched_but_wrong=66
+  mpx-135 acc: trials=4440000 accuracy=0.6926
+  mpx-135 traj: trials=4560000 wall=186330s knowledge=0.3127 reliable=549 spec=10.72 pop=46496
+  mpx-135 diag: trials=4560000 micro=47955 pop_spec=13.59 spec_max=28 q_mean=0.615 q_max=1.000 q_above_half=39493 marked=0.359 mark_density=0.904 exp_mean=8.0 addr_spec=3.122 addr_random=0.705 addr_full=0.0046 correct=61
+  mpx-135 cover: trials=4560000 overall=0.3127 a0_nochange=0.4833 a0_change=0.2990 a1_nochange=0.1073 a1_change=0.3610 matched_but_wrong=75
+  mpx-135 acc: trials=4560000 accuracy=0.7186
+  mpx-135 traj: trials=4680000 wall=187547s knowledge=0.3558 reliable=609 spec=10.60 pop=42998
+  mpx-135 diag: trials=4680000 micro=44624 pop_spec=13.60 spec_max=28 q_mean=0.620 q_max=1.000 q_above_half=36597 marked=0.357 mark_density=0.905 exp_mean=9.3 addr_spec=3.237 addr_random=0.705 addr_full=0.0054 correct=69
+  mpx-135 cover: trials=4680000 overall=0.3558 a0_nochange=0.5420 a0_change=0.3389 a1_nochange=0.1237 a1_change=0.4184 matched_but_wrong=110
+  mpx-135 acc: trials=4680000 accuracy=0.7398
+  mpx-135 traj: trials=4800000 wall=188584s knowledge=0.3817 reliable=628 spec=10.53 pop=38887
+  mpx-135 diag: trials=4800000 micro=40626 pop_spec=13.64 spec_max=28 q_mean=0.621 q_max=1.000 q_above_half=32962 marked=0.356 mark_density=0.904 exp_mean=10.6 addr_spec=3.298 addr_random=0.707 addr_full=0.0066 correct=79
+  mpx-135 cover: trials=4800000 overall=0.3817 a0_nochange=0.5627 a0_change=0.3793 a1_nochange=0.1339 a1_change=0.4508 matched_but_wrong=93
+  mpx-135 acc: trials=4800000 accuracy=0.7604
+  mpx-135 traj: trials=4920000 wall=189432s knowledge=0.4104 reliable=651 spec=10.47 pop=34779
+  mpx-135 diag: trials=4920000 micro=36645 pop_spec=13.70 spec_max=28 q_mean=0.623 q_max=1.000 q_above_half=29377 marked=0.352 mark_density=0.904 exp_mean=12.7 addr_spec=3.328 addr_random=0.710 addr_full=0.0077 correct=88
+  mpx-135 cover: trials=4920000 overall=0.4104 a0_nochange=0.5951 a0_change=0.4173 a1_nochange=0.1509 a1_change=0.4782 matched_but_wrong=71
+  mpx-135 acc: trials=4920000 accuracy=0.7699
+  mpx-135 traj: trials=5040000 wall=190102s knowledge=0.4359 reliable=641 spec=10.39 pop=30894
+  mpx-135 diag: trials=5040000 micro=32880 pop_spec=13.78 spec_max=28 q_mean=0.623 q_max=1.000 q_above_half=25816 marked=0.353 mark_density=0.904 exp_mean=15.2 addr_spec=3.384 addr_random=0.715 addr_full=0.0091 correct=96
+  mpx-135 cover: trials=5040000 overall=0.4359 a0_nochange=0.6300 a0_change=0.4564 a1_nochange=0.1569 a1_change=0.5001 matched_but_wrong=118
+  mpx-135 acc: trials=5040000 accuracy=0.7898
+  mpx-135 traj: trials=5160000 wall=190664s knowledge=0.4580 reliable=617 spec=10.24 pop=28034
+  mpx-135 diag: trials=5160000 micro=30083 pop_spec=13.82 spec_max=28 q_mean=0.626 q_max=1.000 q_above_half=23403 marked=0.345 mark_density=0.904 exp_mean=18.0 addr_spec=3.480 addr_random=0.717 addr_full=0.0105 correct=100
+  mpx-135 cover: trials=5160000 overall=0.4580 a0_nochange=0.6537 a0_change=0.4946 a1_nochange=0.1668 a1_change=0.5169 matched_but_wrong=42
+  mpx-135 acc: trials=5160000 accuracy=0.8032
+  mpx-135 traj: trials=5280000 wall=191124s knowledge=0.4812 reliable=652 spec=10.27 pop=25255
+  mpx-135 diag: trials=5280000 micro=27463 pop_spec=13.88 spec_max=28 q_mean=0.624 q_max=1.000 q_above_half=20839 marked=0.344 mark_density=0.905 exp_mean=21.1 addr_spec=3.504 addr_random=0.719 addr_full=0.0120 correct=114
+  mpx-135 cover: trials=5280000 overall=0.4812 a0_nochange=0.6542 a0_change=0.5397 a1_nochange=0.1822 a1_change=0.5483 matched_but_wrong=71
+  mpx-135 acc: trials=5280000 accuracy=0.8054
+  mpx-135 traj: trials=5400000 wall=191505s knowledge=0.5042 reliable=661 spec=10.20 pop=22774
+  mpx-135 diag: trials=5400000 micro=24988 pop_spec=13.95 spec_max=28 q_mean=0.625 q_max=1.000 q_above_half=18597 marked=0.338 mark_density=0.904 exp_mean=25.3 addr_spec=3.528 addr_random=0.723 addr_full=0.0145 correct=126
+  mpx-135 cover: trials=5400000 overall=0.5042 a0_nochange=0.6899 a0_change=0.5571 a1_nochange=0.1920 a1_change=0.5776 matched_but_wrong=51
+  mpx-135 acc: trials=5400000 accuracy=0.8269
+  mpx-135 traj: trials=5520000 wall=191827s knowledge=0.5165 reliable=658 spec=10.18 pop=20885
+  mpx-135 diag: trials=5520000 micro=23172 pop_spec=13.98 spec_max=28 q_mean=0.623 q_max=1.000 q_above_half=16849 marked=0.336 mark_density=0.904 exp_mean=29.2 addr_spec=3.549 addr_random=0.725 addr_full=0.0157 correct=127
+  mpx-135 cover: trials=5520000 overall=0.5165 a0_nochange=0.6926 a0_change=0.5954 a1_nochange=0.2072 a1_change=0.5708 matched_but_wrong=62
+  mpx-135 acc: trials=5520000 accuracy=0.8222
+  mpx-135 traj: trials=5640000 wall=192106s knowledge=0.5445 reliable=651 spec=9.98 pop=18630
+  mpx-135 diag: trials=5640000 micro=20952 pop_spec=14.12 spec_max=28 q_mean=0.622 q_max=1.000 q_above_half=14831 marked=0.334 mark_density=0.904 exp_mean=34.8 addr_spec=3.588 addr_random=0.732 addr_full=0.0194 correct=141
+  mpx-135 cover: trials=5640000 overall=0.5445 a0_nochange=0.7460 a0_change=0.6190 a1_nochange=0.2208 a1_change=0.5919 matched_but_wrong=61
+  mpx-135 acc: trials=5640000 accuracy=0.8310
+  mpx-135 traj: trials=5760000 wall=192347s knowledge=0.5750 reliable=638 spec=9.85 pop=16441
+  mpx-135 diag: trials=5760000 micro=18841 pop_spec=14.25 spec_max=28 q_mean=0.620 q_max=1.000 q_above_half=12879 marked=0.329 mark_density=0.904 exp_mean=42.2 addr_spec=3.582 addr_random=0.739 addr_full=0.0223 correct=159
+  mpx-135 cover: trials=5760000 overall=0.5750 a0_nochange=0.7556 a0_change=0.6669 a1_nochange=0.2561 a1_change=0.6211 matched_but_wrong=43
+  mpx-135 acc: trials=5760000 accuracy=0.8505
+  mpx-135 traj: trials=5880000 wall=192549s knowledge=0.5875 reliable=609 spec=9.74 pop=14799
+  mpx-135 diag: trials=5880000 micro=17291 pop_spec=14.39 spec_max=29 q_mean=0.620 q_max=1.000 q_above_half=11447 marked=0.319 mark_density=0.904 exp_mean=49.3 addr_spec=3.626 addr_random=0.746 addr_full=0.0254 correct=168
+  mpx-135 cover: trials=5880000 overall=0.5875 a0_nochange=0.7620 a0_change=0.6726 a1_nochange=0.2817 a1_change=0.6337 matched_but_wrong=57
+  mpx-135 acc: trials=5880000 accuracy=0.8515
+  mpx-135 traj: trials=6000000 wall=192733s knowledge=0.6023 reliable=600 spec=9.69 pop=13765
+  mpx-135 diag: trials=6000000 micro=16342 pop_spec=14.41 spec_max=29 q_mean=0.619 q_max=1.000 q_above_half=10531 marked=0.316 mark_density=0.904 exp_mean=56.9 addr_spec=3.608 addr_random=0.747 addr_full=0.0270 correct=177
+  mpx-135 cover: trials=6000000 overall=0.6023 a0_nochange=0.7797 a0_change=0.6843 a1_nochange=0.2916 a1_change=0.6536 matched_but_wrong=40
+  mpx-135 acc: trials=6000000 accuracy=0.8613
+  mpx-135 traj: trials=6120000 wall=192910s knowledge=0.6210 reliable=589 spec=9.57 pop=12952
+  mpx-135 diag: trials=6120000 micro=15592 pop_spec=14.40 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=9714 marked=0.320 mark_density=0.905 exp_mean=63.8 addr_spec=3.637 addr_random=0.746 addr_full=0.0297 correct=191
+  mpx-135 cover: trials=6120000 overall=0.6210 a0_nochange=0.7986 a0_change=0.7103 a1_nochange=0.3069 a1_change=0.6680 matched_but_wrong=18
+  mpx-135 acc: trials=6120000 accuracy=0.8741
+  mpx-135 traj: trials=6240000 wall=193084s knowledge=0.6348 reliable=603 spec=9.59 pop=12120
+  mpx-135 diag: trials=6240000 micro=14797 pop_spec=14.44 spec_max=29 q_mean=0.615 q_max=1.000 q_above_half=8958 marked=0.310 mark_density=0.906 exp_mean=72.7 addr_spec=3.634 addr_random=0.749 addr_full=0.0321 correct=199
+  mpx-135 cover: trials=6240000 overall=0.6348 a0_nochange=0.8114 a0_change=0.7330 a1_nochange=0.3155 a1_change=0.6792 matched_but_wrong=53
+  mpx-135 acc: trials=6240000 accuracy=0.8820
+  mpx-135 traj: trials=6360000 wall=193233s knowledge=0.6525 reliable=574 spec=9.40 pop=10993
+  mpx-135 diag: trials=6360000 micro=13795 pop_spec=14.66 spec_max=29 q_mean=0.614 q_max=1.000 q_above_half=7951 marked=0.308 mark_density=0.905 exp_mean=85.4 addr_spec=3.665 addr_random=0.760 addr_full=0.0344 correct=211
+  mpx-135 cover: trials=6360000 overall=0.6525 a0_nochange=0.8315 a0_change=0.7394 a1_nochange=0.3405 a1_change=0.6982 matched_but_wrong=19
+  mpx-135 acc: trials=6360000 accuracy=0.8809
+  mpx-135 traj: trials=6480000 wall=193362s knowledge=0.6610 reliable=553 spec=9.36 pop=10064
+  mpx-135 diag: trials=6480000 micro=12891 pop_spec=14.84 spec_max=29 q_mean=0.612 q_max=1.000 q_above_half=7215 marked=0.293 mark_density=0.903 exp_mean=98.9 addr_spec=3.598 addr_random=0.769 addr_full=0.0354 correct=220
+  mpx-135 cover: trials=6480000 overall=0.6610 a0_nochange=0.8445 a0_change=0.7436 a1_nochange=0.3351 a1_change=0.7207 matched_but_wrong=15
+  mpx-135 acc: trials=6480000 accuracy=0.8871
+  mpx-135 traj: trials=6600000 wall=193494s knowledge=0.6727 reliable=546 spec=9.22 pop=9446
+  mpx-135 diag: trials=6600000 micro=12325 pop_spec=14.82 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=6577 marked=0.297 mark_density=0.905 exp_mean=111.2 addr_spec=3.586 addr_random=0.768 addr_full=0.0379 correct=227
+  mpx-135 cover: trials=6600000 overall=0.6727 a0_nochange=0.8467 a0_change=0.7472 a1_nochange=0.3645 a1_change=0.7323 matched_but_wrong=30
+  mpx-135 acc: trials=6600000 accuracy=0.8819
+  mpx-135 traj: trials=6720000 wall=193612s knowledge=0.6783 reliable=529 spec=9.15 pop=8987
+  mpx-135 diag: trials=6720000 micro=11918 pop_spec=14.89 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=6181 marked=0.284 mark_density=0.903 exp_mean=124.6 addr_spec=3.619 addr_random=0.772 addr_full=0.0395 correct=232
+  mpx-135 cover: trials=6720000 overall=0.6783 a0_nochange=0.8633 a0_change=0.7333 a1_nochange=0.3583 a1_change=0.7579 matched_but_wrong=14
+  mpx-135 acc: trials=6720000 accuracy=0.8905
+  mpx-135 traj: trials=6840000 wall=193722s knowledge=0.6909 reliable=535 spec=9.08 pop=8456
+  mpx-135 diag: trials=6840000 micro=11414 pop_spec=14.98 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=5669 marked=0.284 mark_density=0.904 exp_mean=139.7 addr_spec=3.610 addr_random=0.777 addr_full=0.0455 correct=242
+  mpx-135 cover: trials=6840000 overall=0.6909 a0_nochange=0.8726 a0_change=0.7451 a1_nochange=0.3625 a1_change=0.7831 matched_but_wrong=38
+  mpx-135 acc: trials=6840000 accuracy=0.8923
+  mpx-135 traj: trials=6960000 wall=193838s knowledge=0.6999 reliable=517 spec=9.00 pop=8054
+  mpx-135 diag: trials=6960000 micro=11110 pop_spec=15.06 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=5452 marked=0.284 mark_density=0.903 exp_mean=154.2 addr_spec=3.618 addr_random=0.781 addr_full=0.0468 correct=257
+  mpx-135 cover: trials=6960000 overall=0.6999 a0_nochange=0.8906 a0_change=0.7524 a1_nochange=0.3803 a1_change=0.7762 matched_but_wrong=14
+  mpx-135 acc: trials=6960000 accuracy=0.8994
+  mpx-135 traj: trials=7080000 wall=193950s knowledge=0.7175 reliable=523 spec=8.89 pop=7963
+  mpx-135 diag: trials=7080000 micro=11009 pop_spec=14.97 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=5355 marked=0.282 mark_density=0.904 exp_mean=165.2 addr_spec=3.643 addr_random=0.776 addr_full=0.0471 correct=266
+  mpx-135 cover: trials=7080000 overall=0.7175 a0_nochange=0.9056 a0_change=0.7603 a1_nochange=0.4179 a1_change=0.7862 matched_but_wrong=15
+  mpx-135 acc: trials=7080000 accuracy=0.8938
+  mpx-135 traj: trials=7200000 wall=194061s knowledge=0.7317 reliable=527 spec=8.82 pop=7709
+  mpx-135 diag: trials=7200000 micro=10871 pop_spec=14.94 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=5166 marked=0.273 mark_density=0.904 exp_mean=178.7 addr_spec=3.651 addr_random=0.775 addr_full=0.0486 correct=271
+  mpx-135 cover: trials=7200000 overall=0.7317 a0_nochange=0.9027 a0_change=0.7882 a1_nochange=0.4480 a1_change=0.7877 matched_but_wrong=4
+  mpx-135 acc: trials=7200000 accuracy=0.9066
+  mpx-135 traj: trials=7320000 wall=194165s knowledge=0.7408 reliable=540 spec=8.82 pop=7667
+  mpx-135 diag: trials=7320000 micro=10864 pop_spec=14.83 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=5123 marked=0.273 mark_density=0.905 exp_mean=187.9 addr_spec=3.672 addr_random=0.769 addr_full=0.0532 correct=279
+  mpx-135 cover: trials=7320000 overall=0.7408 a0_nochange=0.8967 a0_change=0.7868 a1_nochange=0.4779 a1_change=0.8015 matched_but_wrong=4
+  mpx-135 acc: trials=7320000 accuracy=0.9107
+  mpx-135 traj: trials=7440000 wall=194262s knowledge=0.7476 reliable=535 spec=8.82 pop=7474
+  mpx-135 diag: trials=7440000 micro=10724 pop_spec=14.79 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=4927 marked=0.269 mark_density=0.905 exp_mean=200.0 addr_spec=3.660 addr_random=0.767 addr_full=0.0538 correct=282
+  mpx-135 cover: trials=7440000 overall=0.7476 a0_nochange=0.9018 a0_change=0.7947 a1_nochange=0.4985 a1_change=0.7951 matched_but_wrong=0
+  mpx-135 acc: trials=7440000 accuracy=0.9086
+  mpx-135 traj: trials=7560000 wall=194366s knowledge=0.7487 reliable=525 spec=8.80 pop=7361
+  mpx-135 diag: trials=7560000 micro=10610 pop_spec=14.75 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=4874 marked=0.285 mark_density=0.908 exp_mean=212.7 addr_spec=3.646 addr_random=0.765 addr_full=0.0547 correct=288
+  mpx-135 cover: trials=7560000 overall=0.7487 a0_nochange=0.9050 a0_change=0.8035 a1_nochange=0.4867 a1_change=0.7996 matched_but_wrong=37
+  mpx-135 acc: trials=7560000 accuracy=0.9185
+  mpx-135 traj: trials=7680000 wall=194473s knowledge=0.7572 reliable=517 spec=8.76 pop=7286
+  mpx-135 diag: trials=7680000 micro=10567 pop_spec=14.71 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=4816 marked=0.281 mark_density=0.908 exp_mean=222.7 addr_spec=3.691 addr_random=0.763 addr_full=0.0561 correct=297
+  mpx-135 cover: trials=7680000 overall=0.7572 a0_nochange=0.8995 a0_change=0.8076 a1_nochange=0.5264 a1_change=0.7950 matched_but_wrong=14
+  mpx-135 acc: trials=7680000 accuracy=0.9028
+  mpx-135 traj: trials=7800000 wall=194567s knowledge=0.7671 reliable=528 spec=8.76 pop=7274
+  mpx-135 diag: trials=7800000 micro=10673 pop_spec=14.63 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=4770 marked=0.273 mark_density=0.907 exp_mean=234.8 addr_spec=3.743 addr_random=0.759 addr_full=0.0553 correct=304
+  mpx-135 cover: trials=7800000 overall=0.7671 a0_nochange=0.9094 a0_change=0.8109 a1_nochange=0.5357 a1_change=0.8125 matched_but_wrong=31
+  mpx-135 acc: trials=7800000 accuracy=0.9201
+  mpx-135 traj: trials=7920000 wall=194661s knowledge=0.7772 reliable=531 spec=8.74 pop=7040
+  mpx-135 diag: trials=7920000 micro=10457 pop_spec=14.65 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=4568 marked=0.263 mark_density=0.906 exp_mean=251.2 addr_spec=3.750 addr_random=0.760 addr_full=0.0602 correct=312
+  mpx-135 cover: trials=7920000 overall=0.7772 a0_nochange=0.9115 a0_change=0.8131 a1_nochange=0.5710 a1_change=0.8129 matched_but_wrong=2
+  mpx-135 acc: trials=7920000 accuracy=0.9216
+  mpx-135 traj: trials=8040000 wall=194761s knowledge=0.7811 reliable=532 spec=8.73 pop=6745
+  mpx-135 diag: trials=8040000 micro=10165 pop_spec=14.73 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=4331 marked=0.272 mark_density=0.906 exp_mean=271.9 addr_spec=3.717 addr_random=0.764 addr_full=0.0618 correct=309
+  mpx-135 cover: trials=8040000 overall=0.7811 a0_nochange=0.9166 a0_change=0.8100 a1_nochange=0.5724 a1_change=0.8254 matched_but_wrong=2
+  mpx-135 acc: trials=8040000 accuracy=0.9219
+  mpx-135 traj: trials=8160000 wall=194856s knowledge=0.7779 reliable=511 spec=8.67 pop=6550
+  mpx-135 diag: trials=8160000 micro=10055 pop_spec=14.72 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=4190 marked=0.267 mark_density=0.908 exp_mean=292.9 addr_spec=3.742 addr_random=0.763 addr_full=0.0631 correct=308
+  mpx-135 cover: trials=8160000 overall=0.7779 a0_nochange=0.9147 a0_change=0.8040 a1_nochange=0.5717 a1_change=0.8209 matched_but_wrong=12
+  mpx-135 acc: trials=8160000 accuracy=0.9214
+  mpx-135 traj: trials=8280000 wall=194954s knowledge=0.7923 reliable=524 spec=8.61 pop=6208
+  mpx-135 diag: trials=8280000 micro=9737 pop_spec=14.86 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3911 marked=0.261 mark_density=0.907 exp_mean=319.6 addr_spec=3.713 addr_random=0.771 addr_full=0.0678 correct=316
+  mpx-135 cover: trials=8280000 overall=0.7923 a0_nochange=0.9274 a0_change=0.8155 a1_nochange=0.5932 a1_change=0.8327 matched_but_wrong=6
+  mpx-135 acc: trials=8280000 accuracy=0.9252
+  mpx-135 traj: trials=8400000 wall=195061s knowledge=0.7967 reliable=513 spec=8.56 pop=6286
+  mpx-135 diag: trials=8400000 micro=9863 pop_spec=14.70 spec_max=29 q_mean=0.596 q_max=1.000 q_above_half=3887 marked=0.267 mark_density=0.908 exp_mean=329.9 addr_spec=3.747 addr_random=0.762 addr_full=0.0667 correct=317
+  mpx-135 cover: trials=8400000 overall=0.7967 a0_nochange=0.9259 a0_change=0.8158 a1_nochange=0.6089 a1_change=0.8362 matched_but_wrong=34
+  mpx-135 acc: trials=8400000 accuracy=0.9298
+  mpx-135 traj: trials=8520000 wall=195158s knowledge=0.7993 reliable=500 spec=8.47 pop=6223
+  mpx-135 diag: trials=8520000 micro=9845 pop_spec=14.67 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3866 marked=0.262 mark_density=0.908 exp_mean=347.2 addr_spec=3.772 addr_random=0.760 addr_full=0.0659 correct=325
+  mpx-135 cover: trials=8520000 overall=0.7993 a0_nochange=0.9222 a0_change=0.8395 a1_nochange=0.6122 a1_change=0.8231 matched_but_wrong=7
+  mpx-135 acc: trials=8520000 accuracy=0.9284
+  mpx-135 traj: trials=8640000 wall=195264s knowledge=0.8081 reliable=514 spec=8.51 pop=6253
+  mpx-135 diag: trials=8640000 micro=9738 pop_spec=14.58 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=3927 marked=0.263 mark_density=0.909 exp_mean=360.9 addr_spec=3.814 addr_random=0.756 addr_full=0.0659 correct=330
+  mpx-135 cover: trials=8640000 overall=0.8081 a0_nochange=0.9173 a0_change=0.8508 a1_nochange=0.6378 a1_change=0.8266 matched_but_wrong=0
+  mpx-135 acc: trials=8640000 accuracy=0.9326
+  mpx-135 traj: trials=8760000 wall=195370s knowledge=0.8141 reliable=528 spec=8.53 pop=6206
+  mpx-135 diag: trials=8760000 micro=9832 pop_spec=14.54 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=3815 marked=0.268 mark_density=0.909 exp_mean=375.6 addr_spec=3.845 addr_random=0.754 addr_full=0.0694 correct=331
+  mpx-135 cover: trials=8760000 overall=0.8141 a0_nochange=0.9211 a0_change=0.8413 a1_nochange=0.6645 a1_change=0.8295 matched_but_wrong=4
+  mpx-135 acc: trials=8760000 accuracy=0.9231
+  mpx-135 traj: trials=8880000 wall=195467s knowledge=0.8159 reliable=526 spec=8.50 pop=6114
+  mpx-135 diag: trials=8880000 micro=9765 pop_spec=14.55 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=3881 marked=0.254 mark_density=0.908 exp_mean=389.7 addr_spec=3.867 addr_random=0.754 addr_full=0.0720 correct=332
+  mpx-135 cover: trials=8880000 overall=0.8159 a0_nochange=0.9265 a0_change=0.8499 a1_nochange=0.6514 a1_change=0.8357 matched_but_wrong=2
+  mpx-135 acc: trials=8880000 accuracy=0.9396
+  mpx-135 traj: trials=9000000 wall=195562s knowledge=0.8203 reliable=523 spec=8.50 pop=5977
+  mpx-135 diag: trials=9000000 micro=9675 pop_spec=14.52 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3704 marked=0.268 mark_density=0.910 exp_mean=411.2 addr_spec=3.781 addr_random=0.753 addr_full=0.0718 correct=338
+  mpx-135 cover: trials=9000000 overall=0.8203 a0_nochange=0.9273 a0_change=0.8575 a1_nochange=0.6598 a1_change=0.8365 matched_but_wrong=0
+  mpx-135 acc: trials=9000000 accuracy=0.9317
+  mpx-135 traj: trials=9120000 wall=195668s knowledge=0.8305 reliable=521 spec=8.48 pop=5884
+  mpx-135 diag: trials=9120000 micro=9588 pop_spec=14.46 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3635 marked=0.266 mark_density=0.910 exp_mean=433.5 addr_spec=3.856 addr_random=0.750 addr_full=0.0741 correct=346
+  mpx-135 cover: trials=9120000 overall=0.8305 a0_nochange=0.9341 a0_change=0.8720 a1_nochange=0.6829 a1_change=0.8329 matched_but_wrong=2
+  mpx-135 acc: trials=9120000 accuracy=0.9387
+  mpx-135 traj: trials=9240000 wall=195770s knowledge=0.8352 reliable=525 spec=8.47 pop=5799
+  mpx-135 diag: trials=9240000 micro=9597 pop_spec=14.52 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3586 marked=0.260 mark_density=0.909 exp_mean=456.3 addr_spec=3.868 addr_random=0.753 addr_full=0.0759 correct=348
+  mpx-135 cover: trials=9240000 overall=0.8352 a0_nochange=0.9285 a0_change=0.8607 a1_nochange=0.7033 a1_change=0.8481 matched_but_wrong=8
+  mpx-135 acc: trials=9240000 accuracy=0.9416
+  mpx-135 traj: trials=9360000 wall=195861s knowledge=0.8413 reliable=530 spec=8.45 pop=5717
+  mpx-135 diag: trials=9360000 micro=9488 pop_spec=14.51 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3556 marked=0.263 mark_density=0.910 exp_mean=476.5 addr_spec=3.851 addr_random=0.752 addr_full=0.0775 correct=358
+  mpx-135 cover: trials=9360000 overall=0.8413 a0_nochange=0.9335 a0_change=0.8504 a1_nochange=0.7313 a1_change=0.8500 matched_but_wrong=0
+  mpx-135 acc: trials=9360000 accuracy=0.9325
+  mpx-135 traj: trials=9480000 wall=195955s knowledge=0.8482 reliable=530 spec=8.47 pop=5698
+  mpx-135 diag: trials=9480000 micro=9472 pop_spec=14.38 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=3528 marked=0.252 mark_density=0.909 exp_mean=490.3 addr_spec=3.858 addr_random=0.746 addr_full=0.0788 correct=364
+  mpx-135 cover: trials=9480000 overall=0.8482 a0_nochange=0.9379 a0_change=0.8652 a1_nochange=0.7276 a1_change=0.8620 matched_but_wrong=0
+  mpx-135 acc: trials=9480000 accuracy=0.9403
+  mpx-135 traj: trials=9600000 wall=196054s knowledge=0.8524 reliable=540 spec=8.44 pop=5614
+  mpx-135 diag: trials=9600000 micro=9444 pop_spec=14.44 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3444 marked=0.263 mark_density=0.910 exp_mean=515.3 addr_spec=3.896 addr_random=0.749 addr_full=0.0794 correct=367
+  mpx-135 cover: trials=9600000 overall=0.8524 a0_nochange=0.9389 a0_change=0.8632 a1_nochange=0.7461 a1_change=0.8612 matched_but_wrong=16
+  mpx-135 acc: trials=9600000 accuracy=0.9448
+  mpx-135 traj: trials=9720000 wall=196148s knowledge=0.8577 reliable=535 spec=8.47 pop=5735
+  mpx-135 diag: trials=9720000 micro=9595 pop_spec=14.33 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=3601 marked=0.262 mark_density=0.910 exp_mean=518.1 addr_spec=3.938 addr_random=0.743 addr_full=0.0811 correct=372
+  mpx-135 cover: trials=9720000 overall=0.8577 a0_nochange=0.9479 a0_change=0.8786 a1_nochange=0.7499 a1_change=0.8543 matched_but_wrong=0
+  mpx-135 acc: trials=9720000 accuracy=0.9442
+  mpx-135 traj: trials=9840000 wall=196236s knowledge=0.8616 reliable=529 spec=8.40 pop=5539
+  mpx-135 diag: trials=9840000 micro=9481 pop_spec=14.43 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=3450 marked=0.261 mark_density=0.910 exp_mean=550.4 addr_spec=3.882 addr_random=0.748 addr_full=0.0807 correct=374
+  mpx-135 cover: trials=9840000 overall=0.8616 a0_nochange=0.9477 a0_change=0.8817 a1_nochange=0.7662 a1_change=0.8509 matched_but_wrong=0
+  mpx-135 acc: trials=9840000 accuracy=0.9459
+  mpx-135 traj: trials=9960000 wall=196328s knowledge=0.8595 reliable=519 spec=8.34 pop=5412
+  mpx-135 diag: trials=9960000 micro=9257 pop_spec=14.41 spec_max=29 q_mean=0.594 q_max=1.000 q_above_half=3249 marked=0.265 mark_density=0.911 exp_mean=575.2 addr_spec=3.850 addr_random=0.747 addr_full=0.0837 correct=378
+  mpx-135 cover: trials=9960000 overall=0.8595 a0_nochange=0.9479 a0_change=0.8803 a1_nochange=0.7559 a1_change=0.8537 matched_but_wrong=0
+  mpx-135 acc: trials=9960000 accuracy=0.9348
+  mpx-135 traj: trials=10080000 wall=196428s knowledge=0.8642 reliable=521 spec=8.34 pop=5376
+  mpx-135 diag: trials=10080000 micro=9322 pop_spec=14.40 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=3307 marked=0.249 mark_density=0.909 exp_mean=595.2 addr_spec=3.862 addr_random=0.747 addr_full=0.0828 correct=381
+  mpx-135 cover: trials=10080000 overall=0.8642 a0_nochange=0.9523 a0_change=0.8798 a1_nochange=0.7688 a1_change=0.8558 matched_but_wrong=8
+  mpx-135 acc: trials=10080000 accuracy=0.9467
+  mpx-135 traj: trials=10200000 wall=196518s knowledge=0.8711 reliable=534 spec=8.35 pop=5217
+  mpx-135 diag: trials=10200000 micro=9166 pop_spec=14.52 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=3165 marked=0.248 mark_density=0.909 exp_mean=630.2 addr_spec=3.886 addr_random=0.753 addr_full=0.0893 correct=384
+  mpx-135 cover: trials=10200000 overall=0.8711 a0_nochange=0.9527 a0_change=0.8946 a1_nochange=0.7683 a1_change=0.8687 matched_but_wrong=2
+  mpx-135 acc: trials=10200000 accuracy=0.9600
+  mpx-135 traj: trials=10320000 wall=196603s knowledge=0.8724 reliable=532 spec=8.35 pop=5297
+  mpx-135 diag: trials=10320000 micro=9290 pop_spec=14.36 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3250 marked=0.246 mark_density=0.909 exp_mean=636.7 addr_spec=3.879 addr_random=0.745 addr_full=0.0842 correct=386
+  mpx-135 cover: trials=10320000 overall=0.8724 a0_nochange=0.9490 a0_change=0.8847 a1_nochange=0.7942 a1_change=0.8616 matched_but_wrong=11
+  mpx-135 acc: trials=10320000 accuracy=0.9482
+  mpx-135 traj: trials=10440000 wall=196694s knowledge=0.8807 reliable=534 spec=8.34 pop=5364
+  mpx-135 diag: trials=10440000 micro=9322 pop_spec=14.27 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=3316 marked=0.249 mark_density=0.910 exp_mean=648.5 addr_spec=3.955 addr_random=0.740 addr_full=0.0848 correct=387
+  mpx-135 cover: trials=10440000 overall=0.8807 a0_nochange=0.9597 a0_change=0.8824 a1_nochange=0.8028 a1_change=0.8777 matched_but_wrong=8
+  mpx-135 acc: trials=10440000 accuracy=0.9541
+  mpx-135 traj: trials=10560000 wall=196793s knowledge=0.8850 reliable=542 spec=8.36 pop=5254
+  mpx-135 diag: trials=10560000 micro=9276 pop_spec=14.31 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=3250 marked=0.251 mark_density=0.910 exp_mean=681.0 addr_spec=3.948 addr_random=0.742 addr_full=0.0870 correct=392
+  mpx-135 cover: trials=10560000 overall=0.8850 a0_nochange=0.9633 a0_change=0.8986 a1_nochange=0.8000 a1_change=0.8780 matched_but_wrong=21
+  mpx-135 acc: trials=10560000 accuracy=0.9525
+  mpx-135 traj: trials=10680000 wall=196880s knowledge=0.8897 reliable=546 spec=8.33 pop=5210
+  mpx-135 diag: trials=10680000 micro=9191 pop_spec=14.27 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3229 marked=0.250 mark_density=0.910 exp_mean=699.1 addr_spec=3.952 addr_random=0.740 addr_full=0.0877 correct=393
+  mpx-135 cover: trials=10680000 overall=0.8897 a0_nochange=0.9641 a0_change=0.8998 a1_nochange=0.8127 a1_change=0.8819 matched_but_wrong=0
+  mpx-135 acc: trials=10680000 accuracy=0.9571
+  mpx-135 traj: trials=10800000 wall=196961s knowledge=0.8939 reliable=538 spec=8.31 pop=5090
+  mpx-135 diag: trials=10800000 micro=9203 pop_spec=14.30 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3079 marked=0.241 mark_density=0.909 exp_mean=724.8 addr_spec=3.916 addr_random=0.741 addr_full=0.0933 correct=399
+  mpx-135 cover: trials=10800000 overall=0.8939 a0_nochange=0.9655 a0_change=0.9088 a1_nochange=0.8081 a1_change=0.8933 matched_but_wrong=13
+  mpx-135 acc: trials=10800000 accuracy=0.9601
+  mpx-135 traj: trials=10920000 wall=197049s knowledge=0.8905 reliable=526 spec=8.30 pop=5035
+  mpx-135 diag: trials=10920000 micro=9161 pop_spec=14.31 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3026 marked=0.252 mark_density=0.909 exp_mean=743.7 addr_spec=3.921 addr_random=0.742 addr_full=0.0937 correct=399
+  mpx-135 cover: trials=10920000 overall=0.8905 a0_nochange=0.9623 a0_change=0.8839 a1_nochange=0.8161 a1_change=0.8995 matched_but_wrong=6
+  mpx-135 acc: trials=10920000 accuracy=0.9512
+  mpx-135 traj: trials=11040000 wall=197139s knowledge=0.8923 reliable=529 spec=8.31 pop=5066
+  mpx-135 diag: trials=11040000 micro=9096 pop_spec=14.23 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=3125 marked=0.247 mark_density=0.909 exp_mean=760.1 addr_spec=3.969 addr_random=0.738 addr_full=0.0918 correct=396
+  mpx-135 cover: trials=11040000 overall=0.8923 a0_nochange=0.9646 a0_change=0.8880 a1_nochange=0.8237 a1_change=0.8929 matched_but_wrong=0
+  mpx-135 acc: trials=11040000 accuracy=0.9536
+  mpx-135 traj: trials=11160000 wall=197224s knowledge=0.9015 reliable=544 spec=8.31 pop=4923
+  mpx-135 diag: trials=11160000 micro=9083 pop_spec=14.26 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2983 marked=0.253 mark_density=0.911 exp_mean=802.2 addr_spec=3.925 addr_random=0.739 addr_full=0.0951 correct=403
+  mpx-135 cover: trials=11160000 overall=0.9015 a0_nochange=0.9737 a0_change=0.8965 a1_nochange=0.8402 a1_change=0.8956 matched_but_wrong=4
+  mpx-135 acc: trials=11160000 accuracy=0.9594
+  mpx-135 traj: trials=11280000 wall=197304s knowledge=0.8999 reliable=525 spec=8.26 pop=4955
+  mpx-135 diag: trials=11280000 micro=9077 pop_spec=14.20 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=3019 marked=0.250 mark_density=0.910 exp_mean=813.0 addr_spec=3.963 addr_random=0.736 addr_full=0.0961 correct=404
+  mpx-135 cover: trials=11280000 overall=0.8999 a0_nochange=0.9657 a0_change=0.8937 a1_nochange=0.8470 a1_change=0.8933 matched_but_wrong=0
+  mpx-135 acc: trials=11280000 accuracy=0.9582
+  mpx-135 traj: trials=11400000 wall=197385s knowledge=0.9146 reliable=549 spec=8.26 pop=4851
+  mpx-135 diag: trials=11400000 micro=8956 pop_spec=14.21 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2866 marked=0.245 mark_density=0.910 exp_mean=849.2 addr_spec=3.965 addr_random=0.737 addr_full=0.1004 correct=411
+  mpx-135 cover: trials=11400000 overall=0.9146 a0_nochange=0.9683 a0_change=0.9182 a1_nochange=0.8627 a1_change=0.9091 matched_but_wrong=0
+  mpx-135 acc: trials=11400000 accuracy=0.9640
+  mpx-135 traj: trials=11520000 wall=197470s knowledge=0.9132 reliable=538 spec=8.25 pop=4800
+  mpx-135 diag: trials=11520000 micro=8977 pop_spec=14.23 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2939 marked=0.245 mark_density=0.910 exp_mean=870.0 addr_spec=3.962 addr_random=0.738 addr_full=0.1025 correct=417
+  mpx-135 cover: trials=11520000 overall=0.9132 a0_nochange=0.9665 a0_change=0.9128 a1_nochange=0.8604 a1_change=0.9131 matched_but_wrong=0
+  mpx-135 acc: trials=11520000 accuracy=0.9704
+  mpx-135 traj: trials=11640000 wall=197552s knowledge=0.9163 reliable=531 spec=8.20 pop=4900
+  mpx-135 diag: trials=11640000 micro=9083 pop_spec=14.05 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=3016 marked=0.248 mark_density=0.911 exp_mean=873.1 addr_spec=3.989 addr_random=0.729 addr_full=0.1004 correct=422
+  mpx-135 cover: trials=11640000 overall=0.9163 a0_nochange=0.9645 a0_change=0.9088 a1_nochange=0.8643 a1_change=0.9273 matched_but_wrong=0
+  mpx-135 acc: trials=11640000 accuracy=0.9688
+  mpx-135 traj: trials=11760000 wall=197628s knowledge=0.9210 reliable=543 spec=8.24 pop=4680
+  mpx-135 diag: trials=11760000 micro=8924 pop_spec=14.27 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2844 marked=0.235 mark_density=0.909 exp_mean=934.0 addr_spec=3.922 addr_random=0.740 addr_full=0.1024 correct=424
+  mpx-135 cover: trials=11760000 overall=0.9210 a0_nochange=0.9663 a0_change=0.9152 a1_nochange=0.8764 a1_change=0.9261 matched_but_wrong=26
+  mpx-135 acc: trials=11760000 accuracy=0.9701
+  mpx-135 traj: trials=11880000 wall=197704s knowledge=0.9166 reliable=521 spec=8.18 pop=4689
+  mpx-135 diag: trials=11880000 micro=8901 pop_spec=14.20 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2833 marked=0.242 mark_density=0.909 exp_mean=950.7 addr_spec=3.959 addr_random=0.736 addr_full=0.1049 correct=424
+  mpx-135 cover: trials=11880000 overall=0.9166 a0_nochange=0.9604 a0_change=0.9150 a1_nochange=0.8661 a1_change=0.9249 matched_but_wrong=0
+  mpx-135 acc: trials=11880000 accuracy=0.9687
+  mpx-135 traj: trials=12000000 wall=197787s knowledge=0.9188 reliable=534 spec=8.22 pop=4687
+  mpx-135 diag: trials=12000000 micro=8882 pop_spec=14.18 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2828 marked=0.244 mark_density=0.909 exp_mean=971.4 addr_spec=3.955 addr_random=0.735 addr_full=0.1056 correct=426
+  mpx-135 cover: trials=12000000 overall=0.9188 a0_nochange=0.9644 a0_change=0.9258 a1_nochange=0.8632 a1_change=0.9219 matched_but_wrong=0
+  mpx-135 acc: trials=12000000 accuracy=0.9676
+  mpx-135 traj: trials=12120000 wall=197871s knowledge=0.9168 reliable=524 spec=8.16 pop=4519
+  mpx-135 diag: trials=12120000 micro=8732 pop_spec=14.31 spec_max=29 q_mean=0.595 q_max=1.000 q_above_half=2683 marked=0.252 mark_density=0.910 exp_mean=1024.9 addr_spec=3.915 addr_random=0.742 addr_full=0.1089 correct=424
+  mpx-135 cover: trials=12120000 overall=0.9168 a0_nochange=0.9625 a0_change=0.9289 a1_nochange=0.8571 a1_change=0.9187 matched_but_wrong=0
+  mpx-135 acc: trials=12120000 accuracy=0.9663
+  mpx-135 traj: trials=12240000 wall=197951s knowledge=0.9193 reliable=527 spec=8.15 pop=4566
+  mpx-135 diag: trials=12240000 micro=8832 pop_spec=14.27 spec_max=29 q_mean=0.596 q_max=1.000 q_above_half=2734 marked=0.243 mark_density=0.909 exp_mean=1031.8 addr_spec=3.919 addr_random=0.740 addr_full=0.1027 correct=424
+  mpx-135 cover: trials=12240000 overall=0.9193 a0_nochange=0.9552 a0_change=0.9393 a1_nochange=0.8664 a1_change=0.9161 matched_but_wrong=0
+  mpx-135 acc: trials=12240000 accuracy=0.9732
+  mpx-135 traj: trials=12360000 wall=198027s knowledge=0.9242 reliable=530 spec=8.16 pop=4539
+  mpx-135 diag: trials=12360000 micro=8815 pop_spec=14.22 spec_max=29 q_mean=0.596 q_max=1.000 q_above_half=2743 marked=0.241 mark_density=0.908 exp_mean=1052.8 addr_spec=3.980 addr_random=0.738 addr_full=0.1069 correct=432
+  mpx-135 cover: trials=12360000 overall=0.9242 a0_nochange=0.9572 a0_change=0.9331 a1_nochange=0.8887 a1_change=0.9177 matched_but_wrong=1
+  mpx-135 acc: trials=12360000 accuracy=0.9661
+  mpx-135 traj: trials=12480000 wall=198103s knowledge=0.9255 reliable=518 spec=8.12 pop=4539
+  mpx-135 diag: trials=12480000 micro=8806 pop_spec=14.16 spec_max=29 q_mean=0.595 q_max=1.000 q_above_half=2734 marked=0.255 mark_density=0.911 exp_mean=1075.9 addr_spec=3.934 addr_random=0.734 addr_full=0.1073 correct=431
+  mpx-135 cover: trials=12480000 overall=0.9255 a0_nochange=0.9637 a0_change=0.9303 a1_nochange=0.8873 a1_change=0.9207 matched_but_wrong=8
+  mpx-135 acc: trials=12480000 accuracy=0.9650
+  mpx-135 traj: trials=12600000 wall=198188s knowledge=0.9238 reliable=515 spec=8.11 pop=4602
+  mpx-135 diag: trials=12600000 micro=8856 pop_spec=14.11 spec_max=29 q_mean=0.596 q_max=1.000 q_above_half=2789 marked=0.247 mark_density=0.909 exp_mean=1080.9 addr_spec=3.973 addr_random=0.732 addr_full=0.1065 correct=434
+  mpx-135 cover: trials=12600000 overall=0.9238 a0_nochange=0.9714 a0_change=0.9266 a1_nochange=0.8880 a1_change=0.9092 matched_but_wrong=0
+  mpx-135 acc: trials=12600000 accuracy=0.9646
+  mpx-135 traj: trials=12720000 wall=198274s knowledge=0.9270 reliable=520 spec=8.12 pop=4506
+  mpx-135 diag: trials=12720000 micro=8848 pop_spec=14.19 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2721 marked=0.242 mark_density=0.907 exp_mean=1125.1 addr_spec=4.007 addr_random=0.736 addr_full=0.1085 correct=436
+  mpx-135 cover: trials=12720000 overall=0.9270 a0_nochange=0.9677 a0_change=0.9330 a1_nochange=0.8863 a1_change=0.9209 matched_but_wrong=0
+  mpx-135 acc: trials=12720000 accuracy=0.9664
+  mpx-135 traj: trials=12840000 wall=198351s knowledge=0.9278 reliable=522 spec=8.14 pop=4479
+  mpx-135 diag: trials=12840000 micro=8731 pop_spec=14.16 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2740 marked=0.241 mark_density=0.907 exp_mean=1152.6 addr_spec=3.966 addr_random=0.734 addr_full=0.1083 correct=435
+  mpx-135 cover: trials=12840000 overall=0.9278 a0_nochange=0.9656 a0_change=0.9351 a1_nochange=0.8857 a1_change=0.9247 matched_but_wrong=0
+  mpx-135 acc: trials=12840000 accuracy=0.9713
+  mpx-135 traj: trials=12960000 wall=198426s knowledge=0.9288 reliable=519 spec=8.13 pop=4490
+  mpx-135 diag: trials=12960000 micro=8801 pop_spec=14.12 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=2726 marked=0.251 mark_density=0.909 exp_mean=1164.3 addr_spec=3.982 addr_random=0.732 addr_full=0.1109 correct=437
+  mpx-135 cover: trials=12960000 overall=0.9288 a0_nochange=0.9658 a0_change=0.9433 a1_nochange=0.8838 a1_change=0.9224 matched_but_wrong=17
+  mpx-135 acc: trials=12960000 accuracy=0.9738
+  mpx-135 traj: trials=13080000 wall=198502s knowledge=0.9295 reliable=514 spec=8.11 pop=4470
+  mpx-135 diag: trials=13080000 micro=8889 pop_spec=14.08 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2708 marked=0.245 mark_density=0.909 exp_mean=1190.5 addr_spec=4.033 addr_random=0.730 addr_full=0.1094 correct=439
+  mpx-135 cover: trials=13080000 overall=0.9295 a0_nochange=0.9635 a0_change=0.9527 a1_nochange=0.8796 a1_change=0.9223 matched_but_wrong=0
+  mpx-135 acc: trials=13080000 accuracy=0.9737
+  mpx-135 traj: trials=13200000 wall=198584s knowledge=0.9317 reliable=514 spec=8.10 pop=4312
+  mpx-135 diag: trials=13200000 micro=8707 pop_spec=14.24 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2596 marked=0.241 mark_density=0.907 exp_mean=1252.7 addr_spec=3.933 addr_random=0.738 addr_full=0.1129 correct=443
+  mpx-135 cover: trials=13200000 overall=0.9317 a0_nochange=0.9617 a0_change=0.9583 a1_nochange=0.8848 a1_change=0.9219 matched_but_wrong=0
+  mpx-135 acc: trials=13200000 accuracy=0.9746
+  mpx-135 traj: trials=13320000 wall=198669s knowledge=0.9333 reliable=516 spec=8.11 pop=4370
+  mpx-135 diag: trials=13320000 micro=8718 pop_spec=14.05 spec_max=29 q_mean=0.593 q_max=1.000 q_above_half=2571 marked=0.238 mark_density=0.908 exp_mean=1260.5 addr_spec=3.969 addr_random=0.729 addr_full=0.1137 correct=441
+  mpx-135 cover: trials=13320000 overall=0.9333 a0_nochange=0.9633 a0_change=0.9579 a1_nochange=0.8820 a1_change=0.9299 matched_but_wrong=0
+  mpx-135 acc: trials=13320000 accuracy=0.9720
+  mpx-135 traj: trials=13440000 wall=198743s knowledge=0.9304 reliable=518 spec=8.14 pop=4354
+  mpx-135 diag: trials=13440000 micro=8682 pop_spec=14.07 spec_max=29 q_mean=0.595 q_max=1.000 q_above_half=2584 marked=0.250 mark_density=0.909 exp_mean=1290.5 addr_spec=4.004 addr_random=0.730 addr_full=0.1151 correct=440
+  mpx-135 cover: trials=13440000 overall=0.9304 a0_nochange=0.9645 a0_change=0.9550 a1_nochange=0.8761 a1_change=0.9259 matched_but_wrong=0
+  mpx-135 acc: trials=13440000 accuracy=0.9742
+  mpx-135 traj: trials=13560000 wall=198816s knowledge=0.9346 reliable=511 spec=8.08 pop=4382
+  mpx-135 diag: trials=13560000 micro=8724 pop_spec=14.01 spec_max=29 q_mean=0.595 q_max=1.000 q_above_half=2614 marked=0.256 mark_density=0.910 exp_mean=1307.9 addr_spec=4.027 addr_random=0.726 addr_full=0.1118 correct=444
+  mpx-135 cover: trials=13560000 overall=0.9346 a0_nochange=0.9647 a0_change=0.9617 a1_nochange=0.8850 a1_change=0.9269 matched_but_wrong=0
+  mpx-135 acc: trials=13560000 accuracy=0.9761
+  mpx-135 traj: trials=13680000 wall=198891s knowledge=0.9366 reliable=528 spec=8.11 pop=4399
+  mpx-135 diag: trials=13680000 micro=8750 pop_spec=13.95 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2631 marked=0.259 mark_density=0.911 exp_mean=1327.4 addr_spec=4.017 addr_random=0.723 addr_full=0.1123 correct=443
+  mpx-135 cover: trials=13680000 overall=0.9366 a0_nochange=0.9681 a0_change=0.9607 a1_nochange=0.8912 a1_change=0.9264 matched_but_wrong=0
+  mpx-135 acc: trials=13680000 accuracy=0.9769
+  mpx-135 traj: trials=13800000 wall=198971s knowledge=0.9384 reliable=530 spec=8.13 pop=4400
+  mpx-135 diag: trials=13800000 micro=8727 pop_spec=13.88 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2619 marked=0.248 mark_density=0.910 exp_mean=1352.5 addr_spec=4.009 addr_random=0.720 addr_full=0.1141 correct=449
+  mpx-135 cover: trials=13800000 overall=0.9384 a0_nochange=0.9658 a0_change=0.9581 a1_nochange=0.8941 a1_change=0.9358 matched_but_wrong=0
+  mpx-135 acc: trials=13800000 accuracy=0.9810
+  mpx-135 traj: trials=13920000 wall=199041s knowledge=0.9403 reliable=524 spec=8.11 pop=4346
+  mpx-135 diag: trials=13920000 micro=8749 pop_spec=13.93 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2607 marked=0.238 mark_density=0.908 exp_mean=1384.2 addr_spec=3.995 addr_random=0.722 addr_full=0.1171 correct=449
+  mpx-135 cover: trials=13920000 overall=0.9403 a0_nochange=0.9675 a0_change=0.9587 a1_nochange=0.8924 a1_change=0.9424 matched_but_wrong=0
+  mpx-135 acc: trials=13920000 accuracy=0.9808
+  mpx-135 traj: trials=14040000 wall=199106s knowledge=0.9410 reliable=532 spec=8.09 pop=4338
+  mpx-135 diag: trials=14040000 micro=8673 pop_spec=13.91 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=2649 marked=0.249 mark_density=0.910 exp_mean=1409.1 addr_spec=4.029 addr_random=0.721 addr_full=0.1166 correct=453
+  mpx-135 cover: trials=14040000 overall=0.9410 a0_nochange=0.9635 a0_change=0.9518 a1_nochange=0.9012 a1_change=0.9476 matched_but_wrong=41
+  mpx-135 acc: trials=14040000 accuracy=0.9806
+  mpx-135 traj: trials=14160000 wall=199168s knowledge=0.9452 reliable=533 spec=8.11 pop=4308
+  mpx-135 diag: trials=14160000 micro=8681 pop_spec=13.93 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2619 marked=0.242 mark_density=0.908 exp_mean=1445.6 addr_spec=4.090 addr_random=0.722 addr_full=0.1163 correct=454
+  mpx-135 cover: trials=14160000 overall=0.9452 a0_nochange=0.9635 a0_change=0.9591 a1_nochange=0.9077 a1_change=0.9505 matched_but_wrong=0
+  mpx-135 acc: trials=14160000 accuracy=0.9837
+  mpx-135 traj: trials=14280000 wall=199232s knowledge=0.9453 reliable=533 spec=8.11 pop=4215
+  mpx-135 diag: trials=14280000 micro=8614 pop_spec=13.95 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2523 marked=0.246 mark_density=0.909 exp_mean=1496.7 addr_spec=4.022 addr_random=0.723 addr_full=0.1193 correct=453
+  mpx-135 cover: trials=14280000 overall=0.9453 a0_nochange=0.9740 a0_change=0.9488 a1_nochange=0.9077 a1_change=0.9508 matched_but_wrong=0
+  mpx-135 acc: trials=14280000 accuracy=0.9827
+  mpx-135 traj: trials=14400000 wall=199301s knowledge=0.9446 reliable=526 spec=8.13 pop=4249
+  mpx-135 diag: trials=14400000 micro=8616 pop_spec=13.84 spec_max=29 q_mean=0.595 q_max=1.000 q_above_half=2537 marked=0.257 mark_density=0.911 exp_mean=1508.3 addr_spec=4.021 addr_random=0.718 addr_full=0.1189 correct=453
+  mpx-135 cover: trials=14400000 overall=0.9446 a0_nochange=0.9677 a0_change=0.9495 a1_nochange=0.9091 a1_change=0.9519 matched_but_wrong=0
+  mpx-135 acc: trials=14400000 accuracy=0.9818
+  mpx-135 traj: trials=14520000 wall=199370s knowledge=0.9491 reliable=530 spec=8.13 pop=4289
+  mpx-135 diag: trials=14520000 micro=8627 pop_spec=13.82 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2599 marked=0.250 mark_density=0.910 exp_mean=1521.0 addr_spec=4.058 addr_random=0.716 addr_full=0.1187 correct=457
+  mpx-135 cover: trials=14520000 overall=0.9491 a0_nochange=0.9721 a0_change=0.9510 a1_nochange=0.9158 a1_change=0.9575 matched_but_wrong=0
+  mpx-135 acc: trials=14520000 accuracy=0.9848
+  mpx-135 traj: trials=14640000 wall=199437s knowledge=0.9442 reliable=531 spec=8.13 pop=4200
+  mpx-135 diag: trials=14640000 micro=8594 pop_spec=13.89 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2576 marked=0.233 mark_density=0.907 exp_mean=1572.8 addr_spec=4.052 addr_random=0.720 addr_full=0.1210 correct=457
+  mpx-135 cover: trials=14640000 overall=0.9442 a0_nochange=0.9711 a0_change=0.9471 a1_nochange=0.9114 a1_change=0.9471 matched_but_wrong=0
+  mpx-135 acc: trials=14640000 accuracy=0.9780
+  mpx-135 traj: trials=14760000 wall=199500s knowledge=0.9446 reliable=538 spec=8.15 pop=4325
+  mpx-135 diag: trials=14760000 micro=8742 pop_spec=13.71 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=2705 marked=0.238 mark_density=0.909 exp_mean=1553.2 addr_spec=4.122 addr_random=0.711 addr_full=0.1172 correct=455
+  mpx-135 cover: trials=14760000 overall=0.9446 a0_nochange=0.9746 a0_change=0.9440 a1_nochange=0.9080 a1_change=0.9517 matched_but_wrong=0
+  mpx-135 acc: trials=14760000 accuracy=0.9747
+  mpx-135 traj: trials=14880000 wall=199563s knowledge=0.9474 reliable=538 spec=8.14 pop=4259
+  mpx-135 diag: trials=14880000 micro=8716 pop_spec=13.75 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2618 marked=0.250 mark_density=0.910 exp_mean=1603.4 addr_spec=4.083 addr_random=0.713 addr_full=0.1195 correct=459
+  mpx-135 cover: trials=14880000 overall=0.9474 a0_nochange=0.9751 a0_change=0.9583 a1_nochange=0.9034 a1_change=0.9527 matched_but_wrong=0
+  mpx-135 acc: trials=14880000 accuracy=0.9821
+  mpx-135 traj: trials=15000000 wall=199630s knowledge=0.9512 reliable=531 spec=8.15 pop=4166
+  mpx-135 diag: trials=15000000 micro=8614 pop_spec=13.83 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2572 marked=0.240 mark_density=0.908 exp_mean=1662.4 addr_spec=4.079 addr_random=0.717 addr_full=0.1279 correct=461
+  mpx-135 cover: trials=15000000 overall=0.9512 a0_nochange=0.9700 a0_change=0.9667 a1_nochange=0.9094 a1_change=0.9586 matched_but_wrong=0
+  mpx-135 acc: trials=15000000 accuracy=0.9856
+  mpx-135 traj: trials=15120000 wall=199698s knowledge=0.9584 reliable=541 spec=8.13 pop=4177
+  mpx-135 diag: trials=15120000 micro=8653 pop_spec=13.76 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=2506 marked=0.250 mark_density=0.911 exp_mean=1675.9 addr_spec=4.078 addr_random=0.714 addr_full=0.1259 correct=464
+  mpx-135 cover: trials=15120000 overall=0.9584 a0_nochange=0.9732 a0_change=0.9646 a1_nochange=0.9261 a1_change=0.9697 matched_but_wrong=4
+  mpx-135 acc: trials=15120000 accuracy=0.9868
+  mpx-135 traj: trials=15240000 wall=199767s knowledge=0.9547 reliable=530 spec=8.11 pop=4045
+  mpx-135 diag: trials=15240000 micro=8599 pop_spec=13.91 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2413 marked=0.245 mark_density=0.908 exp_mean=1752.5 addr_spec=4.075 addr_random=0.721 addr_full=0.1261 correct=464
+  mpx-135 cover: trials=15240000 overall=0.9547 a0_nochange=0.9712 a0_change=0.9613 a1_nochange=0.9199 a1_change=0.9665 matched_but_wrong=0
+  mpx-135 acc: trials=15240000 accuracy=0.9834
+  mpx-135 traj: trials=15360000 wall=199828s knowledge=0.9598 reliable=535 spec=8.07 pop=4061
+  mpx-135 diag: trials=15360000 micro=8557 pop_spec=13.84 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2483 marked=0.248 mark_density=0.909 exp_mean=1773.6 addr_spec=4.094 addr_random=0.717 addr_full=0.1273 correct=467
+  mpx-135 cover: trials=15360000 overall=0.9598 a0_nochange=0.9798 a0_change=0.9593 a1_nochange=0.9299 a1_change=0.9704 matched_but_wrong=23
+  mpx-135 acc: trials=15360000 accuracy=0.9870
+  mpx-135 traj: trials=15480000 wall=199889s knowledge=0.9581 reliable=526 spec=8.07 pop=3999
+  mpx-135 diag: trials=15480000 micro=8567 pop_spec=13.91 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2407 marked=0.243 mark_density=0.908 exp_mean=1827.7 addr_spec=4.051 addr_random=0.721 addr_full=0.1308 correct=466
+  mpx-135 cover: trials=15480000 overall=0.9581 a0_nochange=0.9798 a0_change=0.9579 a1_nochange=0.9193 a1_change=0.9754 matched_but_wrong=0
+  mpx-135 acc: trials=15480000 accuracy=0.9861
+  mpx-135 traj: trials=15600000 wall=199953s knowledge=0.9593 reliable=536 spec=8.10 pop=4097
+  mpx-135 diag: trials=15600000 micro=8586 pop_spec=13.72 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=2490 marked=0.244 mark_density=0.909 exp_mean=1801.6 addr_spec=4.092 addr_random=0.711 addr_full=0.1281 correct=470
+  mpx-135 cover: trials=15600000 overall=0.9593 a0_nochange=0.9758 a0_change=0.9616 a1_nochange=0.9242 a1_change=0.9756 matched_but_wrong=0
+  mpx-135 acc: trials=15600000 accuracy=0.9879
+  mpx-135 traj: trials=15720000 wall=200020s knowledge=0.9613 reliable=536 spec=8.08 pop=4061
+  mpx-135 diag: trials=15720000 micro=8540 pop_spec=13.69 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2448 marked=0.246 mark_density=0.909 exp_mean=1846.3 addr_spec=4.094 addr_random=0.710 addr_full=0.1317 correct=470
+  mpx-135 cover: trials=15720000 overall=0.9613 a0_nochange=0.9758 a0_change=0.9659 a1_nochange=0.9231 a1_change=0.9802 matched_but_wrong=0
+  mpx-135 acc: trials=15720000 accuracy=0.9896
+  mpx-135 traj: trials=15840000 wall=200087s knowledge=0.9634 reliable=538 spec=8.09 pop=4000
+  mpx-135 diag: trials=15840000 micro=8507 pop_spec=13.75 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2387 marked=0.259 mark_density=0.912 exp_mean=1896.1 addr_spec=4.114 addr_random=0.713 addr_full=0.1315 correct=474
+  mpx-135 cover: trials=15840000 overall=0.9634 a0_nochange=0.9772 a0_change=0.9720 a1_nochange=0.9293 a1_change=0.9749 matched_but_wrong=0
+  mpx-135 acc: trials=15840000 accuracy=0.9900
+  mpx-135 traj: trials=15960000 wall=200155s knowledge=0.9623 reliable=530 spec=8.07 pop=3965
+  mpx-135 diag: trials=15960000 micro=8431 pop_spec=13.73 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2399 marked=0.238 mark_density=0.908 exp_mean=1936.0 addr_spec=4.041 addr_random=0.712 addr_full=0.1299 correct=472
+  mpx-135 cover: trials=15960000 overall=0.9623 a0_nochange=0.9778 a0_change=0.9685 a1_nochange=0.9333 a1_change=0.9697 matched_but_wrong=0
+  mpx-135 acc: trials=15960000 accuracy=0.9890
+  mpx-135 traj: trials=16080000 wall=200215s knowledge=0.9609 reliable=536 spec=8.08 pop=4100
+  mpx-135 diag: trials=16080000 micro=8611 pop_spec=13.54 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2512 marked=0.255 mark_density=0.912 exp_mean=1893.6 addr_spec=4.140 addr_random=0.702 addr_full=0.1271 correct=469
+  mpx-135 cover: trials=16080000 overall=0.9609 a0_nochange=0.9760 a0_change=0.9566 a1_nochange=0.9369 a1_change=0.9739 matched_but_wrong=0
+  mpx-135 acc: trials=16080000 accuracy=0.9867
+  mpx-135 traj: trials=16200000 wall=200276s knowledge=0.9614 reliable=516 spec=8.07 pop=3917
+  mpx-135 diag: trials=16200000 micro=8466 pop_spec=13.73 spec_max=29 q_mean=0.597 q_max=1.000 q_above_half=2337 marked=0.254 mark_density=0.911 exp_mean=2009.2 addr_spec=4.096 addr_random=0.712 addr_full=0.1335 correct=470
+  mpx-135 cover: trials=16200000 overall=0.9614 a0_nochange=0.9800 a0_change=0.9571 a1_nochange=0.9387 a1_change=0.9696 matched_but_wrong=0
+  mpx-135 acc: trials=16200000 accuracy=0.9851
+  mpx-135 traj: trials=16320000 wall=200339s knowledge=0.9634 reliable=517 spec=8.06 pop=3959
+  mpx-135 diag: trials=16320000 micro=8512 pop_spec=13.63 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2409 marked=0.255 mark_density=0.911 exp_mean=2017.1 addr_spec=4.100 addr_random=0.707 addr_full=0.1296 correct=472
+  mpx-135 cover: trials=16320000 overall=0.9634 a0_nochange=0.9819 a0_change=0.9646 a1_nochange=0.9377 a1_change=0.9695 matched_but_wrong=0
+  mpx-135 acc: trials=16320000 accuracy=0.9859
+  mpx-135 traj: trials=16440000 wall=200406s knowledge=0.9623 reliable=523 spec=8.07 pop=3944
+  mpx-135 diag: trials=16440000 micro=8473 pop_spec=13.59 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2408 marked=0.236 mark_density=0.909 exp_mean=2051.4 addr_spec=4.099 addr_random=0.705 addr_full=0.1298 correct=470
+  mpx-135 cover: trials=16440000 overall=0.9623 a0_nochange=0.9819 a0_change=0.9657 a1_nochange=0.9315 a1_change=0.9701 matched_but_wrong=0
+  mpx-135 acc: trials=16440000 accuracy=0.9848
+  mpx-135 traj: trials=16560000 wall=200474s knowledge=0.9644 reliable=530 spec=8.07 pop=3965
+  mpx-135 diag: trials=16560000 micro=8444 pop_spec=13.56 spec_max=29 q_mean=0.598 q_max=1.000 q_above_half=2427 marked=0.246 mark_density=0.910 exp_mean=2069.7 addr_spec=4.114 addr_random=0.703 addr_full=0.1306 correct=471
+  mpx-135 cover: trials=16560000 overall=0.9644 a0_nochange=0.9834 a0_change=0.9713 a1_nochange=0.9320 a1_change=0.9707 matched_but_wrong=0
+  mpx-135 acc: trials=16560000 accuracy=0.9858
+  mpx-135 traj: trials=16680000 wall=200534s knowledge=0.9628 reliable=525 spec=8.06 pop=3919
+  mpx-135 diag: trials=16680000 micro=8406 pop_spec=13.59 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2449 marked=0.249 mark_density=0.910 exp_mean=2123.5 addr_spec=4.109 addr_random=0.705 addr_full=0.1301 correct=469
+  mpx-135 cover: trials=16680000 overall=0.9628 a0_nochange=0.9800 a0_change=0.9653 a1_nochange=0.9335 a1_change=0.9723 matched_but_wrong=0
+  mpx-135 acc: trials=16680000 accuracy=0.9861
+  mpx-135 traj: trials=16800000 wall=200594s knowledge=0.9620 reliable=524 spec=8.05 pop=3932
+  mpx-135 diag: trials=16800000 micro=8385 pop_spec=13.51 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2413 marked=0.261 mark_density=0.913 exp_mean=2145.1 addr_spec=4.120 addr_random=0.701 addr_full=0.1305 correct=470
+  mpx-135 cover: trials=16800000 overall=0.9620 a0_nochange=0.9762 a0_change=0.9612 a1_nochange=0.9387 a1_change=0.9718 matched_but_wrong=0
+  mpx-135 acc: trials=16800000 accuracy=0.9889
+  mpx-135 traj: trials=16920000 wall=200654s knowledge=0.9624 reliable=512 spec=8.04 pop=3869
+  mpx-135 diag: trials=16920000 micro=8439 pop_spec=13.58 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2405 marked=0.251 mark_density=0.910 exp_mean=2208.9 addr_spec=4.159 addr_random=0.704 addr_full=0.1323 correct=471
+  mpx-135 cover: trials=16920000 overall=0.9624 a0_nochange=0.9831 a0_change=0.9602 a1_nochange=0.9335 a1_change=0.9728 matched_but_wrong=0
+  mpx-135 acc: trials=16920000 accuracy=0.9871
+  mpx-135 traj: trials=17040000 wall=200718s knowledge=0.9664 reliable=532 spec=8.06 pop=3985
+  mpx-135 diag: trials=17040000 micro=8509 pop_spec=13.41 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2439 marked=0.252 mark_density=0.911 exp_mean=2174.3 addr_spec=4.175 addr_random=0.695 addr_full=0.1310 correct=475
+  mpx-135 cover: trials=17040000 overall=0.9664 a0_nochange=0.9800 a0_change=0.9617 a1_nochange=0.9493 a1_change=0.9744 matched_but_wrong=0
+  mpx-135 acc: trials=17040000 accuracy=0.9877
+  mpx-135 traj: trials=17160000 wall=200782s knowledge=0.9683 reliable=522 spec=8.03 pop=3941
+  mpx-135 diag: trials=17160000 micro=8487 pop_spec=13.46 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2430 marked=0.258 mark_density=0.912 exp_mean=2224.6 addr_spec=4.187 addr_random=0.698 addr_full=0.1319 correct=476
+  mpx-135 cover: trials=17160000 overall=0.9683 a0_nochange=0.9800 a0_change=0.9694 a1_nochange=0.9537 a1_change=0.9701 matched_but_wrong=0
+  mpx-135 acc: trials=17160000 accuracy=0.9862
+  mpx-135 traj: trials=17280000 wall=200845s knowledge=0.9674 reliable=517 spec=8.06 pop=3943
+  mpx-135 diag: trials=17280000 micro=8488 pop_spec=13.43 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=2469 marked=0.252 mark_density=0.911 exp_mean=2252.8 addr_spec=4.161 addr_random=0.696 addr_full=0.1364 correct=476
+  mpx-135 cover: trials=17280000 overall=0.9674 a0_nochange=0.9820 a0_change=0.9657 a1_nochange=0.9509 a1_change=0.9711 matched_but_wrong=0
+  mpx-135 acc: trials=17280000 accuracy=0.9873
+  mpx-135 traj: trials=17400000 wall=200904s knowledge=0.9667 reliable=527 spec=8.08 pop=3810
+  mpx-135 diag: trials=17400000 micro=8321 pop_spec=13.52 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=2354 marked=0.235 mark_density=0.909 exp_mean=2359.0 addr_spec=4.168 addr_random=0.701 addr_full=0.1378 correct=474
+  mpx-135 cover: trials=17400000 overall=0.9667 a0_nochange=0.9818 a0_change=0.9685 a1_nochange=0.9464 a1_change=0.9702 matched_but_wrong=0
+  mpx-135 acc: trials=17400000 accuracy=0.9878
+  mpx-135 traj: trials=17520000 wall=200963s knowledge=0.9665 reliable=524 spec=8.08 pop=3851
+  mpx-135 diag: trials=17520000 micro=8445 pop_spec=13.43 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2377 marked=0.243 mark_density=0.909 exp_mean=2364.0 addr_spec=4.151 addr_random=0.696 addr_full=0.1324 correct=475
+  mpx-135 cover: trials=17520000 overall=0.9665 a0_nochange=0.9861 a0_change=0.9647 a1_nochange=0.9449 a1_change=0.9704 matched_but_wrong=0
+  mpx-135 acc: trials=17520000 accuracy=0.9845
+  mpx-135 traj: trials=17640000 wall=201025s knowledge=0.9667 reliable=518 spec=8.07 pop=3868
+  mpx-135 diag: trials=17640000 micro=8423 pop_spec=13.34 spec_max=29 q_mean=0.599 q_max=1.000 q_above_half=2383 marked=0.257 mark_density=0.913 exp_mean=2383.5 addr_spec=4.150 addr_random=0.692 addr_full=0.1347 correct=477
+  mpx-135 cover: trials=17640000 overall=0.9667 a0_nochange=0.9838 a0_change=0.9681 a1_nochange=0.9434 a1_change=0.9715 matched_but_wrong=0
+  mpx-135 acc: trials=17640000 accuracy=0.9859
+  mpx-135 traj: trials=17760000 wall=201091s knowledge=0.9692 reliable=531 spec=8.08 pop=3913
+  mpx-135 diag: trials=17760000 micro=8496 pop_spec=13.31 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2426 marked=0.243 mark_density=0.911 exp_mean=2386.3 addr_spec=4.220 addr_random=0.690 addr_full=0.1360 correct=477
+  mpx-135 cover: trials=17760000 overall=0.9692 a0_nochange=0.9859 a0_change=0.9726 a1_nochange=0.9419 a1_change=0.9763 matched_but_wrong=0
+  mpx-135 acc: trials=17760000 accuracy=0.9890
+  mpx-135 traj: trials=17880000 wall=201156s knowledge=0.9662 reliable=533 spec=8.09 pop=3897
+  mpx-135 diag: trials=17880000 micro=8463 pop_spec=13.32 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2403 marked=0.267 mark_density=0.914 exp_mean=2417.7 addr_spec=4.209 addr_random=0.691 addr_full=0.1386 correct=477
+  mpx-135 cover: trials=17880000 overall=0.9662 a0_nochange=0.9838 a0_change=0.9720 a1_nochange=0.9361 a1_change=0.9730 matched_but_wrong=8
+  mpx-135 acc: trials=17880000 accuracy=0.9891
+  mpx-135 traj: trials=18000000 wall=201218s knowledge=0.9717 reliable=533 spec=8.08 pop=3870
+  mpx-135 diag: trials=18000000 micro=8457 pop_spec=13.34 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=2437 marked=0.240 mark_density=0.909 exp_mean=2464.8 addr_spec=4.194 addr_random=0.692 addr_full=0.1375 correct=480
+  mpx-135 cover: trials=18000000 overall=0.9717 a0_nochange=0.9883 a0_change=0.9745 a1_nochange=0.9469 a1_change=0.9769 matched_but_wrong=0
+  mpx-135 acc: trials=18000000 accuracy=0.9903
+  mpx-135 traj: trials=18120000 wall=201277s knowledge=0.9699 reliable=530 spec=8.09 pop=3819
+  mpx-135 diag: trials=18120000 micro=8472 pop_spec=13.30 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2351 marked=0.252 mark_density=0.912 exp_mean=2521.1 addr_spec=4.230 addr_random=0.689 addr_full=0.1380 correct=481
+  mpx-135 cover: trials=18120000 overall=0.9699 a0_nochange=0.9838 a0_change=0.9752 a1_nochange=0.9374 a1_change=0.9832 matched_but_wrong=0
+  mpx-135 acc: trials=18120000 accuracy=0.9914
+  mpx-135 traj: trials=18240000 wall=201335s knowledge=0.9732 reliable=532 spec=8.08 pop=3880
+  mpx-135 diag: trials=18240000 micro=8461 pop_spec=13.22 spec_max=29 q_mean=0.601 q_max=1.000 q_above_half=2398 marked=0.263 mark_density=0.913 exp_mean=2511.8 addr_spec=4.218 addr_random=0.685 addr_full=0.1371 correct=484
+  mpx-135 cover: trials=18240000 overall=0.9732 a0_nochange=0.9904 a0_change=0.9784 a1_nochange=0.9425 a1_change=0.9813 matched_but_wrong=0
+  mpx-135 acc: trials=18240000 accuracy=0.9921
+  mpx-135 traj: trials=18360000 wall=201399s knowledge=0.9711 reliable=527 spec=8.06 pop=3750
+  mpx-135 diag: trials=18360000 micro=8341 pop_spec=13.38 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2363 marked=0.253 mark_density=0.912 exp_mean=2623.5 addr_spec=4.170 addr_random=0.694 addr_full=0.1395 correct=483
+  mpx-135 cover: trials=18360000 overall=0.9711 a0_nochange=0.9844 a0_change=0.9748 a1_nochange=0.9440 a1_change=0.9813 matched_but_wrong=0
+  mpx-135 acc: trials=18360000 accuracy=0.9882
+  mpx-135 traj: trials=18480000 wall=201463s knowledge=0.9723 reliable=526 spec=8.05 pop=3705
+  mpx-135 diag: trials=18480000 micro=8328 pop_spec=13.42 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=2294 marked=0.263 mark_density=0.912 exp_mean=2686.9 addr_spec=4.191 addr_random=0.696 addr_full=0.1409 correct=484
+  mpx-135 cover: trials=18480000 overall=0.9723 a0_nochange=0.9885 a0_change=0.9711 a1_nochange=0.9454 a1_change=0.9844 matched_but_wrong=0
+  mpx-135 acc: trials=18480000 accuracy=0.9921
+  mpx-135 traj: trials=18600000 wall=201527s knowledge=0.9710 reliable=531 spec=8.04 pop=3769
+  mpx-135 diag: trials=18600000 micro=8284 pop_spec=13.24 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2279 marked=0.247 mark_density=0.910 exp_mean=2672.0 addr_spec=4.168 addr_random=0.686 addr_full=0.1417 correct=482
+  mpx-135 cover: trials=18600000 overall=0.9710 a0_nochange=0.9838 a0_change=0.9724 a1_nochange=0.9462 a1_change=0.9816 matched_but_wrong=0
+  mpx-135 acc: trials=18600000 accuracy=0.9912
+  mpx-135 traj: trials=18720000 wall=201586s knowledge=0.9739 reliable=520 spec=8.03 pop=3842
+  mpx-135 diag: trials=18720000 micro=8433 pop_spec=13.15 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=2383 marked=0.260 mark_density=0.913 exp_mean=2651.8 addr_spec=4.255 addr_random=0.682 addr_full=0.1369 correct=484
+  mpx-135 cover: trials=18720000 overall=0.9739 a0_nochange=0.9838 a0_change=0.9771 a1_nochange=0.9525 a1_change=0.9824 matched_but_wrong=0
+  mpx-135 acc: trials=18720000 accuracy=0.9944
+  mpx-135 traj: trials=18840000 wall=201644s knowledge=0.9765 reliable=537 spec=8.04 pop=3696
+  mpx-135 diag: trials=18840000 micro=8272 pop_spec=13.27 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2279 marked=0.251 mark_density=0.911 exp_mean=2785.1 addr_spec=4.189 addr_random=0.688 addr_full=0.1448 correct=484
+  mpx-135 cover: trials=18840000 overall=0.9765 a0_nochange=0.9860 a0_change=0.9792 a1_nochange=0.9600 a1_change=0.9807 matched_but_wrong=0
+  mpx-135 acc: trials=18840000 accuracy=0.9910
+  mpx-135 traj: trials=18960000 wall=201704s knowledge=0.9749 reliable=528 spec=8.05 pop=3693
+  mpx-135 diag: trials=18960000 micro=8294 pop_spec=13.25 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=2299 marked=0.254 mark_density=0.911 exp_mean=2818.7 addr_spec=4.208 addr_random=0.687 addr_full=0.1432 correct=483
+  mpx-135 cover: trials=18960000 overall=0.9749 a0_nochange=0.9838 a0_change=0.9753 a1_nochange=0.9601 a1_change=0.9802 matched_but_wrong=0
+  mpx-135 acc: trials=18960000 accuracy=0.9861
+  mpx-135 traj: trials=19080000 wall=201769s knowledge=0.9741 reliable=526 spec=8.02 pop=3641
+  mpx-135 diag: trials=19080000 micro=8271 pop_spec=13.29 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2286 marked=0.255 mark_density=0.910 exp_mean=2891.2 addr_spec=4.174 addr_random=0.689 addr_full=0.1420 correct=484
+  mpx-135 cover: trials=19080000 overall=0.9741 a0_nochange=0.9838 a0_change=0.9742 a1_nochange=0.9533 a1_change=0.9850 matched_but_wrong=0
+  mpx-135 acc: trials=19080000 accuracy=0.9921
+  mpx-135 traj: trials=19200000 wall=201832s knowledge=0.9698 reliable=520 spec=8.03 pop=3694
+  mpx-135 diag: trials=19200000 micro=8305 pop_spec=13.21 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2270 marked=0.242 mark_density=0.908 exp_mean=2879.5 addr_spec=4.214 addr_random=0.685 addr_full=0.1389 correct=481
+  mpx-135 cover: trials=19200000 overall=0.9698 a0_nochange=0.9838 a0_change=0.9703 a1_nochange=0.9481 a1_change=0.9770 matched_but_wrong=0
+  mpx-135 acc: trials=19200000 accuracy=0.9896
+  mpx-135 traj: trials=19320000 wall=201894s knowledge=0.9741 reliable=533 spec=8.04 pop=3690
+  mpx-135 diag: trials=19320000 micro=8289 pop_spec=13.21 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2324 marked=0.252 mark_density=0.910 exp_mean=2914.6 addr_spec=4.233 addr_random=0.685 addr_full=0.1428 correct=482
+  mpx-135 cover: trials=19320000 overall=0.9741 a0_nochange=0.9838 a0_change=0.9712 a1_nochange=0.9596 a1_change=0.9817 matched_but_wrong=0
+  mpx-135 acc: trials=19320000 accuracy=0.9886
+  mpx-135 traj: trials=19440000 wall=201952s knowledge=0.9703 reliable=520 spec=8.04 pop=3647
+  mpx-135 diag: trials=19440000 micro=8320 pop_spec=13.20 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=2224 marked=0.256 mark_density=0.911 exp_mean=2979.9 addr_spec=4.186 addr_random=0.684 addr_full=0.1418 correct=480
+  mpx-135 cover: trials=19440000 overall=0.9703 a0_nochange=0.9838 a0_change=0.9700 a1_nochange=0.9491 a1_change=0.9783 matched_but_wrong=0
+  mpx-135 acc: trials=19440000 accuracy=0.9891
+  mpx-135 traj: trials=19560000 wall=202009s knowledge=0.9707 reliable=517 spec=8.06 pop=3661
+  mpx-135 diag: trials=19560000 micro=8326 pop_spec=13.13 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2262 marked=0.255 mark_density=0.911 exp_mean=3000.1 addr_spec=4.234 addr_random=0.681 addr_full=0.1426 correct=480
+  mpx-135 cover: trials=19560000 overall=0.9707 a0_nochange=0.9838 a0_change=0.9724 a1_nochange=0.9479 a1_change=0.9784 matched_but_wrong=0
+  mpx-135 acc: trials=19560000 accuracy=0.9911
+  mpx-135 traj: trials=19680000 wall=202072s knowledge=0.9711 reliable=524 spec=8.04 pop=3712
+  mpx-135 diag: trials=19680000 micro=8281 pop_spec=12.99 spec_max=29 q_mean=0.600 q_max=1.000 q_above_half=2276 marked=0.253 mark_density=0.913 exp_mean=2990.9 addr_spec=4.242 addr_random=0.673 addr_full=0.1409 correct=480
+  mpx-135 cover: trials=19680000 overall=0.9711 a0_nochange=0.9838 a0_change=0.9740 a1_nochange=0.9485 a1_change=0.9780 matched_but_wrong=0
+  mpx-135 acc: trials=19680000 accuracy=0.9889
+  mpx-135 traj: trials=19800000 wall=202135s knowledge=0.9735 reliable=524 spec=8.05 pop=3656
+  mpx-135 diag: trials=19800000 micro=8326 pop_spec=13.06 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2268 marked=0.258 mark_density=0.913 exp_mean=3068.5 addr_spec=4.252 addr_random=0.677 addr_full=0.1447 correct=484
+  mpx-135 cover: trials=19800000 overall=0.9735 a0_nochange=0.9838 a0_change=0.9756 a1_nochange=0.9553 a1_change=0.9793 matched_but_wrong=0
+  mpx-135 acc: trials=19800000 accuracy=0.9914
+  mpx-135 traj: trials=19920000 wall=202199s knowledge=0.9738 reliable=528 spec=8.04 pop=3730
+  mpx-135 diag: trials=19920000 micro=8375 pop_spec=12.91 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2320 marked=0.264 mark_density=0.915 exp_mean=3039.2 addr_spec=4.254 addr_random=0.669 addr_full=0.1440 correct=484
+  mpx-135 cover: trials=19920000 overall=0.9738 a0_nochange=0.9838 a0_change=0.9768 a1_nochange=0.9548 a1_change=0.9796 matched_but_wrong=0
+  mpx-135 acc: trials=19920000 accuracy=0.9934
+  mpx-135 traj: trials=20040000 wall=202257s knowledge=0.9735 reliable=524 spec=8.05 pop=3590
+  mpx-135 diag: trials=20040000 micro=8164 pop_spec=13.15 spec_max=29 q_mean=0.607 q_max=1.000 q_above_half=2275 marked=0.237 mark_density=0.909 exp_mean=3190.0 addr_spec=4.272 addr_random=0.682 addr_full=0.1474 correct=484
+  mpx-135 cover: trials=20040000 overall=0.9735 a0_nochange=0.9838 a0_change=0.9778 a1_nochange=0.9528 a1_change=0.9796 matched_but_wrong=0
+  mpx-135 acc: trials=20040000 accuracy=0.9925
+  mpx-135 traj: trials=20160000 wall=202315s knowledge=0.9755 reliable=526 spec=8.04 pop=3749
+  mpx-135 diag: trials=20160000 micro=8348 pop_spec=12.84 spec_max=29 q_mean=0.602 q_max=1.000 q_above_half=2317 marked=0.250 mark_density=0.913 exp_mean=3086.2 addr_spec=4.288 addr_random=0.666 addr_full=0.1411 correct=485
+  mpx-135 cover: trials=20160000 overall=0.9755 a0_nochange=0.9854 a0_change=0.9808 a1_nochange=0.9528 a1_change=0.9831 matched_but_wrong=0
+  mpx-135 acc: trials=20160000 accuracy=0.9922
+  mpx-135 traj: trials=20280000 wall=202373s knowledge=0.9725 reliable=519 spec=8.04 pop=3656
+  mpx-135 diag: trials=20280000 micro=8321 pop_spec=12.94 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=2291 marked=0.252 mark_density=0.912 exp_mean=3196.2 addr_spec=4.231 addr_random=0.671 addr_full=0.1455 correct=482
+  mpx-135 cover: trials=20280000 overall=0.9725 a0_nochange=0.9838 a0_change=0.9774 a1_nochange=0.9486 a1_change=0.9801 matched_but_wrong=0
+  mpx-135 acc: trials=20280000 accuracy=0.9911
+  mpx-135 traj: trials=20400000 wall=202436s knowledge=0.9753 reliable=528 spec=8.05 pop=3662
+  mpx-135 diag: trials=20400000 micro=8360 pop_spec=12.90 spec_max=29 q_mean=0.603 q_max=1.000 q_above_half=2268 marked=0.249 mark_density=0.912 exp_mean=3223.5 addr_spec=4.255 addr_random=0.669 addr_full=0.1455 correct=485
+  mpx-135 cover: trials=20400000 overall=0.9753 a0_nochange=0.9838 a0_change=0.9813 a1_nochange=0.9527 a1_change=0.9835 matched_but_wrong=0
+  mpx-135 acc: trials=20400000 accuracy=0.9935
+  mpx-135 traj: trials=20520000 wall=202500s knowledge=0.9761 reliable=537 spec=8.06 pop=3564
+  mpx-135 diag: trials=20520000 micro=8139 pop_spec=13.03 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2228 marked=0.241 mark_density=0.909 exp_mean=3334.0 addr_spec=4.243 addr_random=0.676 addr_full=0.1484 correct=486
+  mpx-135 cover: trials=20520000 overall=0.9761 a0_nochange=0.9838 a0_change=0.9785 a1_nochange=0.9539 a1_change=0.9881 matched_but_wrong=0
+  mpx-135 acc: trials=20520000 accuracy=0.9940
+  mpx-135 traj: trials=20640000 wall=202561s knowledge=0.9793 reliable=534 spec=8.04 pop=3577
+  mpx-135 diag: trials=20640000 micro=8208 pop_spec=12.98 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2227 marked=0.251 mark_density=0.911 exp_mean=3354.5 addr_spec=4.270 addr_random=0.673 addr_full=0.1482 correct=489
+  mpx-135 cover: trials=20640000 overall=0.9793 a0_nochange=0.9838 a0_change=0.9847 a1_nochange=0.9554 a1_change=0.9932 matched_but_wrong=0
+  mpx-135 acc: trials=20640000 accuracy=0.9944
+  mpx-135 traj: trials=20760000 wall=202617s knowledge=0.9775 reliable=532 spec=8.06 pop=3582
+  mpx-135 diag: trials=20760000 micro=8221 pop_spec=12.97 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2284 marked=0.244 mark_density=0.910 exp_mean=3364.1 addr_spec=4.260 addr_random=0.672 addr_full=0.1452 correct=488
+  mpx-135 cover: trials=20760000 overall=0.9775 a0_nochange=0.9838 a0_change=0.9783 a1_nochange=0.9547 a1_change=0.9932 matched_but_wrong=0
+  mpx-135 acc: trials=20760000 accuracy=0.9954
+  mpx-135 traj: trials=20880000 wall=202675s knowledge=0.9805 reliable=534 spec=8.06 pop=3605
+  mpx-135 diag: trials=20880000 micro=8174 pop_spec=12.87 spec_max=29 q_mean=0.605 q_max=1.000 q_above_half=2263 marked=0.252 mark_density=0.911 exp_mean=3365.4 addr_spec=4.244 addr_random=0.667 addr_full=0.1470 correct=490
+  mpx-135 cover: trials=20880000 overall=0.9805 a0_nochange=0.9838 a0_change=0.9818 a1_nochange=0.9612 a1_change=0.9951 matched_but_wrong=0
+  mpx-135 acc: trials=20880000 accuracy=0.9957
+  mpx-135 traj: trials=21000000 wall=202737s knowledge=0.9806 reliable=532 spec=8.07 pop=3620
+  mpx-135 diag: trials=21000000 micro=8337 pop_spec=12.88 spec_max=29 q_mean=0.607 q_max=1.000 q_above_half=2297 marked=0.256 mark_density=0.912 exp_mean=3380.6 addr_spec=4.305 addr_random=0.668 addr_full=0.1475 correct=488
+  mpx-135 cover: trials=21000000 overall=0.9806 a0_nochange=0.9864 a0_change=0.9790 a1_nochange=0.9638 a1_change=0.9932 matched_but_wrong=0
+  mpx-135 acc: trials=21000000 accuracy=0.9954
+  mpx-135 traj: trials=21120000 wall=202800s knowledge=0.9791 reliable=534 spec=8.06 pop=3604
+  mpx-135 diag: trials=21120000 micro=8183 pop_spec=12.85 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2292 marked=0.255 mark_density=0.911 exp_mean=3428.5 addr_spec=4.284 addr_random=0.667 addr_full=0.1479 correct=487
+  mpx-135 cover: trials=21120000 overall=0.9791 a0_nochange=0.9894 a0_change=0.9747 a1_nochange=0.9595 a1_change=0.9928 matched_but_wrong=0
+  mpx-135 acc: trials=21120000 accuracy=0.9930
+  mpx-135 traj: trials=21240000 wall=202863s knowledge=0.9793 reliable=537 spec=8.08 pop=3596
+  mpx-135 diag: trials=21240000 micro=8223 pop_spec=12.89 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2295 marked=0.249 mark_density=0.910 exp_mean=3468.7 addr_spec=4.335 addr_random=0.668 addr_full=0.1504 correct=488
+  mpx-135 cover: trials=21240000 overall=0.9793 a0_nochange=0.9904 a0_change=0.9803 a1_nochange=0.9535 a1_change=0.9928 matched_but_wrong=0
+  mpx-135 acc: trials=21240000 accuracy=0.9949
+  mpx-135 traj: trials=21360000 wall=202923s knowledge=0.9809 reliable=527 spec=8.05 pop=3475
+  mpx-135 diag: trials=21360000 micro=8163 pop_spec=13.02 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2184 marked=0.254 mark_density=0.910 exp_mean=3623.1 addr_spec=4.275 addr_random=0.675 addr_full=0.1522 correct=491
+  mpx-135 cover: trials=21360000 overall=0.9809 a0_nochange=0.9857 a0_change=0.9810 a1_nochange=0.9621 a1_change=0.9949 matched_but_wrong=0
+  mpx-135 acc: trials=21360000 accuracy=0.9971
+  mpx-135 traj: trials=21480000 wall=202984s knowledge=0.9819 reliable=539 spec=8.05 pop=3588
+  mpx-135 diag: trials=21480000 micro=8197 pop_spec=12.79 spec_max=29 q_mean=0.607 q_max=1.000 q_above_half=2275 marked=0.254 mark_density=0.912 exp_mean=3542.1 addr_spec=4.315 addr_random=0.663 addr_full=0.1466 correct=491
+  mpx-135 cover: trials=21480000 overall=0.9819 a0_nochange=0.9838 a0_change=0.9836 a1_nochange=0.9677 a1_change=0.9928 matched_but_wrong=0
+  mpx-135 acc: trials=21480000 accuracy=0.9957
+  mpx-135 traj: trials=21600000 wall=203044s knowledge=0.9802 reliable=531 spec=8.05 pop=3544
+  mpx-135 diag: trials=21600000 micro=8218 pop_spec=12.79 spec_max=29 q_mean=0.608 q_max=1.000 q_above_half=2239 marked=0.260 mark_density=0.913 exp_mean=3608.6 addr_spec=4.331 addr_random=0.663 addr_full=0.1498 correct=490
+  mpx-135 cover: trials=21600000 overall=0.9802 a0_nochange=0.9861 a0_change=0.9811 a1_nochange=0.9609 a1_change=0.9928 matched_but_wrong=0
+  mpx-135 acc: trials=21600000 accuracy=0.9955
+  mpx-135 traj: trials=21720000 wall=203101s knowledge=0.9763 reliable=531 spec=8.04 pop=3597
+  mpx-135 diag: trials=21720000 micro=8234 pop_spec=12.67 spec_max=29 q_mean=0.604 q_max=1.000 q_above_half=2242 marked=0.262 mark_density=0.914 exp_mean=3582.5 addr_spec=4.301 addr_random=0.657 addr_full=0.1485 correct=487
+  mpx-135 cover: trials=21720000 overall=0.9763 a0_nochange=0.9861 a0_change=0.9778 a1_nochange=0.9486 a1_change=0.9927 matched_but_wrong=0
+  mpx-135 acc: trials=21720000 accuracy=0.9964
+  mpx-135 traj: trials=21840000 wall=203157s knowledge=0.9777 reliable=523 spec=8.02 pop=3522
+  mpx-135 diag: trials=21840000 micro=8173 pop_spec=12.78 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2242 marked=0.253 mark_density=0.912 exp_mean=3692.0 addr_spec=4.262 addr_random=0.663 addr_full=0.1482 correct=487
+  mpx-135 cover: trials=21840000 overall=0.9777 a0_nochange=0.9894 a0_change=0.9816 a1_nochange=0.9469 a1_change=0.9926 matched_but_wrong=0
+  mpx-135 acc: trials=21840000 accuracy=0.9956
+  mpx-135 traj: trials=21960000 wall=203218s knowledge=0.9763 reliable=526 spec=8.02 pop=3472
+  mpx-135 diag: trials=21960000 micro=8127 pop_spec=12.85 spec_max=29 q_mean=0.608 q_max=1.000 q_above_half=2192 marked=0.264 mark_density=0.913 exp_mean=3778.8 addr_spec=4.289 addr_random=0.666 addr_full=0.1518 correct=489
+  mpx-135 cover: trials=21960000 overall=0.9763 a0_nochange=0.9838 a0_change=0.9808 a1_nochange=0.9481 a1_change=0.9926 matched_but_wrong=0
+  mpx-135 acc: trials=21960000 accuracy=0.9949
+  mpx-135 traj: trials=22080000 wall=203280s knowledge=0.9777 reliable=523 spec=8.02 pop=3476
+  mpx-135 diag: trials=22080000 micro=8153 pop_spec=12.79 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2214 marked=0.270 mark_density=0.914 exp_mean=3808.2 addr_spec=4.265 addr_random=0.663 addr_full=0.1510 correct=489
+  mpx-135 cover: trials=22080000 overall=0.9777 a0_nochange=0.9848 a0_change=0.9856 a1_nochange=0.9477 a1_change=0.9926 matched_but_wrong=0
+  mpx-135 acc: trials=22080000 accuracy=0.9960
+  mpx-135 traj: trials=22200000 wall=203342s knowledge=0.9797 reliable=524 spec=8.02 pop=3471
+  mpx-135 diag: trials=22200000 micro=8168 pop_spec=12.79 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2228 marked=0.248 mark_density=0.911 exp_mean=3847.5 addr_spec=4.323 addr_random=0.663 addr_full=0.1515 correct=490
+  mpx-135 cover: trials=22200000 overall=0.9797 a0_nochange=0.9838 a0_change=0.9909 a1_nochange=0.9497 a1_change=0.9942 matched_but_wrong=0
+  mpx-135 acc: trials=22200000 accuracy=0.9981
+  mpx-135 traj: trials=22320000 wall=203400s knowledge=0.9796 reliable=518 spec=8.02 pop=3410
+  mpx-135 diag: trials=22320000 micro=8093 pop_spec=12.85 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2193 marked=0.235 mark_density=0.908 exp_mean=3942.4 addr_spec=4.296 addr_random=0.666 addr_full=0.1551 correct=490
+  mpx-135 cover: trials=22320000 overall=0.9796 a0_nochange=0.9838 a0_change=0.9889 a1_nochange=0.9512 a1_change=0.9944 matched_but_wrong=0
+  mpx-135 acc: trials=22320000 accuracy=0.9964
+  mpx-135 traj: trials=22440000 wall=203456s knowledge=0.9812 reliable=532 spec=8.03 pop=3453
+  mpx-135 diag: trials=22440000 micro=8099 pop_spec=12.77 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2221 marked=0.254 mark_density=0.911 exp_mean=3927.9 addr_spec=4.277 addr_random=0.662 addr_full=0.1558 correct=490
+  mpx-135 cover: trials=22440000 overall=0.9812 a0_nochange=0.9838 a0_change=0.9922 a1_nochange=0.9552 a1_change=0.9934 matched_but_wrong=0
+  mpx-135 acc: trials=22440000 accuracy=0.9970
+  mpx-135 traj: trials=22560000 wall=203512s knowledge=0.9805 reliable=534 spec=8.01 pop=3444
+  mpx-135 diag: trials=22560000 micro=8093 pop_spec=12.75 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2197 marked=0.255 mark_density=0.912 exp_mean=3972.5 addr_spec=4.303 addr_random=0.661 addr_full=0.1516 correct=490
+  mpx-135 cover: trials=22560000 overall=0.9805 a0_nochange=0.9838 a0_change=0.9880 a1_nochange=0.9560 a1_change=0.9943 matched_but_wrong=0
+  mpx-135 acc: trials=22560000 accuracy=0.9977
+  mpx-135 traj: trials=22680000 wall=203572s knowledge=0.9786 reliable=514 spec=8.01 pop=3413
+  mpx-135 diag: trials=22680000 micro=8192 pop_spec=12.77 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2145 marked=0.253 mark_density=0.911 exp_mean=4042.5 addr_spec=4.315 addr_random=0.662 addr_full=0.1541 correct=490
+  mpx-135 cover: trials=22680000 overall=0.9786 a0_nochange=0.9838 a0_change=0.9898 a1_nochange=0.9454 a1_change=0.9953 matched_but_wrong=0
+  mpx-135 acc: trials=22680000 accuracy=0.9958
+  mpx-135 traj: trials=22800000 wall=203634s knowledge=0.9791 reliable=524 spec=8.02 pop=3424
+  mpx-135 diag: trials=22800000 micro=8103 pop_spec=12.71 spec_max=29 q_mean=0.607 q_max=1.000 q_above_half=2156 marked=0.248 mark_density=0.911 exp_mean=4064.1 addr_spec=4.313 addr_random=0.659 addr_full=0.1554 correct=491
+  mpx-135 cover: trials=22800000 overall=0.9791 a0_nochange=0.9838 a0_change=0.9885 a1_nochange=0.9464 a1_change=0.9976 matched_but_wrong=0
+  mpx-135 acc: trials=22800000 accuracy=0.9962
+  mpx-135 traj: trials=22920000 wall=203697s knowledge=0.9817 reliable=529 spec=8.01 pop=3541
+  mpx-135 diag: trials=22920000 micro=8198 pop_spec=12.51 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=2217 marked=0.272 mark_density=0.915 exp_mean=3963.7 addr_spec=4.354 addr_random=0.649 addr_full=0.1502 correct=492
+  mpx-135 cover: trials=22920000 overall=0.9817 a0_nochange=0.9838 a0_change=0.9911 a1_nochange=0.9518 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=22920000 accuracy=0.9980
+  mpx-135 traj: trials=23040000 wall=203752s knowledge=0.9833 reliable=533 spec=8.02 pop=3480
+  mpx-135 diag: trials=23040000 micro=8132 pop_spec=12.58 spec_max=29 q_mean=0.606 q_max=1.000 q_above_half=2179 marked=0.261 mark_density=0.914 exp_mean=4067.2 addr_spec=4.323 addr_random=0.652 addr_full=0.1517 correct=494
+  mpx-135 cover: trials=23040000 overall=0.9833 a0_nochange=0.9838 a0_change=0.9932 a1_nochange=0.9561 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23040000 accuracy=1.0000
+  mpx-135 traj: trials=23160000 wall=203807s knowledge=0.9828 reliable=528 spec=8.01 pop=3397
+  mpx-135 diag: trials=23160000 micro=8132 pop_spec=12.68 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2147 marked=0.253 mark_density=0.912 exp_mean=4187.2 addr_spec=4.313 addr_random=0.657 addr_full=0.1569 correct=494
+  mpx-135 cover: trials=23160000 overall=0.9828 a0_nochange=0.9838 a0_change=0.9918 a1_nochange=0.9557 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23160000 accuracy=0.9991
+  mpx-135 traj: trials=23280000 wall=203864s knowledge=0.9832 reliable=531 spec=8.00 pop=3435
+  mpx-135 diag: trials=23280000 micro=8155 pop_spec=12.57 spec_max=29 q_mean=0.608 q_max=1.000 q_above_half=2149 marked=0.260 mark_density=0.913 exp_mean=4169.0 addr_spec=4.339 addr_random=0.652 addr_full=0.1555 correct=495
+  mpx-135 cover: trials=23280000 overall=0.9832 a0_nochange=0.9838 a0_change=0.9918 a1_nochange=0.9570 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23280000 accuracy=0.9987
+  mpx-135 traj: trials=23400000 wall=203925s knowledge=0.9838 reliable=530 spec=8.00 pop=3436
+  mpx-135 diag: trials=23400000 micro=8110 pop_spec=12.55 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2175 marked=0.266 mark_density=0.914 exp_mean=4201.5 addr_spec=4.319 addr_random=0.651 addr_full=0.1560 correct=496
+  mpx-135 cover: trials=23400000 overall=0.9838 a0_nochange=0.9838 a0_change=0.9960 a1_nochange=0.9554 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23400000 accuracy=0.9999
+  mpx-135 traj: trials=23520000 wall=203988s knowledge=0.9872 reliable=526 spec=8.00 pop=3432
+  mpx-135 diag: trials=23520000 micro=8083 pop_spec=12.53 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2175 marked=0.254 mark_density=0.913 exp_mean=4241.0 addr_spec=4.344 addr_random=0.650 addr_full=0.1597 correct=498
+  mpx-135 cover: trials=23520000 overall=0.9872 a0_nochange=0.9877 a0_change=0.9960 a1_nochange=0.9649 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23520000 accuracy=0.9984
+  mpx-135 traj: trials=23640000 wall=204048s knowledge=0.9869 reliable=527 spec=8.00 pop=3390
+  mpx-135 diag: trials=23640000 micro=8020 pop_spec=12.57 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2126 marked=0.273 mark_density=0.915 exp_mean=4328.6 addr_spec=4.378 addr_random=0.652 addr_full=0.1587 correct=497
+  mpx-135 cover: trials=23640000 overall=0.9869 a0_nochange=0.9848 a0_change=0.9960 a1_nochange=0.9669 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23640000 accuracy=0.9992
+  mpx-135 traj: trials=23760000 wall=204104s knowledge=0.9867 reliable=524 spec=8.00 pop=3355
+  mpx-135 diag: trials=23760000 micro=8076 pop_spec=12.59 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2121 marked=0.257 mark_density=0.913 exp_mean=4406.5 addr_spec=4.320 addr_random=0.653 addr_full=0.1589 correct=498
+  mpx-135 cover: trials=23760000 overall=0.9867 a0_nochange=0.9838 a0_change=0.9982 a1_nochange=0.9647 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23760000 accuracy=0.9992
+  mpx-135 traj: trials=23880000 wall=204159s knowledge=0.9862 reliable=531 spec=8.01 pop=3375
+  mpx-135 diag: trials=23880000 micro=8052 pop_spec=12.55 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2164 marked=0.256 mark_density=0.913 exp_mean=4416.0 addr_spec=4.335 addr_random=0.650 addr_full=0.1579 correct=498
+  mpx-135 cover: trials=23880000 overall=0.9862 a0_nochange=0.9838 a0_change=0.9963 a1_nochange=0.9647 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=23880000 accuracy=0.9985
+  mpx-135 traj: trials=24000000 wall=204218s knowledge=0.9879 reliable=535 spec=8.01 pop=3460
+  mpx-135 diag: trials=24000000 micro=8122 pop_spec=12.40 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2237 marked=0.255 mark_density=0.915 exp_mean=4341.8 addr_spec=4.380 addr_random=0.643 addr_full=0.1526 correct=499
+  mpx-135 cover: trials=24000000 overall=0.9879 a0_nochange=0.9849 a0_change=0.9977 a1_nochange=0.9688 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24000000 accuracy=0.9999
+  mpx-135 traj: trials=24120000 wall=204279s knowledge=0.9860 reliable=525 spec=8.00 pop=3435
+  mpx-135 diag: trials=24120000 micro=8063 pop_spec=12.43 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2189 marked=0.264 mark_density=0.914 exp_mean=4390.0 addr_spec=4.369 addr_random=0.644 addr_full=0.1563 correct=498
+  mpx-135 cover: trials=24120000 overall=0.9860 a0_nochange=0.9838 a0_change=0.9918 a1_nochange=0.9684 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24120000 accuracy=0.9970
+  mpx-135 traj: trials=24240000 wall=204341s knowledge=0.9852 reliable=528 spec=8.01 pop=3374
+  mpx-135 diag: trials=24240000 micro=8047 pop_spec=12.50 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2169 marked=0.251 mark_density=0.912 exp_mean=4496.9 addr_spec=4.386 addr_random=0.648 addr_full=0.1589 correct=499
+  mpx-135 cover: trials=24240000 overall=0.9852 a0_nochange=0.9861 a0_change=0.9924 a1_nochange=0.9623 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24240000 accuracy=0.9985
+  mpx-135 traj: trials=24360000 wall=204400s knowledge=0.9866 reliable=526 spec=8.01 pop=3385
+  mpx-135 diag: trials=24360000 micro=8076 pop_spec=12.46 spec_max=29 q_mean=0.609 q_max=1.000 q_above_half=2136 marked=0.254 mark_density=0.913 exp_mean=4517.3 addr_spec=4.401 addr_random=0.646 addr_full=0.1625 correct=498
+  mpx-135 cover: trials=24360000 overall=0.9866 a0_nochange=0.9861 a0_change=0.9924 a1_nochange=0.9679 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24360000 accuracy=0.9986
+  mpx-135 traj: trials=24480000 wall=204456s knowledge=0.9873 reliable=529 spec=8.01 pop=3308
+  mpx-135 diag: trials=24480000 micro=8003 pop_spec=12.56 spec_max=29 q_mean=0.612 q_max=1.000 q_above_half=2130 marked=0.250 mark_density=0.912 exp_mean=4658.3 addr_spec=4.307 addr_random=0.652 addr_full=0.1620 correct=498
+  mpx-135 cover: trials=24480000 overall=0.9873 a0_nochange=0.9869 a0_change=0.9922 a1_nochange=0.9699 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24480000 accuracy=0.9977
+  mpx-135 traj: trials=24600000 wall=204511s knowledge=0.9867 reliable=529 spec=8.01 pop=3283
+  mpx-135 diag: trials=24600000 micro=8003 pop_spec=12.55 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2097 marked=0.253 mark_density=0.912 exp_mean=4722.4 addr_spec=4.347 addr_random=0.651 addr_full=0.1648 correct=499
+  mpx-135 cover: trials=24600000 overall=0.9867 a0_nochange=0.9876 a0_change=0.9938 a1_nochange=0.9653 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24600000 accuracy=0.9987
+  mpx-135 traj: trials=24720000 wall=204569s knowledge=0.9863 reliable=530 spec=8.00 pop=3418
+  mpx-135 diag: trials=24720000 micro=8074 pop_spec=12.29 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2185 marked=0.266 mark_density=0.916 exp_mean=4566.0 addr_spec=4.312 addr_random=0.637 addr_full=0.1551 correct=500
+  mpx-135 cover: trials=24720000 overall=0.9863 a0_nochange=0.9841 a0_change=0.9930 a1_nochange=0.9682 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24720000 accuracy=0.9987
+  mpx-135 traj: trials=24840000 wall=204632s knowledge=0.9860 reliable=531 spec=8.00 pop=3433
+  mpx-135 diag: trials=24840000 micro=8055 pop_spec=12.28 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2200 marked=0.261 mark_density=0.914 exp_mean=4571.0 addr_spec=4.361 addr_random=0.637 addr_full=0.1576 correct=498
+  mpx-135 cover: trials=24840000 overall=0.9860 a0_nochange=0.9800 a0_change=0.9942 a1_nochange=0.9698 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24840000 accuracy=0.9984
+  mpx-135 traj: trials=24960000 wall=204694s knowledge=0.9875 reliable=533 spec=8.01 pop=3334
+  mpx-135 diag: trials=24960000 micro=8098 pop_spec=12.42 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2101 marked=0.247 mark_density=0.912 exp_mean=4741.8 addr_spec=4.370 addr_random=0.644 addr_full=0.1638 correct=500
+  mpx-135 cover: trials=24960000 overall=0.9875 a0_nochange=0.9805 a0_change=0.9942 a1_nochange=0.9754 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=24960000 accuracy=0.9984
+  mpx-135 traj: trials=25080000 wall=204753s knowledge=0.9879 reliable=538 spec=8.01 pop=3319
+  mpx-135 diag: trials=25080000 micro=7997 pop_spec=12.41 spec_max=29 q_mean=0.612 q_max=1.000 q_above_half=2114 marked=0.255 mark_density=0.913 exp_mean=4799.3 addr_spec=4.326 addr_random=0.644 addr_full=0.1576 correct=500
+  mpx-135 cover: trials=25080000 overall=0.9879 a0_nochange=0.9811 a0_change=0.9918 a1_nochange=0.9788 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25080000 accuracy=0.9986
+  mpx-135 traj: trials=25200000 wall=204809s knowledge=0.9875 reliable=531 spec=8.01 pop=3279
+  mpx-135 diag: trials=25200000 micro=7938 pop_spec=12.44 spec_max=29 q_mean=0.614 q_max=1.000 q_above_half=2114 marked=0.254 mark_density=0.912 exp_mean=4893.5 addr_spec=4.344 addr_random=0.645 addr_full=0.1616 correct=499
+  mpx-135 cover: trials=25200000 overall=0.9875 a0_nochange=0.9832 a0_change=0.9927 a1_nochange=0.9739 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25200000 accuracy=0.9992
+  mpx-135 traj: trials=25320000 wall=204864s knowledge=0.9871 reliable=526 spec=8.01 pop=3355
+  mpx-135 diag: trials=25320000 micro=7994 pop_spec=12.32 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2164 marked=0.253 mark_density=0.913 exp_mean=4817.7 addr_spec=4.412 addr_random=0.639 addr_full=0.1562 correct=500
+  mpx-135 cover: trials=25320000 overall=0.9871 a0_nochange=0.9786 a0_change=0.9918 a1_nochange=0.9779 a1_change=1.0000 matched_but_wrong=52
+  mpx-135 acc: trials=25320000 accuracy=0.9992
+  mpx-135 traj: trials=25440000 wall=204922s knowledge=0.9874 reliable=530 spec=8.01 pop=3350
+  mpx-135 diag: trials=25440000 micro=7988 pop_spec=12.31 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2157 marked=0.254 mark_density=0.913 exp_mean=4860.7 addr_spec=4.412 addr_random=0.638 addr_full=0.1609 correct=499
+  mpx-135 cover: trials=25440000 overall=0.9874 a0_nochange=0.9829 a0_change=0.9918 a1_nochange=0.9749 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25440000 accuracy=0.9986
+  mpx-135 traj: trials=25560000 wall=204982s knowledge=0.9898 reliable=542 spec=8.02 pop=3341
+  mpx-135 diag: trials=25560000 micro=8038 pop_spec=12.29 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2154 marked=0.253 mark_density=0.914 exp_mean=4909.8 addr_spec=4.413 addr_random=0.637 addr_full=0.1634 correct=500
+  mpx-135 cover: trials=25560000 overall=0.9898 a0_nochange=0.9910 a0_change=0.9930 a1_nochange=0.9752 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25560000 accuracy=0.9992
+  mpx-135 traj: trials=25680000 wall=205043s knowledge=0.9901 reliable=526 spec=8.01 pop=3380
+  mpx-135 diag: trials=25680000 micro=7992 pop_spec=12.22 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2123 marked=0.264 mark_density=0.915 exp_mean=4887.8 addr_spec=4.350 addr_random=0.633 addr_full=0.1609 correct=501
+  mpx-135 cover: trials=25680000 overall=0.9901 a0_nochange=0.9891 a0_change=0.9944 a1_nochange=0.9769 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25680000 accuracy=0.9992
+  mpx-135 traj: trials=25800000 wall=205105s knowledge=0.9898 reliable=535 spec=8.02 pop=3318
+  mpx-135 diag: trials=25800000 micro=8042 pop_spec=12.29 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2126 marked=0.263 mark_density=0.915 exp_mean=5005.6 addr_spec=4.406 addr_random=0.638 addr_full=0.1631 correct=500
+  mpx-135 cover: trials=25800000 overall=0.9898 a0_nochange=0.9860 a0_change=0.9952 a1_nochange=0.9778 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25800000 accuracy=0.9988
+  mpx-135 traj: trials=25920000 wall=205164s knowledge=0.9885 reliable=530 spec=8.02 pop=3386
+  mpx-135 diag: trials=25920000 micro=8070 pop_spec=12.17 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2174 marked=0.255 mark_density=0.915 exp_mean=4940.3 addr_spec=4.416 addr_random=0.631 addr_full=0.1598 correct=501
+  mpx-135 cover: trials=25920000 overall=0.9885 a0_nochange=0.9852 a0_change=0.9929 a1_nochange=0.9759 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=25920000 accuracy=0.9990
+  mpx-135 traj: trials=26040000 wall=205225s knowledge=0.9911 reliable=533 spec=8.02 pop=3394
+  mpx-135 diag: trials=26040000 micro=8061 pop_spec=12.14 spec_max=29 q_mean=0.610 q_max=1.000 q_above_half=2131 marked=0.271 mark_density=0.917 exp_mean=4963.3 addr_spec=4.413 addr_random=0.630 addr_full=0.1585 correct=502
+  mpx-135 cover: trials=26040000 overall=0.9911 a0_nochange=0.9895 a0_change=0.9953 a1_nochange=0.9794 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26040000 accuracy=0.9988
+  mpx-135 traj: trials=26160000 wall=205286s knowledge=0.9901 reliable=537 spec=8.01 pop=3412
+  mpx-135 diag: trials=26160000 micro=8086 pop_spec=12.12 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2224 marked=0.257 mark_density=0.915 exp_mean=4971.9 addr_spec=4.472 addr_random=0.628 addr_full=0.1568 correct=502
+  mpx-135 cover: trials=26160000 overall=0.9901 a0_nochange=0.9883 a0_change=0.9929 a1_nochange=0.9794 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26160000 accuracy=0.9980
+  mpx-135 traj: trials=26280000 wall=205344s knowledge=0.9904 reliable=532 spec=8.01 pop=3279
+  mpx-135 diag: trials=26280000 micro=7958 pop_spec=12.27 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2114 marked=0.249 mark_density=0.913 exp_mean=5209.4 addr_spec=4.427 addr_random=0.636 addr_full=0.1665 correct=502
+  mpx-135 cover: trials=26280000 overall=0.9904 a0_nochange=0.9862 a0_change=0.9920 a1_nochange=0.9834 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26280000 accuracy=0.9988
+  mpx-135 traj: trials=26400000 wall=205399s knowledge=0.9915 reliable=535 spec=8.00 pop=3292
+  mpx-135 diag: trials=26400000 micro=7979 pop_spec=12.20 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2137 marked=0.252 mark_density=0.914 exp_mean=5225.3 addr_spec=4.362 addr_random=0.633 addr_full=0.1619 correct=504
+  mpx-135 cover: trials=26400000 overall=0.9915 a0_nochange=0.9920 a0_change=0.9927 a1_nochange=0.9814 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26400000 accuracy=0.9997
+  mpx-135 traj: trials=26520000 wall=205454s knowledge=0.9923 reliable=529 spec=8.00 pop=3338
+  mpx-135 diag: trials=26520000 micro=8070 pop_spec=12.14 spec_max=29 q_mean=0.611 q_max=1.000 q_above_half=2151 marked=0.259 mark_density=0.915 exp_mean=5189.1 addr_spec=4.411 addr_random=0.629 addr_full=0.1630 correct=504
+  mpx-135 cover: trials=26520000 overall=0.9923 a0_nochange=0.9960 a0_change=0.9918 a1_nochange=0.9814 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26520000 accuracy=0.9981
+  mpx-135 traj: trials=26640000 wall=205512s knowledge=0.9919 reliable=528 spec=8.00 pop=3256
+  mpx-135 diag: trials=26640000 micro=8042 pop_spec=12.23 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2048 marked=0.262 mark_density=0.915 exp_mean=5349.0 addr_spec=4.417 addr_random=0.634 addr_full=0.1668 correct=504
+  mpx-135 cover: trials=26640000 overall=0.9919 a0_nochange=0.9960 a0_change=0.9918 a1_nochange=0.9800 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26640000 accuracy=0.9989
+  mpx-135 traj: trials=26760000 wall=205573s knowledge=0.9929 reliable=530 spec=8.00 pop=3240
+  mpx-135 diag: trials=26760000 micro=8012 pop_spec=12.22 spec_max=29 q_mean=0.612 q_max=1.000 q_above_half=2082 marked=0.255 mark_density=0.914 exp_mean=5412.0 addr_spec=4.379 addr_random=0.633 addr_full=0.1679 correct=504
+  mpx-135 cover: trials=26760000 overall=0.9929 a0_nochange=0.9960 a0_change=0.9938 a1_nochange=0.9820 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26760000 accuracy=0.9996
+  mpx-135 traj: trials=26880000 wall=205634s knowledge=0.9933 reliable=527 spec=8.00 pop=3200
+  mpx-135 diag: trials=26880000 micro=7982 pop_spec=12.24 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=2084 marked=0.255 mark_density=0.914 exp_mean=5516.3 addr_spec=4.440 addr_random=0.634 addr_full=0.1669 correct=505
+  mpx-135 cover: trials=26880000 overall=0.9933 a0_nochange=0.9960 a0_change=0.9918 a1_nochange=0.9856 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=26880000 accuracy=0.9984
+  mpx-135 traj: trials=27000000 wall=205690s knowledge=0.9916 reliable=534 spec=8.00 pop=3206
+  mpx-135 diag: trials=27000000 micro=7895 pop_spec=12.21 spec_max=29 q_mean=0.615 q_max=1.000 q_above_half=2078 marked=0.267 mark_density=0.916 exp_mean=5537.2 addr_spec=4.463 addr_random=0.633 addr_full=0.1712 correct=505
+  mpx-135 cover: trials=27000000 overall=0.9916 a0_nochange=0.9911 a0_change=0.9918 a1_nochange=0.9835 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27000000 accuracy=0.9993
+  mpx-135 traj: trials=27120000 wall=205745s knowledge=0.9917 reliable=524 spec=8.01 pop=3276
+  mpx-135 diag: trials=27120000 micro=8036 pop_spec=12.11 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2056 marked=0.270 mark_density=0.916 exp_mean=5455.1 addr_spec=4.484 addr_random=0.628 addr_full=0.1697 correct=505
+  mpx-135 cover: trials=27120000 overall=0.9917 a0_nochange=0.9911 a0_change=0.9922 a1_nochange=0.9835 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27120000 accuracy=0.9986
+  mpx-135 traj: trials=27240000 wall=205799s knowledge=0.9921 reliable=524 spec=8.01 pop=3216
+  mpx-135 diag: trials=27240000 micro=7948 pop_spec=12.14 spec_max=29 q_mean=0.618 q_max=1.000 q_above_half=2086 marked=0.262 mark_density=0.916 exp_mean=5593.6 addr_spec=4.471 addr_random=0.630 addr_full=0.1735 correct=505
+  mpx-135 cover: trials=27240000 overall=0.9921 a0_nochange=0.9911 a0_change=0.9924 a1_nochange=0.9847 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27240000 accuracy=0.9990
+  mpx-135 traj: trials=27360000 wall=205859s knowledge=0.9916 reliable=531 spec=8.00 pop=3193
+  mpx-135 diag: trials=27360000 micro=7988 pop_spec=12.19 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=2081 marked=0.253 mark_density=0.914 exp_mean=5671.4 addr_spec=4.468 addr_random=0.632 addr_full=0.1710 correct=505
+  mpx-135 cover: trials=27360000 overall=0.9916 a0_nochange=0.9911 a0_change=0.9918 a1_nochange=0.9835 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27360000 accuracy=0.9986
+  mpx-135 traj: trials=27480000 wall=205919s knowledge=0.9923 reliable=528 spec=8.00 pop=3334
+  mpx-135 diag: trials=27480000 micro=8061 pop_spec=11.95 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2143 marked=0.250 mark_density=0.916 exp_mean=5467.3 addr_spec=4.462 addr_random=0.620 addr_full=0.1671 correct=505
+  mpx-135 cover: trials=27480000 overall=0.9923 a0_nochange=0.9922 a0_change=0.9918 a1_nochange=0.9854 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27480000 accuracy=0.9985
+  mpx-135 traj: trials=27600000 wall=205979s knowledge=0.9928 reliable=527 spec=8.00 pop=3221
+  mpx-135 diag: trials=27600000 micro=8025 pop_spec=12.03 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2062 marked=0.255 mark_density=0.916 exp_mean=5696.0 addr_spec=4.462 addr_random=0.624 addr_full=0.1683 correct=505
+  mpx-135 cover: trials=27600000 overall=0.9928 a0_nochange=0.9960 a0_change=0.9918 a1_nochange=0.9835 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27600000 accuracy=0.9977
+  mpx-135 traj: trials=27720000 wall=206034s knowledge=0.9933 reliable=524 spec=8.00 pop=3205
+  mpx-135 diag: trials=27720000 micro=8030 pop_spec=12.05 spec_max=29 q_mean=0.615 q_max=1.000 q_above_half=2073 marked=0.275 mark_density=0.919 exp_mean=5761.6 addr_spec=4.460 addr_random=0.625 addr_full=0.1722 correct=505
+  mpx-135 cover: trials=27720000 overall=0.9933 a0_nochange=0.9960 a0_change=0.9937 a1_nochange=0.9835 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27720000 accuracy=0.9995
+  mpx-135 traj: trials=27840000 wall=206088s knowledge=0.9942 reliable=528 spec=8.01 pop=3259
+  mpx-135 diag: trials=27840000 micro=7972 pop_spec=12.01 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2110 marked=0.254 mark_density=0.916 exp_mean=5702.8 addr_spec=4.465 addr_random=0.623 addr_full=0.1700 correct=505
+  mpx-135 cover: trials=27840000 overall=0.9942 a0_nochange=0.9960 a0_change=0.9952 a1_nochange=0.9855 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27840000 accuracy=0.9994
+  mpx-135 traj: trials=27960000 wall=206143s knowledge=0.9941 reliable=531 spec=8.02 pop=3189
+  mpx-135 diag: trials=27960000 micro=7906 pop_spec=12.07 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=2077 marked=0.257 mark_density=0.916 exp_mean=5865.7 addr_spec=4.486 addr_random=0.626 addr_full=0.1662 correct=505
+  mpx-135 cover: trials=27960000 overall=0.9941 a0_nochange=0.9980 a0_change=0.9928 a1_nochange=0.9855 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=27960000 accuracy=0.9981
+  mpx-135 traj: trials=28080000 wall=206202s knowledge=0.9950 reliable=533 spec=8.01 pop=3205
+  mpx-135 diag: trials=28080000 micro=7973 pop_spec=12.02 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2069 marked=0.250 mark_density=0.915 exp_mean=5873.9 addr_spec=4.511 addr_random=0.623 addr_full=0.1750 correct=506
+  mpx-135 cover: trials=28080000 overall=0.9950 a0_nochange=1.0000 a0_change=0.9944 a1_nochange=0.9855 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28080000 accuracy=0.9989
+  mpx-135 traj: trials=28200000 wall=206263s knowledge=0.9970 reliable=528 spec=8.01 pop=3265
+  mpx-135 diag: trials=28200000 micro=8059 pop_spec=11.88 spec_max=29 q_mean=0.613 q_max=1.000 q_above_half=2089 marked=0.255 mark_density=0.917 exp_mean=5802.2 addr_spec=4.509 addr_random=0.616 addr_full=0.1685 correct=508
+  mpx-135 cover: trials=28200000 overall=0.9970 a0_nochange=1.0000 a0_change=0.9960 a1_nochange=0.9922 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28200000 accuracy=0.9995
+  mpx-135 traj: trials=28320000 wall=206324s knowledge=0.9970 reliable=524 spec=8.00 pop=3183
+  mpx-135 diag: trials=28320000 micro=7929 pop_spec=11.98 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=2101 marked=0.248 mark_density=0.916 exp_mean=5989.2 addr_spec=4.521 addr_random=0.621 addr_full=0.1744 correct=509
+  mpx-135 cover: trials=28320000 overall=0.9970 a0_nochange=1.0000 a0_change=0.9960 a1_nochange=0.9922 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28320000 accuracy=0.9986
+  mpx-135 traj: trials=28440000 wall=206378s knowledge=0.9981 reliable=540 spec=8.00 pop=3246
+  mpx-135 diag: trials=28440000 micro=8015 pop_spec=11.82 spec_max=29 q_mean=0.614 q_max=1.000 q_above_half=2081 marked=0.265 mark_density=0.919 exp_mean=5910.6 addr_spec=4.470 addr_random=0.613 addr_full=0.1645 correct=509
+  mpx-135 cover: trials=28440000 overall=0.9981 a0_nochange=1.0000 a0_change=0.9960 a1_nochange=0.9965 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28440000 accuracy=0.9985
+  mpx-135 traj: trials=28560000 wall=206432s knowledge=0.9976 reliable=533 spec=8.01 pop=3199
+  mpx-135 diag: trials=28560000 micro=8003 pop_spec=11.90 spec_max=29 q_mean=0.618 q_max=1.000 q_above_half=2077 marked=0.261 mark_density=0.917 exp_mean=6032.3 addr_spec=4.531 addr_random=0.617 addr_full=0.1719 correct=509
+  mpx-135 cover: trials=28560000 overall=0.9976 a0_nochange=1.0000 a0_change=0.9961 a1_nochange=0.9942 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28560000 accuracy=0.9986
+  mpx-135 traj: trials=28680000 wall=206486s knowledge=0.9980 reliable=537 spec=8.00 pop=3179
+  mpx-135 diag: trials=28680000 micro=7960 pop_spec=11.91 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2061 marked=0.250 mark_density=0.916 exp_mean=6108.3 addr_spec=4.489 addr_random=0.618 addr_full=0.1749 correct=510
+  mpx-135 cover: trials=28680000 overall=0.9980 a0_nochange=1.0000 a0_change=0.9960 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28680000 accuracy=0.9986
+  mpx-135 traj: trials=28800000 wall=206544s knowledge=0.9980 reliable=538 spec=8.00 pop=3113
+  mpx-135 diag: trials=28800000 micro=7887 pop_spec=11.93 spec_max=29 q_mean=0.618 q_max=1.000 q_above_half=2000 marked=0.247 mark_density=0.916 exp_mean=6276.4 addr_spec=4.508 addr_random=0.619 addr_full=0.1776 correct=510
+  mpx-135 cover: trials=28800000 overall=0.9980 a0_nochange=1.0000 a0_change=0.9960 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28800000 accuracy=0.9980
+  mpx-135 traj: trials=28920000 wall=206603s knowledge=0.9990 reliable=536 spec=8.01 pop=3085
+  mpx-135 diag: trials=28920000 micro=7883 pop_spec=11.94 spec_max=29 q_mean=0.620 q_max=1.000 q_above_half=2014 marked=0.244 mark_density=0.917 exp_mean=6367.6 addr_spec=4.516 addr_random=0.619 addr_full=0.1818 correct=511
+  mpx-135 cover: trials=28920000 overall=0.9990 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=28920000 accuracy=1.0000
+  mpx-135 traj: trials=29040000 wall=206662s knowledge=0.9990 reliable=537 spec=8.00 pop=3094
+  mpx-135 diag: trials=29040000 micro=7923 pop_spec=11.89 spec_max=29 q_mean=0.621 q_max=1.000 q_above_half=2024 marked=0.251 mark_density=0.918 exp_mean=6388.0 addr_spec=4.514 addr_random=0.617 addr_full=0.1765 correct=511
+  mpx-135 cover: trials=29040000 overall=0.9990 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29040000 accuracy=1.0000
+  mpx-135 traj: trials=29160000 wall=206718s knowledge=0.9990 reliable=528 spec=8.00 pop=3113
+  mpx-135 diag: trials=29160000 micro=7877 pop_spec=11.82 spec_max=29 q_mean=0.620 q_max=1.000 q_above_half=2024 marked=0.259 mark_density=0.919 exp_mean=6387.4 addr_spec=4.523 addr_random=0.613 addr_full=0.1741 correct=511
+  mpx-135 cover: trials=29160000 overall=0.9990 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29160000 accuracy=1.0000
+  mpx-135 traj: trials=29280000 wall=206771s knowledge=0.9990 reliable=529 spec=8.00 pop=3194
+  mpx-135 diag: trials=29280000 micro=7931 pop_spec=11.70 spec_max=29 q_mean=0.618 q_max=1.000 q_above_half=2070 marked=0.258 mark_density=0.920 exp_mean=6263.0 addr_spec=4.512 addr_random=0.607 addr_full=0.1697 correct=511
+  mpx-135 cover: trials=29280000 overall=0.9990 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9960 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29280000 accuracy=1.0000
+  mpx-135 traj: trials=29400000 wall=206824s knowledge=0.9980 reliable=527 spec=8.00 pop=3049
+  mpx-135 diag: trials=29400000 micro=7875 pop_spec=11.88 spec_max=29 q_mean=0.619 q_max=1.000 q_above_half=1951 marked=0.248 mark_density=0.917 exp_mean=6595.5 addr_spec=4.519 addr_random=0.616 addr_full=0.1810 correct=511
+  mpx-135 cover: trials=29400000 overall=0.9980 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9921 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29400000 accuracy=1.0000
+  mpx-135 traj: trials=29520000 wall=206880s knowledge=0.9980 reliable=531 spec=8.00 pop=3099
+  mpx-135 diag: trials=29520000 micro=7840 pop_spec=11.79 spec_max=29 q_mean=0.617 q_max=1.000 q_above_half=1997 marked=0.256 mark_density=0.919 exp_mean=6527.7 addr_spec=4.453 addr_random=0.611 addr_full=0.1788 correct=511
+  mpx-135 cover: trials=29520000 overall=0.9980 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9921 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29520000 accuracy=1.0000
+  mpx-135 traj: trials=29640000 wall=206940s knowledge=0.9980 reliable=530 spec=8.00 pop=3163
+  mpx-135 diag: trials=29640000 micro=7938 pop_spec=11.67 spec_max=29 q_mean=0.619 q_max=1.000 q_above_half=2076 marked=0.253 mark_density=0.919 exp_mean=6433.8 addr_spec=4.570 addr_random=0.605 addr_full=0.1729 correct=511
+  mpx-135 cover: trials=29640000 overall=0.9980 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9921 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29640000 accuracy=1.0000
+  mpx-135 traj: trials=29760000 wall=207000s knowledge=0.9980 reliable=529 spec=8.00 pop=3168
+  mpx-135 diag: trials=29760000 micro=7968 pop_spec=11.61 spec_max=29 q_mean=0.616 q_max=1.000 q_above_half=2065 marked=0.270 mark_density=0.921 exp_mean=6461.6 addr_spec=4.533 addr_random=0.602 addr_full=0.1742 correct=511
+  mpx-135 cover: trials=29760000 overall=0.9980 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9921 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29760000 accuracy=1.0000
+  mpx-135 traj: trials=29880000 wall=207056s knowledge=0.9980 reliable=529 spec=8.00 pop=3048
+  mpx-135 diag: trials=29880000 micro=7804 pop_spec=11.80 spec_max=29 q_mean=0.625 q_max=1.000 q_above_half=2064 marked=0.248 mark_density=0.918 exp_mean=6755.5 addr_spec=4.564 addr_random=0.612 addr_full=0.1785 correct=511
+  mpx-135 cover: trials=29880000 overall=0.9980 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9921 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29880000 accuracy=1.0000
+  mpx-135 traj: trials=30000000 wall=207109s knowledge=0.9991 reliable=528 spec=8.00 pop=3060
+  mpx-135 diag: trials=30000000 micro=7876 pop_spec=11.75 spec_max=29 q_mean=0.619 q_max=1.000 q_above_half=1989 marked=0.255 mark_density=0.918 exp_mean=6767.8 addr_spec=4.541 addr_random=0.609 addr_full=0.1814 correct=511
+  mpx-135 cover: trials=30000000 overall=0.9991 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9966 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=30000000 accuracy=1.0000
+  mpx-135 traj: trials=30120000 wall=207162s knowledge=0.9994 reliable=528 spec=8.00 pop=3128
+  mpx-135 diag: trials=30120000 micro=7874 pop_spec=11.63 spec_max=29 q_mean=0.619 q_max=1.000 q_above_half=2053 marked=0.260 mark_density=0.920 exp_mean=6659.3 addr_spec=4.564 addr_random=0.603 addr_full=0.1765 correct=511
+  mpx-135 cover: trials=30120000 overall=0.9994 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=0.9974 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=30120000 accuracy=1.0000
+  mpx-135 traj: trials=30240000 wall=207219s knowledge=1.0000 reliable=535 spec=8.01 pop=3122
+  mpx-135 diag: trials=30240000 micro=7865 pop_spec=11.62 spec_max=29 q_mean=0.622 q_max=1.000 q_above_half=2048 marked=0.266 mark_density=0.921 exp_mean=6710.5 addr_spec=4.539 addr_random=0.602 addr_full=0.1778 correct=512
+  mpx-135 cover: trials=30240000 overall=1.0000 a0_nochange=1.0000 a0_change=1.0000 a1_nochange=1.0000 a1_change=1.0000 matched_but_wrong=0
+  mpx-135 acc: trials=30240000 accuracy=1.0000
+  mpx-135 repeat 0: SUCCESS trials=30240000 knowledge=1.0000 reliable=535 spec=8.01/136 peak_macro=82432 peak_rss=0.00GB wall=207223.6s
+  mpx-135 verdict agreement across 1 repeats: ALL AGREE

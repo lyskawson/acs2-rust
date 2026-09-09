@@ -6,6 +6,7 @@ use acs2_core::perception::Perception;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::symbol::Symbol;
+use acs2_core::trial::LearningAgent;
 
 fn state(values: [u8; 4]) -> Perception<4> {
     Perception {

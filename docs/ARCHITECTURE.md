@@ -245,11 +245,14 @@ them ON PURPOSE so the P9 benchmark compares the same algorithm on both sides
 here as the fidelity ledger for the thesis and as the revisit-checklist for the
 Actor-Critic stage, where the port target no longer applies.
 
-- **ALP generalization disabled by `u_max = 100000`** (SPEC J.5). The expected-case
-  over-specialization generalization branches never execute; under the shipped config
-  ALP only specializes. Canonical ACS2 generalizes via ALP. To restore Butz behaviour:
-  lower `u_max` and implement the generalization while-loops (currently omitted, noted
-  in expected_case).
+- **ALP generalization disabled by `u_max = 100000` ON THE MAZE PATH** (SPEC J.5). The
+  expected-case over-specialization generalization branches never execute under the shipped
+  maze config, so maze ALP only specializes. This deviation still holds for the MAZE
+  measured path (P8/P9 use `u_max = 100000`). The generalization while-loops are NO LONGER
+  omitted: **M2b implements them** (pyalcs `alp.py:78-94` faithfully, plus a Butz
+  child-generalization variant), self-gated by `u_max` behind `alp_gen_variant`; they fire
+  only on the MPX path where `u_max` is lowered, and stay dead on the maze path. See the
+  M2b section.
 - **Exploitation ignores epsilon — always BestAction** (SPEC J.8, PROJECT_CONTEXT §4).
   The epsilon values in the exploit scripts are inert. Kept as a property of the
   measured algorithm.
@@ -267,3 +270,681 @@ it is canonical, not a deviation. The four pyalcs bugs (the §4 hazards + the P8
 apply_alp skip) are also NOT here — Rust does not reproduce those; it is the correct
 side. This list is only behaviours Rust intentionally mirrors that depart from the
 paper.
+
+## M1 — Multiplexer (Task 2, phase 1)
+
+M1 adds the Multiplexer (MPX) task as a NEW environment plus a NEW knowledge-evaluation
+capability, reusing the P0–P9-validated `acs2-core` domain unchanged. The maze measured
+path is byte-untouched: the only edits to existing files are additive `pub mod` lines
+(`acs2-core/src/lib.rs`, `acs2-envs/src/lib.rs`) and an additive `Configuration::mpx()`
+(`config.rs`); everything else is new files (`acs2-envs::multiplexer`,
+`acs2-core::knowledge`, `acs2-bench/src/bin/mpx.rs`). All P3–P8 + maze-parity tests stay
+green.
+
+### MPX is anticipatory; the oracle is analytic, not differential
+
+The percept is `[k input bits] + [1 trailing validation bit]`, `N = k + 1`. `reset()`
+samples the k input bits via the injected RNG and pins the validation bit to 0; `step`
+is single-step (`terminated = true` always), leaves the input bits unchanged, and on the
+correct answer flips the validation bit 0→1 (reward 1000) — otherwise leaves it 0 (reward
+0). So there is a real deterministic transition to anticipate. pyalcs's MPX env generates
+states randomly per reset and ships NO knowledge harness, so there is no enumerable
+transition set to diff against (unlike the maze's P7/P8 probes). M1 therefore validates
+against CLOSED-FORM truth: `get_correct_answer` (address-bits-first, MSB-first,
+`data[address]`) is pinned by the exact pyalcs `gym_multiplexer/tests/test_utils.py`
+3-/6-/11-bit vectors ported as unit tests. "Better accuracy" does not exist for MPX —
+knowledge has a hard ceiling at 1.0 reached by every correct implementation.
+
+### `N = k + 1` enforced by a const fn on a monomorphized path
+
+`control_bits_for(N)` (a `const fn`) inverts `N = control_bits + 2^control_bits + 1` and
+`panic!`s at const-eval for any N that is not a valid multiplexer size. `Multiplexer<N>`
+references `Self::CONTROL_BITS` inside `new()` so the assertion lands post-monomorphization
+(associated consts are lazily evaluated — an unreferenced one would not fire). The
+`define_multiplexers!` macro instantiates the explicit set by CONTROL BITS, deriving
+`N = c + 2^c + 1`, so N is never hand-typed. A runtime backstop test asserts perception
+length == k+1 for every instantiated size.
+
+**Size-set correction (137 → 135).** The M1 prompt lists the MPX set as
+`{6,11,20,37,70,137}` → `N ∈ {7,12,21,38,71,138}`. `137` is not a valid multiplexer
+input size: `k = c + 2^c` gives `135` at `c = 7` (`N = 136`), never `137` — so
+`control_bits_for(138)` would (correctly) panic. The canonical LCS multiplexer sequence
+is `3,6,11,20,37,70,135`. M1 therefore instantiates `{6,11,20,37,70,135}` →
+`N ∈ {7,12,21,38,71,136}` (`Mpx6..Mpx135`). This is the const-assertion doing its job,
+and is consistent with PROJECT_CONTEXT §2 (correctness over reproducing a typo) and the
+M1 priority clarification (closed-form truth beats matching any artifact).
+
+### Knowledge metric — env-agnostic core fn + MPX transition generators
+
+- `acs2-core::knowledge` (pure, zero env knowledge): `Transition<N> { p0, action, p1 }`
+  and `anticipation_fraction(population, theta_r, transitions)` — the fraction of
+  transitions for which SOME reliable (`q > theta_r`) classifier `predicts_successfully`
+  (`action` match ∧ `does_match(p0)` ∧ `does_anticipate_correctly(p0,p1)`). This mirrors
+  pyalcs `_maze_knowledge` / `Classifier.predicts_successfully` exactly, retargeted from
+  maze transitions to MPX (input × action) pairs.
+- `acs2-envs::multiplexer` builds the MPX transitions: `exhaustive_transitions` (all
+  `2^k` inputs × 2 actions) and `sampled_transitions` (fixed-seed, WITH REPLACEMENT).
+- **`exhaustive_knowledge` (fast exact bitset).** The naive per-transition × per-classifier
+  scan is `O(2^(k+1) × |reliable|)` — pathological for the LARGE specialize-only MPX
+  populations (see below). Instead, iterate reliable classifiers and mark the
+  `(input, action)` cells each covers into a `2^(k+1)`-bit set; popcount at the end. Cost
+  ≈ Σ over reliable of `2^(free input positions)` ≈ `|reliable|` when classifiers are
+  specialized (the actual regime) — instant. This is EXACT enumeration (every pair
+  evaluated), satisfying the gate's "exhaustive"; a unit test pins
+  `exhaustive_knowledge == anticipation_fraction(exhaustive_transitions)` on a trained
+  k=6 population and a synthetic k=11 population. Two silent-corruption edges baked in: a
+  classifier whose effect specifies any INPUT position covers nothing (inputs never
+  change); a classifier whose condition pins validation = 1 never matches `p0`
+  (validation is always 0 in `p0`).
+- `evaluate_knowledge`: exhaustive (fast bitset) for `k ≤ 20`, sampled for `k ≥ 37`.
+
+**Sampler gate (the only checkable place).** The sampled estimator must agree with
+exhaustive at k=11 AND k=20. The test runs on a SYNTHETIC ~50%-coverage population (four
+reliable classifiers keyed on input bit 0: a change predictor + a no-change predictor per
+action), which yields EXACTLY 0.5 exhaustively (non-vacuous — a converged 1.0 population
+would make the test trivially pass). With 200 000 sampled inputs the binomial band is
+sub-percent; tolerance 0.005.
+
+### NAMED HAZARD — `does_anticipate_change` vs `does_anticipate_correctly`
+
+These look interchangeable and are NOT. Conflating them is the M2 / Actor-Critic trap.
+
+- `does_anticipate_change` (`effect.specify_change()`) gates ACTION SELECTION:
+  `action_selection::best_change_anticipating_action` (exploit/BestAction and the greedy
+  branch of EpsilonGreedy) considers ONLY change-anticipating classifiers. No-change
+  classifiers are invisible to it.
+- `does_anticipate_correctly` is what the KNOWLEDGE metric uses, and it CREDITS the
+  no-change (identity) transition: for the wrong action `p1 == p0`, an all-wildcard-effect
+  reliable classifier anticipates correctly. Without this, the wrong-action half of the
+  pairs is never credited and knowledge silently caps at 0.5 masquerading as a learning
+  plateau. The ceiling is 1.0 by construction; `acs2-core::knowledge` tests
+  (`change_only_population_caps_at_half`, `wildcard_effect_credits_identity_transition`)
+  pin this.
+
+Timed-region invariant. The "knowledge is computed outside the timed region" property
+holds SOLELY because the bench computes the metric AFTER the timer wraps explore+exploit
+(the P9 timed-region symmetry), and never calls it inside the learner loop. It does NOT
+rest on any "reliability is frozen" argument: reliability (`q > theta_r`) is driven by
+ALP's q-updates (`q += beta·(1-q)` on correct, `q -= beta·q` on incorrect), which fire
+THROUGHOUT explore — the phase where knowledge is actually learned. RL
+(`apply_reinforcement_learning`) moves only `r`/`ir`, never `q`; that is true but
+irrelevant to the timing invariant (q is merely quiescent in exploit, which runs no ALP).
+
+### M1 results and the k=20 anticipation/covering INVESTIGATE signal
+
+Trial schedule anchored to the published ACS2 boolean-multiplexer protocol (explore
+ε = 0.8, single-step trials, GA OFF, `u_max = 100000`). There is no `multiplexer_11.yaml`
+in the repo to mirror — that is an M2 cpu_single artifact (GA-on, 1000/−1). Per-size
+explore budgets are ordered `6 < 11 < 20`; the literature figures assume GA-ON
+generalization, whereas M1 is GA-OFF specialize-only, so MORE explore is expected.
+
+| size | explore (measured) | knowledge | reliable pop | mean spec / N |
+|------|--------------------|-----------|--------------|---------------|
+| 6    | 20 000             | 1.0 (min 1.0) | ~260      | 5.63 / 7      |
+| 11   | 400 000            | 1.0 (min 1.0) | ~4 380     | 9.01 / 12     |
+| 20   | —                  | INVESTIGATE   | explodes   | 20.5 / 21     |
+
+(`specificity()` counts over all N condition positions; the compact rule a generalizing
+ACS2 would form specifies only ~`control_bits + 1` of them — the measured 9/12 and 20.5/21
+are the over-specialization that specialize-only produces.)
+
+k=6 and k=11 reach knowledge = 1.0. **k=20 cannot, in the M1 GA-OFF specialize-only
+regime, and this is a measured anticipation/covering signal, not an implementation
+defect.** With ALP generalization dead (`u_max = 100000`) and GA OFF, structural learning
+is specialize-only: reliable conditions specialize to ~full length (mean specificity
+20.5/20 at k=20 — one classifier per input), so the population scales with the `2^k` input
+space. Measured at k=20: 168 956 classifiers after just 2 000 explore trials
+(knowledge 0.134), with per-trial cost growing as the macro population explodes. Reaching
+1.0 would require ~`2^21` reliable classifiers and a budget many orders beyond any generous
+multiple of the literature figure — infeasible. Per the M1 tuning boundary, the budget is
+NOT inflated; k=20 is reported as INVESTIGATE. This is precisely the spec author's
+"compactness is a reach concern (M2)" framing: M2's generalization (lower `u_max` + the
+ALP generalization while-loops, and/or GA-ON) is what forms compact MPX rules. The fast
+`exhaustive_knowledge` metric stays tractable even on the exploded 169k population (~2 s),
+so the evaluator is validated independently of the learning wall. `Mpx20/37/70/135`
+compile and instantiate (const-generic story intact, perception-length test green); they
+are simply not in the default bench run.
+
+The MPX bench is a SEPARATE binary (`acs2-bench/src/bin/mpx.rs`); the maze bench
+(`src/main.rs`) is untouched, so the P9 maze numbers cannot move. Default run = sizes
+`{6, 11}`; `--sizes`, `--explore-trials`, `--skip-knowledge` are available for probing.
+
+## M2a — Multiplexer with GA-on generalization (Task 2, phase 2a)
+
+M2a turns genetic generalization ON (`do_ga=true`) keeping every other M1 parameter,
+crucially `u_max=100000` (so ALP still ONLY specializes — generalization comes SOLELY
+from GA), and asks whether canonical GA-on ACS2 compactifies MPX and how far up in k it
+reaches. The metric is COMPACTNESS, not just knowledge. All GA parameters are the
+canonical pyalcs ACS2 defaults — M2a is purely the `do_ga` flag, zero new tuning:
+`theta_ga=100` (`lcs/agents/acs2/Configuration.py:18`; SPEC §E.1), `mu=0.3`, `chi=0.8`,
+`theta_as=20`, `theta_exp=20`, `do_subsumption=true`. Rust does NOT reproduce pyalcs's
+inferred GA-deletion bug (SPEC §E.4 `cl.is_marked` bound-method): `ga.rs:116` calls the
+method correctly — Rust is the correct side.
+
+Additive changes only: `--do-ga` on `mpx.rs`; a new `acs2-bench/src/bin/mpx_reach.rs`
+(reach + per-component memory + 4-way verdict, with `--time-cap-secs`); `libc` dep on the
+bench crate (for `getrusage` peak-RSS). `ga.rs`/`subsumption.rs`/`agent.rs` and the maze
+measured path are untouched; P5 GA, P3 subsumption, P8 differential, and maze-parity tests
+all stay green, and the maze P9 learning metrics reproduce BYTE-IDENTICAL (GA flag keeps
+the maze bench on GA-off).
+
+### GA-on compactifies and clears the M1 wall (gate, n_exp=10)
+
+GA-on reaches knowledge=1.0 on MPX-6/11/20 (10/10 each), driving reliable-classifier
+condition specificity toward the compact `a+1` and collapsing the reliable population by
+orders of magnitude vs M1 specialize-only:
+
+Knowledge on gate sizes 6/11/20 is **exhaustive-exact** (all 2^k×2 pairs enumerated via
+the M1 fast bitset, `k≤20`), so "1.0" here means *every* pair is correctly anticipated,
+not a sampled estimate:
+
+| k  | knowledge (min, X/10) | reliable spec (→a+1) | reliable pop (GA) | M1 specialize-only |
+|----|-----------------------|----------------------|-------------------|--------------------|
+| 6  | 1.0 (10/10)           | 3.04±0.07 (a+1=3)    | 28.1±2.3          | 259.8              |
+| 11 | 1.0 (10/10)           | 4.15±0.18 (a+1=4)    | 56.7±3.3          | 4380               |
+| 20 | 1.0 (10/10)           | 5.24±0.25 (a+1=5)    | 88.6±3.4          | infeasible (exploded) |
+
+This is NOT the HARD FAIL (knowledge=1.0 with full specificity / ~2^k population): the
+reliable population is compact (specificity ≈ a+1, count ≈ 3·2^(a+1), four orders below
+2^k at k=20). k=20 — which specialize-only structurally could not reach (M1) — is
+solved. Budgets (schedule-tuned to reach 1.0, GA params untouched): k6=20k, k11=200k,
+k20=300k. GA-on is also FASTER than M1 specialize-only at equal k (k=11: 200k trials in
+~2s vs M1 400k in ~20s) because the population stays small. Results: `reports/mpx_rust_ga.csv`
+(M1 baseline preserved in `reports/mpx_rust.csv`).
+
+### Reach (k=37/70/135): boundary found — race won through 37, lost at ≥70
+
+Trials cap for the reach 4-way verdict = **M1-empirical specialize-only extrapolation ×10,
+a generous non-convergence proxy — NOT a GA-on budget prediction, NOT literature.** Fit:
+M1 same-protocol convergence (k=6→20k, k=11→400k, Δk=5 → ×20) modelled as trials ∝ 2^k,
+anchored at k=6 → `estimate(k)=20000·2^(k−6)`; cap = `estimate·10 = 200000·2^(k−6)`
+(k=37 ≈ 4.3×10¹³; k=70/135 exceed u64 → clamped to u64::MAX). Deliberately so loose that
+MEMORY (5.6 GB RSS = 70% of this 8 GB machine) or TIME (per-repeat wall cap) bind first.
+Unold's GECCO Companion '26 figure of 500 exploration episodes is the only in-repo
+literature budget and is cited as CONTEXT only, so it is not the anchor. (An earlier
+version of this note attributed a `u_max=1`, ε=0.1 protocol to that figure — that was
+FALSE. The Unold PDFs never mention `u_max`; the `u_max=1` traces to
+`reference/ALCS/experiments/configs/multiplexer_11.yaml`, where per ALCS's own
+`parameter_guide.md:89` it means "max attributes in covering" — a DIFFERENT semantic that
+is inert/print-only in the ALCS backend and never reaches `expected_case`. It is neither
+the Unold paper's figure nor a pyalcs `expected_case` `u_max`.) Verdicts are four SEPARATE
+outcomes, never merged: SUCCESS / TRIALS-LIMITED / MEMORY-LIMITED / TIME-LIMITED.
+
+Reach knowledge (k=37/70/135) is the **sampled** estimator (50k inputs; exhaustive is
+infeasible at these N), gate-validated against exhaustive at k=11/20 (M1). Reliable
+spec/count are measured at the verdict by the reach bin:
+
+| k   | verdict (n)        | knowledge | reliable | reliable spec     | peak macro | peak RSS | mechanism |
+|-----|--------------------|-----------|----------|-------------------|------------|----------|-----------|
+| 37  | SUCCESS (3/3)      | 1.0       | 163–168 (mean 166) | 7.14–8.32/38 (mean 7.91; a+1=6) | ~34k | 0.08–0.11 GB | GA wins — compact, 1.0 |
+| 70  | TIME-LIMITED (3/3) | 0.0004–0.0071 | 57–109 (mean 76) | 46.35–67.97/71 (≫ a+1=7) | ~78–81k | 0.27 GB | RACE LOST |
+| 135 | TIME-LIMITED (1)   | 0.0000    | 62       | 135.94/136        | 30.4k      | 0.36 GB  | RACE LOST |
+
+(All rows produced by the same current `mpx_reach` binary; k=37 and k=70 are n_exp=3 at a
+unified per-row time cap — k=37 480 s, k=70 600 s.) k=37 is MEASURED compact (mean spec
+7.91/38 across 3 seeds — far from full 38, modestly above the ideal a+1=6), corroborating
+the counting argument: knowledge=1.0 over 2^37 inputs is impossible with per-input
+classifiers, so the ~166 reliable rules must each generalize over ~2^29 inputs. k=70 spans
+3 distinct seeds {42,43,44} at a unified 600 s cap: all TIME-LIMITED, all knowledge≈0
+(0.0004–0.0071), reliable 57–109, all with spec 46.35–67.97/71 — ≫ the compact a+1=7; a
+separate fixed-budget diagnostic also showed reliable FROZEN at 58 across 20k/50k/100k
+trials at spec 70.84/71. The boundary contrast is crisp and measured:
+**k=37 mean spec 7.91/38 → 1.0** vs **k=70 spec 46–68/71 → ≈0**.
+
+**Largest k reaching knowledge=1.0 (compact): k=37.** At k≥70 the generalize-vs-specialize
+race is LOST: the few reliable classifiers that stabilize are heavily OVER-SPECIALIZED
+(spec 46–68/71 at k=70, 135.94/136 at k=135 — i.e. ≫ the compact a+1, up to nearly
+full N, like M1 specialize-only), so only ~57–109 near-per-input rules ever stabilize and
+they cover ≈0% of the 2^k space → knowledge≈0. This is the rare-action-set-visitation race
+realized: ALP specializes a rule toward full length before GA generalizes it; once
+near-fully specialized it matches ≈1/2^k inputs, so its action set is essentially never
+revisited, GA's trigger (`time − mean(tga) > theta_ga`) almost never fires on it, and it
+can never be generalized back. The q/2 child-halving compounds it. **It is NOT a GA bug**
+(GA generalizes correctly through k=37) and **NOT a memory bound**: at both k=70 and k=135
+the binding limit is the RACE (TIME-LIMITED at peak RSS 0.22/0.36 GB — far below the 5.6 GB
+cap; the population never approaches the N=136 memory pop-threshold of ~1.44M in the time
+budget). Precise scope: *canonical GA-on ACS2 compactifies MPX through k=37 (knowledge=1.0,
+general rules); the generalize-vs-specialize race is lost at k≥70 (reliable frozen
+fully-specialized, knowledge≈0, race-bound not memory/trials-bound).* This is the
+pre-authorized FOUND BOUNDARY (a measured result, budget NOT inflated) and it motivates
+**M2b: ALP-generalization via lower `u_max`**, which generalizes inside `expected_case`.
+(An earlier version of this note claimed ALP-gen is "immune to the race that defeats GA
+here" — that was FALSE. ALP runs on the PREVIOUS action set (SPEC D), so a near-fully-
+specialized rule reaches ALP as rarely as it reaches GA; ALP-gen is still action-set-
+revisitation-bound. Its actual advantage over GA is that it fires on EVERY action-set
+visit — no `theta_ga` gate — and generalizes DIRECTIONALLY, mark-driven via
+`get_differences`/`u_max`, rather than by random mutation. Whether that pushes the
+boundary past k=37 is the empirical question M2b answers, not an assumption either way.)
+Raw logs (all current `mpx_reach` binary): `reports/mpx_reach_37.txt` (n_exp=3, 480 s cap),
+`mpx_reach_70.txt` (n_exp=3 seeds {42,43,44}, unified 600 s cap), `mpx_reach_135.txt` (n_exp=1, 360 s cap).
+
+### Per-component memory — the M3 packing target, measured
+
+`size_of` decomposition of `Classifier<N>` at each reached k (`mpx_reach` component bench).
+`Mark<N> = [BTreeSet<Symbol>; N]` dominates and its share GROWS with N, while condition and
+effect (`[Symbol; N]`, 2N bytes each) stay small:
+
+| k (N)     | condition | effect | Mark (stack) | classifier | Mark share |
+|-----------|-----------|--------|--------------|------------|------------|
+| 20 (21)   | 42 B      | 42 B   | 504 B        | 672 B      | 75.0%      |
+| 37 (38)   | 76 B      | 76 B   | 912 B        | 1152 B     | 79.2%      |
+| 70 (71)   | 142 B     | 142 B  | 1704 B       | 2072 B     | 82.2%      |
+| 135 (136) | 272 B     | 272 B  | 3264 B       | 3896 B     | 83.8%      |
+
+Measurement (not intuition) confirms the large-N ceiling is `Mark`: at N=136 a per-classifier
+`[BTreeSet;136]` is 3264 B of 3896 B (84%), and the empty-`BTreeSet` stack footprint scales
+linearly in N. These `size_of` shares are **stack-only and therefore a LOWER bound** on
+Mark's true weight: a populated `BTreeSet` allocates heap nodes on top. Empirically at k=135
+the reach run held ~30.4k classifiers at peak RSS 0.36 GB ≈ 11.8 KB/classifier vs the 3896 B
+stack size — i.e. ~8 KB/classifier of heap, much of it Mark B-tree nodes — so the real Mark
+share exceeds 84%. **M3 packing should target `Mark` first** (e.g. a bitset / small-set
+representation), not condition/effect. This is also why the reach RSS-cap pop-threshold is
+N-dependent (`5.6 GB / size_of(Classifier<N>)`: 8.3M at k=20 → 1.44M at k=135 — itself an
+over-estimate of true capacity, since it ignores Mark heap).
+## M2b — Multiplexer with canonical ALP generalization (Task 2, phase 2b)
+
+M2b turns on the canonical ALP over-specialization generalization branch (pyalcs
+`alp.py:78-94`), DEAD in M1/M2a because `u_max = 100000`. It is a canonical-PORT phase:
+the branch is transcribed faithfully, not modified. Two variants are shipped behind
+`Configuration::alp_gen_variant` (`AlpGenVariant::{Pyalcs, Butz}`), self-gated by `u_max`
+(no `do_alp_gen` bool — the branch is unreachable at `u_max = 100000`, exactly as pyalcs
+expresses it), so the maze path stays on `u_max = 100000` and byte-identical (below):
+
+- **A = Pyalcs (anchor).** Faithful transcription of `alp.py:78-94`: generalizes the
+  PARENT classifier IN PLACE (the live population member), counting only
+  `specified_unchanging_attributes` (condition-specified ∧ effect-wildcard); the child is
+  snapshotted before the loops (`copy_from`, `alp.py:76`) and is NEVER generalized — it is
+  only prevented from over-specializing by the shrinking `diff`. The coin-flip asymmetry
+  (heads unconditionally decrements `no_spec_new`; tails decrements `no_spec` only if a
+  parent generalization succeeded) is ported verbatim.
+- **B = Butz (canonical-algorithm variant).** Per `articles/butz_algorithm.pdf` EXPECTED
+  CASE: generalizes the CHILD (`child.C`), counting FULL condition specificity, any
+  specified position eligible. This is a DELIBERATE DEVIATION from the pyalcs source lines,
+  flagged as a separate mode — not a modification of A.
+
+The A-vs-B divergence is a first-class finding, the same class as the four pyalcs bugs in
+the deviations ledger: **does the widely-used pyalcs variant (parent-generalization)
+compactify the reliable population the knowledge metric measures, or is child-compaction a
+property only the Butz variant achieves?** GA is ON and EQUAL across A and B (see below),
+so the A−B difference is attributable purely to the ALP variant.
+
+### GA must stay ON: GA-off + ALP-gen is a MEASURED runaway (not run)
+
+M2b keeps M2a's `do_ga = true`. This is not incidental — it was FORCED by measurement.
+With GA OFF and ALP-gen ON, the Pyalcs parent-generalization mutates a reliable parent to
+be MORE general, so the parent no longer subsumes its own specialized child; the child is
+then ADDED instead of absorbed, and with GA off there is NO `theta_as` action-set deletion
+pressure at all. The population grows super-linearly and the run becomes computationally
+infeasible: MEASURED to not complete even a few hundred trials at k=11 (k=6 survives only
+because 2^6 saturates). GA-on restores the deletion pressure and bounds the population
+(k=11: 5000 trials in 0.34 s; k=20 300k trials in ~9.7 s). This is an artifact of the
+GA-off CONFIG removing deletion pressure, not a pyalcs bug and not a port bug — but it is
+why M2b = GA-on + ALP-gen (mirroring M2a), never GA-off.
+
+### u_max is a DERIVED hyperparameter (no citable value exists)
+
+No source in the repo gives a pyalcs-semantic `u_max`. Butz's algorithmic description
+defines `umax` but gives NO experimental value; the Unold PDFs never mention `u_max`; the
+`u_max=1` seen in `reference/ALCS/.../multiplexer_11.yaml` means "max attributes in
+covering" (ALCS `parameter_guide.md:89`), a DIFFERENT semantic that is inert/print-only in
+the ALCS backend and never reaches `expected_case`. So `u_max` for MPX is a DERIVED choice,
+labelled not-literature, same honesty rule as the M2a trials cap. It bakes in
+solution-structure knowledge (the compact MPX rule specifies `a` address + 1 data bit); the
+`u_max` sweep is a SEPARATE study, not M2b. Maze keeps `u_max = 100000`.
+
+Derivation principle: branch A fires when the variant's own count `>= u_max`, so set
+`u_max` to the tightest value that (i) does NOT fire on the compact rule and (ii) DOES fire
+at one-redundant. The two variants count differently, so they derive DIFFERENT `u_max`:
+
+| quantity | Pyalcs (unchanging count) | Butz (full condition count) |
+|---|---|---|
+| compact no-change rule | `a+1` | `a+1` |
+| compact change rule (validation bit in condition) | `a+1` (bit is CHANGING → excluded) | `a+2` (bit counted) |
+| **derived `u_max`** | **`a+2`** (`control_bits+2`) | **`a+3`** (`control_bits+3`) |
+
+The change rule specifies the validation/answer bit in its condition (`Classifier::
+specialize` sets `condition[N-1] = p0[N-1]`); Butz's full count includes it, pyalcs's
+unchanging count does not — hence B's `u_max` is one higher. Per-k values: Pyalcs
+{k6→4, k11→5, k20→6, k37→7, k70→8, k135→9}; Butz {5,6,7,8,9,10}.
+
+### Gate (n_exp=10, GA-on + ALP-gen): knowledge=1.0 holds, specificity converges CLEANER
+
+Both variants hold knowledge=1.0 (exhaustive-exact, 10/10) on MPX-6/11/20 — the regression
+check passes — AND drive reliable-condition specificity CLOSER to the ideal `a+1` than M2a's
+GA-alone random mutation:
+
+| k  | knowledge | Pyalcs spec (u_max=a+2) | Butz spec (u_max=a+3) | M2a GA-alone spec | ideal a+1 |
+|----|-----------|-------------------------|-----------------------|-------------------|-----------|
+| 6  | 1.0 (10/10 both) | 3.00±0.01 | 3.02±0.03 | 3.04±0.07 | 3 |
+| 11 | 1.0 (10/10 both) | 4.00±0.00 | 4.00±0.01 | 4.15±0.18 | 4 |
+| 20 | 1.0 (10/10 both) | 5.02±0.03 | 5.00±0.00 | 5.24±0.25 | 5 |
+
+Reliable counts (Pyalcs / Butz / M2a): k6 27.5 / 28.2 / 28.1; k11 56.0 / 57.8 / 56.7;
+k20 88.3 / 92.3 / 88.6. Both variants converge to `a+1` essentially exactly (Butz marginally
+tighter at k20: 5.00 vs 5.02), vs GA-alone's ~0.04–0.24 excess. **Cleaner generalization at
+equal k is CONFIRMED** — canonical ALP-gen approaches the ideal more tightly than GA's
+random mutation, as theory predicts. Results: `reports/mpx_m2b_pyalcs.csv`,
+`reports/mpx_m2b_butz.csv`.
+
+### Reach k=37: SUCCESS, and MUCH cleaner than GA-alone (spec ~6.0 vs 7.91)
+
+At the M2a boundary k=37 (a+1=6), both variants reach knowledge=1.0 (3/3 SUCCESS) with
+specificity at the IDEAL, vs M2a GA-alone's mean 7.91/38 (~2 redundant):
+
+| variant | verdict | knowledge | reliable | spec (/38) | vs M2a GA-alone |
+|---|---|---|---|---|---|
+| Pyalcs (u_max=7) | SUCCESS 3/3 | 1.0 | 144–156 | 6.01–6.05 (mean ~6.03) | 7.91 |
+| Butz (u_max=8)   | SUCCESS 3/3 | 1.0 | 144–161 | 6.00–6.01 (mean ~6.00) | 7.91 |
+
+k=37 reach delta vs GA-on baseline: reach UNCHANGED at k=37 (both SUCCESS, as GA-alone),
+but specificity delta is large and favourable: **−1.9 spec (6.0 vs 7.91)** — ALP-gen removes
+the ~2 redundant specializations GA leaves. Logs: `reports/mpx_m2b_reach37.log`.
+
+### Reach k=70: the M2a freeze is BROKEN — compact rules, coverage time-bound (not race-lost)
+
+M2a GA-alone LOST the generalize-vs-specialize race at k=70: reliables froze
+fully-specialized (spec 46–68/71, ≫ a+1=8) with knowledge≈0 (0.0004–0.0071). Both M2b
+ALP-gen variants shatter that freeze — reliables stay COMPACT near the ideal a+1=8, and
+knowledge is orders of magnitude higher, though neither reaches 1.0 in the 600 s cap
+(TIME-LIMITED, 3/3 ALL AGREE, both variants):
+
+| variant | verdict (n=3) | knowledge | reliable | spec (/71) | peak RSS |
+|---|---|---|---|---|---|
+| M2a GA-alone | TIME-LIMITED | 0.0004–0.0071 | 57–109 | 46.35–67.97 (frozen) | 0.27 GB |
+| Pyalcs (u_max=8) | TIME-LIMITED | 0.135–0.241 (mean ~0.17) | 75–110 | 8.63–9.79 (mean ~9.2) | 0.13 GB |
+| Butz (u_max=9)   | TIME-LIMITED | 0.208–0.268 (mean ~0.24) | 203–223 | 8.52–8.75 (mean ~8.6) | 0.12 GB |
+
+This is the M2b headline. The k=70 boundary CHANGES CHARACTER: under GA-alone it is a
+race-lost freeze (reliables fully specialized, ~1/2^70 match fraction, action set never
+revisited, knowledge≈0); under ALP-gen it is compact-but-coverage-incomplete (reliables at
+spec ~a+1, knowledge climbing to 0.17–0.24 in the same wall-clock, still TIME-LIMITED). The
+peak RSS (0.12–0.13 GB, far below the 5.6 GB cap) confirms the limit is genuinely TIME, not
+memory — as it was for M2a, but now with compact rather than frozen rules. This is exactly
+the mechanism predicted: ALP-gen fires on EVERY action-set visit (no theta_ga gate) and
+generalizes DIRECTIONALLY (mark-driven), so a rule that specializes toward full length is
+generalized back before it freezes — the freeze GA could not escape (theta_ga almost never
+fires on a near-fully-specialized rule whose action set is never revisited).
+
+**A-vs-B at k=70 — the raw gap is a `u_max` + seed CONFOUND; freeze-break is variant-
+independent.** The 3-seed means (Pyalcs know ~0.17 spec ~9.2 rel ~90; Butz know ~0.24 spec
+~8.6 rel ~215) ran Pyalcs at `u_max=a+2` and Butz at `u_max=a+3`, so they differ in BOTH the
+variant AND the threshold. A confound-controlled isolation (k=70, seed 42, both variants ×
+both thresholds; `reports/mpx_m2b_reach70_confound.txt`) resolves it:
+
+| config (seed 42) | knowledge | reliable | spec (/71) |
+|---|---|---|---|
+| Pyalcs @ a+2 (correct) | 0.241 | 110 | 8.63 |
+| Pyalcs @ a+3           | 0.246 | 257 | 9.80 |
+| Butz @ a+2             | 0.024 | 8   | 7.38 (collapse) |
+| Butz @ a+3 (correct)   | 0.256 | 203 | 8.58 |
+
+Findings: (1) **knowledge is variant-independent** (~0.24–0.26 across all valid cells — the
+"0.24 vs 0.17" gap was seed noise; the freeze-break does NOT depend on parent-vs-child).
+(2) **Butz collapses at a+2** (knowledge 0.024, 8 reliable) — its full count fires branch A
+on its own compact change rule and strips a needed bit, CONFIRMING why Butz derives a+3;
+Pyalcs works at the tighter a+2, so **Pyalcs tolerates a tighter threshold**. (3) At equal
+`u_max=a+3` Butz gives tighter conditions (8.58 vs 9.80) but FEWER reliables (203 vs 257) —
+so "more reliable rules" was a threshold artifact that flips. Net: the parent-vs-child
+divergence is a first-class *implementation* choice (pick one, derive its `u_max`), but the
+separable variant effect is threshold tolerance + modestly tighter Butz conditions at equal
+threshold — NOT a Butz sweep, and NOT the source of the freeze-break.
+Logs: `reports/mpx_m2b_reach70.log`, `reports/mpx_m2b_reach70_confound.txt`.
+
+### Reach k=135: beyond reach — no reliable rules form in budget (both variants)
+
+At k=135 (a+1=9), neither variant forms ANY reliable classifier within the 360 s cap
+(n=1, TIME-LIMITED): Pyalcs 324.5k trials, Butz 188k trials, both knowledge=0,
+**reliable=0** (the reported spec=0.00/136 is the empty-set mean — no reliable rules, NOT
+spec 0). Peak RSS 0.26 / 0.38 GB, far below the 5.6 GB cap: TIME-bound, not memory-bound.
+Contrast M2a GA-alone, which formed 62 FULLY-SPECIALIZED reliable rules (spec 135.94/136,
+knowledge 0) — different mechanism, same knowledge=0: GA froze 62 per-input rules; ALP-gen
+churns general candidates none of which accumulate enough experience (q>theta_r=0.9) over
+2^135 in 188–324k trials. k=135 is beyond reach for both under this budget.
+Logs: `reports/mpx_m2b_reach135.log`.
+
+### Reach summary and the boundary delta vs GA-on k=37
+
+| k   | GA-alone (M2a)                  | Pyalcs ALP-gen              | Butz ALP-gen               |
+|-----|---------------------------------|-----------------------------|----------------------------|
+| 37  | SUCCESS, spec 7.91              | SUCCESS, spec ~6.03         | SUCCESS, spec ~6.00        |
+| 70  | TIME-LIM, spec ~57, know ≈0     | TIME-LIM, spec ~9.2, know ~0.17 | TIME-LIM, spec ~8.6, know ~0.24 |
+| 135 | TIME-LIM, 62 rel spec 135.9     | TIME-LIM, 0 reliable        | TIME-LIM, 0 reliable       |
+
+**Largest k at knowledge=1.0: k=37 for both variants — the SAME k as GA-alone.** So the
+reach-to-1.0 boundary is NOT pushed by k. The M2b gains are on the OTHER two axes the gate
+asks about:
+1. **Specificity delta at equal k (k=37): −1.9 (spec ~6.0 vs GA-alone 7.91).** ALP-gen
+   converges to the ideal a+1=6; GA-alone leaves ~2 redundant. Cleaner generalization
+   confirmed, both variants, tightest for Butz.
+2. **k=70 boundary character delta:** GA-alone's race-lost freeze (spec ~57, knowledge ≈0)
+   becomes ALP-gen's compact-but-coverage-incomplete (spec ~a+1, knowledge 0.17–0.24).
+   Same TIME-LIMITED verdict, radically healthier state — a change in KIND, not just degree.
+
+This is the pre-authorized FOUND BOUNDARY, reported as measured (budget NOT inflated). The
+precise scope: *canonical ALP-gen (both variants) reaches knowledge=1.0 through k=37 with
+IDEAL specificity (a+1), strictly cleaner than GA-alone; at k=70 it BREAKS the
+generalize-vs-specialize freeze that defeats GA (compact rules, knowledge lifted from ≈0 to
+~0.2) but remains TIME-bound short of 1.0; at k=135 no reliable rule forms in budget.* The
+KNOWN SUBTLETY is borne out: ALP-gen runs on the previous action set, so it is NOT free of
+action-set revisitation — k=70/135 remain time-bound — but its every-visit, mark-directional
+generalization removes the FREEZE that made GA's boundary a hard wall, which is the
+motivation for the thesis's prioritization/ER mechanism.
+
+### Maze P8/P9 UNCHANGED — byte-identical by construction
+
+The `u_max` flag keeps the maze path on `u_max = 100000`, so the ALP-gen branch is
+unreachable and adds ZERO RNG draws on the maze path (the `else` while-loop runs zero
+iterations; verified by the m2b_alp_generalization `disabled_u_max` fixture). Reproduced:
+- **P8 differential: 761/761 cases, zero divergence** (2519 classifier assertions;
+  `p8_differential` green under `default_protocol`, `u_max = 100000`).
+- **P9 maze learning metrics: byte-identical** — `acs2-bench` default run (GA-off, n_exp=10,
+  seed 42, 500 + 3×200) matches `reports/bench_rust.csv` exactly on all learning columns
+  (`exploit_steps_mean/std`, `macro_pop_mean`, `numerosity_mean`, `reliable_mean`); only the
+  wall-clock columns differ, as expected.
+- All 59 workspace tests green, incl. P3 subsumption, P5 expected_case/unexpected_case, GA,
+  maze parity, and the three new `m2b_alp_generalization` fixtures (parent-vs-child
+  divergence + disabled-u_max inertness locked).
+
+### Per-component memory — unchanged from M2a (no struct changes)
+
+M2b adds no fields to `Classifier<N>`, so the `size_of` decomposition is IDENTICAL to M2a's
+table above (Mark dominates, 75%→84% share k=20→135). Runtime peak RSS at each reached k
+(ALP-gen reach runs, far below the 5.6 GB cap, confirming TIME- not memory-binding): k=37
+0.03–0.06 GB; k=70 0.11–0.14 GB; k=135 0.26–0.38 GB. `Mark` remains the M3 packing target.
+
+
+---
+
+## Analysis tooling — logs reduce to committed CSVs, figures read only CSVs
+
+Thesis provenance requires every figure to regenerate from the repository alone, but
+the raw `mpx_reach` logs are large, arrive in several vintages, and mostly live on the
+WCSS cluster. So the pipeline has a deliberate seam:
+
+```
+logs (.log/.out) --> tools/parse_mpx_logs.py --> reports/mpx_*.csv --> tools/plot_mpx.py --> reports/figures/
+                          stdlib only                committed              matplotlib
+```
+
+**Nothing downstream of the CSV reads a log.** The CSVs are small and reviewable, so a
+supervisor or examiner can check the numbers behind a figure without cluster access.
+
+### Why `tools/` is a separate uv project from `baseline/`
+
+`baseline/` pins an unmodified pyalcs (Python 3.10, `gym==0.23.0`, `numpy==1.23.5`) and
+its lockfile is part of the P8 differential-validation evidence. Plotting dependencies
+must not perturb an environment whose job is to stay fixed, so `tools/` carries its own
+lock and a much looser Python floor.
+
+### NAMED HAZARD — `seed = base_seed + repeat`
+
+`mpx_reach` runs repeat `r` at `options.seed + r`. An `n_exp=3` log headed `seed=42`
+therefore contains seeds **42, 43 and 44**, not three runs of seed 42. Collapsing them
+into one series would have hidden the effect that turned out to dominate at k=70 (see
+`docs/AGENT_HANDOFF.md` §4a): trials-to-success varies ~2.5x across seeds, and seed 42
+is a fast outlier. The parser reconstructs the effective seed for exactly this reason.
+
+Two related log-format facts the parser absorbs: trajectory lines carry no repeat index
+(they are attributed to the repeat closed by the next verdict line, and an unclosed tail
+becomes the next, unfinished repeat), and older logs predate `u_max` / `alp_gen_variant`
+while a single file may hold several runs behind banner lines.
+
+### Chart conventions
+
+No dual-axis plots — the `anatomy` figure is stacked panels sharing one x-axis, because
+knowledge, specificity and population have unrelated units and twin axes would invite
+reading meaningless crossings. Colour follows the seed rather than its rank, mapped from
+every seed in the CSV so that filtering never repaints survivors. A run cut off by its
+time cap gets a hollow end marker and an explicit footnote: truncation is a budget
+artifact and must never read as a failure to converge.
+
+## ACS2ER — ACS2 with experience replay
+
+Added on `feature/acs2er`. Reference implementation (source of truth):
+`pyalcs/lcs/agents/acs2er/` (`ACS2ER.py`, `ReplayMemory.py`,
+`ReplayMemorySample.py`, `Configuration.py`). The accompanying MSc thesis
+(Ł. Śmierzchała, supervisor O. Unold, PWr 2022, ch. 4–5) motivates the
+extension; where the text and the code disagree, the code wins — the
+divergences found are listed at the end of this section.
+
+### NAMED HAZARD — ACS2ER deletes current-step learning
+
+**In ACS2ER the learning on the current step is REMOVED. All learning goes
+exclusively through replay from the buffer.**
+
+This contradicts the intuition that "ER adds replay *on top of* ordinary
+learning", and that intuition produces a wrong implementation. `ACS2ER.py:44-99`
+does only `form_match_set` → action selection → `env.step` →
+`replay_memory.update(...)` → the replay block. There is **no `apply_alp` /
+`apply_reinforcement_learning` / `apply_ga` on the current transition at all.**
+
+Consequences that the implementation must exhibit, and that
+`tests/p10_acs2er.rs` pins:
+
+- While the buffer holds fewer than `min_samples` samples the agent **does not
+  learn at all** — the population stays empty through the whole warmup window.
+- Learning on a sample is **immediate**: match set from `sample.state`, action
+  set from `sample.action`, next match set from `sample.next_state`. It is
+  **not** deferred by one step the way `Agent::run_explore_trial` defers it.
+  The deferred ACS2 loop was deliberately **not** reused or generalised —
+  ACS2ER has a different structure and sharing that loop would be wrong.
+- The timestamp handed to ALP and GA for every replayed sample is the
+  **current** `time + steps`, never the time at which the sample was stored.
+- `random.sample(range(0, len(buffer)), er_samples_number)` draws indices
+  **without replacement**; `ReplayMemory::sample_indices` reproduces that with
+  rejection redraws (the same selection-set strategy CPython uses at these
+  `k ≪ n` sizes), not sampling with replacement.
+- `_run_trial_exploit` is **identical** to ACS2's — no replay. It is therefore
+  shared code, not a copy (see below).
+
+### `LearningAgent` — the agent abstraction
+
+`acs2-core::trial` holds what both agents share: `TrialMetrics`, the
+`LearningAgent<N>` trait (`run_explore_trial`, `run_exploit_trial`,
+`population()`, `config()`) and the free `run_exploit_trial` function that is
+the single implementation of the exploitation loop. `Agent` (ACS2) and
+`Acs2ErAgent` both implement the trait and both delegate exploitation to it.
+
+`Agent`'s previous inherent methods were **moved** into its trait impl rather
+than kept alongside it. Keeping both would have made every call site silently
+resolve to the inherent method (inherent beats trait in method resolution),
+so the trait could rot without any call site noticing. Call sites gained a
+`use acs2_core::trial::LearningAgent;` import and nothing else; the P9 gate
+confirms the move changed no behaviour.
+
+The trait has generic methods (`E`, `S`, `B`), so it is **not object-safe** and
+cannot be boxed. This is deliberate: the alloc-free `(&Population<N>,
+&[ClassifierRef])` seams are worth more than `dyn` dispatch, and the benches
+need static dispatch anyway. Agent choice therefore resolves in a `match` over
+`AgentChoice` at construction, with the experiment body written once as a
+function generic over `A: LearningAgent<N>`. This composes with the existing
+`match size` monomorphisation in `run_reach_dispatch` without multiplying it:
+size dispatch stays four arms, and the agent branch lives inside the
+per-`N` function.
+
+### ER configuration is a separate type, not new `Configuration` fields
+
+`ReplayConfiguration { buffer_size, min_samples, samples_number }` lives in
+`acs2-core::acs2er::replay`; `Configuration` is **untouched**.
+
+pyalcs models this by inheritance (`acs2er.Configuration` extends
+`acs2.Configuration`). The Rust equivalent of that is composition, and it is
+also the safer choice here: invariant 1 of this branch is that ACS2 behaviour
+stays bit-identical, and a `Configuration` that cannot grow an ER field cannot
+leak one into an ACS2 code path. It is Interface Segregation applied literally
+— ACS2 does not depend on parameters it never reads. Defaults
+(`10000 / 1000 / 3`) match `acs2er/Configuration.py`; the thesis calls the same
+three knobs `N`, `N_warmup` and `m`.
+
+### Replay memory
+
+`ReplayMemory<N>` is a `VecDeque<ReplaySample<N>>` bounded by `max_size`, with
+`update` evicting the front (oldest) before pushing, matching
+`ReplayMemory.update`'s `pop(0)` exactly. Index `0` is the oldest sample on both
+sides, so replayed indices mean the same thing. `ReplaySample<N>` is `Copy`
+(`Perception<N>` already is), so replaying a sample does not clone the buffer.
+
+All index draws go through the injected `RandomSource` (invariant: no
+`thread_rng`, no global state). `sample_indices` clamps the request to the
+buffer length instead of panicking; pyalcs would raise `ValueError` there, and
+the clamp is unreachable in any configuration with
+`min_samples >= samples_number`.
+
+### Cost of the deliberate re-derive
+
+`replay_learning_step` re-derives the next match set with
+`form_match_set` after `apply_alp`, exactly as `Agent::run_explore_trial` does,
+rather than using the set `apply_alp` maintains in place. The two are provably
+equal (`apply_alp` appends every new `p1`-matcher and remaps deletions, and the
+input set already held every other matcher), so this costs one extra population
+scan per replayed sample and buys consistency with the documented deletion
+contract above. Given that ER already performs three `form_match_set` calls per
+sample, the deviation was not worth the divergence in style between two agents
+that must be read side by side.
+
+### What the differential covers
+
+`baseline/dump_acs2er_differential.py` + `acs2-core/tests/p11_acs2er_differential.rs`
+run the same 60-trial, 886-step explore experiment on both implementations and
+compare the final population field for field. Both sources of randomness in the
+pyalcs path (the replay index draw, and `PMark.get_differences`' position pick)
+are recorded as one chronological event log and served back to Rust through its
+`RandomSource`; action selection is scripted on both sides. The test asserts
+Rust consumed exactly as many draws, with the same bounds, as pyalcs did —
+so a structural divergence fails on the RNG stream even before the population
+is compared.
+
+The gate configuration sets `theta_i = 0`. ALP deletion is the only trigger for
+the pyalcs mid-iteration skip documented above, and that bug would make an
+end-to-end population comparison meaningless. The dumper counts deletions
+regardless and the Rust test refuses to compare when the count is non-zero.
+ALP deletion itself is covered by the P8 differential, which is unaffected.
+
+`do_ga = false` in the gate, so the GA path through `replay_learning_step`
+(including its `sample.done` empty-match-set gating) is **not** differentially
+covered — it is transcribed from `ACS2ER.py:83-99` and reviewed, not proven.
+
+### Reference code vs the thesis text
+
+- **§5.3 calls the eviction policy "LIFO"** ("usunięcie najstarszego w buforze
+  (ang. Last In First Out, LIFO)"). The prose is right and the label is wrong:
+  dropping the oldest entry is FIFO, and `ReplayMemory.update`'s `pop(0)`
+  drops the oldest. Implemented as FIFO, per the code.
+- **Algorithm 5 shows no `done` handling in the replay block.** The code gates
+  both the RL bootstrap (`0 if sample.done else ...get_maximum_fitness()`) and
+  the GA match set (`ClassifiersList() if sample.done else er_next_match_set`)
+  on the stored `done` flag. Implemented per the code; the algorithm listing is
+  incomplete here.
+- **§5.3's iteration-count formula, `n * m − N_warmup`,** does not follow from
+  the loop. Learning runs on every step from the `N_warmup`-th onward, giving
+  `m * (n − N_warmup + 1)` applications. Presentational only — no code depends
+  on it.
+- `_run_trial_explore` draws `env.action_space.sample()` into `action` before
+  the loop and immediately overwrites it. Dead code in pyalcs that consumes a
+  draw from the environment's RNG; not reproduced, and irrelevant here because
+  the two implementations already draw from different streams (see the P9
+  methodology note above).
+- `TrialMetrics.reward` is the **total** episode reward in the Rust port and
+  the **last** step's reward in pyalcs. This is a pre-existing convention of
+  the Rust `Agent`, kept for `Acs2ErAgent` so both agents behind the trait
+  report comparable metrics. No benchmark reads it.

@@ -1,196 +1,253 @@
-# acs2-rust — an idiomatic Rust port of canonical ACS2
+# acs2-rust
 
-This is a Rust implementation of **ACS2** (an Anticipatory Learning Classifier
-System, Butz & Stolzmann). Its port target is the **pyalcs** library
-(`hendrykik/acs2vcp-python`, the `lcs/agents/acs2` core), which is treated as the
-source of truth for behaviour.
+An independent Rust implementation of **ACS2** (Anticipatory Classifier System,
+Butz & Stolzmann) and **ACS2ER** (ACS2 with experience replay), written for a
+master's thesis on prioritised sample selection from replay memory.
 
-The purpose is to **measure how much faster a Rust ACS2 runs than the Python
-reference** on the same mazes, same protocol, same machine — a baseline to decide
-whether to commit to Rust before a possible Actor-Critic extension of ACS2.
-
-**This phase is baseline-only.** Actor-Critic is **not** implemented. The
-architecture only leaves clean seams for it: an `ActionSelector` trait (the actor
-seam) and an injected RL bootstrap value (the critic seam). See
-`ARCHITECTURE.md` and `PROJECT_CONTEXT.md` §7.
-
----
-
-## Results
-
-Numbers below are taken verbatim from `reports/P9_comparison.md` and
-`reports/P8_differential.md`. GA OFF, `n_exp=10`, protocol = 500 explore (ε=0.8) +
-3×200 exploit, final exploit-window mean steps, sequential timed runs on one
-machine.
-
-### Speedup (P9) — `t_python / t_rust`
-
-| Maze | pyalcs total_s | Rust total_s | speedup |
-|---|---|---|---|
-| Maze4-v0 | 63.569 | 0.415 | 153.3× |
-| Maze5-v0 | 93.924 | 0.756 | 124.2× |
-| Maze7-v0 | 117.444 | 0.916 | 128.3× |
-| Woods1-v0 | 19.840 | 0.066 | 298.8× |
-| Woods100-v0 | 11.428 | 0.047 | 242.6× |
-
-**Headline — total-time speedup (Σt_py / Σt_rust): 139.2×** (pyalcs 306.20s vs
-Rust 2.20s over 5 mazes × 10 repeats). Secondary reading: mean of per-maze
-speedups (equal weight) is 189.4×.
-
-Exploit steps-to-goal agree across every maze (ratios 1.00–1.07×), confirming Rust
-runs the *same* ACS2 algorithm — not a faster, different one. The correctness gate
-(every maze within 2× of pyalcs steps) **passes**.
-
-### Differential validation (P8)
-
-800 random deterministic `(population, p0, action, p1, time, reward)` inputs were
-run through both an instrumented (unmodified) pyalcs and the Rust core, comparing
-match set, action set, next-state match set, RL bootstrap, and population after one
-learning step.
-
-| Bucket | Count | Compared exactly? |
-|---|---|---|
-| Deterministic, RNG-free | **761** | Yes — **0 divergences** |
-| RNG-excluded (≥2 mark candidates; pick is random by design) | 24 | No |
-| pyalcs-bug-excluded (`apply_alp` mid-iteration skip) | 15 | No |
-| **Total generated** | 800 | |
-
-The 39 excluded cases are **legitimately excluded** (RNG or a pyalcs bug Rust does
-not reproduce), not failures. Result: **761/761 deterministic cases agree with zero
-divergence.**
-
----
-
-## Workspace layout
-
-Cargo workspace, Clean Architecture (the domain crate has no I/O and no environment
-knowledge):
-
-| Crate | Kind | Purpose |
-|---|---|---|
-| `acs2-core` | lib | Pure ACS2 domain: classifier, population, ALP, RL, GA, action selection, config, injected RNG, and the shared trial loop. |
-| `acs2-envs` | lib | The `Environment` (Gymnasium-style) trait impl: the 8-sensor maze plus geometry definitions in `mazes/` — the 5 canonical pyalcs mazes ported from `gym_maze` (the default run) and 22 additional ounold/ALCS mazes (opt-in via `--mazes`). |
-| `acs2-bench` | bin | Runs the maze suite under the benchmark protocol, computes metrics + timing, emits CSV. |
-
-The Python reference (pyalcs baseline + dump/compare scripts) lives under
-`baseline/`. Source-of-truth docs: `PROJECT_CONTEXT.md`, `SPEC_PYALCS.md`,
-`BUILD_PLAN.md`, `ARCHITECTURE.md`. Generated artefacts and reports are in
-`reports/`; golden vectors in `fixtures/`.
-
----
-
-## Build and run
-
-### Rust benchmark
+It solves Boolean multiplexers well beyond what the ACS literature reports.
 
 ```bash
 cargo build --release
+cargo test --release                    # 73 tests
+./target/release/acs2-bench             # maze benchmark
+./target/release/mpx_reach --sizes 20   # multiplexer, solves in seconds
+```
+
+## What it does
+
+**Multiplexer scaling.** Published ACS/ACS2 results stop at 20–37 bits. This
+implementation reaches 1.0 knowledge — anticipating *every* transition correctly —
+at 70 and 135 bits:
+
+| Problem | Result | Cost | Final population |
+|---|---|---|---|
+| MPX-70 | solved on **5 of 5 seeds** | 17.8–66.4 M trials | 268–277 reliable rules, specificity 7.00–7.04 (ideal 7) |
+| MPX-135, modified encoding | solved on **4 of 5 seeds** | 30.2–55.6 M trials | 532–539 reliable rules, specificity 8.00–8.01 (ideal 8) |
+| MPX-135, canonical encoding | solved, **1 seed so far** | 428 M trials | 532 reliable rules, specificity 8.02 |
+
+Two things make those numbers readable:
+
+- **`knowledge` is stricter than the accuracy the literature reports.** It requires
+  the model to anticipate every transition, including the null ones a wrong answer
+  produces under the canonical encoding. On MPX-135 the agent reaches **answer
+  accuracy 1.0000 while knowledge sits at 0.7499** — by the criterion ExSTraCS and
+  ACS2ER use, that is already solved. Both metrics are instrumented; report them
+  together.
+- **Two problem encodings.** Canonical MPX leaves the perception unchanged after a
+  wrong answer, so the rules for those transitions must anticipate identity. The
+  `outcome` encoding gives every action an observable effect. It is about ten times
+  cheaper but is formally a different problem, so its results are **not comparable
+  to the multiplexer literature**; canonical ones are.
+
+`reports/MPX_final.md` is the narrative; `reports/MPX<k>_runs.md` is every run at
+that size in one table.
+
+**Performance.** Against the pyalcs reference on the pinned maze protocol
+(5 mazes, `n_exp=10`, GA off, 500 explore + 3×200 exploit, same machine,
+sequential): **139× on total time** (306.20 s → 2.20 s). Exploit steps-to-goal
+agree within 1.00–1.07×, so it is the same algorithm, not a faster different one.
+Against `ounold/ALCS` `cpu_single` over 22 mazes: ~27× median.
+
+**Correctness.** 800 random `(population, p0, action, p1, time, reward)` inputs run
+through both an instrumented pyalcs and this core, comparing match set, action set,
+next-state match set, RL bootstrap and the population after one learning step:
+**761 of 761 deterministic cases agree, zero divergence.** The other 39 are excluded
+for cause — 24 where pyalcs picks a mark candidate at random by design, 15 where
+pyalcs skips a classifier mid-iteration, a bug this implementation does not
+reproduce. ACS2ER is validated the same way (`p11_acs2er_differential.rs`).
+
+## Relationship to pyalcs
+
+`hendrykik/acs2vcp-python` is a **correctness oracle and a performance baseline**,
+not a target. Where it and canonical ACS2 disagree, the deviation is recorded and
+justified in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+The shipped defaults deliberately match pyalcs — GA off, `u_max = 100000` (which
+leaves the ALP generalization branch dormant), the pinned maze protocol — because
+differential validation and a fair timing comparison both need an identical
+configuration on the two sides. Every one of them is a flag, and the multiplexer
+work overrides them routinely.
+
+Four pyalcs bugs are **not** reproduced: three orchestration bugs
+(`_is_preferred_to_delete`, `ClassifiersList.copy()`, `_run_trial_exploit`) and the
+`apply_alp` mid-iteration skip caused by deleting from a list while iterating it.
+All four were surfaced by the differential testing. See
+[`reports/P8_differential.md`](reports/P8_differential.md).
+
+## Layout
+
+Cargo workspace, Clean Architecture — the domain crate has no I/O and no knowledge
+of any environment:
+
+| Crate | Kind | Purpose |
+|---|---|---|
+| `acs2-core` | lib | Classifier, population, ALP, RL, GA, action selection, config, injected RNG, the shared trial loop, and both agents (`agent::Agent`, `acs2er::Acs2ErAgent`) behind the `trial::LearningAgent` trait. |
+| `acs2-envs` | lib | The `Environment` trait: the 8-sensor maze with geometry in `mazes/` (5 canonical pyalcs mazes plus 22 from `ounold/ALCS`), and the multiplexer with both encodings. |
+| `acs2-bench` | bin | `acs2-bench` runs the maze protocol; `mpx_reach` runs the multiplexer scaling experiment. |
+
+`baseline/` holds the pinned Python reference (its lockfile is part of the
+validation evidence). `tools/` is a **separate** Python project for parsing and
+plotting, kept apart so plotting dependencies never perturb that pinned
+environment. `slurm/` holds the cluster scripts, `fixtures/` the golden vectors,
+`reports/` every result.
+
+## Running experiments
+
+### Maze benchmark
+
+```bash
 ./target/release/acs2-bench
 ```
 
-With no flags the runner uses the pinned protocol: all five mazes
-(Maze4-v0, Maze5-v0, Maze7-v0, Woods1-v0, Woods100-v0), `n_exp=10`, seed 42,
-**GA OFF**, 500 explore + 3×200 exploit. The CSV lands at `reports/bench_rust.csv`.
+No flags gives the pinned protocol: all five mazes, `n_exp=10`, seed 42, GA off,
+500 explore + 3×200 exploit, written to `reports/bench_rust.csv`.
 
-Flags (all optional): `--mazes <a,b,...>`, `--n-exp <k>`, `--seed <s>`,
-`--do-ga` (turns GA on — must match the baseline for a valid comparison),
-`--explore-trials`, `--exploit-trials`, `--exploit-phases`, `--out <path>`.
+Flags: `--mazes <a,b,...>`, `--n-exp <k>`, `--seed <s>`, `--do-ga`,
+`--explore-trials`, `--exploit-trials`, `--exploit-phases`, `--out <path>`,
+`--agent acs2|acs2er`.
 
 > Always time the **release** binary. A debug build can read slower than CPython
 > and would invert the result.
 
-### Python baseline (pyalcs)
+### Multiplexer
 
-The baseline runs the **unmodified** pyalcs agent in a pinned environment (Python
-3.10, `gym==0.23.0`, `numpy==1.23.5`) managed by [`uv`]. It expects the reference
-repos cloned as siblings — see `baseline/README.md` for the layout and pinning
-rationale.
+```bash
+./target/release/mpx_reach --sizes 20 --n-exp 1 --seed 42
+```
 
-One-time setup:
+Sizes are not continuous — `k = a + 2^a` gives 6, 11, 20, 37, 70, 135, 264, 521.
+20 and 37 solve in seconds to minutes; 70 takes hours; 135 takes days.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--sizes <a,b,...>` | `37,70,135` | Which multiplexers to run. |
+| `--seed <s>` / `--n-exp <k>` | `42` / `3` | Repeat *r* runs at seed `s + r`. |
+| `--time-cap-secs <s>` | `600` | Wall-clock budget per repeat. |
+| `--u-max derived\|<int>` | `derived` | ALP specificity ceiling. `derived` is `a + 2`, which is too tight at 135 — that needs 11. |
+| `--encoding flip\|outcome` | `flip` | `flip` is canonical; see above. |
+| `--epsilon <f>` | `0.8` | Exploration rate. `1` removes the greedy bias entirely, which is what solves 135 canonically. |
+| `--alp-gen-variant pyalcs\|butz` | `pyalcs` | Which ALP generalization to use. |
+| `--agent acs2\|acs2er` | `acs2` | Which agent. |
+| `--eval-interval <n>` | `6000` | Trials between knowledge evaluations. |
+| `--rss-cap-gb <f>` | `5.6` | Abort if peak RSS exceeds this. Raise it at 264 bits. |
+
+Knowledge is exhaustive for k ≤ 20 and **sampled** (50,000 inputs, fixed evaluation
+seed) for larger sizes — state that caveat when reporting.
+
+### Diagnostics
+
+All off by default and read-only over the population, so turning one on cannot
+change a result:
+
+| Flag | Answers |
+|---|---|
+| `--log-trajectory` | The S-curve: knowledge, reliable count, specificity, population. |
+| `--log-accuracy` | How often the greedy choice answers correctly — the metric the literature reports. |
+| `--log-coverage` | Knowledge split into four action × correctness classes. **This is where a 0.75 or 0.50 ceiling is explained** — it means whole classes are empty. |
+| `--log-quadrant-detail` | Per class, the share covered by any classifier and the best quality among them — separates "never created" from "never reliable". |
+| `--log-diagnostics` | Population-wide specificity, quality spread, mark density, experience, address-bit enrichment. |
+
+### ACS2ER
+
+Both agents run the **same** experiment code; only the agent is swapped.
+
+```bash
+./target/release/acs2-bench --agent acs2er --out /tmp/maze_acs2er.csv
+./target/release/mpx_reach  --agent acs2er --sizes 20 --n-exp 3
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--er-buffer-size` | `10000` | Replay buffer capacity; oldest evicted first. |
+| `--er-min-samples` | `1000` | Warmup — below this the agent does not learn at all. |
+| `--er-samples-number` | `3` | Samples replayed per step, drawn without replacement. |
+
+ACS2ER performs `--er-samples-number` learning applications per step and none on
+the current transition, so per-trial wall time is roughly that multiple of ACS2's,
+and it is memory-hungry: at k=70, `m = 13` needs well over 8 GB. Long comparisons
+belong on a cluster.
+
+### On a cluster (SLURM)
+
+```bash
+sbatch --export=ALL,TAG=<tag>,U_MAX=11,ENCODING=outcome,EPSILON=1 \
+    slurm/mpx_reach.sh <size> <seed> <time_cap_secs> [extra flags]
+./slurm/mpx_status.sh
+```
+
+Results land outside the checkout. Pull them into the repository and rebuild the
+archive with a single command:
+
+```bash
+./tools/sync_runs.sh --commit
+```
+
+Do this after every batch. Until it runs, a result that cost days of compute exists
+in exactly one copy, on the cluster.
+
+## Reproducing the reports
+
+Every figure and table regenerates from committed CSVs, never from raw logs:
+
+```bash
+python3 tools/parse_mpx_logs.py reports/slurm_*.out    # logs  -> CSVs
+python3 tools/rebuild_tables.py                        # CSVs  -> reports/MPX<k>_runs.md
+uv run --project tools python tools/plot_mpx.py --size 135 \
+    --encoding flip --epsilon 1 --u-max 11 --suffix _canonical_eps1
+```
+
+**Always narrow a plot to one experimental arm at k ≥ 135.** One seed now has runs
+under both encodings, two epsilons and several `u_max` values; splicing them makes
+a curve that never happened. The tool refuses a mixed selection and names what is
+mixed. `tools/README.md` documents the rest, including the
+`seed = base_seed + repeat` rule that silently corrupts results if ignored.
+
+The pyalcs comparison needs the pinned baseline environment
+(Python 3.10, `gym==0.23.0`, `numpy==1.23.5`, managed by [`uv`]) and the reference
+repositories cloned as siblings — see `baseline/README.md`:
 
 ```bash
 cd baseline && uv sync
-```
-
-Run the full suite and write the comparison CSV (from the repo root):
-
-```bash
 uv run --project baseline python baseline/run_pyalcs_maze.py \
-  Maze4-v0 Maze5-v0 Maze7-v0 Woods1-v0 Woods100-v0 \
-  --repeats 10 --csv reports/bench_pyalcs.csv
-```
-
-`run_pyalcs_maze.py` takes one or more maze ids (positional), plus `--seed`
-(default 42), `--repeats` (default 1; the pinned benchmark uses 10), `--do-ga`,
-and `--csv <path>`. Without `--csv` it prints verbose per-trial output instead.
-
-### Reproduce the comparison
-
-`compare_bench.py` joins the two CSVs into the P9 report (per-maze learning quality
-+ speedup, with the total-time headline) and flags any maze whose exploit steps
-differ by more than 2× (run from the repo root, where the default CSV paths
-resolve):
-
-```bash
+    Maze4-v0 Maze5-v0 Maze7-v0 Woods1-v0 Woods100-v0 \
+    --repeats 10 --csv reports/bench_pyalcs.csv
 uv run --project baseline python baseline/compare_bench.py
-# reads reports/bench_rust.csv + reports/bench_pyalcs.csv, writes reports/P9_comparison.md
 ```
 
-### Tests
+### Benchmark methodology
 
-```bash
-cargo test --release
-```
+The speedup figure is only meaningful under these constraints, which are the
+project's own rules from `ARCHITECTURE.md`:
 
-This runs the fixture-backed unit tests (P3–P6: matching, population, learning
-core, agent loop), the maze-parity tests against dumped `gym_maze` probes, and the
-**differential tests** (`p8_differential.rs`, `episode_differential.rs`) that
-replay the pyalcs-instrumented fixtures.
+- Optimized Rust only — the timed binary is `target/release/acs2-bench`.
+- Sequential and uncontended — the two sides never overlap, same machine.
+- Symmetric timed region — only explore + exploit are timed; metrics are computed
+  after it on both sides.
+- GA off on both sides, identical protocol, identical per-maze step caps.
+- Two readings reported: per-maze `t_py/t_rust` and the total-time headline.
 
----
+## Reading the code
 
-## Methodology (why the speedup is trustworthy)
+| Document | Read it for |
+|---|---|
+| [`docs/ACS2_PRIMER.md`](docs/ACS2_PRIMER.md) | ACS2 from first principles, anchored to this code. Start here if the algorithm is new to you. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Implementation decisions and the named hazards. |
+| [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | What the project is, the pinned protocol, the fidelity rules. |
+| [`docs/SPEC_PYALCS.md`](docs/SPEC_PYALCS.md) | The reference semantics the oracle enforces. |
+| [`docs/ACS2_RULE_DUMPS_GUIDE.md`](docs/ACS2_RULE_DUMPS_GUIDE.md) | How to read a learned population. |
+| [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) | Live experiment state — what is running and what is still open. |
+| [`reports/MPX_final.md`](reports/MPX_final.md) | The multiplexer results as a narrative. |
+| [`reports/MPX_literature_review.md`](reports/MPX_literature_review.md) | What has been published on this environment. |
 
-Constraints below are quoted from the **ARCHITECTURE.md** "P9 benchmark
-methodology" section — they are the project's own rules, not claims invented here:
+## Scope
 
-- **Optimized Rust only** — the timed binary is `target/release/acs2-bench`; a
-  debug build is never timed.
-- **Sequential, uncontended** — the pyalcs and Rust timed runs never overlap; one
-  runs, then the other, on the **same machine**.
-- **Symmetric timed region** — only explore + exploit are timed; population/reliable
-  metrics are computed *after* the timed region on both sides.
-- **GA OFF on both sides** — `do_ga` is one flag (`--do-ga`), default OFF for this
-  comparison, set to the same value on the Rust bench and the pyalcs baseline.
-- **Identical protocol** — 500 explore (ε=0.8) + 3×200 exploit, final-window mean
-  steps, `n_exp=10`, same mazes and per-maze step caps on both sides.
-- Two readings are reported: per-maze `t_py/t_rust` and the total-time
-  `Σt_py/Σt_rust` (the labelled headline).
+Actor-Critic is **not** implemented; the architecture leaves seams for it (an
+`ActionSelector` trait and an injected RL bootstrap value). Prioritised replay —
+the thesis contribution — is not implemented either: ACS2ER provides uniform replay
+and the measurements that a prioritisation criterion has to beat.
 
-The speedup reflects language/runtime only; the bit-packing optimization is
-deferred behind the same interface and is **not** part of these numbers.
-
----
-
-## Scope and fidelity
-
-The port reproduces **pyalcs behaviour** (the source of truth), not the textbook
-Butz & Stolzmann ACS2. Two consequences, summarized from the ARCHITECTURE.md
-"fidelity deviations" section and `PROJECT_CONTEXT.md` §4:
-
-- **Four pyalcs bugs are NOT reproduced.** Three orchestration bugs
-  (`_is_preferred_to_delete`, `ClassifiersList.copy()`, `_run_trial_exploit`) plus a
-  fourth in a learning primitive — the `apply_alp` mid-iteration skip that pyalcs's
-  list-deletion-while-iterating causes — were surfaced by the differential testing.
-  Rust re-derives the loop cleanly and uses deferred deletion, so it is the correct
-  side. Details: `PROJECT_CONTEXT.md` §4, the ARCHITECTURE.md fidelity ledger, and
-  `reports/P8_differential.md`. (The task brief referenced an `AUDIT_REPORT.md`;
-  that file does not exist in the repo — the four bugs are documented in those three
-  files instead.)
-- **Some pyalcs config choices are reproduced deliberately** for benchmark parity:
-  ALP generalization is disabled by `u_max = 100000` (under the shipped config ALP
-  only specializes), exploitation ignores epsilon (always BestAction), and
-  `biased_exploration` is dead config. These depart from canonical ACS2 on purpose,
-  so P9 compares the *same* algorithm on both sides.
+Determinism is guaranteed by an injected RNG: the same seed and configuration
+reproduce a run trial for trial, verified across architectures. Trials-to-success
+is therefore the machine-independent metric; wall-clock is not.
 
 [`uv`]: https://docs.astral.sh/uv/

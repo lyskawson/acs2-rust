@@ -1,0 +1,14 @@
+########## M2b GATE pyalcs (GA-on + ALP-gen, u_max=a+2) ##########
+acs2-bench mpx: sizes=[6, 11, 20] n_exp=10 seed=42 exploit=200x3 do_ga=true alp_gen_variant=pyalcs
+mpx-6    u_max=4       explore=20000    knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=97.5±9.9 reliable=27.5±2.1 spec=3.00±0.01/7 time=0.844s
+mpx-11   u_max=5       explore=200000   knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=292.5±31.9 reliable=56.0±3.4 spec=4.00±0.00/12 time=23.764s
+mpx-20   u_max=6       explore=300000   knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=507.7±40.4 reliable=88.3±3.7 spec=5.02±0.03/21 time=92.599s
+wrote reports/mpx_m2b_pyalcs.csv
+
+########## M2b GATE butz (GA-on + ALP-gen, u_max=a+3) ##########
+acs2-bench mpx: sizes=[6, 11, 20] n_exp=10 seed=42 exploit=200x3 do_ga=true alp_gen_variant=butz
+mpx-6    u_max=5       explore=20000    knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=100.7±7.9 reliable=28.2±2.0 spec=3.02±0.03/7 time=0.813s
+mpx-11   u_max=6       explore=200000   knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=289.5±19.5 reliable=57.8±2.7 spec=4.00±0.01/12 time=22.897s
+mpx-20   u_max=7       explore=300000   knowledge=1.0000 (min 1.0000, 10/10 at 1.0) macro=514.5±37.7 reliable=92.3±3.6 spec=5.00±0.00/21 time=96.018s
+wrote reports/mpx_m2b_butz.csv
+ALL_GATE_DONE

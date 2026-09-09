@@ -1,0 +1,7 @@
+acs2-bench mpx-reach: sizes=[37] n_exp=3 seed=42 rss_cap=5.6GB time_cap=480s
+  mem mpx-37 (N=38): condition=76B effect=76B mark=912B (stack) classifier=1152B  mark/classifier=79.2%  rss-cap pop-threshold=4861111
+  mpx-37 trials_cap=429496729600000 (= 20000*2^(k-6)*10, clamped to u64::MAX)
+  mpx-37 repeat 0: SUCCESS trials=930000 knowledge=1.0000 reliable=167 spec=8.26/38 peak_macro=34160 peak_rss=0.08GB wall=358.4s
+  mpx-37 repeat 1: SUCCESS trials=828000 knowledge=1.0000 reliable=168 spec=8.32/38 peak_macro=34435 peak_rss=0.11GB wall=298.3s
+  mpx-37 repeat 2: SUCCESS trials=828000 knowledge=1.0000 reliable=163 spec=7.14/38 peak_macro=34979 peak_rss=0.11GB wall=301.3s
+  mpx-37 verdict agreement across 3 repeats: ALL AGREE

@@ -1,0 +1,5 @@
+acs2-bench mpx-reach: sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_cap=360s
+  mem mpx-135 (N=136): condition=272B effect=272B mark=3264B (stack) classifier=3896B  mark/classifier=83.8%  rss-cap pop-threshold=1437371
+  mpx-135 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX)
+  mpx-135 repeat 0: TIME-LIMITED trials=165000 knowledge=0.0000 reliable=62 spec=135.94/136 peak_macro=30406 peak_rss=0.36GB wall=361.8s
+  mpx-135 verdict agreement across 1 repeats: ALL AGREE

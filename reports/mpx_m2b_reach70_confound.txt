@@ -1,0 +1,33 @@
+M2b A/B confound-control diagnostics (not part of the main gate/reach runs)
+===========================================================================
+
+(1) k=70 u_max isolation — variant x threshold, seed 42, n=1, 600 s cap, GA-on.
+    Separates the parent-vs-child variant from the a+2-vs-a+3 u_max value.
+
+  config                     knowledge  reliable  spec(/71)  note
+  Pyalcs @ u_max=a+2 (=8) *   0.2406     110       8.63       correct threshold (from reach70.log seed42 rep0)
+  Pyalcs @ u_max=a+3 (=9)     0.2455     257       9.80
+  Butz   @ u_max=a+2 (=8)     0.0235       8       7.38       COLLAPSE (over-generalizes; confirms Butz needs a+3)
+  Butz   @ u_max=a+3 (=9) *   0.2562     203       8.58       correct threshold (from reach70.log seed42 rep0)
+  * = the variant's own derived correct threshold.
+
+  Conclusions:
+  - knowledge ~0.24-0.26 across all VALID cells -> freeze-break is variant-INDEPENDENT;
+    the earlier "Butz 0.24 vs Pyalcs 0.17" 3-seed-mean gap is seed noise.
+  - Butz@a+2 collapses (knowledge 0.024, 8 reliable): full-spec count fires branch A on the
+    compact change rule (full spec a+2) and strips a needed bit -> confirms the derivation
+    that Butz must use a+3. Pyalcs works at the tighter a+2 (tolerates a tighter threshold).
+  - At equal u_max=9: Butz tighter spec (8.58 vs 9.80) but FEWER reliable (203 vs 257) ->
+    reliable-count tracks threshold, not variant; "Butz more reliable" was a u_max artifact.
+
+(2) GA-off + ALP-gen stability probe (item 1), k=11, u_max=derived, 5000 explore, GA-OFF.
+    Tests whether child-generalization (Butz) confers GA-off stability that parent-gen lacks.
+
+  variant   trials  macro_pop  reliable  spec    outcome
+  Pyalcs    ~few-hundred        -         -       DID NOT COMPLETE (catastrophic; hung > timeout at ~600 trials)
+  Butz      5050    95197      4036      5.98     completes (22 s) but population EXPLODES
+
+  Conclusion: GA-off is unstable for BOTH variants (no theta_as deletion pressure). Butz does
+  not run away as catastrophically as Pyalcs but still blows the population to ~95k / ~4k
+  reliable (vs GA-on bounded ~290 / ~57). Child-generalization does NOT confer GA-off
+  stability -> M2b requires GA-on for both variants.

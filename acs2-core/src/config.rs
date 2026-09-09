@@ -1,3 +1,9 @@
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AlpGenVariant {
+    Pyalcs,
+    Butz,
+}
+
 #[derive(Clone, Debug)]
 pub struct Configuration {
     pub number_of_possible_actions: usize,
@@ -19,6 +25,7 @@ pub struct Configuration {
     pub do_pee: bool,
     pub do_action_planning: bool,
     pub do_subsumption: bool,
+    pub alp_gen_variant: AlpGenVariant,
 }
 
 impl Configuration {
@@ -43,6 +50,28 @@ impl Configuration {
             do_pee: false,
             do_action_planning: false,
             do_subsumption: true,
+            alp_gen_variant: AlpGenVariant::Pyalcs,
         }
+    }
+
+    pub fn mpx() -> Self {
+        Self {
+            number_of_possible_actions: 2,
+            ..Self::default_protocol()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mpx_uses_two_actions_and_leaves_other_defaults() {
+        let mpx = Configuration::mpx();
+        assert_eq!(mpx.number_of_possible_actions, 2);
+        assert!(!mpx.do_ga);
+        assert_eq!(mpx.u_max, Configuration::default_protocol().u_max);
+        assert_eq!(Configuration::default_protocol().number_of_possible_actions, 8);
     }
 }

@@ -1,0 +1,374 @@
+"""Render the MPX thesis figures from the CSVs written by `parse_mpx_logs.py`.
+
+Reads committed data, never raw logs, so every figure regenerates from the
+repository alone. Emits vector PDF for LaTeX plus a PNG preview.
+
+Two figures so far:
+
+  reach      knowledge vs trials, one line per seed -- the reach claim, and the
+             seed variance that goes with it
+  anatomy    one seed as three stacked panels sharing the trials axis --
+             knowledge, mean specificity of reliable rules, population size
+  signal     whether ALP's specialization actually finds the address bits, per
+             multiplexer size, against the rate blind attribute choice would give
+
+`anatomy` is stacked panels rather than one plot with several y-scales on
+purpose: the three measures have unrelated units, and overlaying them on twin
+axes would let the eye read crossings that carry no meaning. It is the figure
+that shows *why* the apparent plateau is not a failure -- specificity is still
+falling toward the ideal and the population is still condensing while knowledge
+looks flat.
+
+Palette is the validated categorical order (worst adjacent CVD dE 35.9 on white);
+aqua sits marginally under 3:1 on white, so every series is direct-labelled.
+"""
+
+import argparse
+import csv
+from collections import defaultdict
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+
+SERIES_COLORS = ["#2a78d6", "#1baf7a", "#008300", "#4a3aa7", "#e34948"]
+INK_PRIMARY = "#0b0b0b"
+INK_SECONDARY = "#52514e"
+INK_MUTED = "#898781"
+GRIDLINE = "#e1e0d9"
+AXIS = "#c3c2b7"
+
+LINE_WIDTH = 1.4
+IDEAL_MARKER_SIZE = 26
+
+
+def address_bits(size):
+    """MPX-k has a address bits with k = a + 2**a; a correct rule specifies a+1."""
+    bits = 1
+    while bits + 2**bits < size:
+        bits += 1
+    if bits + 2**bits != size:
+        raise ValueError(f"{size} is not a valid multiplexer size")
+    return bits
+
+
+def load(path):
+    with path.open(newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def numeric(rows, *columns):
+    for row in rows:
+        for column in columns:
+            row[column] = float(row[column]) if row[column] else 0.0
+    return rows
+
+
+def apply_style():
+    plt.rcParams.update({
+        "figure.dpi": 150,
+        "savefig.bbox": "tight",
+        "font.size": 8.5,
+        "axes.titlesize": 9.5,
+        "axes.labelsize": 8.5,
+        "axes.edgecolor": AXIS,
+        "axes.labelcolor": INK_SECONDARY,
+        "axes.titlecolor": INK_PRIMARY,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.grid": True,
+        "grid.color": GRIDLINE,
+        "grid.linewidth": 0.6,
+        "xtick.color": INK_MUTED,
+        "ytick.color": INK_MUTED,
+        "xtick.labelcolor": INK_SECONDARY,
+        "ytick.labelcolor": INK_SECONDARY,
+        "legend.frameon": False,
+        "legend.labelcolor": INK_SECONDARY,
+    })
+
+
+def millions(value, _position):
+    return f"{value / 1e6:g}M"
+
+
+def spread(points, min_gap, x_tolerance, ceiling):
+    """Nudge end-of-line labels apart vertically, but only where they actually collide.
+
+    Labels collide only when their anchors are close in *both* axes, so lines that
+    finish at the same knowledge but thousands of trials apart keep their true y.
+    Within a cluster the stack is centred on the group, so it stays under `ceiling`
+    instead of marching off the top of the axes.
+    """
+    adjusted = [point["y"] for point in points]
+    order = sorted(range(len(points)), key=lambda index: points[index]["x"])
+
+    cluster = [order[0]]
+    clusters = [cluster]
+    for index in order[1:]:
+        if points[index]["x"] - points[cluster[-1]]["x"] <= x_tolerance:
+            cluster.append(index)
+        else:
+            cluster = [index]
+            clusters.append(cluster)
+
+    for cluster in clusters:
+        if len(cluster) == 1:
+            continue
+        cluster.sort(key=lambda index: points[index]["y"])
+        centre = sum(points[index]["y"] for index in cluster) / len(cluster)
+        start = centre - min_gap * (len(cluster) - 1) / 2
+        for position, index in enumerate(cluster):
+            adjusted[index] = min(start + position * min_gap, ceiling)
+    return adjusted
+
+
+def color_map(rows):
+    """Stable seed -> hue over the whole dataset, so filtering never repaints."""
+    seeds = sorted({int(row["seed"]) for row in rows})
+    if len(seeds) > len(SERIES_COLORS):
+        raise SystemExit(
+            f"{len(seeds)} seeds exceeds the {len(SERIES_COLORS)}-slot palette; "
+            "use small multiples rather than generating hues"
+        )
+    return {seed: SERIES_COLORS[index] for index, seed in enumerate(seeds)}
+
+
+ARM_COLUMNS = ("encoding", "epsilon", "u_max")
+
+
+def arm_of(row):
+    """What makes two runs comparable. Curves from different arms must not merge."""
+    return tuple(row.get(column, "") for column in ARM_COLUMNS)
+
+
+def group_by_seed(rows, size, variant, arm=None):
+    """Trajectory points per seed, restricted to one experimental arm.
+
+    Filtering on size and variant alone was enough while `flip` at one `u_max`
+    was the only configuration. It is not any more: at k=135 a single seed has
+    runs under both encodings, two epsilons and six values of `u_max`, and
+    concatenating them sorts unrelated runs into one curve that never existed.
+    """
+    arm = arm or {}
+    grouped = defaultdict(list)
+    for row in rows:
+        if int(row["size"]) != size or row["variant"] != variant:
+            continue
+        if any(row.get(column, "") != value for column, value in arm.items()):
+            continue
+        grouped[int(row["seed"])].append(row)
+
+    mixed = {seed: {arm_of(row) for row in points} for seed, points in grouped.items()}
+    offenders = {seed: arms for seed, arms in mixed.items() if len(arms) > 1}
+    if offenders:
+        detail = "; ".join(
+            f"seed {seed}: " + ", ".join("/".join(a) for a in sorted(arms))
+            for seed, arms in sorted(offenders.items())
+        )
+        raise SystemExit(
+            "refusing to plot: one seed spans several arms and the curves would be "
+            f"spliced together -- {detail}. Narrow it with --encoding / --epsilon / --u-max."
+        )
+
+    for points in grouped.values():
+        points.sort(key=lambda row: row["trials"])
+    return dict(sorted(grouped.items()))
+
+
+def save(figure, out_dir, stem, formats):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for suffix in formats:
+        path = out_dir / f"{stem}.{suffix}"
+        figure.savefig(path)
+        print(f"wrote {path}")
+    plt.close(figure)
+
+
+def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, suffix=""):
+    series = group_by_seed(trajectory, size, variant, arm)
+    if not series:
+        raise SystemExit(f"no trajectory rows for size={size} variant={variant}")
+    colors = color_map(trajectory)
+
+    solved = {
+        int(row["seed"]): row["trials"]
+        for row in verdicts
+        if int(row["size"]) == size and row["variant"] == variant and row["verdict"] == "SUCCESS"
+        and all(row.get(column, "") == value for column, value in (arm or {}).items())
+    }
+
+    figure, axes = plt.subplots(figsize=(6.4, 3.8))
+    endpoints = []
+    truncated = False
+    for seed, points in series.items():
+        trials = [row["trials"] for row in points]
+        knowledge = [row["knowledge"] for row in points]
+        axes.plot(trials, knowledge, color=colors[seed], linewidth=LINE_WIDTH,
+                  label=f"seed {seed}", solid_capstyle="round")
+        if seed in solved:
+            axes.plot([solved[seed]], [1.0], marker="o", markersize=4.5,
+                      color=colors[seed], markeredgecolor="white", markeredgewidth=0.8)
+        else:
+            truncated = True
+            axes.plot([trials[-1]], [knowledge[-1]], marker="o", markersize=4.5,
+                      markerfacecolor="white", markeredgecolor=colors[seed], markeredgewidth=1.2)
+        endpoints.append({"seed": seed, "x": trials[-1], "y": knowledge[-1]})
+
+    x_span = max(point["x"] for point in endpoints) or 1
+    label_y = spread(endpoints, min_gap=0.06, x_tolerance=0.08 * x_span, ceiling=1.06)
+    for label, y in zip(endpoints, label_y):
+        axes.annotate(f"seed {label['seed']}", xy=(label["x"], y),
+                      xytext=(8, 0), textcoords="offset points",
+                      color=INK_SECONDARY, fontsize=7.5, va="center")
+
+    axes.axhline(1.0, color=INK_MUTED, linewidth=0.7, linestyle=(0, (4, 3)), zorder=0)
+    axes.set_xlabel("explore trials")
+    axes.set_ylabel("knowledge")
+    axes.set_ylim(0, 1.08)
+    axes.set_xlim(left=0)
+    axes.xaxis.set_major_formatter(FuncFormatter(millions))
+    axes.set_title(f"MPX-{size} knowledge acquisition ({variant} variant, GA on)", loc="left", pad=10)
+    axes.legend(loc="center right", ncol=1)
+    if truncated:
+        figure.text(0.0, -0.04,
+                    "Filled marker: knowledge reached 1.0.  Hollow marker: run stopped before "
+                    "converging, at its wall-clock cap or by cancellation.",
+                    color=INK_MUTED, fontsize=7)
+
+    save(figure, out_dir, f"mpx{size}_reach_{variant}{suffix}", formats)
+
+
+def plot_anatomy(trajectory, size, variant, seed, out_dir, formats, arm=None, suffix=""):
+    series = group_by_seed(trajectory, size, variant, arm)
+    if seed not in series:
+        raise SystemExit(f"no trajectory for seed {seed} at size={size} variant={variant}")
+    points = series[seed]
+    color = color_map(trajectory)[seed]
+    ideal = address_bits(size) + 1
+
+    trials = [row["trials"] for row in points]
+    panels = [
+        ("knowledge", [row["knowledge"] for row in points], None),
+        ("mean specificity\nof reliable rules", [row["spec"] for row in points], ideal),
+        ("population size", [row["pop"] for row in points], None),
+    ]
+
+    figure, axes_list = plt.subplots(3, 1, figsize=(6.4, 6.2), sharex=True)
+    for axes, (label, values, reference) in zip(axes_list, panels):
+        axes.plot(trials, values, color=color, linewidth=LINE_WIDTH, solid_capstyle="round")
+        axes.set_ylabel(label)
+        if reference is not None:
+            axes.axhline(reference, color=INK_MUTED, linewidth=0.7, linestyle=(0, (4, 3)), zorder=0)
+            axes.annotate(f"ideal {reference}", xy=(0.995, reference), xycoords=("axes fraction", "data"),
+                          xytext=(0, 4), textcoords="offset points",
+                          color=INK_SECONDARY, fontsize=7.5, ha="right")
+
+    axes_list[0].set_ylim(0, 1.08)
+    axes_list[0].set_title(
+        f"MPX-{size} seed {seed}: knowledge, rule specificity and population size",
+        loc="left", pad=10,
+    )
+    axes_list[-1].set_xlabel("explore trials")
+    axes_list[-1].set_xlim(left=0)
+    axes_list[-1].xaxis.set_major_formatter(FuncFormatter(millions))
+
+    save(figure, out_dir, f"mpx{size}_anatomy_s{seed}_{variant}{suffix}", formats)
+
+
+def plot_signal(diagnostics, sizes, out_dir, formats):
+    """Enrichment of address-bit specialization over the blind-choice baseline.
+
+    `addr_random` is what a classifier of the same specificity would hit by
+    choosing attributes uniformly, so the ratio is 1.0 when ALP carries no signal
+    about which attribute matters. The lower panel is the share of the population
+    holding a complete address -- the precondition for ever predicting correctly.
+    """
+    series = defaultdict(list)
+    for row in diagnostics:
+        size = int(row["size"])
+        if size in sizes and row["addr_random"]:
+            series[size].append(row)
+    if not series:
+        raise SystemExit("no address diagnostics for the requested sizes")
+    for rows in series.values():
+        rows.sort(key=lambda row: row["trials"])
+
+    order = sorted(series)
+    colors = {size: SERIES_COLORS[index] for index, size in enumerate(order)}
+
+    figure, (top, bottom) = plt.subplots(2, 1, figsize=(6.4, 5.2), sharex=True)
+    for size in order:
+        rows = series[size]
+        trials = [row["trials"] for row in rows]
+        ratio = [row["addr_spec"] / row["addr_random"] if row["addr_random"] else 0.0 for row in rows]
+        top.plot(trials, ratio, color=colors[size], linewidth=LINE_WIDTH,
+                 label=f"MPX-{size}", solid_capstyle="round")
+        bottom.plot(trials, [row["addr_full"] for row in rows], color=colors[size],
+                    linewidth=LINE_WIDTH, label=f"MPX-{size}", solid_capstyle="round")
+
+    top.axhline(1.0, color=INK_MUTED, linewidth=0.7, linestyle=(0, (4, 3)), zorder=0)
+    top.annotate("blind choice", xy=(0.995, 1.0), xycoords=("axes fraction", "data"),
+                 xytext=(0, 4), textcoords="offset points",
+                 color=INK_SECONDARY, fontsize=7.5, ha="right")
+    top.set_ylabel("address-bit enrichment\n(observed / blind choice)")
+    top.set_title("Does ALP find the address bits?", loc="left", pad=10)
+    top.legend(loc="upper left")
+
+    bottom.set_ylabel("share of population with\na complete address")
+    bottom.set_xlabel("explore trials")
+    bottom.set_xlim(left=0)
+    bottom.xaxis.set_major_formatter(FuncFormatter(millions))
+
+    save(figure, out_dir, "mpx_specialization_signal", formats)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--trajectory-csv", type=Path, default=Path("reports/mpx_trajectory.csv"))
+    parser.add_argument("--diagnostic-csv", type=Path, default=Path("reports/mpx_diagnostics.csv"))
+    parser.add_argument("--verdict-csv", type=Path, default=Path("reports/mpx_verdicts.csv"))
+    parser.add_argument("--out-dir", type=Path, default=Path("reports/figures"))
+    parser.add_argument("--size", type=int, default=70)
+    parser.add_argument("--variant", default="pyalcs")
+    parser.add_argument("--anatomy-seed", type=int, default=42)
+    parser.add_argument("--formats", default="pdf,png", help="comma-separated: pdf, png, pgf, svg")
+    parser.add_argument("--figures", default="reach,anatomy,signal")
+    parser.add_argument("--signal-sizes", default="70,135")
+    parser.add_argument("--encoding", default=None, help="flip | outcome")
+    parser.add_argument("--epsilon", default=None)
+    parser.add_argument("--u-max", default=None)
+    parser.add_argument("--suffix", default="", help="appended to the figure file name")
+    args = parser.parse_args()
+
+    arm = {
+        column: value
+        for column, value in (
+            ("encoding", args.encoding), ("epsilon", args.epsilon), ("u_max", args.u_max)
+        )
+        if value is not None
+    }
+
+    trajectory = numeric(load(args.trajectory_csv), "trials", "wall_s", "knowledge", "reliable", "spec", "pop")
+    verdicts = numeric(load(args.verdict_csv), "trials", "knowledge", "reliable", "spec", "wall_s")
+    formats = [item.strip() for item in args.formats.split(",") if item.strip()]
+    figures = {item.strip() for item in args.figures.split(",") if item.strip()}
+
+    apply_style()
+    if "reach" in figures:
+        plot_reach(trajectory, verdicts, args.size, args.variant, args.out_dir, formats,
+                   arm, args.suffix)
+    if "anatomy" in figures:
+        plot_anatomy(trajectory, args.size, args.variant, args.anatomy_seed, args.out_dir,
+                     formats, arm, args.suffix)
+    if "signal" in figures:
+        diagnostics = numeric(load(args.diagnostic_csv), "trials", "addr_spec", "addr_random", "addr_full")
+        sizes = {int(item) for item in args.signal_sizes.split(",") if item.strip()}
+        plot_signal(diagnostics, sizes, args.out_dir, formats)
+
+
+if __name__ == "__main__":
+    main()
