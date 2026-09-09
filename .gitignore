@@ -14,3 +14,9 @@ reports/slurm-*.wrapper
 
 # Private: supervisor correspondence, kept locally only
 docs/SUPERVISOR_CORRESPONDENCE.md
+
+# macOS
+.DS_Store
+
+# Private: working notes about supervisor correspondence
+docs/SUPERVISOR_NOTES.md

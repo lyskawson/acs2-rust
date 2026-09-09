@@ -1,9 +1,16 @@
 # The Multiplexer arc in Rust ACS2 — a scientific report
 
-**Scope.** This report tells the whole Multiplexer (MPX) story for the Rust ACS2 port as
-one narrative: how far canonical ACS2 learns the Boolean multiplexer, how compactly, and
-where — and why — it stops. It is a supervisor-facing summary; the terse implementation
-record lives in `docs/ARCHITECTURE.md` (M1 / M2a / M2b sections).
+**Scope.** This report tells the whole Multiplexer (MPX) story as one narrative: how far
+ACS2 learns the Boolean multiplexer, how compactly, where it stops, and what turned out to
+be stopping it. It is a supervisor-facing summary; the terse implementation record lives in
+`docs/ARCHITECTURE.md`.
+
+**Result, up front.** 70 bits is solved on every seed tried and 135 bits is solved — the
+latter both by changing the problem encoding and, more importantly, by removing an
+exploration bias while leaving the canonical encoding intact. Published ACS/ACS2 results
+stop at 20–37 bits. Acts I–IV are the history that got there and remain as written; Act V
+is the resolution, and it overturns this report's own earlier conclusion that k=135 was a
+mechanism boundary.
 
 **Why the multiplexer.** The k-bit multiplexer is the standard LCS scaling benchmark: `a`
 address bits select one of `2^a` data bits, so the perception is `N = a + 2^a + 1` bits
@@ -222,7 +229,7 @@ evidence of non-convergence at any budget short of tens of millions of trials.**
 Specificity and reliable-count are the diagnostic channels — they keep moving while
 knowledge looks frozen (`reports/figures/mpx70_anatomy_s46_pyalcs.pdf`).
 
-### k=135 — a mechanism boundary, not a budget boundary
+### k=135 — where it stood, and why it looked like a wall
 
 The k=135 run (seed 42, pyalcs @ `u_max` = 9, GA on) was given **105,621,000 trials over
 250,000 s** — 1.6x the trials that solved k=70's slowest seed — and ended TIME-LIMITED at
@@ -236,8 +243,11 @@ knowledge = 0.0000. The trajectory contains no learning signal whatsoever:
   trials.
 
 This is qualitatively unlike the k=70 plateau, where knowledge was flat but specificity
-and population were visibly still converging. Here nothing moves, so **more wall-clock is
-not the lever**.
+and population were visibly still converging. Here nothing moved, so more wall-clock did
+not look like the lever.
+
+**That reading was right about the budget and wrong about the wall.** k=135 is solved —
+Act V. What follows is the diagnosis that got there, in the order it was established.
 
 ### The diagnosis, measured: ALP specializes blindly at k=135
 
@@ -284,39 +294,53 @@ the repeated evidence a correct specialization would need, while waiting on the
 environment to revisit the relevant action set — which is exactly what prioritized
 experience replay attacks.
 
-### The boundary is not absolute: `u_max` = 12 breaks it (preliminary)
+### The `u_max` limit is one of two causes
 
 The diagnosis pointed at its own test. Population specificity at k=135 sits at 8.8–9.6
 against a derived `u_max` of 9 — rules were resting *on the limit*, so the limit itself
 was a candidate cause: a blindly specializing rule may need to hold surplus attributes
 before the right ones are among them, and `u_max` = 9 generalizes it back first. Sweeping
-`u_max` at k=135 (seed 42, 6 h cap each) confirms it:
+`u_max` at k=135 (seed 42) confirms the limit matters, and long runs give the ceiling each
+value reaches:
 
-| `u_max` | trials | knowledge | reliable | address enrichment | complete address |
-|---|---|---|---|---|---|
-| 8 | 5.54 M | 0.0000 | 0 | 0.87x | 0.0000 |
-| 9 *(derived)* | 6.08 M | 0.0000 | 0 | 0.97x | 0.0000 |
-| 10 | 7.82 M | 0.0000 | 0 | 0.99x | 0.0000 |
-| **12** | **7.04 M** | **0.0129** | **226** | **3.44x** | **0.0008** |
-| 16 | 3.96 M | 0.0000 | 0 | 1.02x | 0.0000 |
-| 24 | 1.59 M | 0.0000 | 0 | 0.97x | 0.0000 |
+| `u_max` | trials | knowledge | reliable | specificity |
+|---|---|---|---|---|
+| 8 | 5.54 M | 0.0000 | 0 | — |
+| 9 *(derived)* | 105.6 M | 0.0000 | 0 | — |
+| 10 | 294.8 M | 0.2717 | 170 | 8.97 |
+| **11** | **655.4 M** | **0.7499** | **396** | **8.00** |
+| 12 | 366.8 M | 0.5000 | 259 | 8.05 |
+| 13 | 158.2 M | 0.4889 | 258 | 8.14 |
+| 14 | 25.1 M | 0.1628 | 6 861 | 15.20 |
+| 16 | 35.5 M | 0.3242 | 8 092 | 16.89 |
+| 24 | 1.59 M | 0.0000 | 0 | — |
 
-At `u_max` = 12 every indicator that had been frozen starts moving: the first reliable
-rule appears at 3.66 M trials, the count reaches 226, knowledge climbs monotonically
-0.0001 -> 0.0015 -> 0.0048 -> 0.0129, maximum classifier quality reaches 1.000, and address
-enrichment rises past 3x. **This is the first non-zero knowledge ever recorded at k=135.**
+The canonical `a+2` = 9 is too tight at 135 attributes; 11 is the best value tried. But
+the ceilings it exposes — 0.7499 and 0.5000, suspiciously exact fractions — are the real
+finding, and they are not about `u_max` at all.
 
-Three honesty notes. Knowledge is 0.0129, not 1.0 — this is the foot of the S-curve, not a
-solution. The run was TIME-LIMITED with every indicator still rising, so the ceiling is
-unknown. And `u_max` = 16 and 24 are **not** refuted: larger populations run slower, so
-they reached only 3.96 M and 1.59 M trials, less than the 3.66 M at which `u_max` = 12
-produced its first reliable rule. Longer runs across `u_max` ∈ {11, 12, 13, 14, 16}, plus a
-second seed at 12, are in flight.
+### The exact fractions are missing classes, not partial learning
 
-(The `structurally correct` count stays 0 here for a metric reason, not a learning one: it
-requires specificity exactly `a+1` = 8, while `u_max` = 12 rules carry ~13.3 — they hold the
-complete address *plus* surplus attributes. In this regime the complete-address share is
-the meaningful column.)
+Splitting knowledge by action × whether the transition changes the validation bit turns
+those fractions into a structural statement. At `u_max` = 11, seed 42:
+
+| class | coverage |
+|---|---|
+| action 0, changes | 1.0000 |
+| action 1, changes | 1.0000 |
+| action 1, no change | 1.0000 |
+| **action 0, no change** | **0.0000, at every evaluation across 583.8 M trials** |
+
+Three of four classes complete, one empty: 0.75. Seeds 43, 44 and 45 have *both*
+no-change classes at zero and sit at 0.4980–0.5000. Scanning the whole population, not
+just the reliable rules, the starved class contains **no classifier of any quality** —
+rules are never created there. It is a discovery failure, not a reliability-threshold
+failure.
+
+The no-change classes are exactly the wrong answers. Under the canonical encoding a wrong
+answer leaves the perception unchanged, so its rule must anticipate identity — every
+classifier's default effect, which has to be *narrowed* — whereas correct-answer rules are
+built directly by ALP's unexpected case.
 
 ### `u_max` is not doing hidden work at the sizes that already solve
 
@@ -333,6 +357,96 @@ The derived value is the *fastest* at both sizes (k=20 at 6, k=37 at 7), but not
 on picking it — the reach claim survives any value in the range. Which makes the k=135
 result sharper rather than weaker: `u_max` is inert where the task is tractable and
 decisive exactly where it is not.
+
+---
+
+## Act V — k=135 solved, by two independent routes
+
+The starvation hypothesis makes two different predictions, and both hold.
+
+### Route 1 — give the wrong answer an observable effect
+
+Under `--encoding outcome` the validation attribute starts at 2 and becomes 1 on a hit or
+0 on a miss, so every action changes the perception and no rule has to anticipate identity.
+
+Tested first at k=70, where the canonical encoding already succeeds, so the comparison is
+clean: starvation disappears and the problem solves **3.8x faster** (4.68 M trials against
+17.88 M) at the same final structure (276 vs 277 reliable rules, specificity 7.01 vs 7.04).
+Under the canonical encoding the `a1_wrong` class sits at exactly 0.0000 from 120 k to
+5.88 M trials; under `outcome` all four classes climb together from the start.
+
+At k=135 it closes the problem outright, on four of five seeds:
+
+| seed | trials | reliable | specificity (ideal 8) | wall |
+|---|---|---|---|---|
+| 42 | 43.2 M | 539 | 8.00 | 50.5 h |
+| 43 | 46.8 M | 539 | 8.00 | 78.8 h |
+| 45 | 55.6 M | 532 | 8.00 | 80.9 h |
+| 46 | 30.2 M | 535 | 8.01 | 57.6 h |
+| 44 | — | — | — | did not converge; population bloated to 64 579 at specificity 10.9 |
+
+Seed 44 is a genuine exception and is reported as one. **Results under `outcome` are not
+comparable to the multiplexer literature** — it is a different problem.
+
+### Route 2 — stop the exploration bias from avoiding the starved class
+
+ACS2's greedy branch selects among classifiers that anticipate change, which under the
+canonical encoding means classifiers anticipating a *correct* answer. It therefore
+under-visits exactly the transitions that starve. Setting `epsilon = 1` makes action choice
+uniform and removes that bias, changing nothing else.
+
+**This solves k=135 under the canonical encoding**: seed 43 reaches knowledge 1.0000 at
+427,920,000 trials, 532 reliable rules at specificity 8.02, all four coverage classes at
+1.0000, in 152.3 h. Those numbers *are* comparable to the literature.
+
+The shape of the climb is the interesting part, and both seeds share it. One wrong-answer
+class opens early; the other holds at **exactly** 0.0000 for hundreds of millions of
+trials, then opens abruptly and the run finishes within ~23 M more:
+
+| seed | first class opens | second class opens | outcome |
+|---|---|---|---|
+| 43 | `a0_nochange` at 20.2 M | `a1_nochange` at 404.5 M | knowledge 1.0 at 427.9 M |
+| 42 | `a1_nochange` at 80.6 M | still 0.0000 at 301.4 M | stopped by the wall-clock cap |
+
+Seed 42 is not a seed that fails to respond. It was stopped 100 M trials before the point
+where seed 43's second class opened. A run sitting at 0.7442 with one class at exactly zero
+is mid-climb, and reading it as converged is the error this report has now made three
+times — see the ledger.
+
+**Status: one seed, confirmed; a second under way.** The canonical claim rests on seed 43
+alone until that finishes.
+
+### `accuracy` and `knowledge` are different criteria, and the gap is the whole story
+
+`knowledge` demands anticipating every transition, the null ones included. Choosing the
+right answer needs only the change-anticipating half. The literature scores the latter —
+ExSTraCS reports classification accuracy, ACS2ER reports reward.
+
+At k=135, canonical encoding, `u_max` = 11, the agent holds **answer accuracy 1.0000 across
+325.8 M trials while knowledge sits at its 0.7499 ceiling.** By the criterion the
+literature uses, that configuration solves the 135-bit multiplexer; by the anticipatory
+criterion it does not. Both numbers are true and reporting either alone misleads.
+
+Accuracy 1.0 is not automatic at the ceiling: at `u_max` = 12 it stalls at 0.982 while
+knowledge sits at 0.4821. It is a property of that configuration, not of the plateau.
+
+### k=264 — measured, not extrapolated
+
+The next size is 264 (`k = a + 2^a` admits nothing between). A 12-hour probe at
+`u_max` = 12 under `outcome`:
+
+| | measured |
+|---|---|
+| throughput | 27 trials/s average, decaying 88 → 19 as the population grew |
+| peak RSS | **0.86 GB** — memory is not the constraint |
+| population | 60 366 after 1.165 M trials, still growing linearly |
+| reliable rules | 0 |
+
+Scaling trials by the ~10x seen from 70 to 135 puts k=264 near 400 M trials, i.e.
+**700–4500 CPU-hours per seed**. The range is wide because it is unknown whether the
+population condenses as it did at 135, where it peaked near 80 k and then collapsed to
+~2.5 k while throughput recovered. The longest queue available is 21 days (504 h), so
+k=264 needs save/restore of the population before it is attemptable at all.
 
 ---
 
@@ -370,6 +484,16 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
 - **Maze path untouched.** The `u_max` flag keeps mazes on `u_max = 100000` (ALP-gen branch
   dead, zero added RNG draws), so the maze correctness gate (P8: 761/761 differential cases,
   zero divergence) and the P9 benchmark (byte-identical learning metrics) are UNCHANGED.
+- **Knowledge is sampled above k=20** — 50,000 inputs at a fixed evaluation seed, exhaustive
+  only for k ≤ 20.
+- **This report has called a mid-run reading a ceiling three times**, and each time it was
+  wrong. k=70 seed 46 sat at ~0.745 for 29.9 M trials and then reached 1.0. Seed 43 under
+  `epsilon = 1` was reported as capping at 0.7481 and reached 1.0000. Seed 42's starved class
+  was read as a property of the seed when it was the same plateau seed 43 escaped 100 M
+  trials later. A flat knowledge value is evidence of nothing until it is compared against
+  how long the comparable run stayed flat before it moved.
+- **Peak-memory figures from cluster runs before `f93b71e` are void.** `ru_maxrss` is bytes
+  on macOS and kilobytes on Linux; the code assumed bytes, so those runs report 0.00 GB.
 
 ---
 
@@ -385,21 +509,31 @@ Every non-obvious choice, stated plainly so the numbers can be trusted:
    tried** (17.8 M–66.4 M trials, median 21.3 M; 268–277 reliable rules at the ideal `a+1`
    specificity) — beyond every published ACS/ACS2 result. The earlier "does not pass k=37"
    reading was a budget artifact of 600-second probes, not a property of the mechanism.
-   **k=135, however, is a mechanism boundary**: 105.6 M trials produced zero reliable rules
-   at every one of 1,760 evaluations, with a stationary population — ALP still runs on the
-   previous action set and remains action-set-revisitation-bound, **which is precisely the
-   empirical motivation for the prioritization / experience-replay mechanism** the thesis
-   proposes.
-4. The **pyalcs-vs-Butz (parent- vs child-generalization) divergence** is a first-class
+4. **k=135 is solved, and the thing that blocked it was never the budget.** Whole classes of
+   transition — the wrong answers, which under the canonical encoding produce no perceptual
+   change — were never populated with a classifier of any quality. Two independent
+   interventions each relieve it: giving the wrong answer an observable effect
+   (`--encoding outcome`, 4 of 5 seeds, 30.2–55.6 M trials) and removing the greedy
+   exploration bias that avoids those transitions (`epsilon = 1`, knowledge 1.0000 at
+   427.9 M trials **under the canonical encoding**, one seed so far). That two unrelated
+   levers both work is the evidence that the diagnosis is right.
+5. **Report `accuracy` beside `knowledge` or the result reads as weaker than it is.** At
+   k=135 the agent holds answer accuracy 1.0000 while knowledge sits at 0.7499: solved by
+   the criterion ExSTraCS and ACS2ER use, unsolved by the stricter anticipatory one.
+6. **The motivation for prioritised replay survives, sharpened.** The failure was never
+   uniform slowness; it was specific classes of transition receiving no useful experience
+   while the rest converged. A prioritisation criterion aimed at *that* — rather than a
+   generic TD-error rule imported from deep RL — is what the measurements now point to, and
+   ACS2ER with uniform replay is the baseline it has to beat.
+7. The **pyalcs-vs-Butz (parent- vs child-generalization) divergence** is a first-class
    implementation finding, but a confound-controlled isolation shows the freeze-break itself
    is variant-INDEPENDENT (knowledge ~0.25 either way); the separable variant differences are
    threshold tolerance (Pyalcs works at the tighter a+2; Butz collapses there and needs a+3)
    and modestly tighter conditions for Butz at equal threshold. The port must pick one variant
    and derive its `u_max` accordingly — that choice, not a compactness sweep, is the finding.
 
-*Raw data: `reports/mpx_m2b_pyalcs.csv`, `reports/mpx_m2b_butz.csv`,
-`reports/mpx_m2b_reach{37,70,135}.log`. M3 raw logs: `reports/mpx_m3_e1_traj70_pyalcs.log`
-(seed 42) and `reports/slurm_mpx70_s4{3,4,5,6}.out`, `reports/slurm_mpx135_s42.out` (Bem2);
-reduced to `reports/mpx_trajectory.csv` + `reports/mpx_verdicts.csv`, from which every
-figure in `reports/figures/` regenerates (`tools/README.md`). Implementation record:
-`docs/ARCHITECTURE.md` §M2b and §"Analysis tooling".*
+*Raw data: every run at a given size is tabulated in `reports/MPX<k>_runs.md`, generated
+from `reports/mpx_verdicts.csv` and `reports/mpx_trajectory.csv`, which are in turn parsed
+from the cluster logs committed in `reports/` (`tools/README.md` documents the pipeline and
+`tools/sync_runs.sh` rebuilds it). Every figure in `reports/figures/` regenerates from those
+CSVs, never from the logs. Implementation record: `docs/ARCHITECTURE.md`.*
