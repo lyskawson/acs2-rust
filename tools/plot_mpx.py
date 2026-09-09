@@ -137,11 +137,43 @@ def color_map(rows):
     return {seed: SERIES_COLORS[index] for index, seed in enumerate(seeds)}
 
 
-def group_by_seed(rows, size, variant):
+ARM_COLUMNS = ("encoding", "epsilon", "u_max")
+
+
+def arm_of(row):
+    """What makes two runs comparable. Curves from different arms must not merge."""
+    return tuple(row.get(column, "") for column in ARM_COLUMNS)
+
+
+def group_by_seed(rows, size, variant, arm=None):
+    """Trajectory points per seed, restricted to one experimental arm.
+
+    Filtering on size and variant alone was enough while `flip` at one `u_max`
+    was the only configuration. It is not any more: at k=135 a single seed has
+    runs under both encodings, two epsilons and six values of `u_max`, and
+    concatenating them sorts unrelated runs into one curve that never existed.
+    """
+    arm = arm or {}
     grouped = defaultdict(list)
     for row in rows:
-        if int(row["size"]) == size and row["variant"] == variant:
-            grouped[int(row["seed"])].append(row)
+        if int(row["size"]) != size or row["variant"] != variant:
+            continue
+        if any(row.get(column, "") != value for column, value in arm.items()):
+            continue
+        grouped[int(row["seed"])].append(row)
+
+    mixed = {seed: {arm_of(row) for row in points} for seed, points in grouped.items()}
+    offenders = {seed: arms for seed, arms in mixed.items() if len(arms) > 1}
+    if offenders:
+        detail = "; ".join(
+            f"seed {seed}: " + ", ".join("/".join(a) for a in sorted(arms))
+            for seed, arms in sorted(offenders.items())
+        )
+        raise SystemExit(
+            "refusing to plot: one seed spans several arms and the curves would be "
+            f"spliced together -- {detail}. Narrow it with --encoding / --epsilon / --u-max."
+        )
+
     for points in grouped.values():
         points.sort(key=lambda row: row["trials"])
     return dict(sorted(grouped.items()))
@@ -156,8 +188,8 @@ def save(figure, out_dir, stem, formats):
     plt.close(figure)
 
 
-def plot_reach(trajectory, verdicts, size, variant, out_dir, formats):
-    series = group_by_seed(trajectory, size, variant)
+def plot_reach(trajectory, verdicts, size, variant, out_dir, formats, arm=None, suffix=""):
+    series = group_by_seed(trajectory, size, variant, arm)
     if not series:
         raise SystemExit(f"no trajectory rows for size={size} variant={variant}")
     colors = color_map(trajectory)
@@ -166,6 +198,7 @@ def plot_reach(trajectory, verdicts, size, variant, out_dir, formats):
         int(row["seed"]): row["trials"]
         for row in verdicts
         if int(row["size"]) == size and row["variant"] == variant and row["verdict"] == "SUCCESS"
+        and all(row.get(column, "") == value for column, value in (arm or {}).items())
     }
 
     figure, axes = plt.subplots(figsize=(6.4, 3.8))
@@ -202,15 +235,15 @@ def plot_reach(trajectory, verdicts, size, variant, out_dir, formats):
     axes.legend(loc="center right", ncol=1)
     if truncated:
         figure.text(0.0, -0.04,
-                    "Filled marker: knowledge reached 1.0.  Hollow marker: run stopped at its "
-                    "wall-clock cap, not a failure to converge.",
+                    "Filled marker: knowledge reached 1.0.  Hollow marker: run stopped before "
+                    "converging, at its wall-clock cap or by cancellation.",
                     color=INK_MUTED, fontsize=7)
 
-    save(figure, out_dir, f"mpx{size}_reach_{variant}", formats)
+    save(figure, out_dir, f"mpx{size}_reach_{variant}{suffix}", formats)
 
 
-def plot_anatomy(trajectory, size, variant, seed, out_dir, formats):
-    series = group_by_seed(trajectory, size, variant)
+def plot_anatomy(trajectory, size, variant, seed, out_dir, formats, arm=None, suffix=""):
+    series = group_by_seed(trajectory, size, variant, arm)
     if seed not in series:
         raise SystemExit(f"no trajectory for seed {seed} at size={size} variant={variant}")
     points = series[seed]
@@ -243,7 +276,7 @@ def plot_anatomy(trajectory, size, variant, seed, out_dir, formats):
     axes_list[-1].set_xlim(left=0)
     axes_list[-1].xaxis.set_major_formatter(FuncFormatter(millions))
 
-    save(figure, out_dir, f"mpx{size}_anatomy_s{seed}_{variant}", formats)
+    save(figure, out_dir, f"mpx{size}_anatomy_s{seed}_{variant}{suffix}", formats)
 
 
 def plot_signal(diagnostics, sizes, out_dir, formats):
@@ -305,7 +338,19 @@ def main():
     parser.add_argument("--formats", default="pdf,png", help="comma-separated: pdf, png, pgf, svg")
     parser.add_argument("--figures", default="reach,anatomy,signal")
     parser.add_argument("--signal-sizes", default="70,135")
+    parser.add_argument("--encoding", default=None, help="flip | outcome")
+    parser.add_argument("--epsilon", default=None)
+    parser.add_argument("--u-max", default=None)
+    parser.add_argument("--suffix", default="", help="appended to the figure file name")
     args = parser.parse_args()
+
+    arm = {
+        column: value
+        for column, value in (
+            ("encoding", args.encoding), ("epsilon", args.epsilon), ("u_max", args.u_max)
+        )
+        if value is not None
+    }
 
     trajectory = numeric(load(args.trajectory_csv), "trials", "wall_s", "knowledge", "reliable", "spec", "pop")
     verdicts = numeric(load(args.verdict_csv), "trials", "knowledge", "reliable", "spec", "wall_s")
@@ -314,9 +359,11 @@ def main():
 
     apply_style()
     if "reach" in figures:
-        plot_reach(trajectory, verdicts, args.size, args.variant, args.out_dir, formats)
+        plot_reach(trajectory, verdicts, args.size, args.variant, args.out_dir, formats,
+                   arm, args.suffix)
     if "anatomy" in figures:
-        plot_anatomy(trajectory, args.size, args.variant, args.anatomy_seed, args.out_dir, formats)
+        plot_anatomy(trajectory, args.size, args.variant, args.anatomy_seed, args.out_dir,
+                     formats, arm, args.suffix)
     if "signal" in figures:
         diagnostics = numeric(load(args.diagnostic_csv), "trials", "addr_spec", "addr_random", "addr_full")
         sizes = {int(item) for item in args.signal_sizes.split(",") if item.strip()}

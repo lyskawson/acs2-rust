@@ -43,6 +43,10 @@ a measured one:
 
 Treat anything but `header` as evidence to re-check before it goes in a paper.
 
+`epsilon` needs no such column. The `--epsilon` flag and the header field landed in
+the same commit (`0bc6bd0`), so a log that does not state it had no way to run at
+anything but the 0.8 default -- the value is filled in and is not an inference.
+
 Accuracy (`acc:`) and coverage (`cover:`) points are keyed by trial count and
 merged into the trajectory row for that evaluation point, since that is what they
 are -- the same point measured along another axis.
@@ -88,6 +92,9 @@ VERDICT_COLUMNS = IDENTITY_COLUMNS + [
 # ru_maxrss was read as bytes on Linux until f93b71e, so cluster logs written
 # before that print 0.00GB. Zero is not a measurement; it is a missing value.
 RSS_FIX_COMMIT_NOTE = "peak_rss_gb=0 on a cluster log means unmeasured, not 0 GB"
+
+# EXPLORE_EPSILON in mpx_reach.rs, and the only reachable value before 0bc6bd0.
+DEFAULT_EPSILON = "0.8"
 
 
 def parse_fields(text):
@@ -140,7 +147,7 @@ class RunContext:
             self.encoding, self.encoding_source = fields["encoding"], "header"
         else:
             self.encoding, self.encoding_source = encoding_from_name(source)
-        self.epsilon = fields.get("epsilon", "")
+        self.epsilon = fields.get("epsilon", DEFAULT_EPSILON)
         self.agent = fields.get("agent", "")
         self.eval_interval = fields.get("eval_interval", "")
         provenance = provenance or {}

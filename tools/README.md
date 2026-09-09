@@ -80,10 +80,32 @@ Three log-format traps it handles, all of which have bitten this project:
 - **Older logs predate `u_max` and `alp_gen_variant`**, and one file may hold
   several runs behind banner lines. A header line resets the parse context.
 
+## Summarise
+
+Turns one size into a page a person can scan, in-flight runs included:
+
+```bash
+python3 tools/summarize_mpx.py --size 135     # writes reports/MPX135_runs.md
+```
+
+Grouped by experimental arm (encoding, epsilon, agent), one row per repeat, with
+the four coverage classes alongside knowledge -- at k=135 a ceiling of 0.75 or 0.50
+is read in those columns, not in the knowledge column.
+
 ## Plot
 
 ```bash
 uv run --project tools python tools/plot_mpx.py
+```
+
+**Always narrow to one arm at k>=135.** A seed now has runs under both encodings,
+two epsilons and several `u_max` values; splicing them into one curve produces a
+trajectory that never happened. The tool refuses to plot a mixed selection and
+names what is mixed:
+
+```bash
+uv run --project tools python tools/plot_mpx.py --size 135 --figures reach \
+    --encoding flip --epsilon 1 --u-max 11 --suffix _canonical_eps1
 ```
 
 Writes PDF (for LaTeX `\includegraphics`) and PNG (for previewing and README
