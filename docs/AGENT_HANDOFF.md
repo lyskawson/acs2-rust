@@ -417,6 +417,11 @@ eliminating. Write it to the scratchpad and hand the user the file.
 
 ## 11. Standing rules
 
+**`CLAUDE.md` at the repo root carries the operational rules** and is loaded into
+every session automatically — the cluster sync, the gates, and the mid-run-reading
+failure mode. This file carries the research state; that one carries the habits.
+
+
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
 preserving current behaviour. Commit and push to `feature/mpx` after each completed
