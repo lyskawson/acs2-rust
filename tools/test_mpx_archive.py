@@ -7,7 +7,9 @@ import sys
 import tempfile
 import unittest
 
-from parse_mpx_logs import parse_log, TRAJECTORY_COLUMNS, VERDICT_COLUMNS
+from parse_mpx_logs import (
+    close_chained_runs, parse_log, stitch_segments, TRAJECTORY_COLUMNS, VERDICT_COLUMNS,
+)
 from summarize_mpx import collect, render
 
 
@@ -17,6 +19,98 @@ class ArchiveTests(unittest.TestCase):
             path = Path(directory) / "run.out"
             path.write_text(content)
             return parse_log(path)
+
+    def segment(self, base, job, resumed_at, points, verdict_trials):
+        """One job of a checkpointed run, as slurm/mpx_reach.sh writes it."""
+        lines = [
+            f"run-provenance: commit=abc job={job} tag=k264 size=20 seed=42",
+            f"run-segment: base={base} checkpoint=/runs/{base}.ckpt checkpoint_every=4000 "
+            f"resumed={'yes' if resumed_at else 'no'}",
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip",
+            "mpx-20 trials_cap=1000000 u_max=6",
+        ]
+        if resumed_at:
+            lines.append(f"  mpx-20 resumed: trials={resumed_at} time={resumed_at} since_eval=0")
+        for trials, knowledge in points:
+            lines.append(
+                f"  mpx-20 traj: trials={trials} knowledge={knowledge} reliable=1 spec=6 pop=9"
+            )
+        lines.append(
+            f"  mpx-20 repeat 0: TIME-LIMITED trials={verdict_trials} knowledge=unmeasured "
+            "knowledge_trials=unmeasured reliable=1 spec=6/21 wall=10s"
+        )
+        return "\n".join(lines) + "\n"
+
+    def parse_named(self, name, content):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / name
+            path.write_text(content)
+            return parse_log(path)
+
+    def chain(self, segments):
+        trajectory, diagnostics, verdicts = [], [], []
+        for name, content in segments:
+            one, two, three = self.parse_named(name, content)
+            trajectory.extend(one)
+            diagnostics.extend(two)
+            verdicts.extend(three)
+        return (
+            stitch_segments(trajectory, "trials"),
+            close_chained_runs(verdicts),
+        )
+
+    def test_a_chained_run_is_one_run_not_one_per_job(self):
+        base = "slurm_mpx20_s42_k264"
+        trajectory, verdicts = self.chain([
+            (f"{base}_seg1.out", self.segment(base, 1, 0, [(2000, "0.1"), (4000, "0.2")], 4000)),
+            (f"{base}_seg2.out", self.segment(base, 2, 4000, [(6000, "0.3")], 6000)),
+            (f"{base}_seg3.out", self.segment(base, 3, 6000, [(8000, "0.4")], 8000)),
+        ])
+
+        self.assertEqual(len(verdicts), 1, "three jobs, one run, one verdict")
+        self.assertEqual(verdicts[0]["trials"], 8000)
+        self.assertEqual(verdicts[0]["segment"], f"{base}_seg3.out")
+        self.assertEqual({row["source"] for row in trajectory}, {base})
+        self.assertEqual(
+            sorted(row["trials"] for row in trajectory), [2000, 4000, 6000, 8000]
+        )
+
+    def test_work_a_killed_job_did_after_its_last_checkpoint_is_superseded(self):
+        # The killed job logged 6000 and 8000, but its checkpoint holds 4000, so the
+        # resumed job re-ran those trials. The earlier records are of discarded work.
+        base = "slurm_mpx20_s42_k264"
+        trajectory, verdicts = self.chain([
+            (
+                f"{base}_seg1.out",
+                self.segment(base, 1, 0, [(4000, "0.2"), (6000, "0.9"), (8000, "0.9")], 8000),
+            ),
+            (
+                f"{base}_seg2.out",
+                self.segment(base, 2, 4000, [(6000, "0.3"), (8000, "0.4")], 8000),
+            ),
+        ])
+
+        measured = {row["trials"]: row["knowledge"] for row in trajectory}
+        self.assertEqual(sorted(measured), [4000, 6000, 8000])
+        self.assertEqual(measured[4000], 0.2)
+        self.assertEqual(measured[6000], 0.3, "the discarded 0.9 must not survive")
+        self.assertEqual(measured[8000], 0.4, "the discarded 0.9 must not survive")
+        self.assertEqual(len(verdicts), 1)
+        self.assertEqual(
+            verdicts[0]["segment"],
+            f"{base}_seg2.out",
+            "the run's verdict is the last segment's by resume point, not by trial count",
+        )
+
+    def test_an_unchained_log_is_untouched_by_stitching(self):
+        trajectory, _, verdicts = self.parse(
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true\n"
+            "mpx-20 traj: trials=500 knowledge=0.5 reliable=2 pop=3\n"
+            "mpx-20 repeat 0: TIME-LIMITED trials=500 knowledge=0.5 reliable=2\n"
+        )
+        self.assertEqual([row["segment"] for row in trajectory], [""])
+        self.assertEqual(stitch_segments(trajectory, "trials"), trajectory)
+        self.assertEqual(close_chained_runs(verdicts), verdicts)
 
     def test_identical_headers_and_variants_have_distinct_runs(self):
         blocks = []

@@ -13,6 +13,12 @@ Three record types come out of a run:
 
 Three details of the log format that the state machine exists to handle:
 
+  * A checkpointed run spans several jobs, each writing its own log. `source` is then
+    the run and `segment` the job that recorded the row; a resumed job re-runs whatever
+    the previous one did after its last checkpoint, so the later segment supersedes the
+    earlier one above the trial it resumed at, and only the closing segment's verdict is
+    the run's. Without this a chain reads as several independent runs sharing a seed --
+    exactly what plot_mpx.py refuses.
   * Repeat r runs with `seed = base_seed + r` (mpx_reach.rs), so an `n_exp=3`
     log at seed 42 actually holds seeds 42, 43 and 44 -- they must not be
     collapsed into one series.
@@ -68,13 +74,17 @@ ACCURACY = re.compile(r"^\s*mpx-(?P<size>\d+) acc:\s*(?P<fields>.*)")
 COVERAGE = re.compile(r"^\s*mpx-(?P<size>\d+) cover:\s*(?P<fields>.*)")
 QUADRANT_DETAIL = re.compile(r"^\s*mpx-(?P<size>\d+) qdetail:\s*(?P<fields>.*)")
 PROVENANCE = re.compile(r"^run-provenance:\s*(?P<fields>.*)")
+SEGMENT = re.compile(r"^run-segment:\s*(?P<fields>.*)")
+RESUMED = re.compile(r"^\s*mpx-(?P<size>\d+) resumed:\s*(?P<fields>.*)")
 
 REPLAY_COLUMNS = ["er_buffer_size", "er_min_samples", "er_samples_number"]
 PROVENANCE_COLUMNS = [
     "encoding", "encoding_source", "epsilon", "agent", "eval_interval", "commit", "tag",
     "do_ga", *REPLAY_COLUMNS, "strict_resource_limits", "rss_scope",
 ]
-IDENTITY_COLUMNS = ["source", "block", "size", "seed", "variant", "u_max", "repeat"] + PROVENANCE_COLUMNS
+IDENTITY_COLUMNS = [
+    "source", "segment", "block", "size", "seed", "variant", "u_max", "repeat",
+] + PROVENANCE_COLUMNS
 COVERAGE_COLUMNS = [
     "a0_nochange", "a0_change", "a1_nochange", "a1_change", "matched_but_wrong",
 ]
@@ -167,6 +177,15 @@ class RunContext:
         self.pending = {}
         self.pending_diagnostics = {}
         self.next_repeat = {}
+        # A checkpointed run spans several jobs, each with its own log. `run_name` is the
+        # run; `segment_file` is the job. Empty for every log written before checkpointing.
+        self.run_name = ""
+        self.segment_file = ""
+        self.resume_at = {}
+
+    def segment_of(self, base, source):
+        self.run_name = base
+        self.segment_file = source
 
     def provenance(self):
         return {
@@ -189,6 +208,7 @@ def parse_log(path):
     source = path.name
     trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
     provenance = {}
+    segment = {}
     context = RunContext({}, source)
     block = 0
 
@@ -221,11 +241,25 @@ def parse_log(path):
             provenance = parse_fields(marker.group("fields"))
             continue
 
+        chained = SEGMENT.match(line)
+        if chained:
+            segment.update(parse_fields(chained.group("fields")))
+            context.segment_of(segment.get("base", ""), source)
+            continue
+
+        resumed = RESUMED.match(line)
+        if resumed:
+            fields = parse_fields(resumed.group("fields"))
+            context.resume_at[resumed.group("size")] = int(fields.get("trials", 0))
+            continue
+
         header = HEADER.search(line)
         if header:
             flush_pending()
             block += 1
             context = RunContext(parse_fields(header.group("fields")), source, provenance, block)
+            if segment.get("base"):
+                context.segment_of(segment["base"], source)
             continue
 
         config = CONFIG.match(line)
@@ -338,9 +372,17 @@ def parse_log(path):
 
 
 def identity(context, source, size, repeat):
-    """The columns every record in a run block carries, provenance included."""
+    """The columns every record in a run block carries, provenance included.
+
+    For a checkpointed run `source` is the run's stable name and `segment` is the job
+    that wrote the record; for every other log `source` is the file and `segment` empty.
+    Downstream tools key a run on `source`, so a chain has to collapse to one value there
+    or it reads as several independent runs that happen to share a seed.
+    """
     return {
-        "source": source,
+        "source": context.run_name or source,
+        "segment": context.segment_file,
+        "_resume_at": context.resume_at.get(size, 0),
         "block": context.block,
         "size": int(size),
         "seed": context.seed_for(repeat),
@@ -351,10 +393,71 @@ def identity(context, source, size, repeat):
     }
 
 
+def run_key(row):
+    return (row["source"], row["block"], row["size"], row["seed"], row["repeat"])
+
+
+def stitch_segments(rows, key_field):
+    """Collapse a checkpointed run's per-job records into the one run they describe.
+
+    A resumed job re-runs whatever the previous one did after its last checkpoint, so the
+    same trial can be recorded twice with different values -- the earlier record is of work
+    that was discarded. Ordering the segments by the trial they resumed at, each supersedes
+    every record above that trial from the segments before it.
+    """
+    plain = [row for row in rows if not row["segment"]]
+    chained = [row for row in rows if row["segment"]]
+    if not chained:
+        return rows
+
+    stitched = []
+    grouped = {}
+    for row in chained:
+        grouped.setdefault(run_key(row), []).append(row)
+
+    for group in grouped.values():
+        by_segment = {}
+        for row in group:
+            by_segment.setdefault((row["_resume_at"], row["segment"]), []).append(row)
+
+        kept = {}
+        for (resume_at, _), records in sorted(by_segment.items()):
+            # Once per segment, not once per record: superseding has to happen before the
+            # segment's own records go in, or each one discards the last.
+            for trials in [key for key in kept if key > resume_at]:
+                del kept[trials]
+            for row in records:
+                kept[row[key_field]] = row
+        stitched.extend(kept.values())
+
+    return plain + stitched
+
+
+def close_chained_runs(rows):
+    """One verdict per run, not one per job.
+
+    Intermediate jobs stop on their own wall clock and record TIME-LIMITED. That says a
+    job stopped, not that the run did; the run's verdict is the last segment's -- last by
+    resume point, because a job killed after its final checkpoint can report more trials
+    than the job that legitimately superseded it.
+    """
+    plain = [row for row in rows if not row["segment"]]
+    chained = [row for row in rows if row["segment"]]
+    if not chained:
+        return rows
+
+    closing = {}
+    for row in chained:
+        key = run_key(row)
+        if key not in closing or row["_resume_at"] >= closing[key]["_resume_at"]:
+            closing[key] = row
+    return plain + list(closing.values())
+
+
 def write_csv(path, columns, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
     print(f"{path}: {len(rows)} rows")
@@ -378,6 +481,10 @@ def main():
         trajectory_rows.extend(trajectory)
         diagnostic_rows.extend(diagnostics)
         verdict_rows.extend(verdicts)
+
+    trajectory_rows = stitch_segments(trajectory_rows, "trials")
+    diagnostic_rows = stitch_segments(diagnostic_rows, "trials")
+    verdict_rows = close_chained_runs(verdict_rows)
 
     sort_key = lambda row: (
         row["size"], row["encoding"], row["variant"], row["seed"],

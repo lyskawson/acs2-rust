@@ -6,11 +6,9 @@ project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is th
 scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
 file carries only the **live state**.
 
-**Your task, in order, is §8.** Checkpointing is **implemented and gated** (2026-09-10);
-what remains is the independent review of it by a second agent, and then, once the new
-WCSS grant lands, k=264 plus watching the two jobs already running. One prerequisite came
-out of the checkpointing work and blocks k=264 archiving: the archive does not stitch a
-chained run — §8 step 3.
+**Your task, in order, is §8.** Checkpointing is **implemented, reviewed and gated**
+(2026-09-10), and the archive reads a chained run as one run. What remains is step 3:
+once the new WCSS grant lands, k=264, plus watching the two jobs already running.
 
 **Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10. `main` is level with
 it. `develop` was retired: it never differed from `main` in a solo workflow. `feature/mpx`,
@@ -426,7 +424,7 @@ half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
 sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **97 Rust tests**,
-13 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+16 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 
@@ -443,7 +441,8 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 
 - `ee` is serialised but cannot be covered by the test — it is written and never read,
   because PEE is not implemented.
-- The archive does not stitch a chained run. See step 3.
+- The archive stitching that a chained run needs was found and built with it;
+  `ARCHITECTURE.md` has the rules and the mistake that reads as correct.
 
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
 
@@ -483,17 +482,6 @@ Two things at once:
 - **Watch what is already running** (§6). `eps135_s42b` is the one that matters; if it
   closes, the canonical k=135 result is two seeds instead of one. `./tools/sync_runs.sh
   --commit` after anything finishes.
-- **Stitch chained runs into the archive — before k=264, not after.** A checkpointed
-  run spans several jobs and each writes its own log (`..._seg<jobid>.out`), because one
-  filename per run would leave only the last segment. `tools/parse_mpx_logs.py` then
-  reads the segments as **independent runs sharing a seed** — measured on a
-  three-segment k=20 chain: two verdict rows for one run, which is the shape
-  `plot_mpx.py` was hardened to refuse. The wrapper already emits what a fix needs:
-  `run-segment: base=<stable run name> checkpoint=<path> checkpoint_every=<n>
-  resumed=yes|no`. The run's verdict is the last segment's; the intermediate
-  `TIME-LIMITED` rows say a *job* stopped, not the run. This changes the CSV schema and
-  the committed archive, so agree the shape with the user before rebuilding it.
-
 - **Start k=264** under `--encoding outcome`, `u_max = 12` (the `a + 4` analogue of the
   11 that works at 135), with `CHECKPOINT=on` and a **small `--eval-interval`**. The
   large-`m` replay jobs died having recorded nothing because their first evaluation point

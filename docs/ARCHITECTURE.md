@@ -1099,20 +1099,42 @@ node failure kills a job outright and the last periodic save is all that survive
 test spawns a real run, waits for a periodic checkpoint, `SIGKILL`s it, and requires the
 resumed run to rejoin the uninterrupted trajectory.
 
-### NAMED HAZARD — the archive does not stitch a chained run yet
+### How the archive reads a chained run
 
 A checkpointed run spans several jobs and `slurm/mpx_reach.sh` gives each its own log
 (`..._seg<jobid>.out`) — a single filename would leave only the last segment, and the
-segments are where the trajectory lives. But `tools/parse_mpx_logs.py` then reads them
-as **independent runs sharing a seed**, which is exactly what `plot_mpx.py` was hardened
-to refuse. Measured on a three-segment k=20 chain: two verdict rows for one run.
+segments are where the trajectory lives. Downstream tools key a run on `source`, so
+without help a chain reads as **independent runs sharing a seed**, which is what
+`plot_mpx.py` was hardened to refuse. Measured on a three-segment k=20 chain before the
+fix: two verdict rows for one run.
 
-The wrapper already emits the provenance a fix needs:
+The wrapper emits the provenance and `tools/parse_mpx_logs.py` acts on it:
 
 ```
 run-segment: base=<stable run name> checkpoint=<path> checkpoint_every=<n> resumed=yes|no
 ```
 
-**Fix this before the first chained run is archived.** The verdict of a chained run is
-the last segment's; the intermediate `TIME-LIMITED` rows record that a *job* stopped,
-not that the run did.
+- **`source` becomes the run, `segment` the job.** A new `segment` column carries the file
+  a row came from; it is empty for every log written before checkpointing, and the rebuilt
+  archive is unchanged apart from that empty column — 79 verdict, 68,730 trajectory and
+  63,471 diagnostic rows, none differing on any existing field.
+- **A later segment supersedes an earlier one above the trial it resumed at.** A resumed
+  job re-runs whatever the previous one did after its last checkpoint, so the same trial
+  can appear twice with different values and the earlier one is of work that was
+  discarded. Verified against a real `SIGKILL`: a job logged measurements at 6,000 and
+  8,000 trials but checkpointed at 4,000, and the stitched series reproduces an
+  uninterrupted run's values exactly.
+- **One verdict per run, not one per job.** Intermediate jobs stop on their own wall clock
+  and record TIME-LIMITED; that says a job stopped, not that the run did. The run's verdict
+  is the closing segment's — last by **resume point**, not by trial count, because a job
+  killed after its final checkpoint can report more trials than the job that legitimately
+  superseded it.
+
+Superseding is applied once per segment, not once per record. Doing it per record makes
+each of a segment's own rows discard the one before it, which is a mistake that reads as
+correct and was caught only by running a real chain through the parser.
+
+`--eval-interval` must stay constant across a chain — `mpx_reach` refuses a resume that
+changes it without `--checkpoint-allow-eval-change` — or the stitched series carries two
+sampling rates and trials-to-success stops meaning anything.
+

@@ -102,10 +102,10 @@ Three things the file format guarantees, and one it does not:
   resource cap is checked before the evaluation block, so a job can stop on the very
   batch a measurement was due; resuming straight into another batch would shift that
   measurement and every later one, and trials-to-success with them.
-- **The archive does not stitch segments yet.** Each job writes its own log and
-  `tools/parse_mpx_logs.py` reads them as separate runs sharing a seed. Fix that before
-  the first chained run is archived; the wrapper already emits a `run-segment:` line
-  keyed on the run's stable name.
+- **The archive reads a chain as one run.** Each job writes its own log; the wrapper
+  emits a `run-segment:` line and `tools/parse_mpx_logs.py` collapses the segments into
+  one run, supersedes work a killed job did after its last checkpoint, and keeps one
+  verdict instead of one per job.
 
 `slurm/mpx_reach.sh` takes `CHECKPOINT=on` and derives the path from size, seed and tag
 so two jobs cannot share one learning state, and gives each job its own log file.
