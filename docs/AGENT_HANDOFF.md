@@ -6,26 +6,28 @@ project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is th
 scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
 file carries only the **live state**.
 
-**Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10, which is where the
-next step lives (§8). `main` is level with it. `develop` was retired: it never differed
-from `main` in a solo workflow and was one more thing to keep in sync. `feature/mpx`,
+**Your task, in order, is §8.** Checkpointing first — it needs no cluster and no grant.
+Then an independent review of it by a second agent. Then, once the new WCSS grant lands,
+k=264 plus watching the two jobs already running.
+
+**Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10. `main` is level with
+it. `develop` was retired: it never differed from `main` in a solo workflow. `feature/mpx`,
 `feature/mpx264`, `feature/acs2er` and `feature/cpuSingleComp` were merged and deleted.
 The cluster clone `~/acs2-rust-repo` tracks `feature/checkpointing` too.
 
-**Git history was rewritten on 2026-09-09** to drop agent co-author trailers, and every
-commit is authored solely by the user. Check before any merge to `main` — repairing it
-later means another force-push:
+**Git history was rewritten on 2026-09-09** to drop agent co-author trailers; every commit
+is authored solely by the user, and GitHub lists one contributor. Check before any merge
+to `main`, because repairing it later means another force-push:
 
 ```
 git log --oneline --grep="Co-Authored-By" --all | wc -l     # must be 0
 ```
 
-**The repository is public and about to be handed to other students of the supervisor.**
-He asked for it as a base for their work and the user agreed. That raises the bar on
-README and `reports/MPX_final.md`, both rewritten for that audience on 2026-09-09.
-`docs/SUPERVISOR_CORRESPONDENCE.md` and `docs/SUPERVISOR_NOTES.md` are gitignored and
-must stay that way — the first never entered the repository at all, the second was
-untracked on 2026-09-09 but remains in history before that commit.
+**The repository is public and shared with the supervisor's other students** — he asked
+for it as a base for their work and the user agreed (correspondence 28/29). That raises
+the bar on README and `reports/MPX_final.md`, both written for that audience, and it is
+why one-off working reports are not committed. `docs/SUPERVISOR_CORRESPONDENCE.md` and
+`docs/SUPERVISOR_NOTES.md` are gitignored and must stay that way.
 
 ## 1. Where the research stands
 
@@ -384,38 +386,99 @@ columns. Check the raw evidence and distinguish candidates from reliable rules.
 
 ## 8. What to do next
 
-The supervisor approved going after k=264 ("Koniecznie!") and asked whether the
-implementation can be shared as a base for his other students — so **the repository is
-now a public teaching artefact as well as a thesis codebase**. Keep it that way: README
-and `reports/MPX_final.md` are the two documents an outsider reads first, and both were
-rewritten for that audience.
+The supervisor approved going after k=264 ("Koniecznie!") and asked to share the
+implementation as a base for his other students, which the user agreed to — so **the
+repository is a public teaching artefact as well as a thesis codebase**. Keep it that
+way: README and `reports/MPX_final.md` are what an outsider reads first.
 
-In order:
+The work is sequenced, and step 1 does not need the cluster. That matters, because only
+~56 h of grant are genuinely free until the extension lands.
 
-1. **The new WCSS grant.** The user is filing for 10,000 CPU-hours. Until it lands there
-   are ~67 free hours, so no new batches. The application's costed basis: ~700 h to finish
-   current work, ~1000 h to close k=135 canonically on three seeds, ~4000-5000 h for k=264
-   on three seeds with controls, ~2000 h for the replay experiments. Correct the original
-   application's RAM figure — it declared `< 1 GB`, ACS2ER measured 8-32 GB, but the k=264
-   probe measured only **0.86 GB**, so the driver is ACS2ER, not problem size. Wall-time
-   declared `>= 48h` against 21 days actually needed.
-2. **Checkpointing.** The blocker for k=264 and now measured rather than argued: one seed
-   is 700-4500 CPU-hours against a 504 h queue limit. Save/restore of the population is the
-   enabling change. It touches the core, so it goes behind a flag with the P8/P9 gates
-   intact. Note the queue allows 504 h per job against the 167 h we habitually request
-   (§5), which shortens how far checkpointing has to stretch.
-3. **k=264 itself**, on the new grant, under `--encoding outcome` — the user's decision,
-   stated to the supervisor: canonical is ~10x more expensive and looks out of reach. The
-   cost is comparability with the multiplexer literature, which the supervisor was told
-   explicitly.
-4. **Then the thesis core: prioritised experience replay.** The contribution is not replay
-   itself — ACS2ER exists and its limits are measured — but a **prioritisation criterion
-   aimed at the measured gap**: candidates cover a transition class yet stay below
-   the reliability threshold. Measure candidate quality and retention as well as
-   reliable coverage, and compare at matched learning applications. Test whether
-   prioritisation helps candidates become reliable; the current data does not
-   establish whether insufficient reinforcement, conflicting updates, or replacement
-   is the cause, or which replay criterion will work.
+### Step 1 — checkpointing (do this now, no cluster needed)
+
+The blocker for k=264, measured rather than argued: one seed is 700–4500 CPU-hours
+against a **504 h** hard queue limit, so no single job can finish one. Save and restore
+of the learning state is what makes a run span several jobs.
+
+What has to be saved is everything a trial depends on: the **population**, the **RNG
+state**, the **trial counter**, the accumulated **wall-clock**, and the peak trackers.
+Missing any one of them breaks the property the whole methodology rests on.
+
+**The acceptance test is determinism across the cycle.** A run that saves at trial *n*,
+exits, and resumes must produce a trajectory identical to an uninterrupted run of the
+same seed and configuration — not similar, identical, trial for trial. Write that test
+before the feature. `acs2-bench/tests/reach_regressions.rs` is where it belongs; the
+existing `fresh_processes_do_not_share_a_previous_repeat_peak` test shows how to drive a
+separate process from a test.
+
+Constraints, non-negotiable:
+
+- Behind a flag (`--checkpoint-path`, `--checkpoint-every` or similar) whose **absence
+  reproduces today's behaviour exactly**. This touches the measured path.
+- Gates green: 76 Rust tests, 13 Python tests, P9 maze learning columns byte-identical.
+- The RNG is injected (`ChaChaRandomSource`); serialising its state is the delicate part.
+  A resumed run drawing from a differently-positioned stream is the failure mode to hunt.
+- Do not weaken determinism to make serialisation easier. If a container's iteration
+  order would have to become load-bearing, stop and say so rather than shipping it.
+
+Note the queue allows 504 h per job against the 167 h habitually requested (§5), so
+raising the internal cap buys a factor of three before checkpointing has to carry
+anything.
+
+### Step 2 — independent review of the checkpointing
+
+Hand it to a **second agent** before it is trusted. This process ran twice on this
+repository and both times found real defects, so it is established practice, not
+ceremony:
+
+1. Give the reviewer a **read-only** brief: change nothing, run nothing, write a report.
+   Tell it what is deliberate so it does not report settled decisions as findings.
+2. **Verify its findings yourself** against the code and the archive before acting.
+   The last review was right about nine of ten checked claims and wrong about one (it
+   claimed `slurm/mpx_status.sh` would exit on a header-only log; `set -euo pipefail`
+   is not inherited by the remote `bash -s` in its heredoc).
+3. Send back a fix brief that says which findings you confirmed, **and where you
+   disagree with it and why** — that is where the value is. Ask for a report at the end.
+4. Verify the fixes too. Last time the reviewer's own regression tests were not wired
+   into any `Cargo.toml` and never ran.
+
+For checkpointing specifically, point the reviewer at the determinism property: a
+save/restore that is subtly non-identical will pass a casual reading.
+
+### Step 3 — when the new WCSS grant lands
+
+Two things at once:
+
+- **Watch what is already running** (§6). `eps135_s42b` is the one that matters; if it
+  closes, the canonical k=135 result is two seeds instead of one. `./tools/sync_runs.sh
+  --commit` after anything finishes.
+- **Start k=264** under `--encoding outcome`, `u_max = 12` (the `a + 4` analogue of the
+  11 that works at 135), with checkpointing on and a **small `--eval-interval`**. The
+  large-`m` replay jobs died having recorded nothing because their first evaluation point
+  was never reached (§6) — do not repeat that at a size where a job costs 504 h.
+
+The grant application asks for 10,000 CPU-hours: ~700 h to finish current work, ~1000 h
+to close k=135 canonically on three seeds, ~4000–5000 h for k=264 on three seeds with
+controls, ~2000 h for replay. The original application's RAM figure needs correcting —
+it declared `< 1 GB`, ACS2ER measured 8–32 GB, but the k=264 probe measured only
+**0.86 GB**, so the driver is ACS2ER, not problem size. Wall-time was declared `>= 48h`
+against 21 days actually needed.
+
+### Step 4 — the thesis core: prioritised experience replay
+
+The contribution is not replay itself — ACS2ER exists and its limits are measured — but a
+**prioritisation criterion aimed at the measured gap**: candidates cover a transition
+class yet stay below the reliability threshold (§3). Measure candidate quality and
+retention as well as reliable coverage, and compare at matched learning applications.
+
+Two things the data already says, and both shape this:
+
+- **Volume does not work.** Three jobs at m = 8 and 13 cost ~540 CPU-hours and recorded
+  nothing (§6). Scaling replay by quantity becomes prohibitive before it becomes
+  informative — which is itself the empirical argument for prioritising *which* samples.
+- **The mechanism is not established.** Whether candidates fail to become reliable
+  through insufficient reinforcement, conflicting updates, or replacement is unknown.
+  Do not pick a criterion before measuring which of those it is.
 
 ## 9. Working with the user
 
