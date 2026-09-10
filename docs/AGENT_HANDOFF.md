@@ -84,7 +84,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**99 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
+  (**101 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -423,7 +423,7 @@ reported at 66,500 trials instead of 67,000**. A checkpoint moved the headline m
 half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte-identical
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
-sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **99 Rust tests**,
+sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **101 Rust tests**,
 45 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
@@ -445,6 +445,21 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
   `ARCHITECTURE.md` has the rules and the mistake that reads as correct.
 
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
+
+**Integrity follow-up (2026-09-11).** Checkpoint format 3 requires SHA-256 over the full
+payload, including header and terminator, before any learning state is decoded. Versions
+1 and 2 are refused; finish an existing version-2 chain with its matching executable rather
+than treating an unchecked file as verified. The hashing dependency is confined to
+`acs2-bench`; the core and flags-off learning path are unchanged. Corruption regressions
+and the adjusted structural/resume tests were verified with ten assertion-failing Rust
+mutations. State comparisons omit the checksum only because it includes wall/RSS, while
+still comparing every stored learning field.
+
+Two existing publication limits remain: rotation moves the primary checkpoint to `.prev`
+before installing the new one, and directory sync errors are ignored. An interruption in
+that gap leaves no primary path; the binary would start fresh unless `.prev` is restored
+manually first. The integrity change detects bad contents, not missing files, and does not
+claim to fix these durability/recovery limitations.
 
 **Operational follow-up (2026-09-11).** Archive chronology now requires an initial segment
 at zero and cross-checks timestamp order against recorded progress and increasing requeue

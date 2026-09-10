@@ -223,6 +223,7 @@ mod regression {
 
     fn without_volatile_fields(text: &str) -> String {
         text.lines()
+            .filter(|line| !line.starts_with("sha256 "))
             .map(|line| {
                 line.split_whitespace()
                     .filter(|token| !token.starts_with("wall=") && !token.starts_with("peak_rss="))
@@ -517,12 +518,9 @@ mod regression {
         let solved = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
         assert_eq!(solved.verdict, Verdict::Success);
 
-        let stored = std::fs::read_to_string(&settings.path).unwrap();
-        std::fs::write(
-            &settings.path,
-            stored.replace("verdict=SUCCESS", "verdict=TIME-LIMITED"),
-        )
-        .unwrap();
+        let mut stored = checkpoint::read::<7>(&settings.path);
+        stored.verdict = Some("TIME-LIMITED".to_string());
+        checkpoint::write(&settings.path, &stored);
 
         let resumed = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS * 4), Some(&settings));
         assert_eq!(resumed.verdict, Verdict::Success);
@@ -549,15 +547,9 @@ mod regression {
 
         // Forced below anything this process could be using, so reporting the live peak
         // instead of the saved one cannot pass by accident.
-        let stored = std::fs::read_to_string(&settings.path).unwrap();
-        std::fs::write(
-            &settings.path,
-            stored.replace(
-                &format!("peak_rss={} ", solved.peak_rss_bytes),
-                "peak_rss=4096 ",
-            ),
-        )
-        .unwrap();
+        let mut stored = checkpoint::read::<7>(&settings.path);
+        stored.peak_rss_bytes = 4096;
+        checkpoint::write(&settings.path, &stored);
 
         let reopened = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
 
@@ -798,7 +790,7 @@ mod regression {
         );
         // A kill during the staged write legitimately leaves the staging file; what must
         // hold is that the *published* checkpoint is complete.
-        assert!(survivor.trim_end().ends_with("end"));
+        assert_eq!(checkpoint::parse::<21>(&survivor).trials_used, saved_at);
 
         let resumed = run_kill_worker("resume", &directory);
         let expected = measurements_after(&uninterrupted, saved_at);
@@ -838,8 +830,9 @@ mod regression {
         assert!(!stopped.contains("reopened=true"));
 
         // Stand in for the job that saved a SUCCESS and was killed before printing it.
-        let stored = std::fs::read_to_string(&path).unwrap();
-        std::fs::write(&path, stored.replace("verdict=TIME-LIMITED", "verdict=SUCCESS")).unwrap();
+        let mut stored = checkpoint::read::<21>(&path);
+        stored.verdict = Some("SUCCESS".to_string());
+        checkpoint::write(&path, &stored);
 
         let reopened = run("600");
         let verdict = reopened

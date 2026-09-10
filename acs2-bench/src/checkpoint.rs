@@ -3,6 +3,7 @@ use std::fmt::Write as _;
 use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use sha2::{Digest, Sha256};
 
 use acs2_core::acs2er::ReplaySample;
 use acs2_core::checkpoint::AgentState;
@@ -14,9 +15,7 @@ use acs2_core::perception::Perception;
 use acs2_core::rng::RngState;
 use acs2_core::symbol::Symbol;
 
-// Version 2 requires the trailing terminator, so a version-1 file is refused
-// rather than read as a complete one that happens to end early.
-pub const FORMAT: &str = "acs2-checkpoint 2";
+pub const FORMAT: &str = "acs2-checkpoint 3";
 const TERMINATOR: &str = "end";
 
 const WILDCARD: &str = "--";
@@ -291,10 +290,22 @@ pub fn render<const N: usize>(state: &RunState<N>) -> String {
         }
     }
     let _ = writeln!(text, "{TERMINATOR}");
+    seal(text)
+}
+
+fn seal(mut text: String) -> String {
+    let digest = Sha256::digest(text.as_bytes());
+    let _ = writeln!(text, "sha256 {digest:x}");
     text
 }
 
 pub fn parse<const N: usize>(text: &str) -> RunState<N> {
+    let (text, checksum) = text.rsplit_once("sha256 ").expect("checkpoint carries no SHA-256 checksum");
+    assert_eq!(
+        checksum,
+        format!("{:x}\n", Sha256::digest(text.as_bytes())),
+        "checkpoint SHA-256 checksum mismatch"
+    );
     let mut lines = text.lines();
     assert_eq!(
         lines.next(),
@@ -649,22 +660,63 @@ mod tests {
             done: true,
         }]);
         let rendered = render(&original);
+        let rendered = rendered.rsplit_once("sha256 ").unwrap().0;
 
         // Cutting the file immediately after the space before the final `done` flag
         // still yields a field -- an empty one. Read permissively that is a terminal
         // sample silently turned into a bootstrapped one.
-        assert!(std::panic::catch_unwind(|| parse::<7>(&truncate_after_last_space(&rendered))).is_err());
-        assert!(std::panic::catch_unwind(|| parse::<7>(rendered.trim_end_matches("end\n"))).is_err());
-        assert!(std::panic::catch_unwind(|| parse::<7>(&format!("{rendered}c extra\n"))).is_err());
-        assert!(std::panic::catch_unwind(|| parse::<7>(&rendered.replace(" 1\nend", " 2\nend"))).is_err());
-        assert!(parse::<7>(&rendered).agent.replay.unwrap()[0].done);
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(truncate_after_last_space(rendered)))).is_err());
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(rendered.trim_end_matches("end\n").to_string()))).is_err());
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(format!("{rendered}c extra\n")))).is_err());
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(rendered.replace(" 1\nend", " 2\nend")))).is_err());
+        assert!(parse::<7>(&seal(rendered.to_string())).agent.replay.unwrap()[0].done);
     }
 
     #[test]
     fn a_population_count_that_does_not_match_its_records_is_refused() {
         let rendered = render(&state());
-        assert!(std::panic::catch_unwind(|| parse::<7>(&rendered.replace("population 2", "population 3"))).is_err());
-        assert!(std::panic::catch_unwind(|| parse::<7>(&rendered.replace("population 2", "population 1"))).is_err());
+        let payload = rendered.rsplit_once("sha256 ").unwrap().0;
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(payload.replace("population 2", "population 3")))).is_err());
+        assert!(std::panic::catch_unwind(|| parse::<7>(&seal(payload.replace("population 2", "population 1")))).is_err());
+    }
+
+    #[test]
+    fn a_checksum_refuses_parseable_changes_to_learning_state() {
+        let original = state();
+        let rendered = render(&original);
+        let (payload, checksum) = rendered.rsplit_once("sha256 ").unwrap();
+        for (before, after) in [
+            ("time=1500".to_string(), "time=1501".to_string()),
+            ("1234567890123".to_string(), "1234567890124".to_string()),
+            (encode_float(original.agent.population[0].q),
+             format!("{:016x}", original.agent.population[0].q.to_bits() ^ 1)),
+        ] {
+            let changed = payload.replacen(&before, &after, 1);
+            assert_ne!(changed, payload, "the mutation must change a saved field");
+            let restored = parse::<7>(&seal(changed.clone()));
+            assert!(restored.time != original.time
+                || restored.env_rng.word_pos != original.env_rng.word_pos
+                || restored.agent.population[0].q.to_bits() != original.agent.population[0].q.to_bits());
+            let stale_checksum = format!("{changed}sha256 {checksum}");
+            assert!(std::panic::catch_unwind(|| parse::<7>(&stale_checksum)).is_err());
+        }
+    }
+
+    #[test]
+    fn the_checksum_is_required_and_cannot_hide_trailing_bytes() {
+        let rendered = render(&state());
+        let (payload, checksum) = rendered.rsplit_once("sha256 ").unwrap();
+        let other_digit = if checksum.starts_with('0') { '1' } else { '0' };
+        for invalid in [
+            payload.to_string(),
+            format!("{payload}sha256 {other_digit}{}", &checksum[1..]),
+            format!("{rendered}extra\n"),
+            rendered.trim_end_matches('\n').to_string(),
+            seal(payload.replace(FORMAT, "acs2-checkpoint 2")),
+        ] {
+            assert!(std::panic::catch_unwind(|| parse::<7>(&invalid)).is_err());
+        }
+        assert_eq!(parse::<7>(&rendered).trials_used, 1500);
     }
 
     #[test]

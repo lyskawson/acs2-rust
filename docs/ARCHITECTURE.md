@@ -963,8 +963,9 @@ approximately. `acs2-bench/tests/reach_regressions.rs::a_resumed_run_reproduces_
 drives three separate processes (whole / first half / resumed half) through the real
 `run_reach_repeat`, for **both ACS2 and ACS2ER**, and asserts two things: the
 concatenated trajectory lines match the uninterrupted ones, and the checkpoint the
-resumed run finally writes is byte-identical to the uninterrupted one's once wall-clock
-and RSS are removed.
+resumed run finally writes is byte-identical to the uninterrupted one's once wall-clock,
+RSS and the checksum derived from those fields are removed. All learning fields remain
+in the comparison; the resume path verifies integrity separately.
 
 That second assertion is what makes the test hard to pass by accident, but it is not the
 whole property: it compares evaluation snapshots, and both arms run the same
@@ -1026,8 +1027,18 @@ no dependency. Two choices worth stating:
   for 8,107 classifiers — measured, not estimated. Reviewability wins over size here;
   the disk grant is 200 GB against 27 MB used.
 
-Writes are staged and renamed, so a job killed mid-save leaves the previous checkpoint
-whole.
+Format 3 adds a required final `sha256 <64 lowercase hex digits>` line. The digest covers
+every preceding byte, from the version header through `end\n`. Verification happens before
+decoding state. Versions 1 and 2 are refused; there is no implicit unchecked legacy path.
+Continue existing version-2 runs with their matching executable, or arrange an explicit
+conversion after independently checking the source state.
+
+SHA-256 is supplied by RustCrypto's `sha2` crate in `acs2-bench`, with no new dependency in
+`acs2-core`. One extra linear pass over the already-rendered bytes is justified for an
+artifact representing hundreds of hours: valid-looking changes to an RNG position or a
+float previously passed every structural check and silently changed the resumed run.
+The file remains inspectable text. This detects accidental corruption; it does not
+authenticate the writer or prevent someone recomputing the digest after editing a file.
 
 ### What the independent review changed
 
@@ -1213,18 +1224,31 @@ the authoritative figure for spend already exists outside the archive: SLURM's o
 accounting, which §5 of the handoff uses against the grant. Trials-to-success is the
 machine-independent metric this project reports; wall-clock is colour.
 
-**A checkpoint's durability, stated precisely.** The write is staged, `sync_all`ed, and
-renamed, and the directory entry is flushed after; publication is atomic against readers and
-the contents are on the device before the rename. `rename` still *replaces* the destination,
-so the fixed version also keeps the generation it replaces as `<name>.prev` — without it the
-new checkpoint is the only copy from the moment it lands, and a filesystem that loses the
-rename loses the run, not merely the interval since the last save. An earlier version of
-this section claimed a fall-back to "the previous checkpoint" that the code did not keep;
-that was wrong and is what the fifth reviewer caught.
+**A checkpoint's durability, stated precisely.** The staging file is `sync_all`ed before
+publication. The previous primary file is then renamed to `<name>.prev`, and the staging
+file is renamed to the primary path. Each rename is atomic, but the pair is not: a process
+killed between them leaves the primary absent. `run_reach_protocol` tests only that path's
+existence, so it would start fresh on the next invocation. Recovery from `.prev` is manual;
+restore it to the primary path before restarting. Directory synchronization is attempted
+only for an explicit parent path, and both open and sync failures are ignored. These
+existing limitations remain outside the checksum change; this implementation does not
+guarantee automatic recovery or directory-entry durability through every node failure.
 
-No checksum is kept. Truncation, a bad flag, a wrong record count and trailing records are
-all refused, but a single digit changing inside an RNG position or a float is not
-detectable. That is stated rather than implied.
+The version-3 checksum closes the separate content-integrity gap. Truncation, flags,
+record counts and trailing records retain their structural checks. Their tests deliberately
+recompute the checksum after damaging structure, so a green checksum test cannot hide a
+permissive parser. The new corruption test first demonstrates that each changed RNG, clock
+or float field parses with a recomputed digest, then requires rejection under its original
+digest. The checksum-envelope test covers a missing or altered checksum, extra bytes,
+missing final newline and a legacy header.
+
+The checksum and adjusted structural/resume tests were checked with ten individual Rust
+mutations: disabled verification, ignored trailing records/counts, omitted agent restore,
+skipped owed evaluation, ignored measured success, inflated reopened RSS and suppressed
+reopened stdout. Each compiled, selected exactly one test and failed an assertion. The
+hard-kill test now parses and verifies the surviving file instead of only checking its
+last word. Tests that deliberately alter valid checkpoint fixtures use read/modify/write,
+so they still exercise resume behavior rather than failing on stale checksums.
 
 ### Budgeting memory for a save
 

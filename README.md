@@ -16,7 +16,7 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --workspace --release                      # 99 tests, including reach regressions
+cargo test --workspace --release                      # 101 tests, including reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```
@@ -102,10 +102,13 @@ Three things the file format guarantees, and one it does not:
 
   `afterany`, not `afterok`: a segment that stops on its wall clock has done its job.
 - **The write is staged, flushed and renamed**, and the generation it replaces is kept as
-  `<name>.prev`. No reader sees a half-written file, the contents are on the device before
-  the rename, and a filesystem that loses the rename costs the last interval rather than the
-  run. No checksum is kept, so a single digit changing inside the file is not detectable. The process id keeps two jobs *on one node* off each other's staging file; it
-  is not unique across nodes, which is why the sequencing above is the actual guarantee.
+  `<name>.prev`. Version 3 requires a SHA-256 footer covering every preceding byte, including
+  the `end` terminator; a valid-looking change to an RNG position or float is refused.
+  Older versions are refused rather than silently accepted without integrity protection.
+  Rotation still has a gap between moving the old checkpoint and publishing the new one:
+  if interrupted there, restore `.prev` to the main path before submitting another job.
+  Recovery is manual, and directory synchronization is currently best-effort.
+  The staging process id is unique only within a node; job dependencies remain necessary.
 - **An evaluation owed when a job stopped is paid before the next one trains.** A
   resource cap is checked before the evaluation block, so a job can stop on the very
   batch a measurement was due; resuming straight into another batch would shift that
