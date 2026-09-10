@@ -185,6 +185,7 @@ class RunContext:
         self.sizes_seen = set()
         self.job = (provenance or {}).get("job", "")
         self.attempt = (provenance or {}).get("attempt", "0")
+        self.started = (provenance or {}).get("started", "")
 
     def segment_of(self, base, source):
         self.run_name = base
@@ -417,6 +418,7 @@ def parse_log(path):
                 "size": int(size),
                 "segment": source,
                 "resume_at": context.resume_at.get(size, 0),
+                "started": context.started,
                 "order": segment_order(context.job, context.attempt, source),
             })
 
@@ -424,13 +426,15 @@ def parse_log(path):
 
 
 def segment_order(job, attempt, source):
-    """Chronology of a chained run's jobs.
+    """Fallback chronology, used when the wrapper's clock is not on every segment of a run.
 
-    SLURM job ids increase, so they order the segments of a chain, and `SLURM_RESTART_COUNT`
-    orders the attempts of one requeued job, which keeps its id. Resume points order
-    neither: two jobs resume at the same trial when the first dies before saving again, and
-    a restart from zero after a deleted checkpoint resumes at 0 yet supersedes everything.
-    Filenames order neither -- `_seg10` sorts before `_seg9`.
+    SLURM job ids increase within a cluster and `SLURM_RESTART_COUNT` orders the attempts of
+    one requeued job, which keeps its id. Ids are not a true clock -- SLURM wraps them from
+    MaxJobId back to FirstJobId -- which is why `started` is preferred where available.
+
+    Resume points order nothing: two jobs resume at the same trial when the first dies
+    before saving again, and a restart from zero resumes at 0 yet supersedes everything.
+    Filenames order nothing either -- `_seg10` sorts before `_seg9`.
     """
     return (
         int(job) if job.isdigit() else -1,
@@ -471,11 +475,21 @@ def run_key(row):
 
 
 def boundaries_by_run(segments):
+    """A run's segments, in the order its jobs ran.
+
+    `started` is an actual clock and beats job ids, which wrap. It is used only when *every*
+    segment of the run carries one: ordering a mixed set on it would sort the segments
+    missing it ahead of all the others, which is the same silent destruction it exists to
+    prevent.
+    """
     grouped = {}
     for segment in segments:
         grouped.setdefault((segment["source"], segment["size"]), []).append(segment)
     for group in grouped.values():
-        group.sort(key=lambda segment: segment["order"])
+        if all(segment.get("started") for segment in group):
+            group.sort(key=lambda segment: (segment["started"], segment["order"]))
+        else:
+            group.sort(key=lambda segment: segment["order"])
     return grouped
 
 
@@ -517,7 +531,7 @@ def stitch_segments(rows, key_field, segments):
     return plain + stitched
 
 
-def close_chained_runs(rows, segments):
+def close_chained_runs(rows, segments, progress=()):
     """One verdict per run, not one per job.
 
     Intermediate jobs stop on their own wall clock and record TIME-LIMITED. That says a
@@ -534,6 +548,13 @@ def close_chained_runs(rows, segments):
     for row in chained:
         by_run.setdefault(run_key(row), {})[row["segment"]] = row
 
+    furthest = {}
+    for row in progress:
+        if not row["segment"]:
+            continue
+        key = run_key(row)
+        furthest[key] = max(furthest.get(key, -1), int(row["trials"]))
+
     grouped = boundaries_by_run(segments)
     closing = []
     for key, per_segment in by_run.items():
@@ -546,6 +567,11 @@ def close_chained_runs(rows, segments):
             if held is not None and held["trials"] > boundary["resume_at"]:
                 held = None
             held = per_segment.get(boundary["segment"], held)
+        if held is not None and held["trials"] < furthest.get(key, -1):
+            # A later job carried the run past the trial this verdict describes. The
+            # verdict says a *job* stopped; the run did not, and rendering it as the run's
+            # final state would report a mid-chain reading as where the run ended.
+            held = None
         if held is not None:
             closing.append(held)
     return plain + closing
@@ -582,7 +608,7 @@ def main():
 
     trajectory_rows = stitch_segments(trajectory_rows, "trials", segments)
     diagnostic_rows = stitch_segments(diagnostic_rows, "trials", segments)
-    verdict_rows = close_chained_runs(verdict_rows, segments)
+    verdict_rows = close_chained_runs(verdict_rows, segments, trajectory_rows)
 
     sort_key = lambda row: (
         row["size"], row["encoding"], row["variant"], row["seed"],

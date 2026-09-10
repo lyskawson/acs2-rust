@@ -14,6 +14,21 @@ SEED="$2"
 TIME_CAP="${3:-600000}"
 shift 3 2>/dev/null || shift $#
 
+# Extra flags are appended after the ones this script controls, and mpx_reach takes the
+# last value of a repeated flag. A trailing --time-cap-secs would sail past the allocation
+# check below, and a trailing --checkpoint-path would defeat the derived path that keeps
+# two jobs off one learning state.
+for argument in "$@"; do
+  case "$argument" in
+    --time-cap-secs|--checkpoint-path|--checkpoint-every|--sizes|--seed|--n-exp)
+      echo "refusing to start: $argument is set by this wrapper and would be overridden by \
+the trailing argument, silently, because mpx_reach takes the last value of a repeated flag. \
+Pass it through the wrapper's own positional arguments or environment instead." >&2
+      exit 2
+      ;;
+  esac
+done
+
 # The internal cap must fire before SLURM's, or the job is killed hard and everything
 # since the last periodic checkpoint is re-run. #SBATCH --time above is only a default:
 # a k=264 chain overrides it on the sbatch line, and raising TIME_CAP without raising
@@ -43,12 +58,26 @@ seconds_of_slurm_time() {
   esac
 }
 
+# No scontrol at all means this is not a compute node -- a local run or the test suite --
+# and the check is skipped. scontrol present but unable to answer is different: something is
+# wrong on a node where the check matters, and continuing would risk the whole allocation.
 if [ -n "${SLURM_JOB_ID:-}" ] && command -v scontrol >/dev/null 2>&1; then
   allocated_text=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null \
     | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+  allocated=""
   if [ -n "$allocated_text" ] && [ "$allocated_text" != "UNLIMITED" ]; then
     allocated=$(seconds_of_slurm_time "$allocated_text" 2>/dev/null || true)
-    if [ -n "$allocated" ] && [ "$allocated" -gt 0 ] 2>/dev/null; then
+  fi
+  if [ "${allocated_text:-}" != "UNLIMITED" ] \
+     && { [ -z "$allocated" ] || ! [ "$allocated" -gt 0 ] 2>/dev/null; } \
+     && [ "${CHECKPOINT_SKIP_TIME_CHECK:-0}" != "1" ]; then
+    echo "refusing to start: cannot read this job's TimeLimit from scontrol (got \
+'${allocated_text:-nothing}'), so --time-cap-secs ${TIME_CAP}s cannot be checked against the \
+allocation. Set CHECKPOINT_SKIP_TIME_CHECK=1 to proceed anyway." >&2
+    exit 2
+  fi
+  if [ -n "$allocated" ] && [ "$allocated" -gt 0 ] 2>/dev/null; then
+    {
       if [ "$allocated" -ge 7200 ]; then margin=3600; else margin=60; fi
       if [ "$TIME_CAP" -gt $(( allocated - margin )) ]; then
         echo "refusing to start: --time-cap-secs ${TIME_CAP}s leaves under ${margin}s of the \
@@ -57,7 +86,7 @@ losing every trial since the last periodic checkpoint. Raise --time on the sbatc
 lower the cap." >&2
         exit 2
       fi
-    fi
+    }
   fi
 fi
 

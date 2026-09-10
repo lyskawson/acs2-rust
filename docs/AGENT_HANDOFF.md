@@ -424,7 +424,7 @@ half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
 sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **98 Rust tests**,
-31 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+36 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 
@@ -447,12 +447,16 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
 
 Run on a second model, read-only, against a self-contained brief and a code bundle. It
-ran four times: five defects, then five, then two, then one — **thirteen in total and not
-one false positive**. Every finding was verified against the code before acting and the worst was
+ran five times — four with one model, then once with a fresh one given the whole feature
+instead of a diff: five defects, then five, two, one and five. **Eighteen in total and not
+one false positive.** Every finding was verified against the code before acting and the worst was
 reproduced by measurement first. Rounds two and three found most of their defects in code
 written *between* rounds, which is the argument for reviewing the fixes and not only the
 original change. Round four found nothing in its diff and one defect in the wrapper, from a
-question the brief asked it to consider rather than from the code under review. One thing was **not** acted on as asked: it wanted an ownership lock on
+question the brief asked it to consider rather than from the code under review. The fifth,
+by a reviewer with no history of the other four, found no missing learning state and no RNG
+fault but five operational and reporting defects — the strongest of them a mid-chain verdict
+rendered as where a run ended, which is the failure §7 catalogues four times over. One thing was **not** acted on as asked: it wanted an ownership lock on
 the checkpoint, and a stale lock left by a killed job would block exactly the disaster
 recovery that `a_periodic_checkpoint_outlives_a_killed_process` proves works. Job
 dependencies sequence the chain instead.

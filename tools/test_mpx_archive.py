@@ -21,10 +21,13 @@ class ArchiveTests(unittest.TestCase):
             path.write_text(content)
             return parse_log(path)[:3]
 
-    def segment(self, base, job, resumed_at, points, verdict_trials, diagnostics=()):
+    def segment(self, base, job, resumed_at, points, verdict_trials, diagnostics=(),
+                started=None):
         """One job of a checkpointed run, as slurm/mpx_reach.sh writes it."""
+        started = started or f"2026-09-10T{int(job) % 24:02d}:00:00+02:00"
         lines = [
-            f"run-provenance: commit=abc job={job} tag=k264 size=20 seed=42",
+            f"run-provenance: commit=abc job={job} attempt=0 started={started} "
+            f"tag=k264 size=20 seed=42",
             f"run-segment: base={base} checkpoint=/runs/{base}.ckpt checkpoint_every=4000 "
             f"resumed={'yes' if resumed_at else 'no'}",
             "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip",
@@ -38,10 +41,11 @@ class ArchiveTests(unittest.TestCase):
             )
         for trials in diagnostics:
             lines.append(f"  mpx-20 diag: trials={trials} micro=3")
-        lines.append(
-            f"  mpx-20 repeat 0: TIME-LIMITED trials={verdict_trials} knowledge=unmeasured "
-            "knowledge_trials=unmeasured reliable=1 spec=6/21 wall=10s"
-        )
+        if verdict_trials is not None:
+            lines.append(
+                f"  mpx-20 repeat 0: TIME-LIMITED trials={verdict_trials} knowledge=unmeasured "
+                "knowledge_trials=unmeasured reliable=1 spec=6/21 wall=10s"
+            )
         return "\n".join(lines) + "\n"
 
     def parse_named(self, name, content):
@@ -59,10 +63,11 @@ class ArchiveTests(unittest.TestCase):
             diagnostics.extend(two)
             verdicts.extend(three)
             found.extend(four)
+        stitched = stitch_segments(trajectory, "trials", found)
         return (
-            stitch_segments(trajectory, "trials", found),
+            stitched,
             stitch_segments(diagnostics, "trials", found),
-            close_chained_runs(verdicts, found),
+            close_chained_runs(verdicts, found, stitched),
         )
 
     def test_a_chained_run_is_one_run_not_one_per_job(self):
@@ -179,7 +184,8 @@ class ArchiveTests(unittest.TestCase):
         closing = self.segment(base, 1, 4000, [(6000, "1.0")], 6000).rsplit("\n", 2)[0] + "\n"
         self.assertNotIn("repeat 0:", closing)
         reopened = (
-            f"run-provenance: commit=a job={{job}} tag=k264 size=20 seed=42\n"
+            f"run-provenance: commit=a job={{job}} attempt=0 "
+            f"started=2026-09-10T{{job:02d}}:00:00+02:00 tag=k264 size=20 seed=42\n"
             f"run-segment: base={base} checkpoint=/runs/{base}.ckpt checkpoint_every=4000 "
             "resumed=yes\n"
             "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip\n"
@@ -287,9 +293,11 @@ class ArchiveTests(unittest.TestCase):
 
     def test_a_verdict_at_the_resume_point_survives_and_one_above_it_does_not(self):
         # The boundary is `>`, not `>=`: a verdict recorded exactly at the trial the next
-        # job resumed from describes work that job kept.
+        # job resumed from describes work that job kept. The later job records nothing of
+        # its own here, so only the boundary decides -- a later job that made progress is
+        # test_a_verdict_a_later_job_ran_past_is_not_the_runs_verdict.
         base = "slurm_mpx20_s42_k264"
-        killed = self.segment(base, 2, 4000, [(5000, "0.3")], 5000).rsplit("\n", 2)[0] + "\n"
+        killed = self.segment(base, 2, 4000, [], None)
         self.assertNotIn("repeat 0:", killed)
 
         at_the_point = self.segment(base, 1, 0, [(4000, "0.2")], 4000)
@@ -355,7 +363,8 @@ class ArchiveTests(unittest.TestCase):
             ]
             self.assertEqual(attempts, ["0", "1", "2"])
 
-    def wrapper_run(self, root, stub, time_cap, time_limit=None, job="9001"):
+    def wrapper_run(self, root, stub, time_cap, time_limit=None, job="9001", extra=(),
+                    env_extra=None):
         env = {
             **os.environ,
             "MPX_REPO_DIR": str(root),
@@ -367,9 +376,10 @@ class ArchiveTests(unittest.TestCase):
         }
         if time_limit:
             env["PATH"] = f"{root / 'bin'}{os.pathsep}{os.environ['PATH']}"
-            env["FAKE_TIMELIMIT"] = time_limit
+            env["FAKE_TIMELIMIT"] = "" if time_limit.strip() == "" else time_limit
+        env.update(env_extra or {})
         return subprocess.run(
-            ["bash", "slurm/mpx_reach.sh", "20", "42", str(time_cap)],
+            ["bash", "slurm/mpx_reach.sh", "20", "42", str(time_cap), *extra],
             cwd=root, env=env, capture_output=True, text=True,
         )
 
@@ -423,6 +433,113 @@ class ArchiveTests(unittest.TestCase):
 
             self.assertEqual(self.wrapper_run(root, stub, 1_814_400, "21-00:00:00").returncode, 2)
             self.assertEqual(log.read_text(), written)
+
+    def test_segments_are_ordered_by_the_clock_not_the_job_id(self):
+        # SLURM wraps job ids from MaxJobId back to FirstJobId. A chain crossing a rollover
+        # has its newer job carrying the smaller id, and ordering on ids would let the older
+        # segment discard the newer one's measurements and its SUCCESS.
+        base = "slurm_mpx20_s42_k264"
+        older = self.segment(
+            base, 67043328, 0, [(4000, "0.2")], 4000,
+            started="2026-09-10T08:00:00+02:00",
+        )
+        newer = self.segment(
+            base, 1001, 4000, [(8000, "1.0")], 8000,
+            started="2026-09-10T20:00:00+02:00",
+        ).replace("TIME-LIMITED", "SUCCESS")
+
+        for shuffled in (False, True):
+            trajectory, _diagnostics, verdicts = self.chain([
+                (f"{base}_seg67043328.out", older),
+                (f"{base}_seg1001.out", newer),
+            ], shuffled=shuffled)
+            self.assertEqual(
+                sorted(row["trials"] for row in trajectory), [4000, 8000],
+                f"shuffled={shuffled}",
+            )
+            self.assertEqual([row["verdict"] for row in verdicts], ["SUCCESS"])
+            self.assertEqual(verdicts[0]["trials"], 8000)
+
+    def test_a_verdict_a_later_job_ran_past_is_not_the_runs_verdict(self):
+        # A stopped on its own clock at 4,000. B resumed and is at 5,000 with no verdict
+        # yet. Rendering A's TIME-LIMITED as the run's final state reports a mid-chain
+        # reading as where the run ended -- the failure this project keeps repeating.
+        base = "slurm_mpx20_s42_k264"
+        running = self.segment(base, 2, 4000, [(5000, "0.7")], None)
+        trajectory, _diagnostics, verdicts = self.chain([
+            (f"{base}_seg1.out", self.segment(base, 1, 0, [(4000, "0.2")], 4000)),
+            (f"{base}_seg2.out", running),
+        ])
+        self.assertEqual(sorted(row["trials"] for row in trajectory), [4000, 5000])
+        self.assertEqual(verdicts, [], "the run has not stopped, so it has no verdict")
+
+        records = collect(trajectory, verdicts, 20)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(int(records[0]["trials"]), 5000)
+        self.assertFalse(records[0]["final"])
+
+        # But a later job that recorded nothing leaves the earlier verdict standing.
+        trajectory, _diagnostics, verdicts = self.chain([
+            (f"{base}_seg1.out", self.segment(base, 1, 0, [(4000, "0.2")], 4000)),
+            (f"{base}_seg2.out", self.segment(base, 2, 4000, [], None)),
+        ])
+        self.assertEqual([row["trials"] for row in verdicts], [4000])
+
+    def test_a_trailing_flag_cannot_override_one_the_wrapper_controls(self):
+        # mpx_reach takes the last value of a repeated flag, and extra arguments are
+        # appended after the wrapper's own, so a trailing --time-cap-secs would sail past
+        # the allocation check and a trailing --checkpoint-path would defeat the derived
+        # path that keeps two jobs off one learning state.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stub = self.wrapper_fixture(root)
+            for flag, value in (
+                ("--time-cap-secs", "1800000"),
+                ("--checkpoint-path", "/tmp/hijacked.ckpt"),
+                ("--sizes", "37"),
+            ):
+                refused = self.wrapper_run(root, stub, 600_000, "7-12:00:00", extra=[flag, value])
+                self.assertEqual(refused.returncode, 2, flag)
+                self.assertIn("refusing to start", refused.stderr)
+            passed = self.wrapper_run(root, stub, 600_000, "7-12:00:00", extra=["--log-coverage"])
+            self.assertEqual(passed.returncode, 0, "an ordinary extra flag must still pass")
+
+    def test_an_allocation_it_cannot_read_is_refused_inside_slurm(self):
+        # Skipping is right where scontrol is absent -- that is not a compute node. scontrol
+        # present but unable to answer is different: the check matters there, and continuing
+        # risks the whole allocation.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stub = self.wrapper_fixture(root)
+            for answer in ("", "garbage"):
+                refused = self.wrapper_run(root, stub, 600_000, answer or "EMPTY")
+                if answer == "":
+                    refused = self.wrapper_run(root, stub, 600_000, " ")
+                self.assertEqual(refused.returncode, 2, repr(answer))
+                self.assertIn("cannot read this job's TimeLimit", refused.stderr)
+
+            override = self.wrapper_run(
+                root, stub, 600_000, " ", env_extra={"CHECKPOINT_SKIP_TIME_CHECK": "1"}
+            )
+            self.assertEqual(override.returncode, 0)
+
+    def test_a_run_whose_segments_disagree_on_the_clock_falls_back_to_job_ids(self):
+        # Ordering a mixed set on `started` would sort the segments missing it ahead of
+        # every other, which is the silent destruction the clock exists to prevent.
+        base = "slurm_mpx20_s42_k264"
+        timed = self.segment(base, 1, 0, [(4000, "0.2")], 4000,
+                             started="2026-09-10T08:00:00+02:00")
+        untimed = self.segment(base, 2, 4000, [(8000, "1.0")], 8000).replace(
+            " started=2026-09-10T02:00:00+02:00", ""
+        )
+        self.assertNotIn("started=", untimed)
+
+        trajectory, _diagnostics, verdicts = self.chain([
+            (f"{base}_seg1.out", timed),
+            (f"{base}_seg2.out", untimed),
+        ])
+        self.assertEqual(sorted(row["trials"] for row in trajectory), [4000, 8000])
+        self.assertEqual([row["trials"] for row in verdicts], [8000])
 
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(

@@ -99,8 +99,10 @@ Three things the file format guarantees, and one it does not:
 
   `afterany`, not `afterok`: a segment that stops on its wall clock has done its job.
 - **The write is atomic** (staged under a name derived from the destination plus the
-  process id, then renamed), so a job killed mid-save leaves the previous checkpoint
-  intact. The process id keeps two jobs *on one node* off each other's staging file; it
+  process id, then renamed), so no reader ever sees a half-written file and a job killed
+  mid-save leaves the previous checkpoint intact. It is not `fsync`ed: a node losing power
+  can still fall back to the previous checkpoint, which is what `--checkpoint-every`
+  bounds. The process id keeps two jobs *on one node* off each other's staging file; it
   is not unique across nodes, which is why the sequencing above is the actual guarantee.
 - **An evaluation owed when a job stopped is paid before the next one trains.** A
   resource cap is checked before the evaluation block, so a job can stop on the very

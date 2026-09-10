@@ -975,10 +975,10 @@ by sabotage: dropping the environment RNG, the agent RNG, the ALP clock,
 buffer, replay order, replay reward or the replay `done` flag each makes it fail, and so
 does serialising floats as six-decimal text instead of bit patterns.
 
-**`ee` is the one saved field the test cannot cover.** It is written (`set_mark` clears
-it) but never read: PEE is not implemented, and `do_pee` only flips `leave_specialized`
-in `apply_alp`. It is serialised so the checkpoint stays complete if PEE lands, not
-because a trajectory depends on it today.
+**`ee` round-trips through the codec and is checked there, but no test can cover its
+effect on learning.** It is written (`set_mark` clears it) and never read: PEE is not
+implemented, and `do_pee` only flips `leave_specialized` in `apply_alp`. It is serialised so
+the checkpoint stays complete if PEE lands, not because a trajectory depends on it today.
 
 ### What is saved, and why each piece
 
@@ -1169,6 +1169,75 @@ chained run's segments always carry block 1 — now enforced.
 Three rounds, twelve defects, no false positives. Every round after the first found most
 of its defects in code written between rounds, which is the argument for reviewing the
 fixes and not only the change.
+
+### What a fresh reviewer found
+
+A fifth review, by a model with no history of the previous four, read the whole feature
+rather than a diff. It found no missing learning state and no incorrectly restored RNG
+position, and five operational or reporting defects. All five were confirmed against the
+code; two were reproduced.
+
+- **Trailing arguments overrode the flags the wrapper controls.** Extra arguments are
+  appended after the wrapper's own and `mpx_reach` takes the last value of a repeated flag,
+  so a trailing `--time-cap-secs` sailed past the allocation check and a trailing
+  `--checkpoint-path` defeated the derived path that keeps two jobs off one learning state.
+  Reproduced: the guard saw 600,000 and the binary received 1,800,000. Those flags are now
+  refused in the tail.
+- **An allocation the wrapper could not read silently disabled the time check.** No
+  `scontrol` at all means this is not a compute node and skipping is right; `scontrol`
+  present and unable to answer is a failure on a node where the check matters, and now
+  refuses unless `CHECKPOINT_SKIP_TIME_CHECK=1`.
+- **Job ids are not a clock.** SLURM wraps them from `MaxJobId` back to `FirstJobId`, so a
+  chain crossing a rollover would order backwards and the older segment would discard the
+  newer one's measurements and its SUCCESS. Ordering is now the wrapper's `started=`
+  timestamp, with job id and restart count as a tiebreak — and only when *every* segment of
+  the run carries one, because ordering a mixed set on it would sort the segments missing it
+  ahead of all the others, which is the same silent destruction it exists to prevent.
+- **A verdict a later job ran past was still rendered as the run's.** A stopped at 4,000 and
+  recorded TIME-LIMITED; B resumed and reached 5,000 with no verdict yet. Stitching kept
+  both, and `summarize_mpx.collect()` let the verdict replace the newer point, so the table
+  read TIME-LIMITED at 4,000 — a mid-chain reading presented as where the run ended, which
+  is the failure §7 of the handoff catalogues four times over. A verdict superseded by later
+  progress is now dropped and the run renders as in flight.
+- **`wall=` is not the chain's whole compute.** It is the elapsed time along the *retained*
+  checkpoint history: work a job did after its last save and then lost to a kill is not in
+  it, and `trials_per_s` is correspondingly optimistic. Not fixed, narrowed — see below.
+
+It also corrected a claim in this document: `ee` *is* covered by the codec round-trip test.
+What no test can cover is its effect on learning, because nothing reads it.
+
+### Two claims narrowed rather than fixed
+
+**`wall=` is elapsed time along the retained checkpoint history.** Making it the chain's
+true expenditure would need per-attempt accounting including work that was discarded, and
+the authoritative figure for spend already exists outside the archive: SLURM's own
+accounting, which §5 of the handoff uses against the grant. Trials-to-success is the
+machine-independent metric this project reports; wall-clock is colour.
+
+**A checkpoint's durability is atomic publication, not persistence through a node failure.**
+The write is staged and renamed, which means no reader ever sees a half-written file. It is
+not `fsync`ed, so a node losing power between the rename and the flush can leave the
+previous checkpoint. That is acceptable here — the loss is the trials since the last save,
+which is what `--checkpoint-every` already bounds — but the stronger claim was not earned.
+
+### Budgeting memory for a save
+
+Measured at k=264: a `Classifier<265>` is **7,504 B** resident, of which the mark is 6,360 B
+(84.8%), and **1,542 B** as text. `Checkpointed::capture` clones the population and `render`
+builds the whole file as a `String`, so a save roughly **doubles the population's footprint**
+while it runs:
+
+| population | live | at the moment of a save |
+|---|---|---|
+| 8,107 (measured at 500 trials) | 0.06 GB | 0.13 GB |
+| 100,000 | 0.75 GB | 1.65 GB |
+| 300,000 | 2.25 GB | 4.96 GB |
+
+At 500 trials the difference is below the reported resolution — 0.35 GB peak RSS with and
+without checkpointing. Budget `--mem` for at least **2.2x the population's resident size**.
+If a k=264 population reaches the hundreds of thousands, that is the moment to stream the
+render into the staging file and borrow the population instead of cloning it; until then the
+simpler code is worth more than the headroom.
 
 ### The sabotage harness was broken, and what that cost
 
