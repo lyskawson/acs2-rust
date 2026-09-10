@@ -58,12 +58,16 @@ seconds_of_slurm_time() {
   esac
 }
 
-# No scontrol at all means this is not a compute node -- a local run or the test suite --
-# and the check is skipped. scontrol present but unable to answer is different: something is
-# wrong on a node where the check matters, and continuing would risk the whole allocation.
-if [ -n "${SLURM_JOB_ID:-}" ] && command -v scontrol >/dev/null 2>&1; then
-  allocated_text=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null \
-    | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+# Inside an allocation the cap must be checked, and every way of failing to check it is
+# treated alike: no scontrol on PATH is not proof this is not a compute node -- a module
+# environment can strip it -- so it takes the same explicit override as a query that fails
+# or answers unreadably. Outside SLURM there is nothing to check and nothing to say.
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+  allocated_text=""
+  if command -v scontrol >/dev/null 2>&1; then
+    allocated_text=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null \
+      | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+  fi
   allocated=""
   if [ -n "$allocated_text" ] && [ "$allocated_text" != "UNLIMITED" ]; then
     allocated=$(seconds_of_slurm_time "$allocated_text" 2>/dev/null || true)
@@ -71,9 +75,10 @@ if [ -n "${SLURM_JOB_ID:-}" ] && command -v scontrol >/dev/null 2>&1; then
   if [ "${allocated_text:-}" != "UNLIMITED" ] \
      && { [ -z "$allocated" ] || ! [ "$allocated" -gt 0 ] 2>/dev/null; } \
      && [ "${CHECKPOINT_SKIP_TIME_CHECK:-0}" != "1" ]; then
-    echo "refusing to start: cannot read this job's TimeLimit from scontrol (got \
+    echo "refusing to start: cannot establish this job's TimeLimit (scontrol said \
 '${allocated_text:-nothing}'), so --time-cap-secs ${TIME_CAP}s cannot be checked against the \
-allocation. Set CHECKPOINT_SKIP_TIME_CHECK=1 to proceed anyway." >&2
+allocation and SLURM could kill this job before it saves. Set CHECKPOINT_SKIP_TIME_CHECK=1 \
+to proceed anyway." >&2
     exit 2
   fi
   if [ -n "$allocated" ] && [ "$allocated" -gt 0 ] 2>/dev/null; then

@@ -1214,11 +1214,18 @@ the authoritative figure for spend already exists outside the archive: SLURM's o
 accounting, which §5 of the handoff uses against the grant. Trials-to-success is the
 machine-independent metric this project reports; wall-clock is colour.
 
-**A checkpoint's durability is atomic publication, not persistence through a node failure.**
-The write is staged and renamed, which means no reader ever sees a half-written file. It is
-not `fsync`ed, so a node losing power between the rename and the flush can leave the
-previous checkpoint. That is acceptable here — the loss is the trials since the last save,
-which is what `--checkpoint-every` already bounds — but the stronger claim was not earned.
+**A checkpoint's durability, stated precisely.** The write is staged, `sync_all`ed, and
+renamed, and the directory entry is flushed after; publication is atomic against readers and
+the contents are on the device before the rename. `rename` still *replaces* the destination,
+so the fixed version also keeps the generation it replaces as `<name>.prev` — without it the
+new checkpoint is the only copy from the moment it lands, and a filesystem that loses the
+rename loses the run, not merely the interval since the last save. An earlier version of
+this section claimed a fall-back to "the previous checkpoint" that the code did not keep;
+that was wrong and is what the fifth reviewer caught.
+
+No checksum is kept. Truncation, a bad flag, a wrong record count and trailing records are
+all refused, but a single digit changing inside an RNG position or a float is not
+detectable. That is stated rather than implied.
 
 ### Budgeting memory for a save
 
@@ -1238,6 +1245,30 @@ without checkpointing. Budget `--mem` for at least **2.2x the population's resid
 If a k=264 population reaches the hundreds of thousands, that is the moment to stream the
 render into the staging file and borrow the population instead of cloning it; until then the
 simpler code is worth more than the headroom.
+
+### What the fresh reviewer's second pass changed
+
+Its verification round confirmed the flag-override and stale-verdict fixes and found four
+more, two of them in the fix for its own finding:
+
+- **`started` was compared as text.** `date -Is` writes local time with an offset, so across
+  a daylight-saving change the later job carries the smaller string —
+  `02:30:00+02:00` sorts after `02:00:00+01:00` although the second is half an hour later.
+  Poland changes clocks on 2026-10-25 and the grant runs into 2027, so a k=264 chain reaches
+  it. Ordering now compares parsed instants, and a `started` that cannot be parsed no longer
+  counts as a clock.
+- **One missing `started` reinstated the wrapped-job-id bug.** The all-or-nothing fallback
+  meant a single segment without a timestamp threw the whole run back onto ids. Guessing an
+  order has now produced silent loss twice, so an unorderable chained run **raises** instead:
+  ordering decides which segment's measurements survive and is not inferred.
+- **A missing `scontrol` still disabled the time check inside an allocation.** "No scontrol
+  means this is not a compute node" is not true — a module environment can strip it. Every
+  way of failing to establish the limit now takes the same explicit override.
+- **The durability claim, again** — see above.
+
+It also noted a comment in `mpx_reach.rs` still saying "the whole chain's compute" after the
+docs had been narrowed, and that a test which used to pin the numeric fallback had stopped
+doing so once the fixture gained timestamps. Both fixed.
 
 ### The sabotage harness was broken, and what that cost
 

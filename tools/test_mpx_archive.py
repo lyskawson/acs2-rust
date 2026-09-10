@@ -320,18 +320,13 @@ class ArchiveTests(unittest.TestCase):
         # the run continues from its checkpoint and its earlier trajectory disappears.
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "slurm").mkdir()
-            (root / "runs").mkdir()
-            shutil.copy(
-                Path(__file__).parents[1] / "slurm/mpx_reach.sh", root / "slurm"
-            )
-            stub = root / "stub.sh"
-            stub.write_text("#!/bin/sh\necho \"acs2-bench mpx-reach: seed=42\"\n")
-            stub.chmod(0o755)
+            stub = self.wrapper_fixture(root)
 
             for attempt in (None, "1", "2"):
                 env = {
                     **os.environ,
+                    "PATH": f"{root / 'bin'}{os.pathsep}{os.environ['PATH']}",
+                    "FAKE_TIMELIMIT": "7-12:00:00",
                     "MPX_REPO_DIR": str(root),
                     "MPX_BINARY": str(stub),
                     "MPX_RUNS_DIR": str(root / "runs"),
@@ -372,8 +367,11 @@ class ArchiveTests(unittest.TestCase):
             "MPX_RUNS_DIR": str(root / "runs"),
             "TAG": "g",
             "CHECKPOINT": "on",
-            "SLURM_JOB_ID": job,
         }
+        if job:
+            env["SLURM_JOB_ID"] = job
+        else:
+            env.pop("SLURM_JOB_ID", None)
         if time_limit:
             env["PATH"] = f"{root / 'bin'}{os.pathsep}{os.environ['PATH']}"
             env["FAKE_TIMELIMIT"] = "" if time_limit.strip() == "" else time_limit
@@ -419,8 +417,10 @@ class ArchiveTests(unittest.TestCase):
                 self.wrapper_run(root, stub, 1_800_000, "UNLIMITED").returncode, 0,
                 "an unlimited allocation bounds nothing",
             )
-            # No scontrol on PATH at all: local runs and the rest of this suite.
-            self.assertEqual(self.wrapper_run(root, stub, 1_800_000).returncode, 0)
+            self.assertEqual(
+                self.wrapper_run(root, stub, 1_800_000, job=None).returncode, 0,
+                "outside an allocation there is nothing to check",
+            )
 
     def test_a_refused_cap_does_not_truncate_an_earlier_attempts_log(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -434,7 +434,7 @@ class ArchiveTests(unittest.TestCase):
             self.assertEqual(self.wrapper_run(root, stub, 1_814_400, "21-00:00:00").returncode, 2)
             self.assertEqual(log.read_text(), written)
 
-    def test_segments_are_ordered_by_the_clock_not_the_job_id(self):
+    def test_a_wrapped_job_id_does_not_reorder_a_chain(self):
         # SLURM wraps job ids from MaxJobId back to FirstJobId. A chain crossing a rollover
         # has its newer job carrying the smaller id, and ordering on ids would let the older
         # segment discard the newer one's measurements and its SUCCESS.
@@ -496,7 +496,10 @@ class ArchiveTests(unittest.TestCase):
             for flag, value in (
                 ("--time-cap-secs", "1800000"),
                 ("--checkpoint-path", "/tmp/hijacked.ckpt"),
+                ("--checkpoint-every", "1"),
                 ("--sizes", "37"),
+                ("--seed", "43"),
+                ("--n-exp", "2"),
             ):
                 refused = self.wrapper_run(root, stub, 600_000, "7-12:00:00", extra=[flag, value])
                 self.assertEqual(refused.returncode, 2, flag)
@@ -516,30 +519,73 @@ class ArchiveTests(unittest.TestCase):
                 if answer == "":
                     refused = self.wrapper_run(root, stub, 600_000, " ")
                 self.assertEqual(refused.returncode, 2, repr(answer))
-                self.assertIn("cannot read this job's TimeLimit", refused.stderr)
+                self.assertIn("cannot establish this job's TimeLimit", refused.stderr)
 
-            override = self.wrapper_run(
-                root, stub, 600_000, " ", env_extra={"CHECKPOINT_SKIP_TIME_CHECK": "1"}
-            )
-            self.assertEqual(override.returncode, 0)
+            # No scontrol on PATH is not proof this is not a compute node: a module
+            # environment can strip it, and then the cap goes unchecked.
+            missing = self.wrapper_run(root, stub, 600_000)
+            self.assertEqual(missing.returncode, 2, "a missing scontrol must refuse too")
+            self.assertIn("cannot establish this job's TimeLimit", missing.stderr)
 
-    def test_a_run_whose_segments_disagree_on_the_clock_falls_back_to_job_ids(self):
-        # Ordering a mixed set on `started` would sort the segments missing it ahead of
-        # every other, which is the silent destruction the clock exists to prevent.
+            for env_extra in ({"CHECKPOINT_SKIP_TIME_CHECK": "1"},):
+                self.assertEqual(
+                    self.wrapper_run(root, stub, 600_000, " ", env_extra=env_extra).returncode, 0
+                )
+                self.assertEqual(
+                    self.wrapper_run(root, stub, 600_000, env_extra=env_extra).returncode, 0
+                )
+
+    def test_a_run_whose_segments_do_not_all_carry_a_clock_is_refused(self):
+        # Ordering decides which segment's measurements survive. Guessing it has twice
+        # produced silent loss -- job ids wrap, and a missing timestamp sorts ahead of every
+        # real one -- so an unorderable run is handed back rather than merged.
         base = "slurm_mpx20_s42_k264"
         timed = self.segment(base, 1, 0, [(4000, "0.2")], 4000,
                              started="2026-09-10T08:00:00+02:00")
-        untimed = self.segment(base, 2, 4000, [(8000, "1.0")], 8000).replace(
-            " started=2026-09-10T02:00:00+02:00", ""
-        )
-        self.assertNotIn("started=", untimed)
+        for broken in ("", "not-a-timestamp"):
+            other = self.segment(base, 2, 4000, [(8000, "1.0")], 8000,
+                                 started="2026-09-10T20:00:00+02:00")
+            other = other.replace("started=2026-09-10T20:00:00+02:00", f"started={broken}")
+            with self.assertRaises(ValueError):
+                self.chain([
+                    (f"{base}_seg1.out", timed),
+                    (f"{base}_seg2.out", other),
+                ])
 
+    def test_segments_are_ordered_by_the_instant_not_by_the_text(self):
+        # `date -Is` writes local time with an offset. Across a daylight-saving change the
+        # later job carries the smaller string: Poland changes clocks on 2026-10-25 and the
+        # grant runs into 2027.
+        base = "slurm_mpx20_s42_k264"
+        earlier = self.segment(base, 1, 0, [(4000, "0.2")], 4000,
+                               started="2026-10-25T02:30:00+02:00")
+        later = self.segment(base, 2, 4000, [(8000, "1.0")], 8000,
+                             started="2026-10-25T02:00:00+01:00").replace(
+            "TIME-LIMITED", "SUCCESS")
+
+        for shuffled in (False, True):
+            trajectory, _diagnostics, verdicts = self.chain([
+                (f"{base}_seg1.out", earlier),
+                (f"{base}_seg2.out", later),
+            ], shuffled=shuffled)
+            self.assertEqual(sorted(row["trials"] for row in trajectory), [4000, 8000],
+                             f"shuffled={shuffled}")
+            self.assertEqual([row["verdict"] for row in verdicts], ["SUCCESS"])
+            self.assertEqual(verdicts[0]["trials"], 8000)
+
+    def test_attempts_of_one_requeued_job_break_an_identical_instant(self):
+        # A requeued job keeps its id and its attempts can share a second.
+        base = "slurm_mpx20_s42_k264"
+        moment = "2026-09-10T08:00:00+02:00"
+        first = self.segment(base, 7001, 0, [(4000, "0.2")], 4000, started=moment)
+        second = self.segment(base, 7001, 4000, [(8000, "1.0")], 8000, started=moment).replace(
+            "attempt=0", "attempt=1").replace("TIME-LIMITED", "SUCCESS")
         trajectory, _diagnostics, verdicts = self.chain([
-            (f"{base}_seg1.out", timed),
-            (f"{base}_seg2.out", untimed),
-        ])
+            (f"{base}_seg7001.out", first),
+            (f"{base}_seg7001.r1.out", second),
+        ], shuffled=True)
         self.assertEqual(sorted(row["trials"] for row in trajectory), [4000, 8000])
-        self.assertEqual([row["trials"] for row in verdicts], [8000])
+        self.assertEqual([row["verdict"] for row in verdicts], ["SUCCESS"])
 
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(

@@ -462,9 +462,11 @@ where
     let mut knowledge_trials = None;
     let mut trials_since_eval: u64 = 0;
     let mut trials_since_checkpoint: u64 = 0;
-    // Wall-clock has two readings once a run spans several jobs: `limits.time_cap`
-    // bounds THIS process, because that is what the queue kills, while the reported
-    // and archived figure is the whole chain's compute.
+    // Wall-clock has two readings once a run spans several jobs: `limits.time_cap` bounds
+    // THIS process, because that is what the queue kills, while the reported figure is the
+    // elapsed time along the RETAINED checkpoint history -- work a job did after its last
+    // save and then lost to a kill is not in it. SLURM's own accounting is the authority on
+    // what a chain actually spent.
     let mut carried_wall_seconds = 0.0f64;
     let mut resumed_verdict: Option<Verdict> = None;
     let mut already_reported = false;

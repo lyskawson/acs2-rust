@@ -61,6 +61,7 @@ are -- the same point measured along another axis.
 import argparse
 import csv
 import re
+from datetime import datetime
 from pathlib import Path
 
 HEADER = re.compile(r"acs2-bench mpx-reach:\s*(?P<fields>.*)")
@@ -425,17 +426,26 @@ def parse_log(path):
     return trajectory_rows, diagnostic_rows, verdict_rows, segments
 
 
-def segment_order(job, attempt, source):
-    """Fallback chronology, used when the wrapper's clock is not on every segment of a run.
+def started_instant(started):
+    """The moment a job began, as an absolute instant, or None if it cannot be read.
 
-    SLURM job ids increase within a cluster and `SLURM_RESTART_COUNT` orders the attempts of
-    one requeued job, which keeps its id. Ids are not a true clock -- SLURM wraps them from
-    MaxJobId back to FirstJobId -- which is why `started` is preferred where available.
-
-    Resume points order nothing: two jobs resume at the same trial when the first dies
-    before saving again, and a restart from zero resumes at 0 yet supersedes everything.
-    Filenames order nothing either -- `_seg10` sorts before `_seg9`.
+    `date -Is` writes local time with an offset, so comparing the strings is wrong across a
+    daylight-saving change -- `...T02:30:00+02:00` sorts after `...T02:00:00+01:00` although
+    the second is half an hour later. Poland changes clocks on 2026-10-25 and the grant runs
+    into 2027, so a k=264 chain reaches it.
     """
+    if not started:
+        return None
+    try:
+        return datetime.fromisoformat(started).timestamp()
+    except ValueError:
+        return None
+
+
+def segment_order(job, attempt, source):
+    """Tiebreak within one instant: attempts of a requeued job share its id and can share a
+    second. Job ids are not a chronology on their own -- SLURM wraps them from MaxJobId back
+    to FirstJobId -- so they only ever separate segments the clock cannot."""
     return (
         int(job) if job.isdigit() else -1,
         int(attempt) if attempt.isdigit() else -1,
@@ -477,19 +487,27 @@ def run_key(row):
 def boundaries_by_run(segments):
     """A run's segments, in the order its jobs ran.
 
-    `started` is an actual clock and beats job ids, which wrap. It is used only when *every*
-    segment of the run carries one: ordering a mixed set on it would sort the segments
-    missing it ahead of all the others, which is the same silent destruction it exists to
-    prevent.
+    Ordering here is destructive -- a segment discards every measurement above the trial it
+    resumed at -- so it is settled by an actual clock or not at all. Every segment the
+    wrapper writes carries `started`; a run whose segments do not all carry a readable one
+    has no reliable order, and guessing has twice produced exactly the silent loss this
+    exists to prevent: job ids wrap, and a missing timestamp sorts ahead of every real one.
+    Refusing hands the operator a decision instead of making a destructive one for them.
     """
     grouped = {}
     for segment in segments:
         grouped.setdefault((segment["source"], segment["size"]), []).append(segment)
-    for group in grouped.values():
-        if all(segment.get("started") for segment in group):
-            group.sort(key=lambda segment: (segment["started"], segment["order"]))
-        else:
-            group.sort(key=lambda segment: segment["order"])
+
+    for (source, size), group in grouped.items():
+        instants = {segment["segment"]: started_instant(segment.get("started")) for segment in group}
+        unreadable = sorted(name for name, instant in instants.items() if instant is None)
+        if unreadable:
+            raise ValueError(
+                f"{source} (size {size}): cannot order the run's jobs -- no readable "
+                f"`started` on {', '.join(unreadable)}. Ordering decides which segment's "
+                "measurements survive, so it is not guessed."
+            )
+        group.sort(key=lambda segment: (instants[segment["segment"]], segment["order"]))
     return grouped
 
 

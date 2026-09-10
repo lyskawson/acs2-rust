@@ -16,7 +16,7 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --workspace --release                      # 98 tests, including reach regressions
+cargo test --workspace --release                      # 99 tests, including reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```
@@ -98,11 +98,10 @@ Three things the file format guarantees, and one it does not:
   ```
 
   `afterany`, not `afterok`: a segment that stops on its wall clock has done its job.
-- **The write is atomic** (staged under a name derived from the destination plus the
-  process id, then renamed), so no reader ever sees a half-written file and a job killed
-  mid-save leaves the previous checkpoint intact. It is not `fsync`ed: a node losing power
-  can still fall back to the previous checkpoint, which is what `--checkpoint-every`
-  bounds. The process id keeps two jobs *on one node* off each other's staging file; it
+- **The write is staged, flushed and renamed**, and the generation it replaces is kept as
+  `<name>.prev`. No reader sees a half-written file, the contents are on the device before
+  the rename, and a filesystem that loses the rename costs the last interval rather than the
+  run. No checksum is kept, so a single digit changing inside the file is not detectable. The process id keeps two jobs *on one node* off each other's staging file; it
   is not unique across nodes, which is why the sequencing above is the actual guarantee.
 - **An evaluation owed when a job stopped is paid before the next one trains.** A
   resource cap is checked before the evaluation block, so a job can stop on the very

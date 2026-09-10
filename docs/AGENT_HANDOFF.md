@@ -84,7 +84,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**98 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
+  (**99 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -423,8 +423,8 @@ reported at 66,500 trials instead of 67,000**. A checkpoint moved the headline m
 half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte-identical
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
-sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **98 Rust tests**,
-36 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **99 Rust tests**,
+38 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 
@@ -448,7 +448,7 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 
 Run on a second model, read-only, against a self-contained brief and a code bundle. It
 ran five times — four with one model, then once with a fresh one given the whole feature
-instead of a diff: five defects, then five, two, one and five. **Eighteen in total and not
+instead of a diff: five defects, then five, two, one, five and four. **Twenty-two in total and not
 one false positive.** Every finding was verified against the code before acting and the worst was
 reproduced by measurement first. Rounds two and three found most of their defects in code
 written *between* rounds, which is the argument for reviewing the fixes and not only the

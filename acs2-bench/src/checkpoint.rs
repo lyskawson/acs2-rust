@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
 use acs2_core::acs2er::ReplaySample;
@@ -419,15 +420,53 @@ fn staging_path(path: &Path) -> PathBuf {
     path.with_file_name(name)
 }
 
+/// The generation a publish keeps, so a torn one is not the end of the run.
+///
+/// `rename` replaces the destination, so without this the new checkpoint is the only copy
+/// from the moment it lands. That is fine for a torn *write* -- the staging file absorbs it
+/// -- but not for a filesystem that loses the rename or the data behind it. A run that cost
+/// hundreds of hours gets one spare.
+fn previous_path(path: &Path) -> PathBuf {
+    let mut name = path
+        .file_name()
+        .unwrap_or_else(|| panic!("checkpoint path {} names no file", path.display()))
+        .to_os_string();
+    name.push(".prev");
+    path.with_file_name(name)
+}
+
 pub fn write<const N: usize>(path: &Path, state: &RunState<N>) {
-    if let Some(parent) = path.parent() {
-        if !parent.as_os_str().is_empty() {
+    let directory = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => {
             fs::create_dir_all(parent).expect("cannot create the checkpoint directory");
+            Some(parent.to_path_buf())
+        }
+        _ => None,
+    };
+
+    let staging = staging_path(path);
+    let file = fs::File::create(&staging).expect("cannot write the checkpoint");
+    {
+        let mut writer = std::io::BufWriter::new(&file);
+        writer
+            .write_all(render(state).as_bytes())
+            .expect("cannot write the checkpoint");
+        writer.flush().expect("cannot write the checkpoint");
+    }
+    // Publishing an unflushed file is atomic only against other readers, not against the
+    // machine losing power a second later.
+    file.sync_all().expect("cannot flush the checkpoint");
+    drop(file);
+
+    if path.exists() {
+        fs::rename(path, previous_path(path)).expect("cannot retain the previous checkpoint");
+    }
+    fs::rename(&staging, path).expect("cannot publish the checkpoint");
+    if let Some(directory) = directory {
+        if let Ok(handle) = fs::File::open(&directory) {
+            let _ = handle.sync_all();
         }
     }
-    let staging = staging_path(path);
-    fs::write(&staging, render(state)).expect("cannot write the checkpoint");
-    fs::rename(&staging, path).expect("cannot publish the checkpoint");
 }
 
 pub fn read<const N: usize>(path: &Path) -> RunState<N> {
@@ -626,5 +665,38 @@ mod tests {
         let rendered = render(&state());
         assert!(std::panic::catch_unwind(|| parse::<7>(&rendered.replace("population 2", "population 3"))).is_err());
         assert!(std::panic::catch_unwind(|| parse::<7>(&rendered.replace("population 2", "population 1"))).is_err());
+    }
+
+    #[test]
+    fn a_publish_keeps_the_generation_it_replaces() {
+        let directory = std::env::temp_dir().join(format!(
+            "acs2-checkpoint-prev-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let path = directory.join("run.ckpt");
+
+        let mut first = state();
+        first.trials_used = 1000;
+        write::<7>(&path, &first);
+        assert!(!previous_path(&path).exists(), "nothing to retain on the first publish");
+
+        let mut second = state();
+        second.trials_used = 2000;
+        write::<7>(&path, &second);
+
+        assert_eq!(read::<7>(&path).trials_used, 2000);
+        assert_eq!(
+            read::<7>(&previous_path(&path)).trials_used,
+            1000,
+            "a run that cost hundreds of hours keeps one spare"
+        );
+        assert_ne!(previous_path(&path), path);
+        assert_ne!(previous_path(&path), staging_path(&path));
+
+        std::fs::remove_dir_all(&directory).ok();
     }
 }
