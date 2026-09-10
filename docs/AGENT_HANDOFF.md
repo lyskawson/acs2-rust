@@ -300,14 +300,14 @@ Three things that cost days before:
 Verified live on 2026-09-10. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Two jobs running. Grant: 4529 h of 5000 spent (`RawUsage` 16,305,527 CPU-s), 471 h
-left, of which 415 h is already committed to these two.** Roughly 56 h genuinely free,
-so submit nothing new until the extension lands.
+**Two jobs running. Grant: 4552 h of 5000 spent (`RawUsage` 16,387,127 CPU-s), 448 h
+left, 392 h of it committed to these two.** Roughly 56 h genuinely free, so submit nothing
+new until the extension lands.
 
-| Job | State, late 2026-09-10 | Why it matters |
+| Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `eps135_s42b` (5856652) | 45.48 M trials, knowledge **0.1800**, 269 reliable, spec 11.14, pop 15 883; 11 d 23 h of wall left (300 h allocation, 1 d used) | **The one that matters.** Seed 42 restarted from zero. At 1 841 trials/s over 24.7 h the allocation projects to ~550 M trials against the 428 M seed 43 needed — and throughput rises as the population condenses. If it closes, the canonical k=135 result is two seeds instead of one. Specificity 11.1 against the ideal 8, falling from 12.5 earlier in the day, is the bloat phase resolving, not a warning sign. |
-| `encU9_s42` (5828411) | 29.88 M trials, knowledge **0.2320**, 124 reliable, spec **8.15**; 5 d 7 h left | Climbing steadily — 0.0023 on 09-08, 0.1502 on 09-09, 0.2075 and then 0.2320 on 09-10 — with specificity settled at the ideal. Under the canonical encoding this configuration produced a hard zero across 105.6 M trials. So the encoding, not `u_max`, was the binding constraint at 135 bits. |
+| `eps135_s42b` (5856652) | 66.36 M trials, knowledge **0.2863**, 169 reliable, spec **9.20**, pop 3 284; 11 d 12 h of wall left | **The one that matters.** Knowledge 0.1800 → 0.2863 and specificity 11.14 → 9.20 in a day: the bloat phase is resolving toward the ideal 8 and the population has collapsed from 15 883 to 3 284, which is condensation, not stalling. If it closes, the canonical k=135 result stands on two seeds instead of one. |
+| `encU9_s42` (5828411) | 37.20 M trials, knowledge **0.2400**, 125 reliable, spec **8.15**; 4 d 20 h left | Still climbing, specificity settled at the ideal. Under the canonical encoding this configuration produced a hard zero across 105.6 M trials. |
 
 Neither job is checkpointed: both predate the feature and restarting them to gain
 resumability would throw away a month of trials. The first chained run is k=264.
