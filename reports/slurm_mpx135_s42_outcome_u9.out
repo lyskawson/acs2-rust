@@ -985,3 +985,15 @@ acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_
   mpx-135 diag: trials=29520000 micro=22334 pop_spec=12.49 spec_max=27 q_mean=0.606 q_max=1.000 q_above_half=18235 marked=0.362 mark_density=0.911 exp_mean=176.1 addr_spec=0.955 addr_random=0.648 addr_full=0.0057 correct=109
   mpx-135 cover: trials=29520000 overall=0.2304 a0_nochange=0.0000 a0_change=0.9220 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
   mpx-135 acc: trials=29520000 accuracy=0.8800
+  mpx-135 traj: trials=29640000 wall=186099s knowledge=0.2323 reliable=127 spec=8.14 pop=21286
+  mpx-135 diag: trials=29640000 micro=22264 pop_spec=12.49 spec_max=27 q_mean=0.610 q_max=1.000 q_above_half=18252 marked=0.362 mark_density=0.911 exp_mean=178.2 addr_spec=0.914 addr_random=0.648 addr_full=0.0056 correct=109
+  mpx-135 cover: trials=29640000 overall=0.2323 a0_nochange=0.0000 a0_change=0.9297 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29640000 accuracy=0.9090
+  mpx-135 traj: trials=29760000 wall=186716s knowledge=0.2327 reliable=126 spec=8.15 pop=20842
+  mpx-135 diag: trials=29760000 micro=21842 pop_spec=12.59 spec_max=27 q_mean=0.606 q_max=1.000 q_above_half=17780 marked=0.362 mark_density=0.911 exp_mean=183.5 addr_spec=0.950 addr_random=0.653 addr_full=0.0060 correct=111
+  mpx-135 cover: trials=29760000 overall=0.2327 a0_nochange=0.0000 a0_change=0.9312 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29760000 accuracy=0.8798
+  mpx-135 traj: trials=29880000 wall=187338s knowledge=0.2320 reliable=124 spec=8.15 pop=21147
+  mpx-135 diag: trials=29880000 micro=22130 pop_spec=12.56 spec_max=27 q_mean=0.608 q_max=1.000 q_above_half=18204 marked=0.359 mark_density=0.911 exp_mean=182.5 addr_spec=0.966 addr_random=0.651 addr_full=0.0055 correct=110
+  mpx-135 cover: trials=29880000 overall=0.2320 a0_nochange=0.0000 a0_change=0.9283 a1_nochange=0.0000 a1_change=0.0000 matched_but_wrong=0
+  mpx-135 acc: trials=29880000 accuracy=0.9004
