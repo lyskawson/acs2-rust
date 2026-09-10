@@ -16,7 +16,7 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --workspace --release                      # 76 tests, including reach regressions
+cargo test --workspace --release                      # 85 tests, including reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```
@@ -48,6 +48,8 @@ Sizes are not continuous: `k = a + 2^a` gives 6, 11, 20, 37, 70, 135, 264, 521. 
 | `--rss-cap-gb <f>` | `5.6` | Abort above process peak RSS; use `--isolate-repeats` for a fresh process per repeat. |
 | `--isolate-repeats` | off | Isolate each size/repeat so prior runs cannot contaminate its RSS peak or cap. |
 | `--strict-resource-limits` | off | Recheck time and RSS after evaluation and diagnostics, before SUCCESS. |
+| `--checkpoint-path <p>` | off | Save the learning state there and resume from it if it exists. A resumed run is identical to an uninterrupted one, trial for trial. Requires `--n-exp 1` and one size. |
+| `--checkpoint-every <n>` | `0` | Trials between saves; `0` saves only when the run stops. A save is rounded up to the next 500-trial batch boundary. |
 | `--alp-gen-variant pyalcs\|butz\|butz-checked` | `pyalcs` | `butz-checked` fixes exhausted-condition counting; `butz` preserves historical trajectories. |
 
 Diagnostics are off by default and preserve population and learning RNG state: learning
@@ -56,6 +58,39 @@ cap stops a run.
 `--log-trajectory` (the S-curve), `--log-accuracy` (the metric the literature reports),
 `--log-coverage` (**start here when knowledge sticks near 0.75 or 0.50** — check for
 classes without reliable coverage), `--log-quadrant-detail`, `--log-diagnostics`.
+
+### Checkpointing — running past the queue limit
+
+One k=264 seed is 700-4500 CPU-hours against a hard 504 h per job, so no single job
+can finish one. `--checkpoint-path` saves everything a trial depends on -- population,
+both RNG streams, the trial and ALP clocks, the accumulated wall time and the peak
+trackers -- and resuming reproduces an uninterrupted run **trial for trial**, which
+`acs2-bench/tests/reach_regressions.rs` pins for both ACS2 and ACS2ER.
+
+```bash
+# the same command for every job in the chain: it starts fresh, then resumes
+./target/release/mpx_reach --sizes 264 --n-exp 1 --seed 42 --time-cap-secs 1800000 \
+    --checkpoint-path ~/mpx_runs/checkpoints/mpx264_s42.ckpt --checkpoint-every 100000
+```
+
+Three things the file format guarantees, and one it does not:
+
+- **Resuming under another configuration is refused, not merged.** The checkpoint
+  carries the seed, encoding, epsilon, `u_max`, GA and agent settings it was written
+  for and the run aborts if they differ. The stopping limits are deliberately not part
+  of that identity -- a chained run raises them per job.
+- **A closed run is never relearned.** A checkpoint that records SUCCESS makes the next
+  job report `already-finished` and exit without touching the state, so a chain can be
+  submitted in one batch.
+- **The write is atomic** (staged, then renamed), so a job killed mid-save leaves the
+  previous checkpoint intact.
+- **The archive does not stitch segments yet.** Each job writes its own log and
+  `tools/parse_mpx_logs.py` reads them as separate runs sharing a seed. Fix that before
+  the first chained run is archived; the wrapper already emits a `run-segment:` line
+  keyed on the run's stable name.
+
+`slurm/mpx_reach.sh` takes `CHECKPOINT=on` and derives the path from size, seed and tag
+so two jobs cannot share one learning state, and gives each job its own log file.
 
 A terminal row prints `knowledge=unmeasured` when the final population has not been
 measured at that trial. It does not rerun evaluation after a resource cap. SUCCESS
@@ -92,6 +127,9 @@ prepare this cluster binary. Run the submission command from that clone.
 ```bash
 sbatch --export=ALL,TAG=<tag>,U_MAX=11,ENCODING=outcome,EPSILON=1 \
     slurm/mpx_reach.sh <size> <seed> <time_cap_secs> [extra flags]
+# resumable across jobs (k=264 needs this):
+sbatch --export=ALL,TAG=<tag>,CHECKPOINT=on,CHECKPOINT_EVERY=100000 \
+    slurm/mpx_reach.sh <size> <seed> <time_cap_secs>
 ./slurm/mpx_status.sh
 ./tools/sync_runs.sh --commit      # pull results back into the repo
 ```

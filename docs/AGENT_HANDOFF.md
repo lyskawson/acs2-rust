@@ -6,9 +6,11 @@ project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is th
 scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
 file carries only the **live state**.
 
-**Your task, in order, is §8.** Checkpointing first — it needs no cluster and no grant.
-Then an independent review of it by a second agent. Then, once the new WCSS grant lands,
-k=264 plus watching the two jobs already running.
+**Your task, in order, is §8.** Checkpointing is **implemented and gated** (2026-09-10);
+what remains is the independent review of it by a second agent, and then, once the new
+WCSS grant lands, k=264 plus watching the two jobs already running. One prerequisite came
+out of the checkpointing work and blocks k=264 archiving: the archive does not stitch a
+chained run — §8 step 3.
 
 **Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10. `main` is level with
 it. `develop` was retired: it never differed from `main` in a solo workflow. `feature/mpx`,
@@ -84,7 +86,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**76 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
+  (**85 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -155,7 +157,7 @@ that no correct candidate exists.
 Experiment knobs: `--u-max derived|<int>`, `--alp-gen-variant pyalcs|butz`,
 `--agent acs2|acs2er`, `--er-{buffer-size,min-samples,samples-number}`,
 `--encoding flip|outcome`, `--epsilon <f64>`, `--eval-interval`,
-`--rss-cap-gb <f64>`.
+`--rss-cap-gb <f64>`, `--checkpoint-path <p>` / `--checkpoint-every <n>`.
 
 ### The archive — where results live, and what makes a row reproducible
 
@@ -286,8 +288,8 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
 
 Three things that cost days before:
 - **Budget wall-clock generously.** Nodes run packed, so throughput is ~2.7x below the
-  M1 and degrades within a run. There is no checkpointing; a cut-off run restarts from
-  zero.
+  M1 and degrades within a run. A run without `CHECKPOINT=on` restarts from zero when it
+  is cut off — checkpointing exists since 2026-09-10, but it is opt-in.
 - **ACS2ER is memory-bound.** m = 13 at k=70 died OUT_OF_MEMORY at 8.4 GB. Give ER runs
   `--mem=32G`.
 - **RSS reporting was broken until 2026-09.** `ru_maxrss` is bytes on macOS and
@@ -394,36 +396,38 @@ way: README and `reports/MPX_final.md` are what an outsider reads first.
 The work is sequenced, and step 1 does not need the cluster. That matters, because only
 ~56 h of grant are genuinely free until the extension lands.
 
-### Step 1 — checkpointing (do this now, no cluster needed)
+### Step 1 — checkpointing — DONE (2026-09-10)
 
-The blocker for k=264, measured rather than argued: one seed is 700–4500 CPU-hours
-against a **504 h** hard queue limit, so no single job can finish one. Save and restore
-of the learning state is what makes a run span several jobs.
+The blocker it removes, measured rather than argued: one k=264 seed is 700-4500
+CPU-hours against a **504 h** hard queue limit, so no single job can finish one.
 
-What has to be saved is everything a trial depends on: the **population**, the **RNG
-state**, the **trial counter**, the accumulated **wall-clock**, and the peak trackers.
-Missing any one of them breaks the property the whole methodology rests on.
+`--checkpoint-path` saves the population, both RNG streams (agent **and**
+environment), the trial and ALP clocks, `trials_since_eval`, the accumulated
+wall-clock and the peak trackers; `--checkpoint-every` adds periodic saves.
+`slurm/mpx_reach.sh` takes `CHECKPOINT=on` and derives the path from size, seed and
+tag. `docs/ARCHITECTURE.md` carries the design, the file format and the two decisions
+that are not obvious from the code (wall-clock has two readings; the identity gate
+excludes the stopping limits).
 
-**The acceptance test is determinism across the cycle.** A run that saves at trial *n*,
-exits, and resumes must produce a trajectory identical to an uninterrupted run of the
-same seed and configuration — not similar, identical, trial for trial. Write that test
-before the feature. `acs2-bench/tests/reach_regressions.rs` is where it belongs; the
-existing `fresh_processes_do_not_share_a_previous_repeat_peak` test shows how to drive a
-separate process from a test.
+**The acceptance test is determinism across the cycle** and it is in
+`acs2-bench/tests/reach_regressions.rs`: three processes — whole, first half, resumed
+half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte-identical
+final checkpoint. It was verified by sabotage rather than trusted
+because it is green: sixteen mutations of the saved state, fifteen caught — the
+sixteenth is `ee`, and that one *cannot* be caught, see below. Gates at the time of the commit: **85 Rust tests**,
+13 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output
+compared line for line against the pre-change binary at k=20 over 102 learning lines.
 
-Constraints, non-negotiable:
+Verified end to end outside the test harness too: a k=20 run split across ten processes
+by a 5 s wall cap reproduces the uninterrupted run's 39 measurements exactly and closes
+at the same 78,000 trials; a k=264 checkpoint round-trips at 12.5 MB for 8,107
+classifiers.
 
-- Behind a flag (`--checkpoint-path`, `--checkpoint-every` or similar) whose **absence
-  reproduces today's behaviour exactly**. This touches the measured path.
-- Gates green: 76 Rust tests, 13 Python tests, P9 maze learning columns byte-identical.
-- The RNG is injected (`ChaChaRandomSource`); serialising its state is the delicate part.
-  A resumed run drawing from a differently-positioned stream is the failure mode to hunt.
-- Do not weaken determinism to make serialisation easier. If a container's iteration
-  order would have to become load-bearing, stop and say so rather than shipping it.
+Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 
-Note the queue allows 504 h per job against the 167 h habitually requested (§5), so
-raising the internal cap buys a factor of three before checkpointing has to carry
-anything.
+- `ee` is serialised but cannot be covered by the test — it is written and never read,
+  because PEE is not implemented.
+- The archive does not stitch a chained run. See step 3.
 
 ### Step 2 — independent review of the checkpointing
 
@@ -452,10 +456,23 @@ Two things at once:
 - **Watch what is already running** (§6). `eps135_s42b` is the one that matters; if it
   closes, the canonical k=135 result is two seeds instead of one. `./tools/sync_runs.sh
   --commit` after anything finishes.
+- **Stitch chained runs into the archive — before k=264, not after.** A checkpointed
+  run spans several jobs and each writes its own log (`..._seg<jobid>.out`), because one
+  filename per run would leave only the last segment. `tools/parse_mpx_logs.py` then
+  reads the segments as **independent runs sharing a seed** — measured on a
+  three-segment k=20 chain: two verdict rows for one run, which is the shape
+  `plot_mpx.py` was hardened to refuse. The wrapper already emits what a fix needs:
+  `run-segment: base=<stable run name> checkpoint=<path> checkpoint_every=<n>
+  resumed=yes|no`. The run's verdict is the last segment's; the intermediate
+  `TIME-LIMITED` rows say a *job* stopped, not the run. This changes the CSV schema and
+  the committed archive, so agree the shape with the user before rebuilding it.
+
 - **Start k=264** under `--encoding outcome`, `u_max = 12` (the `a + 4` analogue of the
-  11 that works at 135), with checkpointing on and a **small `--eval-interval`**. The
+  11 that works at 135), with `CHECKPOINT=on` and a **small `--eval-interval`**. The
   large-`m` replay jobs died having recorded nothing because their first evaluation point
-  was never reached (§6) — do not repeat that at a size where a job costs 504 h.
+  was never reached (§6) — do not repeat that at a size where a job costs 504 h. Size
+  `--checkpoint-every` so writes stay rare: at k=264 a checkpoint is ~1.5 KB per
+  classifier, 12.5 MB at 8,107 of them.
 
 The grant application asks for 10,000 CPU-hours: ~700 h to finish current work, ~1000 h
 to close k=135 canonically on three seeds, ~4000–5000 h for k=264 on three seeds with

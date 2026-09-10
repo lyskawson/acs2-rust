@@ -37,6 +37,10 @@ impl<const N: usize> Population<N> {
             .count()
     }
 
+    pub fn classifiers(&self) -> &[Classifier<N>] {
+        &self.classifiers
+    }
+
     pub fn iter(&self) -> Box<dyn Iterator<Item = &Classifier<N>> + '_> {
         Box::new(self.classifiers.iter())
     }

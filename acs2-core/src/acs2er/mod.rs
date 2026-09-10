@@ -2,6 +2,7 @@ pub mod replay;
 
 use crate::action_selection::ActionSelector;
 use crate::alp::apply_alp;
+use crate::checkpoint::{AgentState, Checkpointed};
 use crate::config::Configuration;
 use crate::environment::Environment;
 use crate::ga::apply_ga;
@@ -52,6 +53,31 @@ impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
 
     pub fn replay_memory(&self) -> &ReplayMemory<N> {
         &self.replay_memory
+    }
+}
+
+impl<const N: usize, R: RandomSource> Checkpointed<N> for Acs2ErAgent<N, R> {
+    fn capture(&self) -> AgentState<N> {
+        AgentState {
+            population: self.population.classifiers().to_vec(),
+            rng: self
+                .rng
+                .capture_state()
+                .expect("this random source cannot be checkpointed"),
+            replay: Some(self.replay_memory.samples().copied().collect()),
+        }
+    }
+
+    fn restore(&mut self, state: AgentState<N>) {
+        let samples = state
+            .replay
+            .expect("an ACS2 checkpoint cannot be restored into an ACS2ER agent");
+        self.population = Population::from_classifiers(state.population);
+        self.replay_memory = ReplayMemory::from_samples(self.replay_config.buffer_size, samples);
+        assert!(
+            self.rng.restore_state(&state.rng),
+            "this random source cannot be checkpointed"
+        );
     }
 }
 

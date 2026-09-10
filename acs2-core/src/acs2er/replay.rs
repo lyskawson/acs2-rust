@@ -49,6 +49,22 @@ impl<const N: usize> ReplayMemory<N> {
         }
     }
 
+    pub fn from_samples(max_size: usize, samples: Vec<ReplaySample<N>>) -> Self {
+        assert!(max_size > 0, "replay buffer_size must be positive");
+        assert!(
+            samples.len() <= max_size,
+            "a replay checkpoint holds more samples than the buffer admits"
+        );
+        Self {
+            samples: VecDeque::from(samples),
+            max_size,
+        }
+    }
+
+    pub fn samples(&self) -> impl Iterator<Item = &ReplaySample<N>> {
+        self.samples.iter()
+    }
+
     pub fn max_size(&self) -> usize {
         self.max_size
     }

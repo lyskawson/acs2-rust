@@ -1,5 +1,6 @@
 use crate::action_selection::ActionSelector;
 use crate::alp::apply_alp;
+use crate::checkpoint::{AgentState, Checkpointed};
 use crate::config::Configuration;
 use crate::environment::Environment;
 use crate::ga::apply_ga;
@@ -36,6 +37,31 @@ impl<const N: usize, R: RandomSource> Agent<N, R> {
             config,
             rng,
         }
+    }
+}
+
+impl<const N: usize, R: RandomSource> Checkpointed<N> for Agent<N, R> {
+    fn capture(&self) -> AgentState<N> {
+        AgentState {
+            population: self.population.classifiers().to_vec(),
+            rng: self
+                .rng
+                .capture_state()
+                .expect("this random source cannot be checkpointed"),
+            replay: None,
+        }
+    }
+
+    fn restore(&mut self, state: AgentState<N>) {
+        assert!(
+            state.replay.is_none(),
+            "an ACS2ER checkpoint cannot be restored into an ACS2 agent"
+        );
+        self.population = Population::from_classifiers(state.population);
+        assert!(
+            self.rng.restore_state(&state.rng),
+            "this random source cannot be checkpointed"
+        );
     }
 }
 

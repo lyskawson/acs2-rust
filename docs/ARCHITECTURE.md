@@ -948,3 +948,111 @@ covered — it is transcribed from `ACS2ER.py:83-99` and reviewed, not proven.
   the **last** step's reward in pyalcs. This is a pre-existing convention of
   the Rust `Agent`, kept for `Acs2ErAgent` so both agents behind the trait
   report comparable metrics. No benchmark reads it.
+
+## Checkpointing — save and restore of a run in flight
+
+Added on `feature/checkpointing`. The blocker it removes is measured, not argued: one
+k=264 seed is 700-4500 CPU-hours against a hard **504 h** per job in the longest queue,
+so no single job can finish one. Everything else about it follows from one property.
+
+### The property: a resumed run is identical, not similar
+
+A run saved at trial *n*, exited, and resumed must produce the same trajectory as an
+uninterrupted run of the same seed and configuration — trial for trial, not
+approximately. `acs2-bench/tests/reach_regressions.rs::a_resumed_run_reproduces_an_uninterrupted_trajectory`
+drives three separate processes (whole / first half / resumed half) through the real
+`run_reach_repeat`, for **both ACS2 and ACS2ER**, and asserts two things: the
+concatenated trajectory lines match the uninterrupted ones, and the checkpoint the
+resumed run finally writes is byte-identical to the uninterrupted one's once wall-clock
+and RSS are removed.
+
+That second assertion is what makes the test hard to pass by accident. It was verified
+by sabotage: dropping the environment RNG, the agent RNG, the ALP clock,
+`trials_since_eval`, the mark, `talp`, `tga`, `tav`, `exp`, population order, the replay
+buffer, replay order, replay reward or the replay `done` flag each makes it fail, and so
+does serialising floats as six-decimal text instead of bit patterns.
+
+**`ee` is the one saved field the test cannot cover.** It is written (`set_mark` clears
+it) but never read: PEE is not implemented, and `do_pee` only flips `leave_specialized`
+in `apply_alp`. It is serialised so the checkpoint stays complete if PEE lands, not
+because a trajectory depends on it today.
+
+### What is saved, and why each piece
+
+| Saved | Because |
+|---|---|
+| Population, in order | `ClassifierRef` is a positional index; reordering it changes deletion and match sets |
+| Agent RNG state | every ALP, GA and exploration draw comes from it |
+| **Environment RNG state** | `Multiplexer::reset` draws the input bits — a fresh env RNG replays the same inputs from the top |
+| `time` (the ALP clock) | `talp` / `tga` are relative to it, so `update_application_average` diverges without it |
+| `trials_used` | the x-axis of every archived trajectory |
+| `trials_since_eval` | otherwise the resumed run measures at different trial counts and the archive gets an inconsistent series |
+| Peak macro population, peak RSS | run-level maxima, meaningless if they restart per job |
+| Accumulated wall-clock | the archived cost of the run is the whole chain's |
+| Replay buffer (ACS2ER) | it *is* the learning input; a fresh buffer relearns from different transitions |
+
+### `ChaChaRandomSource` state — seed, stream, word position
+
+`rand_chacha` 0.3 has no serde in this build and none is added. `ChaCha8Rng` exposes
+`get_seed` / `get_stream` / `get_word_pos` and the matching setters, and those three
+values determine the generator exactly, including a capture taken mid-block —
+`get_word_pos` accounts for the position inside the buffered 4-block window. Both are
+pinned in `acs2-core/src/rng.rs`.
+
+`RandomSource` gains `capture_state` / `restore_state` with defaults that return
+`None` / `false`, so every existing test double compiles unchanged and a source that
+cannot be checkpointed fails **loudly** at save time rather than resuming from a
+differently-positioned stream. That failure mode — a resumed run drawing from the wrong
+place — is the one this design exists to make impossible.
+
+**No container's iteration order became load-bearing.** `Population` is a `Vec` and is
+written in order; `Mark` is a `[BTreeSet<Symbol>; N]` and is already sorted; the replay
+buffer is a `VecDeque` written front to back. There is no `HashMap` or `HashSet` on the
+learning path.
+
+### The file format
+
+Line-oriented text, hand-rolled in `acs2-bench/src/checkpoint.rs` so `acs2-core` gains
+no dependency. Two choices worth stating:
+
+- **Floats are stored as `to_bits` hex, not decimal.** Rust's shortest-round-trip
+  `Display` would also be exact, but exactness by construction is cheaper to review than
+  exactness by argument, and a 500-hour run is a bad place to find out.
+- **Symbols are two hex digits, wildcard `--`.** 2N characters per condition against a
+  printable encoding's N, which at k=264 is ~1.5 KB per classifier and a 12.5 MB file
+  for 8,107 classifiers — measured, not estimated. Reviewability wins over size here;
+  the disk grant is 200 GB against 27 MB used.
+
+Writes are staged and renamed, so a job killed mid-save leaves the previous checkpoint
+whole.
+
+### Two decisions that are not obvious from the code
+
+**Wall-clock has two readings.** `--time-cap-secs` bounds *this process*, because that
+is what the queue kills; the reported and archived `wall=` is the whole chain's compute.
+Conflating them would make either the last job overrun its allocation or the archive
+understate the cost of a run.
+
+**The identity gate excludes the stopping limits.** Seed, encoding, epsilon, `u_max`,
+GA, ALP variant and agent settings must match or the resume aborts — resuming under a
+different one of those would splice two unrelated runs into one trajectory. Trials, wall
+and RSS caps are deliberately absent: a chained run raises them per job, and they change
+when a run stops, not what it learns.
+
+### NAMED HAZARD — the archive does not stitch a chained run yet
+
+A checkpointed run spans several jobs and `slurm/mpx_reach.sh` gives each its own log
+(`..._seg<jobid>.out`) — a single filename would leave only the last segment, and the
+segments are where the trajectory lives. But `tools/parse_mpx_logs.py` then reads them
+as **independent runs sharing a seed**, which is exactly what `plot_mpx.py` was hardened
+to refuse. Measured on a three-segment k=20 chain: two verdict rows for one run.
+
+The wrapper already emits the provenance a fix needs:
+
+```
+run-segment: base=<stable run name> checkpoint=<path> checkpoint_every=<n> resumed=yes|no
+```
+
+**Fix this before the first chained run is archived.** The verdict of a chained run is
+the last segment's; the intermediate `TIME-LIMITED` rows record that a *job* stopped,
+not that the run did.

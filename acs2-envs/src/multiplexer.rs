@@ -103,6 +103,14 @@ impl<const N: usize> Multiplexer<N> {
         }
     }
 
+    pub fn rng(&self) -> &dyn RandomSource {
+        &*self.rng
+    }
+
+    pub fn rng_mut(&mut self) -> &mut dyn RandomSource {
+        &mut *self.rng
+    }
+
     fn bit_at(&self, index: usize) -> u8 {
         match self.perception[index] {
             Symbol::Token(value) => value - DIGIT_ZERO,

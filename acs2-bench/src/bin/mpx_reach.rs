@@ -1,7 +1,9 @@
 use std::mem::size_of;
+use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+use acs2_bench::checkpoint::{self, CheckpointSettings, RunState};
 use acs2_bench::{
     parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
     UMaxMode,
@@ -9,6 +11,7 @@ use acs2_bench::{
 use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
 use acs2_core::agent::Agent;
+use acs2_core::checkpoint::Checkpointed;
 use acs2_core::classifier::Classifier;
 use acs2_core::condition::Condition;
 use acs2_core::config::{AlpGenVariant, Configuration};
@@ -74,10 +77,21 @@ impl Verdict {
             Verdict::TimeLimited => "TIME-LIMITED",
         }
     }
+
+    fn from_label(label: &str) -> Self {
+        match label {
+            "SUCCESS" => Verdict::Success,
+            "TRIALS-LIMITED" => Verdict::TrialsLimited,
+            "MEMORY-LIMITED" => Verdict::MemoryLimited,
+            "TIME-LIMITED" => Verdict::TimeLimited,
+            other => panic!("checkpoint carries an unknown verdict {other}"),
+        }
+    }
 }
 
 struct ReachOutcome {
     verdict: Verdict,
+    already_finished: bool,
     trials_used: u64,
     final_knowledge: Option<f64>,
     reliable_count: usize,
@@ -378,15 +392,63 @@ impl ReachLimits {
     }
 }
 
+struct CheckpointPlan<'a> {
+    settings: &'a CheckpointSettings,
+    identity: String,
+}
+
+struct ProtocolProgress {
+    time: u64,
+    trials_used: u64,
+    trials_since_eval: u64,
+    peak_macro_population: usize,
+    peak_rss_bytes: u64,
+    wall_seconds: f64,
+    final_knowledge: f64,
+    knowledge_trials: Option<u64>,
+}
+
+fn save_checkpoint<const N: usize, A>(
+    plan: &CheckpointPlan,
+    eval_interval: u64,
+    progress: &ProtocolProgress,
+    verdict: Option<Verdict>,
+    agent: &A,
+    env: &Multiplexer<N>,
+) where
+    A: Checkpointed<N>,
+{
+    let state = RunState {
+        identity: plan.identity.clone(),
+        eval_interval,
+        trials_used: progress.trials_used,
+        time: progress.time,
+        trials_since_eval: progress.trials_since_eval,
+        peak_macro_population: progress.peak_macro_population,
+        peak_rss_bytes: progress.peak_rss_bytes,
+        wall_seconds: progress.wall_seconds,
+        final_knowledge: progress.final_knowledge,
+        knowledge_trials: progress.knowledge_trials,
+        verdict: verdict.map(|verdict| verdict.label().to_string()),
+        env_rng: env
+            .rng()
+            .capture_state()
+            .expect("the environment random source cannot be checkpointed"),
+        agent: agent.capture(),
+    };
+    checkpoint::write(&plan.settings.path, &state);
+}
+
 fn run_reach_protocol<const N: usize, A>(
     agent: &mut A,
     env: &mut Multiplexer<N>,
     selector: &EpsilonGreedy,
     size: usize,
     limits: &ReachLimits,
+    checkpoint: Option<&CheckpointPlan>,
 ) -> ReachOutcome
 where
-    A: LearningAgent<N>,
+    A: LearningAgent<N> + Checkpointed<N>,
 {
     let bootstrap = MaxFitnessBootstrap;
     let theta_r = agent.config().theta_r;
@@ -399,112 +461,178 @@ where
     let mut final_knowledge = 0.0;
     let mut knowledge_trials = None;
     let mut trials_since_eval: u64 = 0;
+    let mut trials_since_checkpoint: u64 = 0;
+    // Wall-clock has two readings once a run spans several jobs: `limits.time_cap`
+    // bounds THIS process, because that is what the queue kills, while the reported
+    // and archived figure is the whole chain's compute.
+    let mut carried_wall_seconds = 0.0f64;
+    let mut resumed_verdict: Option<Verdict> = None;
 
-    let verdict = loop {
-        for _ in 0..TIME_CHECK_BATCH {
-            let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
-            time += metrics.steps as u64;
-            trials_used += 1;
-            trials_since_eval += 1;
-        }
-
-        peak_macro_population = peak_macro_population.max(agent.population().len());
-        peak_rss = peak_rss.max(peak_rss_bytes());
-
-        if peak_rss > limits.rss_cap_bytes {
-            break Verdict::MemoryLimited;
-        }
-        if start.elapsed() > limits.time_cap {
-            break Verdict::TimeLimited;
-        }
-        if trials_since_eval >= limits.eval_interval {
-            trials_since_eval = 0;
-            final_knowledge =
-                evaluate_knowledge(
-                agent.population(),
-                theta_r,
-                SAMPLE_INPUTS,
-                SAMPLE_SEED,
-                limits.encoding,
+    if let Some(plan) = checkpoint {
+        if plan.settings.path.exists() {
+            let restored = checkpoint::read::<N>(&plan.settings.path);
+            assert_eq!(
+                restored.identity, plan.identity,
+                "the checkpoint at {} was written for another configuration",
+                plan.settings.path.display()
             );
-            knowledge_trials = Some(trials_used);
-            if limits.log_trajectory {
-                let (reliable, spec_sum) = agent
-                    .population()
-                    .iter()
-                    .filter(|classifier| classifier.is_reliable(theta_r))
-                    .fold((0usize, 0.0f64), |(count, sum), classifier| {
-                        (count + 1, sum + classifier.condition.specificity() as f64)
-                    });
-                let spec = if reliable == 0 { 0.0 } else { spec_sum / reliable as f64 };
+            if restored.eval_interval != limits.eval_interval {
                 println!(
-                    "  mpx-{size} traj: trials={trials_used} wall={:.0}s knowledge={final_knowledge:.4} reliable={reliable} spec={spec:.2} pop={}",
-                    start.elapsed().as_secs_f64(),
-                    agent.population().len(),
+                    "  mpx-{size} warning: resuming at eval_interval={} a run measured every {} trials",
+                    limits.eval_interval, restored.eval_interval,
                 );
             }
-            if limits.log_diagnostics {
-                let diagnostics = population_diagnostics(agent.population());
-                println!(
-                    "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1} addr_spec={:.3} addr_random={:.3} addr_full={:.4} correct={}",
-                    diagnostics.micro_size,
-                    diagnostics.specificity_mean,
-                    diagnostics.specificity_max,
-                    diagnostics.quality_mean,
-                    diagnostics.quality_max,
-                    diagnostics.above_half_quality,
-                    diagnostics.marked_fraction,
-                    diagnostics.mark_density,
-                    diagnostics.experience_mean,
-                    diagnostics.address_specified_mean,
-                    diagnostics.address_random_baseline,
-                    diagnostics.address_complete_fraction,
-                    diagnostics.structurally_correct,
-                );
+            time = restored.time;
+            trials_used = restored.trials_used;
+            trials_since_eval = restored.trials_since_eval;
+            peak_macro_population = restored.peak_macro_population;
+            peak_rss = peak_rss.max(restored.peak_rss_bytes);
+            carried_wall_seconds = restored.wall_seconds;
+            final_knowledge = restored.final_knowledge;
+            knowledge_trials = restored.knowledge_trials;
+            assert!(
+                env.rng_mut().restore_state(&restored.env_rng),
+                "the environment random source cannot be checkpointed"
+            );
+            let stored_verdict = restored.verdict.as_deref().map(Verdict::from_label);
+            agent.restore(restored.agent);
+            if stored_verdict == Some(Verdict::Success) {
+                resumed_verdict = stored_verdict;
             }
-            if limits.log_coverage {
-                let breakdown = knowledge_breakdown(agent.population(), theta_r, limits.encoding);
-                println!(
-                    "  mpx-{size} cover: trials={trials_used} overall={:.4} a0_nochange={:.4} a0_change={:.4} a1_nochange={:.4} a1_change={:.4} matched_but_wrong={}",
-                    breakdown.overall(),
-                    breakdown.fraction(0),
-                    breakdown.fraction(1),
-                    breakdown.fraction(2),
-                    breakdown.fraction(3),
-                    breakdown.matched_but_wrong,
-                );
+            println!(
+                "  mpx-{size} resumed: trials={trials_used} time={time} since_eval={trials_since_eval} knowledge={final_knowledge:.4} carried_wall={carried_wall_seconds:.0}s from={}",
+                plan.settings.path.display(),
+            );
+        }
+    }
+
+    let verdict = match resumed_verdict {
+        Some(verdict) => verdict,
+        None => loop {
+            if trials_used >= limits.trials_cap {
+                break Verdict::TrialsLimited;
             }
-            if limits.log_quadrant_detail {
-                let detail = quadrant_detail(agent.population(), limits.encoding);
-                println!(
-                    "  mpx-{size} qdetail: trials={trials_used} a0nc_any={:.4} a0nc_q={:.3} a0c_any={:.4} a0c_q={:.3} a1nc_any={:.4} a1nc_q={:.3} a1c_any={:.4} a1c_q={:.3}",
-                    detail.fraction(0), detail.best_quality[0],
-                    detail.fraction(1), detail.best_quality[1],
-                    detail.fraction(2), detail.best_quality[2],
-                    detail.fraction(3), detail.best_quality[3],
-                );
+
+            for _ in 0..TIME_CHECK_BATCH {
+                let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
+                time += metrics.steps as u64;
+                trials_used += 1;
+                trials_since_eval += 1;
             }
-            if limits.log_accuracy {
-                let accuracy = answer_accuracy(
+            trials_since_checkpoint += TIME_CHECK_BATCH as u64;
+
+            peak_macro_population = peak_macro_population.max(agent.population().len());
+            peak_rss = peak_rss.max(peak_rss_bytes());
+
+            if peak_rss > limits.rss_cap_bytes {
+                break Verdict::MemoryLimited;
+            }
+            if start.elapsed() > limits.time_cap {
+                break Verdict::TimeLimited;
+            }
+            if trials_since_eval >= limits.eval_interval {
+                trials_since_eval = 0;
+                final_knowledge =
+                    evaluate_knowledge(
                     agent.population(),
-                    Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
+                    theta_r,
+                    SAMPLE_INPUTS,
+                    SAMPLE_SEED,
                     limits.encoding,
                 );
-                println!("  mpx-{size} acc: trials={trials_used} accuracy={accuracy:.4}");
-            }
-            if limits.strict_resource_limits {
-                peak_rss = peak_rss.max(peak_rss_bytes());
-                if let Some(verdict) = limits.resource_verdict(start.elapsed(), peak_rss) {
-                    break verdict;
+                knowledge_trials = Some(trials_used);
+                if limits.log_trajectory {
+                    let (reliable, spec_sum) = agent
+                        .population()
+                        .iter()
+                        .filter(|classifier| classifier.is_reliable(theta_r))
+                        .fold((0usize, 0.0f64), |(count, sum), classifier| {
+                            (count + 1, sum + classifier.condition.specificity() as f64)
+                        });
+                    let spec = if reliable == 0 { 0.0 } else { spec_sum / reliable as f64 };
+                    println!(
+                        "  mpx-{size} traj: trials={trials_used} wall={:.0}s knowledge={final_knowledge:.4} reliable={reliable} spec={spec:.2} pop={}",
+                        carried_wall_seconds + start.elapsed().as_secs_f64(),
+                        agent.population().len(),
+                    );
+                }
+                if limits.log_diagnostics {
+                    let diagnostics = population_diagnostics(agent.population());
+                    println!(
+                        "  mpx-{size} diag: trials={trials_used} micro={} pop_spec={:.2} spec_max={} q_mean={:.3} q_max={:.3} q_above_half={} marked={:.3} mark_density={:.3} exp_mean={:.1} addr_spec={:.3} addr_random={:.3} addr_full={:.4} correct={}",
+                        diagnostics.micro_size,
+                        diagnostics.specificity_mean,
+                        diagnostics.specificity_max,
+                        diagnostics.quality_mean,
+                        diagnostics.quality_max,
+                        diagnostics.above_half_quality,
+                        diagnostics.marked_fraction,
+                        diagnostics.mark_density,
+                        diagnostics.experience_mean,
+                        diagnostics.address_specified_mean,
+                        diagnostics.address_random_baseline,
+                        diagnostics.address_complete_fraction,
+                        diagnostics.structurally_correct,
+                    );
+                }
+                if limits.log_coverage {
+                    let breakdown = knowledge_breakdown(agent.population(), theta_r, limits.encoding);
+                    println!(
+                        "  mpx-{size} cover: trials={trials_used} overall={:.4} a0_nochange={:.4} a0_change={:.4} a1_nochange={:.4} a1_change={:.4} matched_but_wrong={}",
+                        breakdown.overall(),
+                        breakdown.fraction(0),
+                        breakdown.fraction(1),
+                        breakdown.fraction(2),
+                        breakdown.fraction(3),
+                        breakdown.matched_but_wrong,
+                    );
+                }
+                if limits.log_quadrant_detail {
+                    let detail = quadrant_detail(agent.population(), limits.encoding);
+                    println!(
+                        "  mpx-{size} qdetail: trials={trials_used} a0nc_any={:.4} a0nc_q={:.3} a0c_any={:.4} a0c_q={:.3} a1nc_any={:.4} a1nc_q={:.3} a1c_any={:.4} a1c_q={:.3}",
+                        detail.fraction(0), detail.best_quality[0],
+                        detail.fraction(1), detail.best_quality[1],
+                        detail.fraction(2), detail.best_quality[2],
+                        detail.fraction(3), detail.best_quality[3],
+                    );
+                }
+                if limits.log_accuracy {
+                    let accuracy = answer_accuracy(
+                        agent.population(),
+                        Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
+                        limits.encoding,
+                    );
+                    println!("  mpx-{size} acc: trials={trials_used} accuracy={accuracy:.4}");
+                }
+                if limits.strict_resource_limits {
+                    peak_rss = peak_rss.max(peak_rss_bytes());
+                    if let Some(verdict) = limits.resource_verdict(start.elapsed(), peak_rss) {
+                        break verdict;
+                    }
+                }
+                if final_knowledge >= 1.0 {
+                    break Verdict::Success;
                 }
             }
-            if final_knowledge >= 1.0 {
-                break Verdict::Success;
+
+            if let Some(plan) = checkpoint {
+                if plan.settings.every > 0 && trials_since_checkpoint >= plan.settings.every {
+                    trials_since_checkpoint = 0;
+                    let progress = ProtocolProgress {
+                        time,
+                        trials_used,
+                        trials_since_eval,
+                        peak_macro_population,
+                        peak_rss_bytes: peak_rss,
+                        wall_seconds: carried_wall_seconds + start.elapsed().as_secs_f64(),
+                        final_knowledge,
+                        knowledge_trials,
+                    };
+                    save_checkpoint(plan, limits.eval_interval, &progress, None, agent, env);
+                }
             }
-        }
-        if trials_used >= limits.trials_cap {
-            break Verdict::TrialsLimited;
-        }
+        },
     };
 
     let reliable_specificities: Vec<f64> = agent
@@ -520,16 +648,59 @@ where
         reliable_specificities.iter().sum::<f64>() / reliable_count as f64
     };
 
+    let wall_seconds = carried_wall_seconds + start.elapsed().as_secs_f64();
+
+    if let (Some(plan), None) = (checkpoint, resumed_verdict) {
+        let progress = ProtocolProgress {
+            time,
+            trials_used,
+            trials_since_eval,
+            peak_macro_population,
+            peak_rss_bytes: peak_rss,
+            wall_seconds,
+            final_knowledge,
+            knowledge_trials,
+        };
+        save_checkpoint(plan, limits.eval_interval, &progress, Some(verdict), agent, env);
+    }
+
     ReachOutcome {
         verdict,
+        already_finished: resumed_verdict.is_some(),
         trials_used,
         final_knowledge: knowledge_trials.filter(|&trial| trial == trials_used).map(|_| final_knowledge),
         reliable_count,
         mean_reliable_specificity,
         peak_macro_population,
         peak_rss_bytes: peak_rss,
-        wall_seconds: start.elapsed().as_secs_f64(),
+        wall_seconds,
     }
+}
+
+/// Everything a resumed run must agree with the checkpoint about.
+///
+/// A checkpoint carries a learning state, not a configuration: resuming it under a
+/// different seed, encoding or generalization setting would silently splice two
+/// unrelated runs into one trajectory. The identity is compared verbatim, so any
+/// field added here becomes a resume-time gate. The stopping limits -- trials, wall
+/// clock, RSS -- are deliberately absent: a chained run raises them per job, and they
+/// change when a run stops, not what it learns.
+fn checkpoint_identity(
+    size: usize,
+    seed: u64,
+    gen: GenConfig,
+    agent_options: AgentOptions,
+    limits: &ReachLimits,
+) -> String {
+    format!(
+        "size={size} seed={seed} {} encoding={} epsilon={} u_max={} do_ga={} alp_gen_variant={}",
+        agent_options.describe(),
+        encoding_label(limits.encoding),
+        limits.epsilon,
+        gen.u_max,
+        gen.do_ga,
+        variant_label(gen.alp_gen_variant),
+    )
 }
 
 fn run_reach_repeat<const N: usize>(
@@ -538,6 +709,7 @@ fn run_reach_repeat<const N: usize>(
     gen: GenConfig,
     agent_options: AgentOptions,
     limits: &ReachLimits,
+    checkpoint: Option<&CheckpointSettings>,
 ) -> ReachOutcome {
     let mut config = Configuration::mpx();
     config.epsilon = limits.epsilon;
@@ -551,11 +723,15 @@ fn run_reach_repeat<const N: usize>(
         number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
         epsilon: limits.epsilon,
     };
+    let plan = checkpoint.map(|settings| CheckpointPlan {
+        settings,
+        identity: checkpoint_identity(size, seed, gen, agent_options, limits),
+    });
 
     match agent_options.agent {
         AgentChoice::Acs2 => {
             let mut agent = Agent::<N, _>::new(config, ChaChaRandomSource::from_seed(seed));
-            run_reach_protocol(&mut agent, &mut env, &selector, size, limits)
+            run_reach_protocol(&mut agent, &mut env, &selector, size, limits, plan.as_ref())
         }
         AgentChoice::Acs2Er => {
             let mut agent = Acs2ErAgent::<N, _>::new(
@@ -563,7 +739,7 @@ fn run_reach_repeat<const N: usize>(
                 agent_options.replay,
                 ChaChaRandomSource::from_seed(seed),
             );
-            run_reach_protocol(&mut agent, &mut env, &selector, size, limits)
+            run_reach_protocol(&mut agent, &mut env, &selector, size, limits, plan.as_ref())
         }
     }
 }
@@ -574,13 +750,14 @@ fn run_reach_dispatch(
     gen: GenConfig,
     agent_options: AgentOptions,
     limits: &ReachLimits,
+    checkpoint: Option<&CheckpointSettings>,
 ) -> ReachOutcome {
     match size {
-        37 => run_reach_repeat::<38>(size, seed, gen, agent_options, limits),
-        70 => run_reach_repeat::<71>(size, seed, gen, agent_options, limits),
-        135 => run_reach_repeat::<136>(size, seed, gen, agent_options, limits),
-        264 => run_reach_repeat::<265>(size, seed, gen, agent_options, limits),
-        20 => run_reach_repeat::<21>(size, seed, gen, agent_options, limits),
+        37 => run_reach_repeat::<38>(size, seed, gen, agent_options, limits, checkpoint),
+        70 => run_reach_repeat::<71>(size, seed, gen, agent_options, limits, checkpoint),
+        135 => run_reach_repeat::<136>(size, seed, gen, agent_options, limits, checkpoint),
+        264 => run_reach_repeat::<265>(size, seed, gen, agent_options, limits, checkpoint),
+        20 => run_reach_repeat::<21>(size, seed, gen, agent_options, limits, checkpoint),
         other => panic!("reach not configured for {other}-bit multiplexer"),
     }
 }
@@ -638,6 +815,8 @@ struct Options {
     agent: AgentOptions,
     strict_resource_limits: bool,
     isolate_repeats: bool,
+    checkpoint_path: Option<PathBuf>,
+    checkpoint_every: u64,
 }
 
 impl Options {
@@ -662,6 +841,8 @@ impl Options {
             agent: AgentOptions::default(),
             strict_resource_limits: false,
             isolate_repeats: false,
+            checkpoint_path: None,
+            checkpoint_every: 0,
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -703,6 +884,18 @@ impl Options {
                 "--log-accuracy" => options.log_accuracy = true,
                 "--strict-resource-limits" => options.strict_resource_limits = true,
                 "--isolate-repeats" => options.isolate_repeats = true,
+                "--checkpoint-path" => {
+                    options.checkpoint_path = Some(PathBuf::from(
+                        args.next().expect("--checkpoint-path needs a value"),
+                    ))
+                }
+                "--checkpoint-every" => {
+                    options.checkpoint_every = args
+                        .next()
+                        .expect("--checkpoint-every needs a value")
+                        .parse()
+                        .expect("--checkpoint-every must be a trial count")
+                }
                 "--rss-cap-gb" => {
                     let gb: f64 = args
                         .next()
@@ -748,8 +941,28 @@ fn main() {
         }
         return;
     }
+    let checkpoint = options.checkpoint_path.clone().map(|path| {
+        assert_eq!(
+            options.n_exp, 1,
+            "--checkpoint-path holds one run: use --n-exp 1"
+        );
+        assert_eq!(
+            options.sizes.len(),
+            1,
+            "--checkpoint-path holds one run: pass a single --sizes value"
+        );
+        assert!(
+            !options.isolate_repeats,
+            "--checkpoint-path and --isolate-repeats cannot be combined"
+        );
+        CheckpointSettings {
+            path,
+            every: options.checkpoint_every,
+        }
+    });
+
     println!(
-        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={} strict_resource_limits={} rss_scope={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={} strict_resource_limits={} rss_scope={} checkpoint={} checkpoint_every={}",
         options.agent.describe(),
         options.sizes,
         options.n_exp,
@@ -763,6 +976,8 @@ fn main() {
         options.eval_interval,
         options.strict_resource_limits,
         if options.isolate_repeats && isolated_worker { "repeat-process" } else { "process-lifetime" },
+        if checkpoint.is_some() { "on" } else { "off" },
+        options.checkpoint_every,
     );
 
     for &size in &options.sizes {
@@ -803,8 +1018,20 @@ fn main() {
                 gen,
                 options.agent,
                 &limits,
+                checkpoint.as_ref(),
             );
             verdicts.push(outcome.verdict);
+            // A chained run's later jobs find a finished checkpoint and have nothing to
+            // do. They must not print a `repeat N:` line: the archive parser would read
+            // one run's verdict once per job it outlived.
+            if outcome.already_finished {
+                println!(
+                    "  mpx-{size} already-finished: {} trials={} (the checkpoint records a closed run)",
+                    outcome.verdict.label(),
+                    outcome.trials_used,
+                );
+                continue;
+            }
             let knowledge = outcome.final_knowledge
                 .map(|value| format!("{value:.4}"))
                 .unwrap_or_else(|| "unmeasured".to_string());
