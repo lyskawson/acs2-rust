@@ -1104,3 +1104,21 @@ acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_
   mpx-135 traj: trials=44040000 wall=85292s knowledge=0.1575 reliable=186 spec=10.92 pop=11548
   mpx-135 cover: trials=44040000 overall=0.1575 a0_nochange=0.0000 a0_change=0.0819 a1_nochange=0.0000 a1_change=0.5480 matched_but_wrong=23
   mpx-135 acc: trials=44040000 accuracy=0.7171
+  mpx-135 traj: trials=44160000 wall=85663s knowledge=0.1583 reliable=187 spec=10.90 pop=12015
+  mpx-135 cover: trials=44160000 overall=0.1583 a0_nochange=0.0000 a0_change=0.0860 a1_nochange=0.0000 a1_change=0.5471 matched_but_wrong=12
+  mpx-135 acc: trials=44160000 accuracy=0.7070
+  mpx-135 traj: trials=44280000 wall=85922s knowledge=0.1609 reliable=193 spec=10.99 pop=11992
+  mpx-135 cover: trials=44280000 overall=0.1609 a0_nochange=0.0000 a0_change=0.0954 a1_nochange=0.0000 a1_change=0.5482 matched_but_wrong=5
+  mpx-135 acc: trials=44280000 accuracy=0.6918
+  mpx-135 traj: trials=44400000 wall=86297s knowledge=0.1632 reliable=195 spec=10.98 pop=11578
+  mpx-135 cover: trials=44400000 overall=0.1632 a0_nochange=0.0000 a0_change=0.1069 a1_nochange=0.0000 a1_change=0.5456 matched_but_wrong=14
+  mpx-135 acc: trials=44400000 accuracy=0.7058
+  mpx-135 traj: trials=44520000 wall=86533s knowledge=0.1633 reliable=188 spec=10.89 pop=11020
+  mpx-135 cover: trials=44520000 overall=0.1633 a0_nochange=0.0000 a0_change=0.1063 a1_nochange=0.0000 a1_change=0.5468 matched_but_wrong=5
+  mpx-135 acc: trials=44520000 accuracy=0.7175
+  mpx-135 traj: trials=44640000 wall=86867s knowledge=0.1629 reliable=183 spec=10.84 pop=12139
+  mpx-135 cover: trials=44640000 overall=0.1629 a0_nochange=0.0000 a0_change=0.1053 a1_nochange=0.0000 a1_change=0.5463 matched_but_wrong=1
+  mpx-135 acc: trials=44640000 accuracy=0.6880
+  mpx-135 traj: trials=44760000 wall=87114s knowledge=0.1649 reliable=193 spec=10.87 pop=11820
+  mpx-135 cover: trials=44760000 overall=0.1649 a0_nochange=0.0000 a0_change=0.1106 a1_nochange=0.0000 a1_change=0.5486 matched_but_wrong=0
+  mpx-135 acc: trials=44760000 accuracy=0.7025

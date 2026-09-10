@@ -57,14 +57,14 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 | seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | 301440000 | - | 393 | 8.01 | - | - | - | - | 166.7 | 502 | `135_s42_eps1_u11` |
-| 42 | pyalcs | 11 | running | 44 040 000 | 0.1575 | 44040000 | 0.7171 | 186 | 10.92 | 0.0000 | 0.0819 | 0.0000 | 0.5480 | 23.7 | 516 | `135_s42_eps1b_u11` |
+| 42 | pyalcs | 11 | running | 44 760 000 | 0.1649 | 44760000 | 0.7025 | 193 | 10.87 | 0.0000 | 0.1106 | 0.0000 | 0.5486 | 24.2 | 514 | `135_s42_eps1b_u11` |
 | 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | 427920000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
 | seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 9 | running | 29 280 000 | 0.2287 | 29280000 | 0.8439 | 119 | 8.13 | 0.0000 | 0.9150 | 0.0000 | 0.0000 | 51.2 | 159 | `135_s42_outcome_u9` |
+| 42 | pyalcs | 9 | running | 29 520 000 | 0.2304 | 29520000 | 0.8800 | 123 | 8.16 | 0.0000 | 0.9220 | 0.0000 | 0.0000 | 51.5 | 159 | `135_s42_outcome_u9` |
 | 42 | pyalcs | 11 | **SUCCESS** | 43 200 000 | 1.0000 | 43200000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 50.5 | 238 | `135_s42_outcome_u11` |
 | 43 | pyalcs | 11 | **SUCCESS** | 46 800 000 | 1.0000 | 46800000 | - | 539 | 8.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 78.8 | 165 | `135_s43_outcome_u11` |
 | 44 | pyalcs | 11 | cancelled | 4 800 000 | 0.1583 | 4800000 | 0.6495 | 423 | 10.92 | 0.0918 | 0.3379 | 0.1092 | 0.0944 | 79.0 | 17 | `135_s44_outcome_u11.cancelled` |
