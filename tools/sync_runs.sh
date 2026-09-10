@@ -54,9 +54,29 @@ if ! $local_only; then
   echo "==> $new new, $updated updated"
 fi
 
+# The logs are the irreplaceable half of this script and the CSVs are derived from them.
+# The parser now refuses a chain whose ordering it cannot support, which is the right call
+# on its own -- but under `set -e` it would abort here, before the commit, and leave a
+# freshly pulled log in exactly the one-copy state this script exists to end. So a rebuild
+# that fails commits the logs first and then reports.
+commit_logs_only() {
+  if $commit && [ -n "$(git status --porcelain --untracked-files=all -- reports/)" ]; then
+    git add reports/
+    git commit -q -m "data: sync cluster runs into the archive
+
+$new new logs, $updated updated. The CSV rebuild failed, so the archive is NOT
+rebuilt from them -- rerun tools/sync_runs.sh --local once the cause is fixed."
+    echo "==> committed the logs; the archive is NOT rebuilt"
+  fi
+}
+
 echo "==> rebuilding the CSV archive"
-python3 tools/parse_mpx_logs.py reports/slurm_*.out reports/*.cancelled \
-  reports/mpx_m2b_reach*.log reports/mpx_m3_e1_traj70_*.log
+if ! python3 tools/parse_mpx_logs.py reports/slurm_*.out reports/*.cancelled \
+  reports/mpx_m2b_reach*.log reports/mpx_m3_e1_traj70_*.log; then
+  commit_logs_only
+  echo "!! the CSV rebuild failed -- see the parser's message above" >&2
+  exit 1
+fi
 
 echo "==> rebuilding the readable tables"
 python3 tools/rebuild_tables.py

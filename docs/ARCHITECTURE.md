@@ -1332,6 +1332,33 @@ and the explicit override. Nine affected Python tests were individually run with
 protection removed; each selected exactly one test and failed an assertion, rather than
 failing to import the test module.
 
+### Verifying the reviewer's own implementation
+
+The reviewer that found the last nine defects was handed the remaining open items to
+implement rather than report — it has repository access, and the earlier insistence on
+read-only was my constraint, not its limitation. Its two commits were verified here rather
+than accepted: all four gates re-run independently (101 Rust tests, 45 Python tests, P9
+byte-identical, the archive unchanged), every check it added sabotaged one at a time under a
+harness that asserts the test *ran*, and the twelve-segment chain re-measured end to end.
+Everything it claimed holds.
+
+Two things the verification added.
+
+**The new dependency had to be checked against the target that matters.** The checksum
+brings `sha2` and its tree into `acs2-bench` — not into `acs2-core`, so that decision
+stands. The cluster binary is built `--target x86_64-unknown-linux-musl`, and nothing had
+compiled that tree for musl. `cargo check --target x86_64-unknown-linux-musl` passes, which
+covers compilation but not linking; the cluster remains where the real build happens.
+
+**A loud refusal must not silence the sync.** The parser now refuses a chain whose ordering
+it cannot support, which is right on its own — but `tools/sync_runs.sh` runs the parser
+under `set -e` *before* it commits, so a refusal would abort with a freshly pulled log
+sitting uncommitted, in exactly the one-copy state that script exists to end. That is this
+repository's other named failure, traded against the first. The rebuild is now fenced: if
+the parser refuses, the logs are committed with a message saying the archive was not rebuilt,
+and the refusal is reported afterwards. The irreplaceable half is never held hostage to the
+derived half.
+
 ### The sabotage harness was broken, and what that cost
 
 Every fix in this feature was checked by reverting it and requiring a test to fail. On the
