@@ -256,6 +256,16 @@ def parse_log(path):
             # Flush first: rows pending from an earlier block belong to the run they were
             # measured under, not to the one this marker names.
             flush_pending()
+            if segment:
+                # One job, one log. Boundaries are built once per file from the context
+                # that survives to EOF, so a second segment in the same file would emit
+                # its own boundaries under the last one's name and silently drop the
+                # first's rows. Rejecting is right rather than clever: sync_runs.sh
+                # copies each job's log as its own file and nothing produces this.
+                raise ValueError(
+                    f"{source}: two run-segment markers in one log; a checkpointed job "
+                    "writes its own file"
+                )
             segment.update(parse_fields(chained.group("fields")))
             context.segment_of(segment.get("base", ""), source)
             continue
@@ -386,16 +396,21 @@ def parse_log(path):
 
     segments = []
     if context.run_name:
-        # `resumed=yes` from the wrapper and the binary's `resumed:` line must agree. A
-        # segment that resumed but whose resume point went unrecorded reads as a restart
-        # from zero, and a restart from zero discards the whole run's history -- silently,
-        # which is the one thing this archive must never do.
-        if segment.get("resumed") == "yes" and not context.resume_at:
+        if block > 1:
             raise ValueError(
-                f"{source}: the wrapper recorded resumed=yes but the log carries no "
-                "`resumed:` line, so the trial it resumed at is unknown"
+                f"{source}: a checkpointed log carries {block} header blocks; a "
+                "checkpointed job runs one size once and writes its own file"
             )
         for size in sorted(sizes_seen):
+            # `resumed=yes` from the wrapper and the binary's `resumed:` line must agree,
+            # per size. A segment that resumed but whose resume point went unrecorded
+            # reads as a restart from zero, and a restart from zero discards the whole
+            # run's history -- silently, which is the one thing this archive must not do.
+            if segment.get("resumed") == "yes" and size not in context.resume_at:
+                raise ValueError(
+                    f"{source}: the wrapper recorded resumed=yes but the log carries no "
+                    f"`resumed:` line for size {size}, so the trial it resumed at is unknown"
+                )
             segments.append({
                 "source": context.run_name,
                 "size": int(size),
@@ -513,12 +528,20 @@ def close_chained_runs(rows, segments):
     for row in chained:
         by_run.setdefault(run_key(row), {})[row["segment"]] = row
 
+    grouped = boundaries_by_run(segments)
     closing = []
     for key, per_segment in by_run.items():
-        ordered = boundaries_by_run(segments).get((key[0], key[1]), [])
-        recorded = [segment["segment"] for segment in ordered if segment["segment"] in per_segment]
-        if recorded:
-            closing.append(per_segment[recorded[-1]])
+        held = None
+        for boundary in grouped.get((key[0], key[1]), []):
+            # A verdict describes the run as it stood when a job stopped. A later job that
+            # resumed below that trial -- a restart from zero after a deleted checkpoint,
+            # say -- superseded the work the verdict described, so it must not survive
+            # merely because the job that replaced it recorded no verdict of its own.
+            if held is not None and held["trials"] > boundary["resume_at"]:
+                held = None
+            held = per_segment.get(boundary["segment"], held)
+        if held is not None:
+            closing.append(held)
     return plain + closing
 
 

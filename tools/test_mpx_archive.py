@@ -191,6 +191,43 @@ class ArchiveTests(unittest.TestCase):
             self.parse_named(f"{base}_seg2.out", truncated)
         self.assertEqual(len(self.parse_named(f"{base}_seg2.out", content)[3]), 1)
 
+    def test_two_segments_concatenated_into_one_log_are_refused(self):
+        # Boundaries are built once per file from the context that survives to EOF, so a
+        # second segment would emit its boundaries under the last one's name and the
+        # first's rows would be dropped without a word.
+        first = self.segment("runA", 1, 0, [(2000, "0.1"), (4000, "0.2")], 4000)
+        for base, job in (("runA", 2), ("runB", 2)):
+            second = self.segment(base, job, 4000, [(6000, "0.3")], 6000)
+            with self.assertRaises(ValueError):
+                self.parse_named("concatenated.out", first + second)
+
+    def test_a_checkpointed_log_with_several_header_blocks_is_refused(self):
+        base = "slurm_mpx20_s42_k264"
+        content = self.segment(base, 1, 0, [(2000, "0.1")], 2000)
+        extra = (
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip\n"
+            "mpx-20 trials_cap=1000000 u_max=6\n"
+            "  mpx-20 repeat 0: TIME-LIMITED trials=3000 knowledge=unmeasured reliable=1 "
+            "spec=6/21 wall=1s\n"
+        )
+        with self.assertRaises(ValueError):
+            self.parse_named(f"{base}_seg1.out", content + extra)
+
+    def test_a_restart_from_zero_invalidates_an_earlier_success(self):
+        # A succeeded, its checkpoint was deleted, B restarted from zero and was killed
+        # before recording a verdict of its own. A's SUCCESS describes work B replaced.
+        base = "slurm_mpx20_s42_k264"
+        killed = self.segment(base, 2, 0, [(1000, "0.1")], 1000).rsplit("\n", 2)[0] + "\n"
+        self.assertNotIn("repeat 0:", killed)
+        _trajectory, _diagnostics, verdicts = self.chain([
+            (f"{base}_seg1.out", self.segment(base, 1, 0, [(4000, "1.0")], 4000).replace(
+                "TIME-LIMITED", "SUCCESS")),
+            (f"{base}_seg2.out", killed),
+        ])
+        self.assertEqual(
+            verdicts, [], "a success the restart superseded must not stay in the archive"
+        )
+
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(
             "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true\n"

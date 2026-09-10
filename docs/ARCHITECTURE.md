@@ -1140,6 +1140,36 @@ Two more it was right about: the `end` terminator makes the format incompatible,
 version 2 rather than version 1; and the process id in the staging name is unique on a
 node, not across them, so the README no longer claims two processes never share one.
 
+### What the third review round changed
+
+Two more, both in the archive and both silent:
+
+- **Concatenated segment logs dropped a run without a word.** Boundaries are built once
+  per file from the context that survives to EOF, so a file holding two segments emitted
+  both under the last one's name and the first's rows found no boundary and vanished.
+  Reproduced. Rejected rather than handled: `sync_runs.sh` copies each job's log as its
+  own file and nothing produces a concatenated one, so a second `run-segment:` marker or
+  a second header block in a checkpointed log now raises.
+- **A restart from zero could leave an obsolete SUCCESS standing.** Verdict selection
+  only considered segments that recorded a verdict, so a job that restarted the run and
+  was killed before printing invalidated the trajectory but not the verdict. The archive
+  would have reported success from work the restart replaced. Verdicts now obey the same
+  invalidation as measurements.
+
+It also noted that the reopened-verdict test was written in Python against a handwritten
+line, so it would have passed if the binary stopped printing one.
+`a_reopened_run_restates_its_verdict_on_stdout` runs the real binary through
+`CARGO_BIN_EXE_mpx_reach` and pins that it does.
+
+`block` stays in `tools/mpx_selection.py`'s run identity and out of the parser's chained
+run key. They are not in conflict: downstream, `block` separates runs *within* one file,
+which is what a multi-block non-chained log needs; the parser's key spans files, where a
+chained run's segments always carry block 1 — now enforced.
+
+Three rounds, twelve defects, no false positives. Every round after the first found most
+of its defects in code written between rounds, which is the argument for reviewing the
+fixes and not only the change.
+
 ### How the archive reads a chained run
 
 A checkpointed run spans several jobs and `slurm/mpx_reach.sh` gives each its own log

@@ -811,4 +811,44 @@ mod regression {
 
         std::fs::remove_dir_all(&directory).ok();
     }
+
+    /// The archive's only record of a success can be a reopening job's line: the job that
+    /// closed the run writes its checkpoint before it prints, and a kill in between leaves
+    /// the verdict nowhere else. The Python side pins that the parser reads such a line;
+    /// this pins that the binary still writes one.
+    #[test]
+    fn a_reopened_run_restates_its_verdict_on_stdout() {
+        let directory = checkpoint_directory("reopen");
+        let path = directory.join("run.ckpt");
+        let run = |cap: &str| {
+            let output = Command::new(env!("CARGO_BIN_EXE_mpx_reach"))
+                .args([
+                    "--sizes", "20", "--n-exp", "1", "--seed", "42", "--u-max", "derived",
+                    "--eval-interval", "500", "--time-cap-secs", cap,
+                    "--checkpoint-path", path.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
+            assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+            String::from_utf8(output.stdout).unwrap()
+        };
+
+        let stopped = run("0");
+        assert!(stopped.contains("repeat 0: TIME-LIMITED"));
+        assert!(!stopped.contains("reopened=true"));
+
+        // Stand in for the job that saved a SUCCESS and was killed before printing it.
+        let stored = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, stored.replace("verdict=TIME-LIMITED", "verdict=SUCCESS")).unwrap();
+
+        let reopened = run("600");
+        let verdict = reopened
+            .lines()
+            .find(|line| line.contains("repeat 0:"))
+            .expect("a reopened run must still print a verdict line");
+        assert!(verdict.contains("SUCCESS"), "{verdict}");
+        assert!(verdict.contains("reopened=true"), "{verdict}");
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
 }

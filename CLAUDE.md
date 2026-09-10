@@ -34,8 +34,8 @@ and are worth archiving.
 ## Gates — before any change to the core
 
 ```bash
-cargo test --workspace --release          # 97 tests, including reach regressions
-uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 16 tests
+cargo test --workspace --release          # 98 tests, including reach regressions
+uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 25 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
 ```

@@ -84,7 +84,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**97 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
+  (**98 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -423,8 +423,8 @@ reported at 66,500 trials instead of 67,000**. A checkpoint moved the headline m
 half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte-identical
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
-sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **97 Rust tests**,
-16 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **98 Rust tests**,
+25 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 
@@ -447,13 +447,14 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
 
 Run on a second model, read-only, against a self-contained brief and a code bundle. It
-found five real defects and raised two challenges to stated decisions; every one was
-verified against the code before acting, and the worst was reproduced by measurement
-before being fixed. Nothing it reported was wrong this time, and one thing it reported
-was **not** acted on as asked: it wanted an ownership lock on the checkpoint, and a stale
-lock left by a killed job would block exactly the disaster recovery that
-`a_periodic_checkpoint_outlives_a_killed_process` proves works. Job dependencies sequence
-the chain instead.
+ran three times: five defects, then five, then two — **twelve in total and not one false
+positive**. Every finding was verified against the code before acting and the worst was
+reproduced by measurement first. Rounds two and three found most of their defects in code
+written *between* rounds, which is the argument for reviewing the fixes and not only the
+original change. One thing was **not** acted on as asked: it wanted an ownership lock on
+the checkpoint, and a stale lock left by a killed job would block exactly the disaster
+recovery that `a_periodic_checkpoint_outlives_a_killed_process` proves works. Job
+dependencies sequence the chain instead.
 
 The procedure below is what was followed and is worth following again.
 
