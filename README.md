@@ -24,6 +24,9 @@ cargo test --workspace --release                      # 99 tests, including reac
 If those four commands work you have everything. The Python parts below are optional and
 only needed to regenerate figures or re-run the pyalcs comparison.
 
+Archive and plotting tests: `uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'`
+(45 tests).
+
 ## Running experiments
 
 ### Multiplexer — `mpx_reach`
@@ -111,6 +114,10 @@ Three things the file format guarantees, and one it does not:
   emits a `run-segment:` line and `tools/parse_mpx_logs.py` collapses the segments into
   one run, supersedes work a killed job did after its last checkpoint, and keeps one
   verdict instead of one per job.
+  Include the initial segment: the parser refuses missing or timezone-free timestamps,
+  unresolved timestamp ties, reversed requeue attempts, and resume points unsupported by
+  the preceding log's progress. A checkpoint saved between measurements may require more
+  evidence before a sparse chain can be archived; the parser does not guess its order.
 
 `slurm/mpx_reach.sh` takes `CHECKPOINT=on` and derives the path from size, seed and tag
 so two jobs cannot share one learning state, and gives each job its own log file.

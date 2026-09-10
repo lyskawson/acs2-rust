@@ -37,7 +37,7 @@ done
 # a previous attempt's output.
 # SLURM prints a TimeLimit as `d-hh:mm:ss` or `hh:mm:ss`. Every field is forced to base 10:
 # an ordinary `08:00:00` is octal to bash arithmetic and would fail. An unrecognised format
-# yields nothing and the check below skips, which is the safe direction.
+# yields nothing and requires the explicit override below.
 seconds_of_slurm_time() {
   local text="$1" days=0
   case "$text" in
@@ -65,8 +65,10 @@ seconds_of_slurm_time() {
 if [ -n "${SLURM_JOB_ID:-}" ]; then
   allocated_text=""
   if command -v scontrol >/dev/null 2>&1; then
-    allocated_text=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null \
-      | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+    if job_details=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null); then
+      allocated_text=$(echo "$job_details" \
+        | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+    fi
   fi
   allocated=""
   if [ -n "$allocated_text" ] && [ "$allocated_text" != "UNLIMITED" ]; then

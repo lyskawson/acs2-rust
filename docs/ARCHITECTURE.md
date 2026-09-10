@@ -991,7 +991,7 @@ the checkpoint stays complete if PEE lands, not because a trajectory depends on 
 | `trials_used` | the x-axis of every archived trajectory |
 | `trials_since_eval` | otherwise the resumed run measures at different trial counts and the archive gets an inconsistent series |
 | Peak macro population, peak RSS | run-level maxima, meaningless if they restart per job |
-| Accumulated wall-clock | the archived cost of the run is the whole chain's |
+| Accumulated wall-clock | elapsed time along the retained checkpoint history; discarded work requires SLURM accounting |
 | Replay buffer (ACS2ER) | it *is* the learning input; a fresh buffer relearns from different transitions |
 
 ### `ChaChaRandomSource` state — seed, stream, word position
@@ -1083,9 +1083,8 @@ sequence the chain; the lock would only convert one failure mode into another.
 ### Two decisions that are not obvious from the code
 
 **Wall-clock has two readings.** `--time-cap-secs` bounds *this process*, because that
-is what the queue kills; the reported and archived `wall=` is the whole chain's compute.
-Conflating them would make either the last job overrun its allocation or the archive
-understate the cost of a run.
+is what the queue kills; the reported and archived `wall=` follows the retained checkpoint
+history. Work lost after a save is absent from that number; SLURM accounting measures spend.
 
 **The identity gate excludes the stopping limits.** Seed, encoding, epsilon, `u_max`,
 GA, ALP variant and agent settings must match or the resume aborts — resuming under a
@@ -1270,6 +1269,45 @@ It also noted a comment in `mpx_reach.rs` still saying "the whole chain's comput
 docs had been narrowed, and that a test which used to pin the numeric fallback had stopped
 doing so once the fixture gained timestamps. Both fixed.
 
+### Clock order needs supporting evidence (2026-09-11)
+
+`boundaries_by_run` still uses parsed instants to propose chronology, but no longer accepts
+that proposal without checking the chain. Its first segment must start at zero; callers
+must provide the initial log, not a suffix of the chain. Each later resume point must be
+at or below the preceding segment's furthest recorded progress. Progress includes trajectory,
+accuracy, coverage, diagnostic and verdict trials, and the segment's own resume point.
+The latter lets an attempt that printed nothing new hand the same checkpoint onwards.
+Restarts at zero remain valid and invalidate the history they replace.
+
+The largest logged trial is a **lower bound**, not an upper bound. Periodic saves can land
+between evaluations, and a killed process prints no terminal verdict. A link beyond the
+recorded bound is therefore refused as *unsupported*, with a message naming both logs and
+trial counts; it is not proof that the clocks are wrong. This deliberately rejects some
+valid sparse chains rather than deleting measurements under an unverified order. Recover
+missing logs or independently verify their chronology and progress before repairing an
+archive input; do not fabricate an evaluation row to satisfy the check.
+
+Timezone-free timestamps are refused rather than interpreted in the parser machine's
+timezone. Equal instants can be resolved only by distinct numeric restart counts of the
+same SLURM job. Job ids and filenames cannot break a tie across jobs. A job's attempt
+counts must increase in clock order, including when its instants differ. Validation also
+runs when every segment is empty, before any CSV is written.
+
+These checks detect contradictions and unresolved timestamp ties, not arbitrary clock
+skew: two attempts resuming from the same point can interlock in either order, and distinct
+but wrong timestamps are not distinguishable from correct ones using the current logs.
+Synchronized clocks remain an operational requirement. Removing that assumption requires
+explicit predecessor identities in future checkpoint/log records, not sorting by trial
+counts. The retry regression is renamed `test_clock_order_wins_when_retries_share_a_resume_point`;
+it pins replacement of a larger discarded trial count and catches filename ordering.
+
+The wrapper now checks `scontrol`'s exit status before parsing its output. Previously a
+failed query could print `TimeLimit=UNLIMITED` and still bypass the guard. Its regression
+checks both empty and plausible output with exit status 1, preservation of an existing log,
+and the explicit override. Nine affected Python tests were individually run with their
+protection removed; each selected exactly one test and failed an assertion, rather than
+failing to import the test module.
+
 ### The sabotage harness was broken, and what that cost
 
 Every fix in this feature was checked by reverting it and requiring a test to fail. On the
@@ -1350,7 +1388,7 @@ run-segment: base=<stable run name> checkpoint=<path> checkpoint_every=<n> resum
   uninterrupted run's values exactly.
 - **One verdict per run, not one per job.** Intermediate jobs stop on their own wall clock
   and record TIME-LIMITED; that says a job stopped, not that the run did. The run's verdict
-  is the closing segment's — last by **resume point**, not by trial count, because a job
+  is the closing segment's — last in validated clock order, not by trial count, because a job
   killed after its final checkpoint can report more trials than the job that legitimately
   superseded it.
 
@@ -1361,4 +1399,3 @@ correct and was caught only by running a real chain through the parser.
 `--eval-interval` must stay constant across a chain — `mpx_reach` refuses a resume that
 changes it without `--checkpoint-allow-eval-change` — or the stitched series carries two
 sampling rates and trials-to-success stops meaning anything.
-

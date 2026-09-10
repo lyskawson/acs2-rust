@@ -419,6 +419,12 @@ def parse_log(path):
                 "size": int(size),
                 "segment": source,
                 "resume_at": context.resume_at.get(size, 0),
+                "furthest": max(
+                    [context.resume_at.get(size, 0)]
+                    + [int(row["trials"]) for row in
+                       (*trajectory_rows, *diagnostic_rows, *verdict_rows)
+                       if row["size"] == int(size)]
+                ),
                 "started": context.started,
                 "order": segment_order(context.job, context.attempt, source),
             })
@@ -437,15 +443,14 @@ def started_instant(started):
     if not started:
         return None
     try:
-        return datetime.fromisoformat(started).timestamp()
+        instant = datetime.fromisoformat(started)
+        return instant.timestamp() if instant.tzinfo is not None else None
     except ValueError:
         return None
 
 
 def segment_order(job, attempt, source):
-    """Tiebreak within one instant: attempts of a requeued job share its id and can share a
-    second. Job ids are not a chronology on their own -- SLURM wraps them from MaxJobId back
-    to FirstJobId -- so they only ever separate segments the clock cannot."""
+    """Job identity and numeric attempt; different jobs do not establish chronology."""
     return (
         int(job) if job.isdigit() else -1,
         int(attempt) if attempt.isdigit() else -1,
@@ -487,12 +492,9 @@ def run_key(row):
 def boundaries_by_run(segments):
     """A run's segments, in the order its jobs ran.
 
-    Ordering here is destructive -- a segment discards every measurement above the trial it
-    resumed at -- so it is settled by an actual clock or not at all. Every segment the
-    wrapper writes carries `started`; a run whose segments do not all carry a readable one
-    has no reliable order, and guessing has twice produced exactly the silent loss this
-    exists to prevent: job ids wrap, and a missing timestamp sorts ahead of every real one.
-    Refusing hands the operator a decision instead of making a destructive one for them.
+    A clock proposes the order; recorded progress and requeue attempts must support it.
+    Sparse logs give lower bounds on progress, not upper bounds: a checkpoint can land
+    between evaluations. An unsupported link is refused, not declared impossible.
     """
     grouped = {}
     for segment in segments:
@@ -508,6 +510,37 @@ def boundaries_by_run(segments):
                 "measurements survive, so it is not guessed."
             )
         group.sort(key=lambda segment: (instants[segment["segment"]], segment["order"]))
+        if group[0]["resume_at"] != 0:
+            raise ValueError(
+                f"{source} (size {size}): the clock orders a resumed segment first "
+                f"({group[0]['segment']}); include the initial log and check clock skew"
+            )
+        attempts = {}
+        for index, segment in enumerate(group):
+            job, attempt, _ = segment["order"]
+            if job >= 0:
+                if attempt < 0 or attempt <= attempts.get(job, -1):
+                    raise ValueError(
+                        f"{source} (size {size}): clock order contradicts requeue attempts "
+                        f"at {segment['segment']}"
+                    )
+                attempts[job] = attempt
+            if index == 0:
+                continue
+            previous = group[index - 1]
+            if instants[previous["segment"]] == instants[segment["segment"]]:
+                if job < 0 or job != previous["order"][0]:
+                    raise ValueError(
+                        f"{source} (size {size}): ambiguous started instant shared by "
+                        f"{previous['segment']} and {segment['segment']}; job ids cannot break it"
+                    )
+            if segment["resume_at"] > previous["furthest"]:
+                raise ValueError(
+                    f"{source} (size {size}): unsupported resume link: {segment['segment']} "
+                    f"resumes at {segment['resume_at']}, but {previous['segment']} records "
+                    f"progress only through {previous['furthest']}; check clock skew, "
+                    "missing logs or a checkpoint saved between measurements"
+                )
     return grouped
 
 
@@ -523,6 +556,7 @@ def stitch_segments(rows, key_field, segments):
     before recording anything still invalidates what the job before it measured after its
     last checkpoint.
     """
+    grouped = boundaries_by_run(segments)
     plain = [row for row in rows if not row["segment"]]
     chained = [row for row in rows if row["segment"]]
     if not chained:
@@ -536,7 +570,7 @@ def stitch_segments(rows, key_field, segments):
     for key, per_segment in by_run.items():
         source, size = key[0], key[1]
         kept = {}
-        for segment in boundaries_by_run(segments).get((source, size), []):
+        for segment in grouped.get((source, size), []):
             resume_at = segment["resume_at"]
             for trials in [trials for trials in kept if trials > resume_at]:
                 del kept[trials]
@@ -557,6 +591,7 @@ def close_chained_runs(rows, segments, progress=()):
     in chronological order -- not the largest trial count, because a job killed after its
     final checkpoint reports more trials than the job that legitimately superseded it.
     """
+    grouped = boundaries_by_run(segments)
     plain = [row for row in rows if not row["segment"]]
     chained = [row for row in rows if row["segment"]]
     if not chained:
@@ -573,7 +608,6 @@ def close_chained_runs(rows, segments, progress=()):
         key = run_key(row)
         furthest[key] = max(furthest.get(key, -1), int(row["trials"]))
 
-    grouped = boundaries_by_run(segments)
     closing = []
     for key, per_segment in by_run.items():
         held = None

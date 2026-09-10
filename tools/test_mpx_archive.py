@@ -153,14 +153,16 @@ class ArchiveTests(unittest.TestCase):
         ])
         self.assertEqual(sorted(int(row["trials"]) for row in diagnostics), [4000, 6000])
 
-    def test_jobs_are_ordered_by_job_id_not_by_filename_or_trial_count(self):
-        # seg9 and seg10 both resume at 4,000 because seg9 died before saving again, and
-        # the closing job reports fewer trials than the job it superseded.
+    def test_clock_order_wins_when_retries_share_a_resume_point(self):
         base = "slurm_mpx20_s42_k264"
         for shuffled in (False, True):
             trajectory, _diagnostics, verdicts = self.chain([
-                (f"{base}_seg9.out", self.segment(base, 9, 4000, [(6000, "0.9")], 9000)),
-                (f"{base}_seg10.out", self.segment(base, 10, 4000, [(6000, "0.3")], 6500)),
+                (f"{base}_seg0.out", self.segment(base, 0, 0, [], 4000,
+                                                started="2026-09-10T08:00:00+02:00")),
+                (f"{base}_seg9.out", self.segment(base, 9, 4000, [(6000, "0.9")], 9000,
+                                                started="2026-09-10T09:00:00+02:00")),
+                (f"{base}_seg10.out", self.segment(base, 10, 4000, [(6000, "0.3")], 6500,
+                                                 started="2026-09-10T10:00:00+02:00")),
             ], shuffled=shuffled)
             measured = {row["trials"]: row["knowledge"] for row in trajectory}
             self.assertEqual(measured, {6000: 0.3}, f"shuffled={shuffled}")
@@ -195,6 +197,7 @@ class ArchiveTests(unittest.TestCase):
             "reliable=9 spec=6/21 wall=30s reopened=true\n"
         )
         _trajectory, _diagnostics, verdicts = self.chain([
+            (f"{base}_seg0.out", self.segment(base, 0, 0, [], 4000)),
             (f"{base}_seg1.out", closing),
             (f"{base}_seg2.out", reopened.format(job=2)),
             (f"{base}_seg3.out", reopened.format(job=3)),
@@ -368,6 +371,7 @@ class ArchiveTests(unittest.TestCase):
             "TAG": "g",
             "CHECKPOINT": "on",
         }
+        env.pop("CHECKPOINT_SKIP_TIME_CHECK", None)
         if job:
             env["SLURM_JOB_ID"] = job
         else:
@@ -551,6 +555,82 @@ class ArchiveTests(unittest.TestCase):
                     (f"{base}_seg1.out", timed),
                     (f"{base}_seg2.out", other),
                 ])
+
+    def test_clock_skew_cannot_put_a_resume_before_its_initial_segment(self):
+        base = "skew"
+        for shuffled in (False, True):
+            with self.assertRaisesRegex(ValueError, "resumed segment first"):
+                self.chain([
+                    ("a.out", self.segment(base, 1, 0, [(4000, "0.2")], 4000,
+                                           started="2026-09-10T10:00:00+02:00")),
+                    ("b.out", self.segment(base, 2, 4000, [(8000, "1.0")], 8000,
+                                           started="2026-09-10T09:00:00+02:00")),
+                ], shuffled=shuffled)
+
+    def test_clock_skew_cannot_break_an_internal_resume_link(self):
+        base = "skew"
+        with self.assertRaisesRegex(ValueError, "unsupported resume link"):
+            self.chain([
+                ("a.out", self.segment(base, 1, 0, [], 4000)),
+                ("b.out", self.segment(base, 2, 4000, [], 8000,
+                                       started="2026-09-10T03:00:00+02:00")),
+                ("c.out", self.segment(base, 3, 8000, [], 12000,
+                                       started="2026-09-10T02:00:00+02:00")),
+            ])
+
+    def test_unrecorded_progress_is_an_unsupported_link_not_proof_of_a_bad_clock(self):
+        base = "sparse"
+        with self.assertRaisesRegex(ValueError, "checkpoint saved between measurements"):
+            self.chain([
+                ("a.out", self.segment(base, 1, 0, [(4000, "0.2")], None)),
+                ("b.out", self.segment(base, 2, 4500, [(5000, "0.3")], None)),
+            ])
+        trajectory, _, _ = self.chain([
+            ("a.out", self.segment(base, 1, 0, [(4000, "0.2")], 4500)),
+            ("b.out", self.segment(base, 2, 4500, [], None)),
+            ("c.out", self.segment(base, 3, 4500, [(5000, "0.3")], None)),
+        ])
+        self.assertEqual([row["trials"] for row in trajectory], [4000, 5000])
+
+    def test_distinct_jobs_sharing_an_instant_have_no_id_tiebreak(self):
+        moment = "2026-09-10T08:00:00+02:00"
+        with self.assertRaisesRegex(ValueError, "ambiguous started instant"):
+            self.chain([
+                ("a.out", self.segment("tie", 1, 0, [], None, started=moment)),
+                ("b.out", self.segment("tie", 2, 0, [], None, started=moment)),
+            ])
+
+    def test_clock_order_cannot_reverse_a_jobs_requeue_attempts(self):
+        with self.assertRaisesRegex(ValueError, "contradicts requeue attempts"):
+            self.chain([
+                ("a.out", self.segment("requeue", 7, 0, [(4000, "0.2")], 4000,
+                                       started="2026-09-10T09:00:00+02:00")),
+                ("b.out", self.segment("requeue", 7, 0, [(4000, "0.3")], 4000,
+                                       started="2026-09-10T08:00:00+02:00").replace(
+                                           "attempt=0", "attempt=1")),
+            ])
+
+    def test_a_timestamp_without_an_offset_cannot_depend_on_the_parsers_timezone(self):
+        with self.assertRaisesRegex(ValueError, "no readable `started`"):
+            self.chain([("a.out", self.segment("naive", 1, 0, [(4000, "0.2")], 4000,
+                                               started="2026-09-10T08:00:00"))])
+
+    def test_a_failed_scontrol_query_cannot_supply_a_trusted_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stub = self.wrapper_fixture(root)
+            log = root / "runs/slurm_mpx20_s42_g_seg9001.out"
+            log.write_text("earlier attempt\n")
+            for output in ("", "JobId=9001 TimeLimit=UNLIMITED"):
+                (root / "bin/scontrol").write_text(f"#!/bin/sh\necho '{output}'\nexit 1\n")
+                refused = self.wrapper_run(root, stub, 600_000, "unused")
+                self.assertEqual(refused.returncode, 2)
+                self.assertIn("cannot establish this job's TimeLimit", refused.stderr)
+                self.assertEqual(log.read_text(), "earlier attempt\n")
+            override = self.wrapper_run(
+                root, stub, 600_000, "unused", env_extra={"CHECKPOINT_SKIP_TIME_CHECK": "1"}
+            )
+            self.assertEqual(override.returncode, 0)
 
     def test_segments_are_ordered_by_the_instant_not_by_the_text(self):
         # `date -Is` writes local time with an offset. Across a daylight-saving change the

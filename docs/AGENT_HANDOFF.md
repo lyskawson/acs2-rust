@@ -424,7 +424,7 @@ half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
 sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **99 Rust tests**,
-38 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+45 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 
@@ -445,6 +445,16 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
   `ARCHITECTURE.md` has the rules and the mistake that reads as correct.
 
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
+
+**Operational follow-up (2026-09-11).** Archive chronology now requires an initial segment
+at zero and cross-checks timestamp order against recorded progress and increasing requeue
+attempts. Equal timestamps across distinct jobs are refused; timestamps need an explicit
+UTC offset. Missing evidence, including a checkpoint beyond the last logged evaluation,
+is refused rather than silently merged. Consistent clock skew cannot be detected from
+these logs alone; `ARCHITECTURE.md` records that limit. The retry-order test now states
+what it covers. A failed `scontrol` process is refused even if it printed a plausible
+limit before failing. The affected Python tests were each run against a reverted fix and
+failed an assertion, with exactly one test selected by `unittest discover`.
 
 Run on a second model, read-only, against a self-contained brief and a code bundle. It
 ran five times — four with one model, then once with a fresh one given the whole feature
