@@ -228,6 +228,31 @@ class ArchiveTests(unittest.TestCase):
             verdicts, [], "a success the restart superseded must not stay in the archive"
         )
 
+    def test_a_resume_point_is_validated_for_every_size_the_log_covers(self):
+        # `--checkpoint-path` refuses more than one --sizes value, so a two-size segment
+        # log cannot come from the binary. The guard is still per size: checking only that
+        # *some* size resumed would let a size whose resume point went unrecorded read as
+        # a restart from zero, which discards the run's history for that size.
+        base = "slurm_mpx20_s42_k264"
+        head = (
+            f"run-provenance: commit=a job=2 tag=k264 size=20 seed=42\n"
+            f"run-segment: base={base} checkpoint=/runs/{base}.ckpt checkpoint_every=4000 "
+            "resumed=yes\n"
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip\n"
+            "mpx-20 trials_cap=1000000 u_max=6\n"
+            "mpx-37 trials_cap=1000000 u_max=8\n"
+            "  mpx-20 resumed: trials=4000 time=4000 since_eval=0\n"
+        )
+        with self.assertRaises(ValueError):
+            self.parse_named(f"{base}_seg2.out", head)
+
+        both = head + "  mpx-37 resumed: trials=9000 time=9000 since_eval=0\n"
+        segments = self.parse_named(f"{base}_seg2.out", both)[3]
+        self.assertEqual(
+            {segment["size"]: segment["resume_at"] for segment in segments},
+            {20: 4000, 37: 9000},
+        )
+
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(
             "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true\n"
