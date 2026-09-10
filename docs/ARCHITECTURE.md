@@ -1170,6 +1170,28 @@ Three rounds, twelve defects, no false positives. Every round after the first fo
 of its defects in code written between rounds, which is the argument for reviewing the
 fixes and not only the change.
 
+### What the fourth review round changed
+
+Nothing in the diff it was given — the round-3 fixes hold. It found one defect anyway, in
+the wrapper, by following a question the brief asked it to consider.
+
+**SLURM requeues a job under the same id**, which is exactly the case checkpointing exists
+for: node failure, preemption. The log name carried only the job id and the wrapper
+truncates it, so the second attempt erased the first's. Measured: three attempts under one
+job id left a single log with one measurement at 6,000 trials, the first 4,000 trials of
+trajectory gone — while the run itself continued correctly from its checkpoint. Neither
+rejection fires, because the surviving file is a perfectly well-formed single segment. The
+name now carries `SLURM_RESTART_COUNT` and the provenance line carries `attempt=`, which
+also orders the attempts of one job within `segment_order`.
+
+This is the archive failure this repository keeps having: the run is fine, the record is
+not, and nothing says so.
+
+It also pointed out that the second-marker guard was never pinned on its own — both
+concatenation fixtures carry two headers, so they would still raise through the header
+check with the marker guard removed. My sabotage of that guard had "passed" for that
+reason. Pinned now with two markers and one header.
+
 ### How the archive reads a chained run
 
 A checkpointed run spans several jobs and `slurm/mpx_reach.sh` gives each its own log

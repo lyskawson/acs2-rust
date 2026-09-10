@@ -184,6 +184,7 @@ class RunContext:
         self.resume_at = {}
         self.sizes_seen = set()
         self.job = (provenance or {}).get("job", "")
+        self.attempt = (provenance or {}).get("attempt", "0")
 
     def segment_of(self, base, source):
         self.run_name = base
@@ -416,21 +417,26 @@ def parse_log(path):
                 "size": int(size),
                 "segment": source,
                 "resume_at": context.resume_at.get(size, 0),
-                "order": segment_order(context.job, source),
+                "order": segment_order(context.job, context.attempt, source),
             })
 
     return trajectory_rows, diagnostic_rows, verdict_rows, segments
 
 
-def segment_order(job, source):
+def segment_order(job, attempt, source):
     """Chronology of a chained run's jobs.
 
-    SLURM job ids increase, so they order the segments of a chain. Resume points do not:
-    two jobs resume at the same trial when the first dies before saving again, and a
-    restart from zero after a deleted checkpoint resumes at 0 yet supersedes everything.
-    Filenames do not either -- `_seg10` sorts before `_seg9`.
+    SLURM job ids increase, so they order the segments of a chain, and `SLURM_RESTART_COUNT`
+    orders the attempts of one requeued job, which keeps its id. Resume points order
+    neither: two jobs resume at the same trial when the first dies before saving again, and
+    a restart from zero after a deleted checkpoint resumes at 0 yet supersedes everything.
+    Filenames order neither -- `_seg10` sorts before `_seg9`.
     """
-    return (int(job) if job.isdigit() else -1, source)
+    return (
+        int(job) if job.isdigit() else -1,
+        int(attempt) if attempt.isdigit() else -1,
+        source,
+    )
 
 
 def identity(context, source, size, repeat):

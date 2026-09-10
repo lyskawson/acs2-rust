@@ -36,7 +36,11 @@ if [ "${CHECKPOINT:-off}" = "on" ]; then
   CHECKPOINT_PATH="$RUNS/checkpoints/${BASE}.ckpt"
   mkdir -p "$RUNS/checkpoints"
   CHECKPOINT_ARGS=(--checkpoint-path "$CHECKPOINT_PATH" --checkpoint-every "${CHECKPOINT_EVERY:-0}")
-  OUT="$RUNS/${BASE}_seg${SLURM_JOB_ID:-$$}.out"
+  # SLURM requeues a job under the SAME id after a node failure or preemption, which is
+  # the exact case checkpointing exists for. Without the attempt in the name the second
+  # run truncates the first's log: the run continues from its checkpoint, and the
+  # trajectory of everything before it is gone.
+  OUT="$RUNS/${BASE}_seg${SLURM_JOB_ID:-$$}${SLURM_RESTART_COUNT:+.r$SLURM_RESTART_COUNT}.out"
 else
   OUT="$RUNS/${BASE}.out"
 fi
@@ -47,7 +51,8 @@ cd "$REPO"
 # the file alone, without the submitting shell or the job name.
 {
   echo "run-provenance: commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown) \
-job=${SLURM_JOB_ID:-none} tag=${TAG:-none} size=$SIZE seed=$SEED time_cap=${TIME_CAP}s \
+job=${SLURM_JOB_ID:-none} attempt=${SLURM_RESTART_COUNT:-0} tag=${TAG:-none} size=$SIZE \
+seed=$SEED time_cap=${TIME_CAP}s \
 partition=${SLURM_JOB_PARTITION:-none} host=$(hostname) started=$(date -Is)"
   echo "run-argv: $* "
   if [ "${CHECKPOINT:-off}" = "on" ]; then

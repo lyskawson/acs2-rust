@@ -8,7 +8,8 @@ import tempfile
 import unittest
 
 from parse_mpx_logs import (
-    close_chained_runs, parse_log, stitch_segments, TRAJECTORY_COLUMNS, VERDICT_COLUMNS,
+    close_chained_runs, parse_fields, parse_log, stitch_segments, TRAJECTORY_COLUMNS,
+    VERDICT_COLUMNS,
 )
 from summarize_mpx import collect, render
 
@@ -252,6 +253,89 @@ class ArchiveTests(unittest.TestCase):
             {segment["size"]: segment["resume_at"] for segment in segments},
             {20: 4000, 37: 9000},
         )
+
+    def test_a_second_marker_is_refused_even_with_one_header(self):
+        # Pinned on its own: the concatenation fixtures carry two headers as well, so they
+        # would still raise through the header check if this guard were removed.
+        base = "slurm_mpx20_s42_k264"
+        doubled = (
+            f"run-segment: base={base} checkpoint=/runs/a.ckpt checkpoint_every=4000 resumed=no\n"
+            f"run-segment: base={base} checkpoint=/runs/a.ckpt checkpoint_every=4000 resumed=no\n"
+            "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true encoding=flip\n"
+            "mpx-20 trials_cap=1000000 u_max=6\n"
+        )
+        with self.assertRaises(ValueError):
+            self.parse_named(f"{base}_seg1.out", doubled)
+
+    def test_a_verdict_at_the_resume_point_survives_and_one_above_it_does_not(self):
+        # The boundary is `>`, not `>=`: a verdict recorded exactly at the trial the next
+        # job resumed from describes work that job kept.
+        base = "slurm_mpx20_s42_k264"
+        killed = self.segment(base, 2, 4000, [(5000, "0.3")], 5000).rsplit("\n", 2)[0] + "\n"
+        self.assertNotIn("repeat 0:", killed)
+
+        at_the_point = self.segment(base, 1, 0, [(4000, "0.2")], 4000)
+        _t, _d, verdicts = self.chain([
+            (f"{base}_seg1.out", at_the_point),
+            (f"{base}_seg2.out", killed),
+        ])
+        self.assertEqual([row["trials"] for row in verdicts], [4000])
+
+        above_the_point = self.segment(base, 1, 0, [(4000, "0.2")], 4500)
+        _t, _d, verdicts = self.chain([
+            (f"{base}_seg1.out", above_the_point),
+            (f"{base}_seg2.out", killed),
+        ])
+        self.assertEqual(verdicts, [], "a verdict above the resume point describes discarded work")
+
+    def test_a_requeued_job_keeps_the_log_of_every_attempt(self):
+        # SLURM requeues under the same job id, which is the case checkpointing exists
+        # for. One filename per job would let the second attempt truncate the first's log:
+        # the run continues from its checkpoint and its earlier trajectory disappears.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "slurm").mkdir()
+            (root / "runs").mkdir()
+            shutil.copy(
+                Path(__file__).parents[1] / "slurm/mpx_reach.sh", root / "slurm"
+            )
+            stub = root / "stub.sh"
+            stub.write_text("#!/bin/sh\necho \"acs2-bench mpx-reach: seed=42\"\n")
+            stub.chmod(0o755)
+
+            for attempt in (None, "1", "2"):
+                env = {
+                    **os.environ,
+                    "MPX_REPO_DIR": str(root),
+                    "MPX_BINARY": str(stub),
+                    "MPX_RUNS_DIR": str(root / "runs"),
+                    "TAG": "rq",
+                    "CHECKPOINT": "on",
+                    "SLURM_JOB_ID": "7001",
+                }
+                if attempt:
+                    env["SLURM_RESTART_COUNT"] = attempt
+                else:
+                    env.pop("SLURM_RESTART_COUNT", None)
+                subprocess.run(
+                    ["bash", "slurm/mpx_reach.sh", "20", "42", "60"],
+                    cwd=root, env=env, check=True, capture_output=True,
+                )
+
+            logs = sorted(path.name for path in (root / "runs").glob("*.out"))
+            self.assertEqual(
+                logs,
+                [
+                    "slurm_mpx20_s42_rq_seg7001.out",
+                    "slurm_mpx20_s42_rq_seg7001.r1.out",
+                    "slurm_mpx20_s42_rq_seg7001.r2.out",
+                ],
+            )
+            attempts = [
+                parse_fields(path.read_text().splitlines()[0].split(":", 1)[1])["attempt"]
+                for path in sorted((root / "runs").glob("*.out"))
+            ]
+            self.assertEqual(attempts, ["0", "1", "2"])
 
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(
