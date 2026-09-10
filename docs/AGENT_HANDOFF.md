@@ -424,7 +424,7 @@ half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
 sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **98 Rust tests**,
-29 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+31 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
 the flag compared line for line against the pre-checkpointing binary at k=20 over 102
 learning lines.
 

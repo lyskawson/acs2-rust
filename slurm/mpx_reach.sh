@@ -14,6 +14,53 @@ SEED="$2"
 TIME_CAP="${3:-600000}"
 shift 3 2>/dev/null || shift $#
 
+# The internal cap must fire before SLURM's, or the job is killed hard and everything
+# since the last periodic checkpoint is re-run. #SBATCH --time above is only a default:
+# a k=264 chain overrides it on the sbatch line, and raising TIME_CAP without raising
+# --time is the mistake this catches. Silent where SLURM is absent, so local runs and the
+# test suite are unaffected, and run BEFORE the log is opened so a refusal cannot truncate
+# a previous attempt's output.
+# SLURM prints a TimeLimit as `d-hh:mm:ss` or `hh:mm:ss`. Every field is forced to base 10:
+# an ordinary `08:00:00` is octal to bash arithmetic and would fail. An unrecognised format
+# yields nothing and the check below skips, which is the safe direction.
+seconds_of_slurm_time() {
+  local text="$1" days=0
+  case "$text" in
+    *-*) days=$(( 10#${text%%-*} )); text="${text#*-}" ;;
+  esac
+  case "$text" in
+    *:*:*)
+      echo $(( days * 86400 \
+        + 10#$(echo "$text" | cut -d: -f1) * 3600 \
+        + 10#$(echo "$text" | cut -d: -f2) * 60 \
+        + 10#$(echo "$text" | cut -d: -f3) ))
+      ;;
+    *:*)
+      [ "$days" -eq 0 ] || { echo ""; return; }
+      echo $(( 10#$(echo "$text" | cut -d: -f1) * 60 + 10#$(echo "$text" | cut -d: -f2) ))
+      ;;
+    *) echo "" ;;
+  esac
+}
+
+if [ -n "${SLURM_JOB_ID:-}" ] && command -v scontrol >/dev/null 2>&1; then
+  allocated_text=$(scontrol show job "$SLURM_JOB_ID" 2>/dev/null \
+    | tr ' ' '\n' | sed -n 's/^TimeLimit=//p' | head -1 || true)
+  if [ -n "$allocated_text" ] && [ "$allocated_text" != "UNLIMITED" ]; then
+    allocated=$(seconds_of_slurm_time "$allocated_text" 2>/dev/null || true)
+    if [ -n "$allocated" ] && [ "$allocated" -gt 0 ] 2>/dev/null; then
+      if [ "$allocated" -ge 7200 ]; then margin=3600; else margin=60; fi
+      if [ "$TIME_CAP" -gt $(( allocated - margin )) ]; then
+        echo "refusing to start: --time-cap-secs ${TIME_CAP}s leaves under ${margin}s of the \
+${allocated}s SLURM allocation ($allocated_text). SLURM would kill the job before it saves, \
+losing every trial since the last periodic checkpoint. Raise --time on the sbatch line or \
+lower the cap." >&2
+        exit 2
+      fi
+    fi
+  fi
+fi
+
 REPO="${MPX_REPO_DIR:-$HOME/acs2-rust-repo}"
 # Results land OUTSIDE the checkout: the repo also carries committed copies of
 # past logs, and writing live output into a tracked directory makes every

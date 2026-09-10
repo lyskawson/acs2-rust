@@ -85,6 +85,26 @@ class ArchiveTests(unittest.TestCase):
         # The killed job logged 6000 and 8000, but its checkpoint holds 4000, so the
         # resumed job re-ran those trials. The earlier records are of discarded work.
         base = "slurm_mpx20_s42_k264"
+
+        # The resumed job re-measured 6,000 but stopped at 7,000 without reaching 8,000.
+        # Overwriting by trial cannot remove that 8,000: it has to be discarded, or the
+        # archive carries a measurement of work no longer in the population.
+        trajectory, _diagnostics, verdicts = self.chain([
+            (
+                f"{base}_seg1.out",
+                self.segment(base, 1, 0, [(4000, "0.2"), (6000, "0.9"), (8000, "0.9")], 8000),
+            ),
+            (f"{base}_seg2.out", self.segment(base, 2, 4000, [(6000, "0.3")], 7000)),
+        ])
+        measured = {row["trials"]: row["knowledge"] for row in trajectory}
+        self.assertEqual(
+            sorted(measured), [4000, 6000],
+            "a measurement the resumed job never reached again must not survive",
+        )
+        self.assertEqual(measured[4000], 0.2)
+        self.assertEqual(measured[6000], 0.3, "the discarded 0.9 must not survive")
+
+        # And where it did re-measure, the later value wins.
         trajectory, _diagnostics, verdicts = self.chain([
             (
                 f"{base}_seg1.out",
@@ -95,10 +115,8 @@ class ArchiveTests(unittest.TestCase):
                 self.segment(base, 2, 4000, [(6000, "0.3"), (8000, "0.4")], 8000),
             ),
         ])
-
         measured = {row["trials"]: row["knowledge"] for row in trajectory}
         self.assertEqual(sorted(measured), [4000, 6000, 8000])
-        self.assertEqual(measured[4000], 0.2)
         self.assertEqual(measured[6000], 0.3, "the discarded 0.9 must not survive")
         self.assertEqual(measured[8000], 0.4, "the discarded 0.9 must not survive")
         self.assertEqual(len(verdicts), 1)
@@ -336,6 +354,75 @@ class ArchiveTests(unittest.TestCase):
                 for path in sorted((root / "runs").glob("*.out"))
             ]
             self.assertEqual(attempts, ["0", "1", "2"])
+
+    def wrapper_run(self, root, stub, time_cap, time_limit=None, job="9001"):
+        env = {
+            **os.environ,
+            "MPX_REPO_DIR": str(root),
+            "MPX_BINARY": str(stub),
+            "MPX_RUNS_DIR": str(root / "runs"),
+            "TAG": "g",
+            "CHECKPOINT": "on",
+            "SLURM_JOB_ID": job,
+        }
+        if time_limit:
+            env["PATH"] = f"{root / 'bin'}{os.pathsep}{os.environ['PATH']}"
+            env["FAKE_TIMELIMIT"] = time_limit
+        return subprocess.run(
+            ["bash", "slurm/mpx_reach.sh", "20", "42", str(time_cap)],
+            cwd=root, env=env, capture_output=True, text=True,
+        )
+
+    def wrapper_fixture(self, root):
+        (root / "slurm").mkdir()
+        (root / "runs").mkdir()
+        (root / "bin").mkdir()
+        shutil.copy(Path(__file__).parents[1] / "slurm/mpx_reach.sh", root / "slurm")
+        scontrol = root / "bin/scontrol"
+        scontrol.write_text(
+            '#!/bin/sh\necho "JobId=$3 TimeLimit=$FAKE_TIMELIMIT NumNodes=1"\n'
+        )
+        scontrol.chmod(0o755)
+        stub = root / "bin/stub"
+        stub.write_text('#!/bin/sh\necho "acs2-bench mpx-reach: seed=42"\n')
+        stub.chmod(0o755)
+        return stub
+
+    def test_a_cap_that_outlives_its_slurm_allocation_is_refused(self):
+        # SLURM would kill the job before it saves, losing every trial since the last
+        # periodic checkpoint. The wrapper's own #SBATCH --time is a default that a k=264
+        # chain overrides, so the cap and the allocation are set in two different places.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stub = self.wrapper_fixture(root)
+
+            self.assertEqual(self.wrapper_run(root, stub, 1_800_000, "21-00:00:00").returncode, 0)
+            refused = self.wrapper_run(root, stub, 1_814_400, "21-00:00:00")
+            self.assertEqual(refused.returncode, 2)
+            self.assertIn("refusing to start", refused.stderr)
+            self.assertEqual(
+                self.wrapper_run(root, stub, 1_800_000, "7-12:00:00").returncode, 2,
+                "raising the cap without raising --time is the mistake this catches",
+            )
+            self.assertEqual(self.wrapper_run(root, stub, 600_000, "7-12:00:00").returncode, 0)
+            self.assertEqual(
+                self.wrapper_run(root, stub, 1_800_000, "UNLIMITED").returncode, 0,
+                "an unlimited allocation bounds nothing",
+            )
+            # No scontrol on PATH at all: local runs and the rest of this suite.
+            self.assertEqual(self.wrapper_run(root, stub, 1_800_000).returncode, 0)
+
+    def test_a_refused_cap_does_not_truncate_an_earlier_attempts_log(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stub = self.wrapper_fixture(root)
+            self.wrapper_run(root, stub, 1_800_000, "21-00:00:00")
+            log = root / "runs/slurm_mpx20_s42_g_seg9001.out"
+            written = log.read_text()
+            self.assertTrue(written)
+
+            self.assertEqual(self.wrapper_run(root, stub, 1_814_400, "21-00:00:00").returncode, 2)
+            self.assertEqual(log.read_text(), written)
 
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(

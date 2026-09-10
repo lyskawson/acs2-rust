@@ -1170,6 +1170,37 @@ Three rounds, twelve defects, no false positives. Every round after the first fo
 of its defects in code written between rounds, which is the argument for reviewing the
 fixes and not only the change.
 
+### The sabotage harness was broken, and what that cost
+
+Every fix in this feature was checked by reverting it and requiring a test to fail. On the
+Rust side that worked: re-run with an explicit check for "compiled but failed" rather than
+just "did not print `1 passed`", all eight core sabotages genuinely compile and genuinely
+fail.
+
+**The Python harness did not.** It invoked
+`python -m unittest tools.test_mpx_archive.ArchiveTests.<name>`, which cannot import
+`parse_mpx_logs` — `tools/` is only on the path under `unittest discover`. Every such run
+errored before reaching a test, and the harness read any non-`OK` result as a catch. Every
+Python-side sabotage reported during this work proved nothing.
+
+Re-run correctly with `unittest discover -s tools -p 'test_*.py' -k <name>`, and requiring
+that a test actually ran, all of them hold except one, which was a real gap:
+
+**`test_work_a_killed_job_did_after_its_last_checkpoint_is_superseded` did not test
+superseding.** Its resumed segment re-measured every trial the killed one had, so
+overwriting by trial gave the same answer as discarding and re-inserting. The drop only
+matters when the resumed job does *not* reach a trial again — it stops earlier — and then a
+measurement of discarded work survives. The fixture now has the resumed job stop at 7,000
+after the killed one recorded 8,000, and keeps the overwrite case alongside it.
+
+One sabotage that "still passed" is not a gap: choosing the verdict by maximum trial count
+*after* invalidation is provably the same as choosing the last chronologically, because a
+job cannot end with fewer trials than it resumed at. Selection by maximum taken independent
+of the boundaries is caught.
+
+The lesson is narrow and worth keeping: a sabotage harness must assert that the test **ran**,
+not merely that the command failed.
+
 ### What the fourth review round changed
 
 Nothing in the diff it was given — the round-3 fixes hold. It found one defect anyway, in

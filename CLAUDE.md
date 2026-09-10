@@ -35,7 +35,7 @@ and are worth archiving.
 
 ```bash
 cargo test --workspace --release          # 98 tests, including reach regressions
-uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 29 tests
+uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 31 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
 ```
