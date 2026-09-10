@@ -111,4 +111,41 @@ mod tests {
         let replayed: Vec<f64> = (0..8).map(|_| restored.gen_unit()).collect();
         assert_eq!(replayed, expected);
     }
+
+    #[test]
+    fn every_word_offset_in_a_buffer_round_trips() {
+        for consumed in 0..80usize {
+            let mut original = ChaChaRandomSource::from_seed(11);
+            for _ in 0..consumed {
+                original.gen_unit();
+            }
+            let state = original.capture_state().unwrap();
+            let expected: Vec<u64> = (0..4).map(|_| original.gen_range(usize::MAX) as u64).collect();
+            let mut restored = ChaChaRandomSource::from_state(&state);
+            let replayed: Vec<u64> = (0..4).map(|_| restored.gen_range(usize::MAX) as u64).collect();
+            assert_eq!(replayed, expected, "diverged after {consumed} words");
+        }
+    }
+
+    #[test]
+    fn a_capture_carries_the_stream_as_well_as_the_position() {
+        let mut original = ChaChaRandomSource::from_seed(5);
+        original.inner.set_stream(0x0123_4567_89ab_cdef);
+        original.gen_unit();
+        let state = original.capture_state().unwrap();
+        assert_eq!(state.stream, 0x0123_4567_89ab_cdef);
+        let expected: Vec<f64> = (0..4).map(|_| original.gen_unit()).collect();
+
+        let mut restored = ChaChaRandomSource::from_state(&state);
+        assert_eq!(restored.capture_state().unwrap().stream, state.stream);
+        assert_eq!((0..4).map(|_| restored.gen_unit()).collect::<Vec<_>>(), expected);
+
+        let mut other_stream = ChaChaRandomSource::from_seed(5);
+        other_stream.gen_unit();
+        assert_ne!(
+            (0..4).map(|_| other_stream.gen_unit()).collect::<Vec<_>>(),
+            expected,
+            "the stream must actually change the output, or this test proves nothing"
+        );
+    }
 }

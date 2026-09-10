@@ -16,7 +16,7 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --workspace --release                      # 85 tests, including reach regressions
+cargo test --workspace --release                      # 97 tests, including reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```
@@ -50,6 +50,7 @@ Sizes are not continuous: `k = a + 2^a` gives 6, 11, 20, 37, 70, 135, 264, 521. 
 | `--strict-resource-limits` | off | Recheck time and RSS after evaluation and diagnostics, before SUCCESS. |
 | `--checkpoint-path <p>` | off | Save the learning state there and resume from it if it exists. A resumed run is identical to an uninterrupted one, trial for trial. Requires `--n-exp 1` and one size. |
 | `--checkpoint-every <n>` | `0` | Trials between saves; `0` saves only when the run stops. A save is rounded up to the next 500-trial batch boundary. |
+| `--checkpoint-allow-eval-change` | off | Permit resuming a checkpoint under a different `--eval-interval`. Refused without it: two sampling rates spliced into one run make trials-to-success meaningless. |
 | `--alp-gen-variant pyalcs\|butz\|butz-checked` | `pyalcs` | `butz-checked` fixes exhausted-condition counting; `butz` preserves historical trajectories. |
 
 Diagnostics are off by default and preserve population and learning RNG state: learning
@@ -80,10 +81,27 @@ Three things the file format guarantees, and one it does not:
   for and the run aborts if they differ. The stopping limits are deliberately not part
   of that identity -- a chained run raises them per job.
 - **A closed run is never relearned.** A checkpoint that records SUCCESS makes the next
-  job report `already-finished` and exit without touching the state, so a chain can be
-  submitted in one batch.
-- **The write is atomic** (staged, then renamed), so a job killed mid-save leaves the
-  previous checkpoint intact.
+  job report `already-finished` and exit without touching the state, so the tail of an
+  over-long chain costs a few seconds each and nothing else.
+- **The segments must not overlap.** One checkpoint is one run's learning state, and
+  nothing locks it. Chain the jobs so only one runs at a time:
+
+  ```bash
+  previous=$(sbatch --parsable --export=ALL,TAG=k264,CHECKPOINT=on … slurm/mpx_reach.sh 264 42 1800000)
+  for _ in $(seq 9); do
+      previous=$(sbatch --parsable --dependency=afterany:$previous \
+          --export=ALL,TAG=k264,CHECKPOINT=on … slurm/mpx_reach.sh 264 42 1800000)
+  done
+  ```
+
+  `afterany`, not `afterok`: a segment that stops on its wall clock has done its job.
+- **The write is atomic** (staged under a name derived from the destination plus the
+  process id, then renamed), so a job killed mid-save leaves the previous checkpoint
+  intact and two processes never share a staging file.
+- **An evaluation owed when a job stopped is paid before the next one trains.** A
+  resource cap is checked before the evaluation block, so a job can stop on the very
+  batch a measurement was due; resuming straight into another batch would shift that
+  measurement and every later one, and trials-to-success with them.
 - **The archive does not stitch segments yet.** Each job writes its own log and
   `tools/parse_mpx_logs.py` reads them as separate runs sharing a seed. Fix that before
   the first chained run is archived; the wrapper already emits a `run-segment:` line

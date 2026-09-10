@@ -86,7 +86,7 @@ improving efficiency; at matched learning applications no advantage is measurabl
 
 - Maze path untouched: `u_max = 100000` on the maze config keeps the ALP-gen branch
   dead. Before any core change lands: `cargo test --workspace --release` green
-  (**85 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
+  (**97 tests**, including reach regressions) and the P9 maze learning columns byte-identical to
   `reports/bench_rust.csv`.
 - Determinism from an injected RNG, verified on 64-bit Apple M1 and x86_64 Bem2.
   No equivalence is claimed across 32-bit and 64-bit pointer widths. **Trials-to-success
@@ -412,19 +412,32 @@ tag. `docs/ARCHITECTURE.md` carries the design, the file format and the two deci
 that are not obvious from the code (wall-clock has two readings; the identity gate
 excludes the stopping limits).
 
+**Reviewed and corrected (2026-09-10).** The independent review of §8 step 2 found five
+real defects; all are fixed and pinned by regressions. The one that mattered: a resource
+cap is checked *before* the evaluation block, so a job could stop on the very batch a
+measurement was due and the resumed run shifted that measurement and every later one.
+Reproduced at k=20 — evaluations at 1500/2500/3500 against 1000/2000/3000 and **SUCCESS
+reported at 66,500 trials instead of 67,000**. A checkpoint moved the headline metric.
+`docs/ARCHITECTURE.md` lists the rest and the two challenges accepted.
+
 **The acceptance test is determinism across the cycle** and it is in
 `acs2-bench/tests/reach_regressions.rs`: three processes — whole, first half, resumed
 half — for both ACS2 and ACS2ER, asserting identical trajectories *and* a byte-identical
 final checkpoint. It was verified by sabotage rather than trusted
 because it is green: sixteen mutations of the saved state, fifteen caught — the
-sixteenth is `ee`, and that one *cannot* be caught, see below. Gates at the time of the commit: **85 Rust tests**,
-13 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output
-compared line for line against the pre-change binary at k=20 over 102 learning lines.
+sixteenth is `ee`, and that one *cannot* be caught, see below. Gates: **97 Rust tests**,
+13 Python tests, P9 maze learning columns byte-identical, and `mpx_reach` output without
+the flag compared line for line against the pre-checkpointing binary at k=20 over 102
+learning lines.
 
-Verified end to end outside the test harness too: a k=20 run split across ten processes
-by a 5 s wall cap reproduces the uninterrupted run's 39 measurements exactly and closes
-at the same 78,000 trials; a k=264 checkpoint round-trips at 12.5 MB for 8,107
-classifiers.
+Verified end to end outside the test harness too: a k=20 run split across **twelve**
+processes by a 1 s wall cap reproduces the uninterrupted run's 134 measurements exactly
+and closes at the same 67,000 trials, with the tail segments reporting `already-finished`;
+a k=264 checkpoint round-trips at 12.5 MB for 8,107 classifiers.
+
+**Submit a chain with `--dependency=afterany`.** One checkpoint is one learning state and
+nothing locks it; two segments running at once corrupt each other. `README.md` has the
+loop.
 
 Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
 
@@ -432,7 +445,18 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
   because PEE is not implemented.
 - The archive does not stitch a chained run. See step 3.
 
-### Step 2 — independent review of the checkpointing
+### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
+
+Run on a second model, read-only, against a self-contained brief and a code bundle. It
+found five real defects and raised two challenges to stated decisions; every one was
+verified against the code before acting, and the worst was reproduced by measurement
+before being fixed. Nothing it reported was wrong this time, and one thing it reported
+was **not** acted on as asked: it wanted an ownership lock on the checkpoint, and a stale
+lock left by a killed job would block exactly the disaster recovery that
+`a_periodic_checkpoint_outlives_a_killed_process` proves works. Job dependencies sequence
+the chain instead.
+
+The procedure below is what was followed and is worth following again.
 
 Hand it to a **second agent** before it is trusted. This process ran twice on this
 repository and both times found real defects, so it is established practice, not

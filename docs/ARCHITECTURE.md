@@ -966,7 +966,10 @@ concatenated trajectory lines match the uninterrupted ones, and the checkpoint t
 resumed run finally writes is byte-identical to the uninterrupted one's once wall-clock
 and RSS are removed.
 
-That second assertion is what makes the test hard to pass by accident. It was verified
+That second assertion is what makes the test hard to pass by accident, but it is not the
+whole property: it compares evaluation snapshots, and both arms run the same
+implementation. No-flag parity is established separately, by running the pre-change
+binary from a git worktree and diffing its output line for line. It was verified
 by sabotage: dropping the environment RNG, the agent RNG, the ALP clock,
 `trials_since_eval`, the mark, `talp`, `tga`, `tav`, `exp`, population order, the replay
 buffer, replay order, replay reward or the replay `done` flag each makes it fail, and so
@@ -1026,6 +1029,57 @@ no dependency. Two choices worth stating:
 Writes are staged and renamed, so a job killed mid-save leaves the previous checkpoint
 whole.
 
+### What the independent review changed
+
+The change was reviewed by a second model against the acceptance test's blind spots.
+Five defects were confirmed against the code and fixed; two challenges to stated
+decisions were accepted. The one that mattered:
+
+**A resource cap could swallow an evaluation that was due.** The loop checks the RSS and
+wall-clock caps *before* the evaluation block, so a job can stop on the very batch a
+measurement was due, leaving the checkpoint owing it. Resuming straight into another
+batch shifted that measurement and every later one. Reproduced at k=20 with
+`--eval-interval 1000`: evaluations landed at 1500/2500/3500 against 1000/2000/3000, and
+**SUCCESS was reported at 66,500 trials instead of 67,000** — the headline metric of the
+thesis, moved by a checkpoint. Fixed by paying an owed evaluation before the next batch
+(`train_before_measuring`); a fresh run never takes that branch.
+
+The others, in descending order:
+
+- **`--strict-resource-limits` can stop a job between measuring knowledge 1.0 and
+  declaring SUCCESS.** Only a stored `SUCCESS` verdict short-circuited a resume, so such
+  a run trained on and reported a later success trial. A run is solved at the trial its
+  measurement names.
+- **Nothing sequences the jobs of a chain.** One checkpoint is one learning state and
+  there is no lock; the README had invited submitting a chain in one batch. It now
+  prescribes `--dependency=afterany`. A staging file named from the destination plus the
+  process id keeps two writers off one another, but that is defence in depth, not a
+  substitute for sequencing.
+- **`with_extension("partial")` could stage onto the destination itself** when the
+  destination already ended in `.partial`, destroying the only recoverable copy, and
+  `run.ckpt` and `run.backup` shared one staging file.
+- **Booleans were decoded as `text == "1"`,** so anything else read as `false`. A file
+  cut immediately after the space before a trailing flag still yields a field — an empty
+  one — silently turning a terminal replay sample into a bootstrapped one. Booleans are
+  now strict and the file carries an `end` terminator, which also rejects trailing junk.
+- **Reopening a closed run inflated its archived cost** with the new process's start-up
+  time and footprint.
+
+Two challenges accepted:
+
+- **A changed `--eval-interval` is now refused,** not warned about, unless
+  `--checkpoint-allow-eval-change` says otherwise. It does not change what the agent
+  learns, only which trials can be observed — which is the number this project reports.
+- **The identity now carries the whole `Configuration`** through its `Debug` rendering
+  rather than a hand-listed subset of flags. Nothing on the command line reaches `beta`
+  or `theta_r`, so a later executable could change one and still satisfy a list; a field
+  added later gates resumes without anyone remembering to add it.
+
+One finding was **not** acted on as reported: no ownership lock was added. A stale lock
+left by a killed job would block exactly the disaster recovery that
+`a_periodic_checkpoint_outlives_a_killed_process` exists to prove works. Job dependencies
+sequence the chain; the lock would only convert one failure mode into another.
+
 ### Two decisions that are not obvious from the code
 
 **Wall-clock has two readings.** `--time-cap-secs` bounds *this process*, because that
@@ -1038,6 +1092,12 @@ GA, ALP variant and agent settings must match or the resume aborts — resuming 
 different one of those would splice two unrelated runs into one trajectory. Trials, wall
 and RSS caps are deliberately absent: a chained run raises them per job, and they change
 when a run stops, not what it learns.
+
+`a_periodic_checkpoint_outlives_a_killed_process` covers the disaster path the other
+tests miss: every one of them resumes from a *clean* stop, which records a verdict. A
+node failure kills a job outright and the last periodic save is all that survives. The
+test spawns a real run, waits for a periodic checkpoint, `SIGKILL`s it, and requires the
+resumed run to rejoin the uninterrupted trajectory.
 
 ### NAMED HAZARD — the archive does not stitch a chained run yet
 

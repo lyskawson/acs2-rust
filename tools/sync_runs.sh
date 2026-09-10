@@ -33,7 +33,12 @@ new=0
 updated=0
 if ! $local_only; then
   echo "==> pulling ~/mpx_runs from the cluster"
-  rsync -az -e "ssh -i $KEY -o ConnectTimeout=30" "$REMOTE:~/mpx_runs/" "$STAGE/"
+  # Checkpoints live under ~/mpx_runs/checkpoints/ and are resumable state, not results:
+  # a k=264 one is ~1.5 KB per classifier and a chained run keeps several. Pulling them
+  # would move hundreds of megabytes on every session start and then discard them --
+  # the result of a run is its log.
+  rsync -az --exclude 'checkpoints/' -e "ssh -i $KEY -o ConnectTimeout=30" \
+    "$REMOTE:~/mpx_runs/" "$STAGE/"
   for file in "$STAGE"/*.out "$STAGE"/*.cancelled; do
     [ -f "$file" ] || continue
     name="$(basename "$file")"

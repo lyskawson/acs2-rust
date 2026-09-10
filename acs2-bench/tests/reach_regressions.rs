@@ -204,7 +204,7 @@ mod regression {
             ),
             other => panic!("unknown checkpoint worker segment {other}"),
         };
-        let settings = CheckpointSettings { path, every };
+        let settings = CheckpointSettings { path, every, allow_eval_interval_change: false };
         let gen = GenConfig {
             do_ga: true,
             u_max: 4,
@@ -232,13 +232,17 @@ mod regression {
             .join("\n")
     }
 
-    fn run_checkpoint_worker(mode: &str, directory: &Path) -> Vec<String> {
-        let output = Command::new(std::env::current_exe().unwrap())
-            .args(["--exact", CHECKPOINT_TEST, "--nocapture"])
-            .env("ACS2_CHECKPOINT_REGRESSION", mode)
-            .env("ACS2_CHECKPOINT_DIR", directory)
-            .output()
-            .unwrap();
+    fn worker_command(switch: &str, mode: &str, test: &str, directory: &Path) -> Command {
+        let mut command = Command::new(std::env::current_exe().unwrap());
+        command
+            .args(["--exact", test, "--nocapture"])
+            .env(switch, mode)
+            .env("ACS2_CHECKPOINT_DIR", directory);
+        command
+    }
+
+    fn run_worker_process(switch: &str, mode: &str, test: &str, directory: &Path) -> Vec<String> {
+        let output = worker_command(switch, mode, test, directory).output().unwrap();
         assert!(
             output.status.success(),
             "worker {mode} failed: {}",
@@ -250,6 +254,10 @@ mod regression {
             .filter(|line| line.contains(" traj: "))
             .map(without_volatile_fields)
             .collect()
+    }
+
+    fn run_checkpoint_worker(mode: &str, directory: &Path) -> Vec<String> {
+        run_worker_process("ACS2_CHECKPOINT_REGRESSION", mode, CHECKPOINT_TEST, directory)
     }
 
     #[test]
@@ -316,6 +324,7 @@ mod regression {
         let settings = CheckpointSettings {
             path: directory.join("run.ckpt"),
             every: 0,
+            allow_eval_interval_change: false,
         };
         let gen = GenConfig {
             do_ga: true,
@@ -365,7 +374,11 @@ mod regression {
         std::fs::create_dir_all(&directory).unwrap();
         let path = directory.join("run.ckpt");
 
-        let settings = CheckpointSettings { path: path.clone(), every: 0 };
+        let settings = CheckpointSettings {
+            path: path.clone(),
+            every: 0,
+            allow_eval_interval_change: false,
+        };
         let gen = GenConfig {
             do_ga: true,
             u_max: 4,
@@ -396,6 +409,388 @@ mod regression {
         assert!(
             resumed_under_another_seed.is_err(),
             "a checkpoint written for another seed must not be resumed silently"
+        );
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    fn checkpoint_directory(purpose: &str) -> PathBuf {
+        let directory = std::env::temp_dir().join(format!(
+            "acs2-checkpoint-{purpose}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        directory
+    }
+
+    fn settings_at(path: PathBuf) -> CheckpointSettings {
+        CheckpointSettings {
+            path,
+            every: 0,
+            allow_eval_interval_change: false,
+        }
+    }
+
+    fn mpx6_gen() -> GenConfig {
+        GenConfig {
+            do_ga: true,
+            u_max: 4,
+            alp_gen_variant: AlpGenVariant::Pyalcs,
+        }
+    }
+
+    fn run_mpx6(limits: &ReachLimits, checkpoint: Option<&CheckpointSettings>) -> ReachOutcome {
+        run_reach_repeat::<7>(
+            CHECKPOINT_SIZE,
+            CHECKPOINT_SEED,
+            mpx6_gen(),
+            AgentOptions::default(),
+            limits,
+            checkpoint,
+        )
+    }
+
+    fn panics(work: impl FnOnce()) -> bool {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(work));
+        std::panic::set_hook(previous);
+        outcome.is_err()
+    }
+
+    /// A resource cap is checked before the evaluation block, so a job can stop on the
+    /// very batch an evaluation was due and leave the measurement unpaid. Resuming
+    /// straight into another batch then shifts that evaluation and every later one --
+    /// and trials-to-success moves with them. Measured before the fix at k=20: the
+    /// evaluation points ran 1500/2500/3500 against 1000/2000/3000 and SUCCESS was
+    /// reported at 66,500 trials instead of 67,000.
+    #[test]
+    fn a_resource_cap_does_not_swallow_an_evaluation_that_was_due() {
+        let directory = checkpoint_directory("due");
+        let uninterrupted = settings_at(directory.join("whole.ckpt"));
+        let interrupted = settings_at(directory.join("split.ckpt"));
+
+        let mut limits = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+        limits.eval_interval = 1000;
+        run_mpx6(&limits, Some(&uninterrupted));
+
+        // Two jobs that stop the instant their clock is checked. The second leaves the
+        // run owing an evaluation: 1000 trials since the last one, none taken.
+        let mut stopped = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+        stopped.eval_interval = 1000;
+        stopped.time_cap = Duration::ZERO;
+        run_mpx6(&stopped, Some(&interrupted));
+        run_mpx6(&stopped, Some(&interrupted));
+
+        let owed = std::fs::read_to_string(&interrupted.path).unwrap();
+        assert!(
+            owed.contains("trials=1000 ") && owed.contains("since_eval=1000 "),
+            "the fixture must stop with an evaluation outstanding: {}",
+            owed.lines().nth(2).unwrap_or_default()
+        );
+
+        run_mpx6(&limits, Some(&interrupted));
+
+        assert_eq!(
+            without_volatile_fields(&std::fs::read_to_string(&interrupted.path).unwrap()),
+            without_volatile_fields(&std::fs::read_to_string(&uninterrupted.path).unwrap()),
+            "an evaluation owed at the moment a job stopped must be paid before the next batch"
+        );
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// `--strict-resource-limits` rechecks the clock after evaluation, so a job can
+    /// measure knowledge 1.0 and still stop TIME-LIMITED before declaring SUCCESS. The
+    /// run is solved at the trial that measurement names; training on would move the
+    /// only number this project reports.
+    #[test]
+    fn a_run_measured_complete_before_its_clock_ran_out_resumes_as_solved() {
+        let directory = checkpoint_directory("solved");
+        let settings = settings_at(directory.join("run.ckpt"));
+
+        let solved = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
+        assert_eq!(solved.verdict, Verdict::Success);
+
+        let stored = std::fs::read_to_string(&settings.path).unwrap();
+        std::fs::write(
+            &settings.path,
+            stored.replace("verdict=SUCCESS", "verdict=TIME-LIMITED"),
+        )
+        .unwrap();
+
+        let resumed = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS * 4), Some(&settings));
+        assert_eq!(resumed.verdict, Verdict::Success);
+        assert_eq!(resumed.trials_used, solved.trials_used);
+        assert_eq!(resumed.reliable_count, solved.reliable_count);
+        assert!(
+            !resumed.already_finished,
+            "a verdict no earlier job reported must still reach the log"
+        );
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// A closed run's cost is what it cost. Reopening its checkpoint must not add the
+    /// new process's start-up time to the archived wall-clock or its footprint to the
+    /// archived peak.
+    #[test]
+    fn reopening_a_closed_run_reports_the_resources_it_finished_with() {
+        let directory = checkpoint_directory("closed");
+        let settings = settings_at(directory.join("run.ckpt"));
+
+        let solved = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
+        assert_eq!(solved.verdict, Verdict::Success);
+        let reopened = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
+
+        assert!(reopened.already_finished);
+        assert_eq!(reopened.wall_seconds.to_bits(), solved.wall_seconds.to_bits());
+        assert_eq!(reopened.peak_rss_bytes, solved.peak_rss_bytes);
+        assert_eq!(reopened.peak_macro_population, solved.peak_macro_population);
+        assert_eq!(reopened.trials_used, solved.trials_used);
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// The evaluation interval does not change what the agent learns, only which trials
+    /// can be observed -- which is the number this project reports. Splicing two
+    /// sampling rates into one run takes an explicit decision.
+    #[test]
+    fn resuming_at_another_evaluation_interval_takes_an_explicit_decision() {
+        let directory = checkpoint_directory("evalrate");
+        let settings = settings_at(directory.join("run.ckpt"));
+        run_mpx6(&checkpoint_limits(CHECKPOINT_SPLIT_TRIALS), Some(&settings));
+
+        let mut faster = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+        faster.eval_interval = CHECKPOINT_EVAL_INTERVAL * 2;
+        assert!(
+            panics(|| {
+                run_mpx6(&faster, Some(&settings));
+            }),
+            "a changed evaluation interval must not pass unremarked"
+        );
+
+        let allowed = CheckpointSettings {
+            allow_eval_interval_change: true,
+            ..settings_at(settings.path.clone())
+        };
+        assert!(
+            !panics(|| {
+                run_mpx6(&faster, Some(&allowed));
+            }),
+            "the override must let a deliberate change through"
+        );
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// The identity gates the learning configuration, not just the flags that set it: a
+    /// later executable could change a threshold and still meet a hand-listed subset.
+    #[test]
+    fn a_checkpoint_refuses_a_changed_learning_configuration() {
+        let directory = checkpoint_directory("config");
+        let settings = settings_at(directory.join("run.ckpt"));
+        run_mpx6(&checkpoint_limits(CHECKPOINT_SPLIT_TRIALS), Some(&settings));
+
+        let limits = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+        let resume_with = |gen: GenConfig| {
+            run_reach_repeat::<7>(
+                CHECKPOINT_SIZE,
+                CHECKPOINT_SEED,
+                gen,
+                AgentOptions::default(),
+                &limits,
+                Some(&settings),
+            );
+        };
+
+        assert!(
+            panics(|| resume_with(GenConfig { u_max: 5, ..mpx6_gen() })),
+            "a changed generalization limit must not be resumed silently"
+        );
+        assert!(
+            panics(|| resume_with(GenConfig { do_ga: false, ..mpx6_gen() })),
+            "a changed GA setting must not be resumed silently"
+        );
+        assert!(
+            panics(|| {
+                let mut other = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+                other.epsilon = 1.0;
+                run_mpx6(&other, Some(&settings));
+            }),
+            "a changed exploration rate must not be resumed silently"
+        );
+        assert!(
+            !panics(|| resume_with(mpx6_gen())),
+            "the configuration it was written for must still resume"
+        );
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    /// The identity must state the learning configuration, not the flags that set it.
+    /// Nothing on the command line reaches `beta`, so a later executable could change it
+    /// and still satisfy a hand-listed subset of fields.
+    #[test]
+    fn the_identity_gates_learning_constants_no_flag_can_reach() {
+        let limits = checkpoint_limits(CHECKPOINT_TOTAL_TRIALS);
+        let mut config = Configuration::mpx();
+        config.u_max = 4;
+        let baseline = checkpoint_identity(
+            CHECKPOINT_SIZE,
+            CHECKPOINT_SEED,
+            &config,
+            AgentOptions::default(),
+            &limits,
+        );
+
+        for altered in [
+            Configuration { beta: 0.06, ..config.clone() },
+            Configuration { theta_r: 0.95, ..config.clone() },
+            Configuration { theta_ga: 50, ..config.clone() },
+            Configuration { do_subsumption: false, ..config.clone() },
+        ] {
+            assert_ne!(
+                checkpoint_identity(
+                    CHECKPOINT_SIZE,
+                    CHECKPOINT_SEED,
+                    &altered,
+                    AgentOptions::default(),
+                    &limits,
+                ),
+                baseline,
+                "a changed learning constant must change the identity"
+            );
+        }
+
+        assert_eq!(
+            checkpoint_identity(
+                CHECKPOINT_SIZE,
+                CHECKPOINT_SEED,
+                &config,
+                AgentOptions::default(),
+                &limits,
+            ),
+            baseline,
+            "the identity must be stable for an unchanged configuration"
+        );
+    }
+
+    const KILL_SIZE: usize = 20;
+    const KILL_EVAL_INTERVAL: u64 = 1000;
+    const KILL_RESUME_AT: u64 = 8000;
+    const KILL_TRIALS: u64 = 20_000;
+    const KILL_TEST: &str = "regression::a_periodic_checkpoint_outlives_a_killed_process";
+
+    fn kill_limits(trials_cap: u64) -> ReachLimits {
+        ReachLimits {
+            eval_interval: KILL_EVAL_INTERVAL,
+            ..checkpoint_limits(trials_cap)
+        }
+    }
+
+    fn kill_worker(mode: &str) {
+        let directory = PathBuf::from(std::env::var_os("ACS2_CHECKPOINT_DIR").unwrap());
+        let path = directory.join("killed.ckpt");
+        let periodic = CheckpointSettings { every: 2000, ..settings_at(path) };
+        // The victim gets a cap it cannot reach before the parent kills it, so the file
+        // the resume reads is a periodic save with no verdict recorded.
+        let (settings, trials_cap) = match mode {
+            "whole" => (None, KILL_TRIALS),
+            "killable" => (Some(periodic), u64::MAX),
+            "resume" => (Some(periodic), KILL_TRIALS),
+            other => panic!("unknown kill worker mode {other}"),
+        };
+        run_reach_repeat::<21>(
+            KILL_SIZE,
+            CHECKPOINT_SEED,
+            GenConfig {
+                do_ga: true,
+                u_max: derived_u_max(KILL_SIZE, AlpGenVariant::Pyalcs),
+                alp_gen_variant: AlpGenVariant::Pyalcs,
+            },
+            AgentOptions::default(),
+            &kill_limits(trials_cap),
+            settings.as_ref(),
+        );
+    }
+
+    fn run_kill_worker(mode: &str, directory: &Path) -> Vec<String> {
+        run_worker_process("ACS2_CHECKPOINT_KILL", mode, KILL_TEST, directory)
+    }
+
+    fn checkpoint_trials(path: &Path) -> Option<u64> {
+        let text = std::fs::read_to_string(path).ok()?;
+        let run = text.lines().find(|line| line.starts_with("run "))?;
+        run.split_whitespace()
+            .find_map(|field| field.strip_prefix("trials=")?.parse().ok())
+    }
+
+    fn measurements_after(lines: &[String], trial: u64) -> Vec<String> {
+        lines
+            .iter()
+            .filter(|line| {
+                line.split_whitespace()
+                    .find_map(|field| field.strip_prefix("trials=")?.parse::<u64>().ok())
+                    .is_some_and(|trials| trials > trial)
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// A node failure kills a job outright: no verdict is written and the last periodic
+    /// save is all that survives. Over a 504 h job that is the disaster path, and every
+    /// other test here resumes from a clean stop instead.
+    #[test]
+    fn a_periodic_checkpoint_outlives_a_killed_process() {
+        if let Some(mode) = std::env::var_os("ACS2_CHECKPOINT_KILL") {
+            kill_worker(&mode.to_string_lossy());
+            return;
+        }
+
+        let directory = checkpoint_directory("kill");
+        let path = directory.join("killed.ckpt");
+        let uninterrupted = run_kill_worker("whole", &directory);
+
+        let mut victim = worker_command("ACS2_CHECKPOINT_KILL", "killable", KILL_TEST, &directory)
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(120);
+        let saved_at = loop {
+            if let Some(trials) = checkpoint_trials(&path) {
+                if trials >= KILL_RESUME_AT {
+                    break trials;
+                }
+            }
+            assert!(Instant::now() < deadline, "no periodic checkpoint was ever written");
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        victim.kill().unwrap();
+        victim.wait().unwrap();
+
+        let survivor = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            survivor.contains("verdict=-"),
+            "the fixture must kill the run before it records a verdict"
+        );
+        assert_eq!(
+            std::fs::read_dir(&directory).unwrap().count(),
+            1,
+            "a killed process must leave no staging file behind"
+        );
+
+        let resumed = run_kill_worker("resume", &directory);
+        let expected = measurements_after(&uninterrupted, saved_at);
+        assert!(!expected.is_empty(), "nothing left to compare after trial {saved_at}");
+        assert_eq!(
+            measurements_after(&resumed, saved_at),
+            expected,
+            "a run resumed from a periodic checkpoint must rejoin the uninterrupted trajectory"
         );
 
         std::fs::remove_dir_all(&directory).ok();

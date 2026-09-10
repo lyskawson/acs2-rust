@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use acs2_bench::checkpoint::{self, CheckpointSettings, RunState};
 use acs2_bench::{
-    parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
-    UMaxMode,
+    derived_u_max, parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice,
+    AgentOptions, UMaxMode,
 };
 use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
@@ -467,6 +467,13 @@ where
     // and archived figure is the whole chain's compute.
     let mut carried_wall_seconds = 0.0f64;
     let mut resumed_verdict: Option<Verdict> = None;
+    let mut already_reported = false;
+    // A resource cap can stop a job on the very batch an evaluation was due, because
+    // the cap is checked first. The checkpoint then carries a measurement the run
+    // owes: it must be paid before any further training, or every later evaluation
+    // lands at a different trial than an uninterrupted run's and the reported
+    // trials-to-success moves with it.
+    let mut train_before_measuring = true;
 
     if let Some(plan) = checkpoint {
         if plan.settings.path.exists() {
@@ -476,17 +483,29 @@ where
                 "the checkpoint at {} was written for another configuration",
                 plan.settings.path.display()
             );
+            // The evaluation interval does not change what the agent learns, but it
+            // decides which trials can be observed -- and trials-to-success is the
+            // number this project reports. Splicing two sampling rates into one run
+            // makes that number mean nothing, so it takes an explicit decision.
             if restored.eval_interval != limits.eval_interval {
+                assert!(
+                    plan.settings.allow_eval_interval_change,
+                    "the checkpoint at {} was measured every {} trials, this job every {}; \
+pass --checkpoint-allow-eval-change to splice the two sampling rates deliberately",
+                    plan.settings.path.display(),
+                    restored.eval_interval,
+                    limits.eval_interval,
+                );
                 println!(
-                    "  mpx-{size} warning: resuming at eval_interval={} a run measured every {} trials",
-                    limits.eval_interval, restored.eval_interval,
+                    "  mpx-{size} eval-interval-changed: from={} to={} (trials-to-success is no longer comparable across this run)",
+                    restored.eval_interval, limits.eval_interval,
                 );
             }
             time = restored.time;
             trials_used = restored.trials_used;
             trials_since_eval = restored.trials_since_eval;
             peak_macro_population = restored.peak_macro_population;
-            peak_rss = peak_rss.max(restored.peak_rss_bytes);
+            peak_rss = restored.peak_rss_bytes;
             carried_wall_seconds = restored.wall_seconds;
             final_knowledge = restored.final_knowledge;
             knowledge_trials = restored.knowledge_trials;
@@ -496,8 +515,15 @@ where
             );
             let stored_verdict = restored.verdict.as_deref().map(Verdict::from_label);
             agent.restore(restored.agent);
+            train_before_measuring = trials_since_eval < limits.eval_interval;
             if stored_verdict == Some(Verdict::Success) {
                 resumed_verdict = stored_verdict;
+                already_reported = true;
+            } else if knowledge_trials == Some(trials_used) && final_knowledge >= 1.0 {
+                // `--strict-resource-limits` can stop a job between measuring knowledge
+                // 1.0 and declaring SUCCESS. The run is solved at the trial the
+                // measurement names; training on is what would move that number.
+                resumed_verdict = Some(Verdict::Success);
             }
             println!(
                 "  mpx-{size} resumed: trials={trials_used} time={time} since_eval={trials_since_eval} knowledge={final_knowledge:.4} carried_wall={carried_wall_seconds:.0}s from={}",
@@ -509,27 +535,31 @@ where
     let verdict = match resumed_verdict {
         Some(verdict) => verdict,
         None => loop {
-            if trials_used >= limits.trials_cap {
-                break Verdict::TrialsLimited;
-            }
+            if train_before_measuring {
+                if trials_used >= limits.trials_cap {
+                    break Verdict::TrialsLimited;
+                }
 
-            for _ in 0..TIME_CHECK_BATCH {
-                let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
-                time += metrics.steps as u64;
-                trials_used += 1;
-                trials_since_eval += 1;
-            }
-            trials_since_checkpoint += TIME_CHECK_BATCH as u64;
+                for _ in 0..TIME_CHECK_BATCH {
+                    let metrics = agent.run_explore_trial(env, selector, &bootstrap, time);
+                    time += metrics.steps as u64;
+                    trials_used += 1;
+                    trials_since_eval += 1;
+                }
+                trials_since_checkpoint += TIME_CHECK_BATCH as u64;
 
-            peak_macro_population = peak_macro_population.max(agent.population().len());
-            peak_rss = peak_rss.max(peak_rss_bytes());
+                peak_macro_population = peak_macro_population.max(agent.population().len());
+                peak_rss = peak_rss.max(peak_rss_bytes());
 
-            if peak_rss > limits.rss_cap_bytes {
-                break Verdict::MemoryLimited;
+                if peak_rss > limits.rss_cap_bytes {
+                    break Verdict::MemoryLimited;
+                }
+                if start.elapsed() > limits.time_cap {
+                    break Verdict::TimeLimited;
+                }
             }
-            if start.elapsed() > limits.time_cap {
-                break Verdict::TimeLimited;
-            }
+            train_before_measuring = true;
+
             if trials_since_eval >= limits.eval_interval {
                 trials_since_eval = 0;
                 final_knowledge =
@@ -648,9 +678,13 @@ where
         reliable_specificities.iter().sum::<f64>() / reliable_count as f64
     };
 
-    let wall_seconds = carried_wall_seconds + start.elapsed().as_secs_f64();
+    let wall_seconds = if already_reported {
+        carried_wall_seconds
+    } else {
+        carried_wall_seconds + start.elapsed().as_secs_f64()
+    };
 
-    if let (Some(plan), None) = (checkpoint, resumed_verdict) {
+    if let (Some(plan), false) = (checkpoint, already_reported) {
         let progress = ProtocolProgress {
             time,
             trials_used,
@@ -666,7 +700,7 @@ where
 
     ReachOutcome {
         verdict,
-        already_finished: resumed_verdict.is_some(),
+        already_finished: already_reported,
         trials_used,
         final_knowledge: knowledge_trials.filter(|&trial| trial == trials_used).map(|_| final_knowledge),
         reliable_count,
@@ -685,21 +719,24 @@ where
 /// field added here becomes a resume-time gate. The stopping limits -- trials, wall
 /// clock, RSS -- are deliberately absent: a chained run raises them per job, and they
 /// change when a run stops, not what it learns.
+///
+/// The whole `Configuration` goes in through its `Debug` rendering rather than a
+/// hand-listed subset. Flags are what an operator sets, but the learning constants are
+/// what a trial obeys, and a later executable could change `beta` or a threshold and
+/// still accept a checkpoint written by an earlier one. Rendering the struct means a
+/// field added later gates resumes without anyone remembering to add it here.
 fn checkpoint_identity(
     size: usize,
     seed: u64,
-    gen: GenConfig,
+    config: &Configuration,
     agent_options: AgentOptions,
     limits: &ReachLimits,
 ) -> String {
     format!(
-        "size={size} seed={seed} {} encoding={} epsilon={} u_max={} do_ga={} alp_gen_variant={}",
+        "size={size} seed={seed} {} encoding={} eval_sample={SAMPLE_INPUTS}/{SAMPLE_SEED} config={}",
         agent_options.describe(),
         encoding_label(limits.encoding),
-        limits.epsilon,
-        gen.u_max,
-        gen.do_ga,
-        variant_label(gen.alp_gen_variant),
+        format!("{config:?}").replace(' ', ""),
     )
 }
 
@@ -725,7 +762,7 @@ fn run_reach_repeat<const N: usize>(
     };
     let plan = checkpoint.map(|settings| CheckpointPlan {
         settings,
-        identity: checkpoint_identity(size, seed, gen, agent_options, limits),
+        identity: checkpoint_identity(size, seed, &config, agent_options, limits),
     });
 
     match agent_options.agent {
@@ -817,6 +854,7 @@ struct Options {
     isolate_repeats: bool,
     checkpoint_path: Option<PathBuf>,
     checkpoint_every: u64,
+    checkpoint_allow_eval_change: bool,
 }
 
 impl Options {
@@ -843,6 +881,7 @@ impl Options {
             isolate_repeats: false,
             checkpoint_path: None,
             checkpoint_every: 0,
+            checkpoint_allow_eval_change: false,
         };
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
@@ -888,6 +927,9 @@ impl Options {
                     options.checkpoint_path = Some(PathBuf::from(
                         args.next().expect("--checkpoint-path needs a value"),
                     ))
+                }
+                "--checkpoint-allow-eval-change" => {
+                    options.checkpoint_allow_eval_change = true
                 }
                 "--checkpoint-every" => {
                     options.checkpoint_every = args
@@ -958,6 +1000,7 @@ fn main() {
         CheckpointSettings {
             path,
             every: options.checkpoint_every,
+            allow_eval_interval_change: options.checkpoint_allow_eval_change,
         }
     });
 
