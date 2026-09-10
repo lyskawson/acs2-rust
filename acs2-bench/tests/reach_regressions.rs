@@ -7,6 +7,7 @@ mod regression {
     use std::path::{Path, PathBuf};
     use acs2_core::action_selection::ActionSelector;
     use acs2_core::environment::Environment;
+    use acs2_bench::derived_u_max;
     use acs2_core::acs2er::ReplayConfiguration;
     use acs2_core::checkpoint::AgentState;
     use acs2_core::rl::BootstrapEstimator;
@@ -545,11 +546,24 @@ mod regression {
 
         let solved = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
         assert_eq!(solved.verdict, Verdict::Success);
+
+        // Forced below anything this process could be using, so reporting the live peak
+        // instead of the saved one cannot pass by accident.
+        let stored = std::fs::read_to_string(&settings.path).unwrap();
+        std::fs::write(
+            &settings.path,
+            stored.replace(
+                &format!("peak_rss={} ", solved.peak_rss_bytes),
+                "peak_rss=4096 ",
+            ),
+        )
+        .unwrap();
+
         let reopened = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
 
         assert!(reopened.already_finished);
         assert_eq!(reopened.wall_seconds.to_bits(), solved.wall_seconds.to_bits());
-        assert_eq!(reopened.peak_rss_bytes, solved.peak_rss_bytes);
+        assert_eq!(reopened.peak_rss_bytes, 4096);
         assert_eq!(reopened.peak_macro_population, solved.peak_macro_population);
         assert_eq!(reopened.trials_used, solved.trials_used);
 
@@ -772,25 +786,27 @@ mod regression {
         };
         victim.kill().unwrap();
         victim.wait().unwrap();
+        let _ = saved_at;
+        // Read the surviving position *after* the kill: another checkpoint can publish
+        // between the poll that saw one and the signal that lands.
+        let saved_at = checkpoint_trials(&path).expect("the published checkpoint must be whole");
 
         let survivor = std::fs::read_to_string(&path).unwrap();
         assert!(
             survivor.contains("verdict=-"),
             "the fixture must kill the run before it records a verdict"
         );
-        assert_eq!(
-            std::fs::read_dir(&directory).unwrap().count(),
-            1,
-            "a killed process must leave no staging file behind"
-        );
+        // A kill during the staged write legitimately leaves the staging file; what must
+        // hold is that the *published* checkpoint is complete.
+        assert!(survivor.trim_end().ends_with("end"));
 
         let resumed = run_kill_worker("resume", &directory);
         let expected = measurements_after(&uninterrupted, saved_at);
         assert!(!expected.is_empty(), "nothing left to compare after trial {saved_at}");
         assert_eq!(
-            measurements_after(&resumed, saved_at),
-            expected,
-            "a run resumed from a periodic checkpoint must rejoin the uninterrupted trajectory"
+            resumed, expected,
+            "the whole resumed trajectory must be the uninterrupted one's tail -- filtering \
+             the resumed side too would let a run that restarted from zero pass"
         );
 
         std::fs::remove_dir_all(&directory).ok();

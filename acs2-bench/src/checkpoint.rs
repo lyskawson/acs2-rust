@@ -13,7 +13,9 @@ use acs2_core::perception::Perception;
 use acs2_core::rng::RngState;
 use acs2_core::symbol::Symbol;
 
-pub const FORMAT: &str = "acs2-checkpoint 1";
+// Version 2 requires the trailing terminator, so a version-1 file is refused
+// rather than read as a complete one that happens to end early.
+pub const FORMAT: &str = "acs2-checkpoint 2";
 const TERMINATOR: &str = "end";
 
 const WILDCARD: &str = "--";
@@ -559,7 +561,15 @@ mod tests {
         let path = directory.join("run.ckpt");
         write::<7>(&path, &state());
         assert!(path.exists());
-        assert!(!path.with_extension("partial").exists());
+        assert!(
+            !staging_path(&path).exists(),
+            "the staging file the writer actually uses must be gone"
+        );
+        assert_eq!(
+            std::fs::read_dir(&directory).unwrap().count(),
+            1,
+            "nothing but the checkpoint may be left behind"
+        );
         assert_eq!(read::<7>(&path).trials_used, 1500);
         std::fs::remove_dir_all(&directory).ok();
     }

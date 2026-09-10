@@ -1099,6 +1099,47 @@ node failure kills a job outright and the last periodic save is all that survive
 test spawns a real run, waits for a periodic checkpoint, `SIGKILL`s it, and requires the
 resumed run to rejoin the uninterrupted trajectory.
 
+### What the second review round changed
+
+The fixes went back to the same reviewer. It confirmed them and found five more, all real,
+four of them in the archive stitching that had been written between the two rounds and
+reviewed by nobody:
+
+- **Diagnostic rows key `trials` as text and trajectory rows as an int**, so stitching a
+  chain with diagnostics from two segments compared `"4000" > 4000` and raised. The
+  stitching key is now cast; the stored value is not, because sorting the diagnostics CSV
+  by a string is pre-existing behaviour and changing it would reorder the archive.
+- **A segment that recorded nothing could not discard the work it superseded.** Boundaries
+  were inferred from the rows, so a job that resumed and stopped before its next
+  evaluation left the previous job's discarded measurements standing. `parse_log` now
+  returns the segments it saw whether or not they produced rows.
+- **Segments were ordered by resume point, which is not chronology.** Two jobs resume at
+  the same trial when the first dies before saving again, and ties broke lexicographically
+  — `_seg10` before `_seg9`, letting the older job overwrite the newer. A restart from
+  zero after a deleted checkpoint sorted first and revived history it should have
+  replaced. Ordering is now the SLURM job id.
+- **A `run-segment:` marker relabelled rows still pending from an earlier block.** Pending
+  rows are flushed before the marker takes effect.
+- **A SUCCESS could vanish from the archive entirely.** The terminal checkpoint is written
+  before the verdict is printed; a job killed between the two recorded no verdict, and
+  every later job printed a line the parser did not read as one. A reopening job now
+  restates the verdict marked `reopened=true`, and stitching keeps one per run. Confirmed
+  by reverting: without it a reopened run prints no verdict line at all.
+
+It also corrected three tests that asserted less than they claimed. The `SIGKILL` test read
+the surviving checkpoint position *before* the kill, so a save landing in between made the
+comparison wrong; it required no staging file to survive, which a kill during a staged
+write legitimately leaves; and it filtered both sides of the comparison above the resume
+point, which would have let a resume that restarted from zero pass, since that run
+reproduces the same trajectory. The closed-run RSS assertion could pass without the fix
+whenever the reopening process happened not to grow, and now forces the saved figure below
+anything the process could be using. The staging test checked a filename the writer no
+longer produces.
+
+Two more it was right about: the `end` terminator makes the format incompatible, so it is
+version 2 rather than version 1; and the process id in the staging name is unique on a
+node, not across them, so the README no longer claims two processes never share one.
+
 ### How the archive reads a chained run
 
 A checkpointed run spans several jobs and `slurm/mpx_reach.sh` gives each its own log

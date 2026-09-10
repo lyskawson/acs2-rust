@@ -81,8 +81,11 @@ Three things the file format guarantees, and one it does not:
   for and the run aborts if they differ. The stopping limits are deliberately not part
   of that identity -- a chained run raises them per job.
 - **A closed run is never relearned.** A checkpoint that records SUCCESS makes the next
-  job report `already-finished` and exit without touching the state, so the tail of an
-  over-long chain costs a few seconds each and nothing else.
+  job restate that verdict — marked `reopened=true` — and exit without touching the state,
+  so the tail of an over-long chain costs a few seconds each. It restates rather than
+  staying quiet because the job that closed the run can be killed between saving its
+  checkpoint and printing, and then the reopening job's line is the only place the SUCCESS
+  reaches the archive. The parser keeps one verdict per run.
 - **The segments must not overlap.** One checkpoint is one run's learning state, and
   nothing locks it. Chain the jobs so only one runs at a time:
 
@@ -97,7 +100,8 @@ Three things the file format guarantees, and one it does not:
   `afterany`, not `afterok`: a segment that stops on its wall clock has done its job.
 - **The write is atomic** (staged under a name derived from the destination plus the
   process id, then renamed), so a job killed mid-save leaves the previous checkpoint
-  intact and two processes never share a staging file.
+  intact. The process id keeps two jobs *on one node* off each other's staging file; it
+  is not unique across nodes, which is why the sequencing above is the actual guarantee.
 - **An evaluation owed when a job stopped is paid before the next one trains.** A
   resource cap is checked before the evaluation block, so a job can stop on the very
   batch a measurement was due; resuming straight into another batch would shift that

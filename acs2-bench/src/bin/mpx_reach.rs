@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use acs2_bench::checkpoint::{self, CheckpointSettings, RunState};
 use acs2_bench::{
-    derived_u_max, parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice,
-    AgentOptions, UMaxMode,
+    parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
+    UMaxMode,
 };
 use acs2_core::acs2er::Acs2ErAgent;
 use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
@@ -1065,16 +1065,11 @@ fn main() {
             );
             verdicts.push(outcome.verdict);
             // A chained run's later jobs find a finished checkpoint and have nothing to
-            // do. They must not print a `repeat N:` line: the archive parser would read
-            // one run's verdict once per job it outlived.
-            if outcome.already_finished {
-                println!(
-                    "  mpx-{size} already-finished: {} trials={} (the checkpoint records a closed run)",
-                    outcome.verdict.label(),
-                    outcome.trials_used,
-                );
-                continue;
-            }
+            // do, but they must still print a verdict line. The job that closed the run
+            // can be killed between saving its checkpoint and printing, and then this is
+            // the only place the SUCCESS ever reaches the archive. The parser keeps one
+            // verdict per run, so the repetition costs nothing.
+            let reopened = if outcome.already_finished { " reopened=true" } else { "" };
             let knowledge = outcome.final_knowledge
                 .map(|value| format!("{value:.4}"))
                 .unwrap_or_else(|| "unmeasured".to_string());
@@ -1082,7 +1077,7 @@ fn main() {
                 .map(|_| outcome.trials_used.to_string())
                 .unwrap_or_else(|| "unmeasured".to_string());
             println!(
-                "  mpx-{size} repeat {repeat}: {} trials={} knowledge={knowledge} knowledge_trials={knowledge_trials} reliable={} spec={:.2}/{} peak_macro={} peak_rss={:.2}GB wall={:.1}s",
+                "  mpx-{size} repeat {repeat}: {} trials={} knowledge={knowledge} knowledge_trials={knowledge_trials} reliable={} spec={:.2}/{} peak_macro={} peak_rss={:.2}GB wall={:.1}s{reopened}",
                 outcome.verdict.label(),
                 outcome.trials_used,
                 outcome.reliable_count,

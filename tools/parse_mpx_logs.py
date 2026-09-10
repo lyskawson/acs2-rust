@@ -182,6 +182,8 @@ class RunContext:
         self.run_name = ""
         self.segment_file = ""
         self.resume_at = {}
+        self.sizes_seen = set()
+        self.job = (provenance or {}).get("job", "")
 
     def segment_of(self, base, source):
         self.run_name = base
@@ -204,12 +206,20 @@ class RunContext:
 
 
 def parse_log(path):
-    """Return (trajectory_rows, diagnostic_rows, verdict_rows) for one log file."""
+    """Return (trajectory_rows, diagnostic_rows, verdict_rows, segments) for one log file.
+
+    `segments` is emitted whether or not the job recorded anything. A job that resumed
+    and stopped before its next evaluation has no rows at all, and its resume point is
+    still what invalidates the measurements the job before it took after its last
+    checkpoint.
+    """
     source = path.name
     trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
     provenance = {}
     segment = {}
+    sizes_seen = set()
     context = RunContext({}, source)
+    context.sizes_seen = sizes_seen
     block = 0
 
     def flush_pending():
@@ -243,6 +253,9 @@ def parse_log(path):
 
         chained = SEGMENT.match(line)
         if chained:
+            # Flush first: rows pending from an earlier block belong to the run they were
+            # measured under, not to the one this marker names.
+            flush_pending()
             segment.update(parse_fields(chained.group("fields")))
             context.segment_of(segment.get("base", ""), source)
             continue
@@ -258,11 +271,14 @@ def parse_log(path):
             flush_pending()
             block += 1
             context = RunContext(parse_fields(header.group("fields")), source, provenance, block)
+            context.sizes_seen = sizes_seen
             if segment.get("base"):
                 context.segment_of(segment["base"], source)
             continue
 
         config = CONFIG.match(line)
+        if config:
+            sizes_seen.add(config.group("size"))
         if config and config.group("u_max"):
             context.u_max[config.group("size")] = config.group("u_max")
             continue
@@ -368,7 +384,29 @@ def parse_log(path):
 
     flush_pending()
 
-    return trajectory_rows, diagnostic_rows, verdict_rows
+    segments = []
+    if context.run_name:
+        for size in sorted(sizes_seen):
+            segments.append({
+                "source": context.run_name,
+                "size": int(size),
+                "segment": source,
+                "resume_at": context.resume_at.get(size, 0),
+                "order": segment_order(context.job, source),
+            })
+
+    return trajectory_rows, diagnostic_rows, verdict_rows, segments
+
+
+def segment_order(job, source):
+    """Chronology of a chained run's jobs.
+
+    SLURM job ids increase, so they order the segments of a chain. Resume points do not:
+    two jobs resume at the same trial when the first dies before saving again, and a
+    restart from zero after a deleted checkpoint resumes at 0 yet supersedes everything.
+    Filenames do not either -- `_seg10` sorts before `_seg9`.
+    """
+    return (int(job) if job.isdigit() else -1, source)
 
 
 def identity(context, source, size, repeat):
@@ -394,64 +432,85 @@ def identity(context, source, size, repeat):
 
 
 def run_key(row):
-    return (row["source"], row["block"], row["size"], row["seed"], row["repeat"])
+    """A run, across the files its jobs wrote.
+
+    `block` is deliberately absent: it counts header blocks within one file, so keeping it
+    would stop a run's segments joining each other.
+    """
+    return (row["source"], row["size"], row["seed"], row["repeat"])
 
 
-def stitch_segments(rows, key_field):
+def boundaries_by_run(segments):
+    grouped = {}
+    for segment in segments:
+        grouped.setdefault((segment["source"], segment["size"]), []).append(segment)
+    for group in grouped.values():
+        group.sort(key=lambda segment: segment["order"])
+    return grouped
+
+
+def stitch_segments(rows, key_field, segments):
     """Collapse a checkpointed run's per-job records into the one run they describe.
 
     A resumed job re-runs whatever the previous one did after its last checkpoint, so the
-    same trial can be recorded twice with different values -- the earlier record is of work
-    that was discarded. Ordering the segments by the trial they resumed at, each supersedes
-    every record above that trial from the segments before it.
+    same trial can be recorded twice and the earlier record is of work that was discarded.
+    Walking the run's jobs in chronological order, each discards every record above the
+    trial it resumed at before its own records go in.
+
+    The walk is over the *segments*, not over the rows: a job that resumed and stopped
+    before recording anything still invalidates what the job before it measured after its
+    last checkpoint.
     """
     plain = [row for row in rows if not row["segment"]]
     chained = [row for row in rows if row["segment"]]
     if not chained:
         return rows
 
-    stitched = []
-    grouped = {}
+    by_run = {}
     for row in chained:
-        grouped.setdefault(run_key(row), []).append(row)
+        by_run.setdefault(run_key(row), {}).setdefault(row["segment"], []).append(row)
 
-    for group in grouped.values():
-        by_segment = {}
-        for row in group:
-            by_segment.setdefault((row["_resume_at"], row["segment"]), []).append(row)
-
+    stitched = []
+    for key, per_segment in by_run.items():
+        source, size = key[0], key[1]
         kept = {}
-        for (resume_at, _), records in sorted(by_segment.items()):
-            # Once per segment, not once per record: superseding has to happen before the
-            # segment's own records go in, or each one discards the last.
-            for trials in [key for key in kept if key > resume_at]:
+        for segment in boundaries_by_run(segments).get((source, size), []):
+            resume_at = segment["resume_at"]
+            for trials in [trials for trials in kept if trials > resume_at]:
                 del kept[trials]
-            for row in records:
-                kept[row[key_field]] = row
+            for row in per_segment.get(segment["segment"], []):
+                # Diagnostic rows carry `trials` as text and trajectory rows as an int;
+                # the key has to be one type or the comparison above raises.
+                kept[int(row[key_field])] = row
         stitched.extend(kept.values())
 
     return plain + stitched
 
 
-def close_chained_runs(rows):
+def close_chained_runs(rows, segments):
     """One verdict per run, not one per job.
 
     Intermediate jobs stop on their own wall clock and record TIME-LIMITED. That says a
-    job stopped, not that the run did; the run's verdict is the last segment's -- last by
-    resume point, because a job killed after its final checkpoint can report more trials
-    than the job that legitimately superseded it.
+    job stopped, not that the run did. The run's verdict is the last one its jobs recorded
+    in chronological order -- not the largest trial count, because a job killed after its
+    final checkpoint reports more trials than the job that legitimately superseded it.
     """
     plain = [row for row in rows if not row["segment"]]
     chained = [row for row in rows if row["segment"]]
     if not chained:
         return rows
 
-    closing = {}
+    by_run = {}
     for row in chained:
-        key = run_key(row)
-        if key not in closing or row["_resume_at"] >= closing[key]["_resume_at"]:
-            closing[key] = row
-    return plain + list(closing.values())
+        by_run.setdefault(run_key(row), {})[row["segment"]] = row
+
+    closing = []
+    for key, per_segment in by_run.items():
+        ordered = boundaries_by_run(segments).get((key[0], key[1]), [])
+        recorded = [segment["segment"] for segment in ordered if segment["segment"] in per_segment]
+        if recorded:
+            closing.append(per_segment[recorded[-1]])
+    return plain + closing
 
 
 def write_csv(path, columns, rows):
@@ -471,20 +530,21 @@ def main():
     parser.add_argument("--verdict-csv", type=Path, default=Path("reports/mpx_verdicts.csv"))
     args = parser.parse_args()
 
-    trajectory_rows, diagnostic_rows, verdict_rows = [], [], []
+    trajectory_rows, diagnostic_rows, verdict_rows, segments = [], [], [], []
     if len({path.name for path in args.logs}) != len(args.logs):
         raise SystemExit("duplicate log basenames would collide; archive each source once under a unique name")
     for log in args.logs:
         if not log.is_file():
             raise SystemExit(f"not a file: {log}")
-        trajectory, diagnostics, verdicts = parse_log(log)
+        trajectory, diagnostics, verdicts, found = parse_log(log)
         trajectory_rows.extend(trajectory)
         diagnostic_rows.extend(diagnostics)
         verdict_rows.extend(verdicts)
+        segments.extend(found)
 
-    trajectory_rows = stitch_segments(trajectory_rows, "trials")
-    diagnostic_rows = stitch_segments(diagnostic_rows, "trials")
-    verdict_rows = close_chained_runs(verdict_rows)
+    trajectory_rows = stitch_segments(trajectory_rows, "trials", segments)
+    diagnostic_rows = stitch_segments(diagnostic_rows, "trials", segments)
+    verdict_rows = close_chained_runs(verdict_rows, segments)
 
     sort_key = lambda row: (
         row["size"], row["encoding"], row["variant"], row["seed"],

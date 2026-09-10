@@ -112,14 +112,21 @@ mod tests {
         assert_eq!(replayed, expected);
     }
 
+    /// `gen_unit` draws a f64 and so consumes two 32-bit words; advancing with it would
+    /// only ever capture at an even word offset. The buffer is 64 words, so the odd ones
+    /// have to be reached by drawing a single word at a time.
     #[test]
     fn every_word_offset_in_a_buffer_round_trips() {
         for consumed in 0..80usize {
             let mut original = ChaChaRandomSource::from_seed(11);
             for _ in 0..consumed {
-                original.gen_unit();
+                original.inner.gen::<u32>();
             }
             let state = original.capture_state().unwrap();
+            assert_eq!(
+                state.word_pos, consumed as u128,
+                "the fixture must advance one word at a time, or odd offsets go untested"
+            );
             let expected: Vec<u64> = (0..4).map(|_| original.gen_range(usize::MAX) as u64).collect();
             let mut restored = ChaChaRandomSource::from_state(&state);
             let replayed: Vec<u64> = (0..4).map(|_| restored.gen_range(usize::MAX) as u64).collect();

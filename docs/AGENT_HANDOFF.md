@@ -430,7 +430,7 @@ learning lines.
 
 Verified end to end outside the test harness too: a k=20 run split across **twelve**
 processes by a 1 s wall cap reproduces the uninterrupted run's 134 measurements exactly
-and closes at the same 67,000 trials, with the tail segments reporting `already-finished`;
+and closes at the same 67,000 trials, with the tail segments restating the verdict;
 a k=264 checkpoint round-trips at 12.5 MB for 8,107 classifiers.
 
 **Submit a chain with `--dependency=afterany`.** One checkpoint is one learning state and
