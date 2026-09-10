@@ -179,6 +179,18 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(verdicts[0]["verdict"], "SUCCESS")
         self.assertEqual(verdicts[0]["trials"], 6000)
 
+    def test_a_segment_that_lost_its_resume_point_is_refused(self):
+        # resumed=yes with no `resumed:` line would read as a restart from zero, and a
+        # restart from zero discards every earlier segment of the run.
+        base = "slurm_mpx20_s42_k264"
+        content = self.segment(base, 2, 4000, [(6000, "0.3")], 6000)
+        truncated = "\n".join(
+            line for line in content.splitlines() if " resumed: " not in line
+        ) + "\n"
+        with self.assertRaises(ValueError):
+            self.parse_named(f"{base}_seg2.out", truncated)
+        self.assertEqual(len(self.parse_named(f"{base}_seg2.out", content)[3]), 1)
+
     def test_an_unchained_log_is_untouched_by_stitching(self):
         trajectory, _, verdicts = self.parse(
             "acs2-bench mpx-reach: seed=42 alp_gen_variant=pyalcs do_ga=true\n"

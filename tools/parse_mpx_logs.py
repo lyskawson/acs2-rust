@@ -386,6 +386,15 @@ def parse_log(path):
 
     segments = []
     if context.run_name:
+        # `resumed=yes` from the wrapper and the binary's `resumed:` line must agree. A
+        # segment that resumed but whose resume point went unrecorded reads as a restart
+        # from zero, and a restart from zero discards the whole run's history -- silently,
+        # which is the one thing this archive must never do.
+        if segment.get("resumed") == "yes" and not context.resume_at:
+            raise ValueError(
+                f"{source}: the wrapper recorded resumed=yes but the log carries no "
+                "`resumed:` line, so the trial it resumed at is unknown"
+            )
         for size in sorted(sizes_seen):
             segments.append({
                 "source": context.run_name,
