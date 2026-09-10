@@ -5,6 +5,11 @@ what is running on the cluster, which claims were corrected, and how the user wo
 `docs/PROJECT_CONTEXT.md` says what the project is, `docs/ARCHITECTURE.md` how it is
 built, `reports/MPX_final.md` the scientific narrative.
 
+**Every document in this repository is written for an agent working on the code**, in
+English. Personal study notes, one-off reports and anything written for the user rather
+than for the work are kept outside the checkout. Do not add a document here that only a
+human learner would read.
+
 ## Sync the cluster runs — do this without being asked
 
 ```bash

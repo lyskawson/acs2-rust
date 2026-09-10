@@ -152,11 +152,9 @@ project, so plotting deps never perturb the pinned baseline) · `slurm/` cluster
 
 | Document | Read it for |
 |---|---|
-| [`docs/ACS2_PRIMER.md`](docs/ACS2_PRIMER.md) | ACS2 from first principles, anchored to this code. **Start here if the algorithm is new to you.** |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Implementation decisions and the named hazards. |
 | [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | The pinned protocol and the fidelity rules. |
 | [`docs/SPEC_PYALCS.md`](docs/SPEC_PYALCS.md) | The reference semantics the oracle enforces. |
-| [`docs/ACS2_RULE_DUMPS_GUIDE.md`](docs/ACS2_RULE_DUMPS_GUIDE.md) | How to read a learned population. |
 | [`reports/MPX_final.md`](reports/MPX_final.md) | The multiplexer results as a narrative. |
 | [`tools/README.md`](tools/README.md) | The analysis pipeline and its traps. |
 

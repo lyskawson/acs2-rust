@@ -17,5 +17,5 @@ and `docs/ARCHITECTURE.md`.
 
 Two files were removed rather than archived: `CPU_SINGLE_PRECHECK_SCRATCH.md`
 (self-described scratch notes, not a deliverable) and `reguly_notatka.md`
-(an earlier draft that `ACS2_RULE_DUMPS_GUIDE.md` supersedes). Both are in git
-history if ever needed.
+(an earlier draft of a rule-dump reading guide, itself since removed). Both are in
+git history if ever needed.
