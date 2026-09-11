@@ -69,8 +69,10 @@ the file. The commits and the docs they corrected are the durable record.
   them, never an agent.**
 - Ask the user only about scope: new experiment phases, cancelling jobs, anything
   going to the supervisor. Execution decisions inside an agreed phase are yours.
-- `docs/SUPERVISOR_CORRESPONDENCE.md` is gitignored on purpose — the repo is public.
-  Do not commit it, quote it into tracked files, or recreate it.
+- The user keeps a private working log outside the checkout at
+  `~/Desktop/acs2-notatki/kierunek.md`. Read it — several decisions that look arbitrary
+  in the code were made there. Never copy from it into a tracked file, never recreate it
+  inside the repository, and do not name its contents in anything committed.
 
 ## The failure mode this project keeps hitting
 

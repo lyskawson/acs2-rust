@@ -27,8 +27,8 @@ git log --oneline --grep="Co-Authored-By" --all | wc -l     # must be 0
 **The repository is public and shared with the supervisor's other students** — he asked
 for it as a base for their work and the user agreed (correspondence 28/29). That raises
 the bar on README and `reports/MPX_final.md`, both written for that audience, and it is
-why one-off working reports are not committed. `docs/SUPERVISOR_CORRESPONDENCE.md` and
-`docs/SUPERVISOR_NOTES.md` are gitignored and must stay that way.
+why one-off working reports are not committed, and why the user's private working log
+lives outside the checkout rather than in it.
 
 ## 1. Where the research stands
 
@@ -357,8 +357,7 @@ columns. Check the raw evidence and distinguish candidates from reliable rules.
 - **ACS2ER with m=1 is not measurably slower than ACS2.** One k=37 comparison said
   it was; with more data k=70 seed 42 has ER *faster* (12.12 M vs 17.88 M) and seed
   43 slower (22.86 M vs 17.82 M). At the measured 3.73x seed variance, two seeds
-  settle nothing. **This wrong claim is in the email already sent** — see
-  `SUPERVISOR_NOTES.md`.
+  settle nothing. **This wrong claim has already gone out** and was corrected later.
 - **It is not one starved class but two.** Seed 42 at `u_max`=11 filled one of the
   two wrong-answer classes, which is why it reads 0.75; seeds 43–45 have both at
   zero. Seed 42 is the outlier. The sent email says "the fourth class", which
@@ -616,10 +615,12 @@ Two things the data already says, and both shape this:
   gates (tests, maze P9) are fine locally; **experiments go to the cluster**.
 - Cancelling jobs, new experiment phases and anything sent to the supervisor are his
   calls. Execution inside an agreed phase is yours.
-- The supervisor thread is kept locally in `docs/SUPERVISOR_CORRESPONDENCE.md`,
-  **gitignored on purpose** — the repository is public. Do not commit it, quote it
-  into tracked files, or recreate it. Its operative directives are already reflected
-  in §8 here and in `PROJECT_CONTEXT.md`.
+- The user keeps a private working log at `~/Desktop/acs2-notatki/kierunek.md`,
+  **outside the checkout on purpose** — the repository is public. Read it: several
+  choices that look arbitrary in the code were decided there. Do not copy from it into
+  tracked files, do not recreate it inside the repository, and do not describe its
+  contents in anything committed. Its operative directives are already reflected in §8
+  here and in `PROJECT_CONTEXT.md`.
 
 ## 10. Escalating to a stronger model
 

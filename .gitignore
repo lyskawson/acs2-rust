@@ -12,14 +12,9 @@ baseline/cpusingle/alcs_sandbox/
 # SLURM wrapper-level diagnostics (job stderr, not measurements)
 reports/slurm-*.wrapper
 
-# Private: supervisor correspondence, kept locally only
-docs/SUPERVISOR_CORRESPONDENCE.md
-
 # macOS
 .DS_Store
 
-# Private: working notes about supervisor correspondence
-docs/SUPERVISOR_NOTES.md
-
-# One-off task reports are not committed (see CLAUDE.md)
+# Local notes and one-off task reports are not committed (see CLAUDE.md)
+*.local.md
 scratchpad/
