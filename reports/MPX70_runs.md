@@ -22,6 +22,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 | 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | - | - | - | - | 2.4 | 2104 | `70_s42_addr` |
 | 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.2 | 2234 | `70_s42_cover` |
 | 42 | pyalcs | 8 | **SUCCESS** | 17 880 000 | 1.0000 | 17880000 | - | 277 | 7.04 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 2.9 | 1696 | `70_s42_qdetail` |
+| 42 | pyalcs | 8 | TIME-LIMITED | 2 157 500 | - | unknown | - | 153 | 8.22 | - | - | - | - | 0.5 | 1198 | `70_s42_smoke70` |
 | 42 | pyalcs | 8 | TIME-LIMITED | 1 625 500 | 0.2406 | unknown | - | 110 | 8.63 | - | - | - | - | 0.2 | 2709 | `mpx_m2b_reach70.log` |
 | 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | 17820000 | - | 269 | 7.00 | - | - | - | - | 3.8 | 1301 | `70_s43` |
 | 43 | pyalcs | 8 | **SUCCESS** | 17 820 000 | 1.0000 | 17820000 | - | 269 | 7.00 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 3.7 | 1355 | `70_s43_cover` |
@@ -60,7 +61,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 
 ## Summary
 
-- archived runs: **24**
+- archived runs: **25**
 - solved (knowledge = 1.0): **15**
 - fewest trials: seed 42, 3 960 000 trials, 160.1 h, encoding flip, epsilon 0.8, acs2er, variant pyalcs
 - shortest wall time: seed 42, 4 680 000 trials, 0.6 h, encoding outcome, epsilon 0.8, acs2, variant pyalcs

@@ -1,0 +1,33 @@
+run-provenance: commit=93812a9 job=5869131 attempt=0 tag=smoke70 size=70 seed=42 time_cap=600s partition=bem2-cpu-short host=r22c01b03.bem2.kdm.wcss.pl started=2026-09-11T02:10:24+02:00
+run-argv:  
+run-segment: base=slurm_mpx70_s42_smoke70 checkpoint=/home/alelys2099/mpx_runs/checkpoints/slurm_mpx70_s42_smoke70.ckpt checkpoint_every=100000 resumed=yes
+acs2-bench mpx-reach: agent=acs2 sizes=[70] n_exp=1 seed=42 rss_cap=5.6GB time_cap=600s do_ga=true alp_gen_variant=pyalcs epsilon=0.8 encoding=flip eval_interval=60000 strict_resource_limits=false rss_scope=process-lifetime checkpoint=on checkpoint_every=100000
+  mem mpx-70 (N=71): condition=142B effect=142B mark=1704B (stack) classifier=2072B  mark/classifier=82.2%  rss-cap pop-threshold=2702702
+  mpx-70 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=8
+  mpx-70 resumed: trials=587000 time=587000 since_eval=47000 knowledge=0.0347 carried_wall=600s from=/home/alelys2099/mpx_runs/checkpoints/slurm_mpx70_s42_smoke70.ckpt
+  mpx-70 traj: trials=600000 wall=611s knowledge=0.0385 reliable=29 spec=9.76 pop=5226
+  mpx-70 acc: trials=600000 accuracy=0.5706
+  mpx-70 traj: trials=660000 wall=671s knowledge=0.0438 reliable=30 spec=9.30 pop=5185
+  mpx-70 acc: trials=660000 accuracy=0.5703
+  mpx-70 traj: trials=720000 wall=733s knowledge=0.0544 reliable=34 spec=9.15 pop=5068
+  mpx-70 acc: trials=720000 accuracy=0.5761
+  mpx-70 traj: trials=780000 wall=790s knowledge=0.0714 reliable=52 spec=9.65 pop=4938
+  mpx-70 acc: trials=780000 accuracy=0.5912
+  mpx-70 traj: trials=840000 wall=848s knowledge=0.0864 reliable=60 spec=9.23 pop=4860
+  mpx-70 acc: trials=840000 accuracy=0.5976
+  mpx-70 traj: trials=900000 wall=901s knowledge=0.1019 reliable=69 spec=9.28 pop=4708
+  mpx-70 acc: trials=900000 accuracy=0.6134
+  mpx-70 traj: trials=960000 wall=953s knowledge=0.1022 reliable=62 spec=9.39 pop=4698
+  mpx-70 acc: trials=960000 accuracy=0.6101
+  mpx-70 traj: trials=1020000 wall=1000s knowledge=0.1140 reliable=64 spec=9.05 pop=4085
+  mpx-70 acc: trials=1020000 accuracy=0.6292
+  mpx-70 traj: trials=1080000 wall=1049s knowledge=0.1229 reliable=62 spec=8.87 pop=3981
+  mpx-70 acc: trials=1080000 accuracy=0.6222
+  mpx-70 traj: trials=1140000 wall=1100s knowledge=0.1294 reliable=70 spec=8.81 pop=3902
+  mpx-70 acc: trials=1140000 accuracy=0.6310
+  mpx-70 traj: trials=1200000 wall=1148s knowledge=0.1482 reliable=78 spec=8.88 pop=4056
+  mpx-70 acc: trials=1200000 accuracy=0.6476
+  mpx-70 traj: trials=1260000 wall=1192s knowledge=0.1677 reliable=92 spec=8.98 pop=4310
+  mpx-70 acc: trials=1260000 accuracy=0.6598
+  mpx-70 repeat 0: TIME-LIMITED trials=1261500 knowledge=unmeasured knowledge_trials=unmeasured reliable=92 spec=8.98/71 peak_macro=8980 peak_rss=0.10GB wall=1200.4s
+  mpx-70 verdict agreement across 1 repeats: ALL AGREE

@@ -14,6 +14,7 @@ slurm_mpx37_s42_addr.out,,1,37,42,pyalcs,7,0,flip,wrapper-default,0.8,,,,,true,,
 slurm_mpx37_s42_cover.out,,1,37,42,pyalcs,7,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,SUCCESS,780000,1.0,148,6.0,38,6893,0.0,122.5,6367.35,780000,at-verdict
 slurm_mpx37_s42_er.out,,1,37,42,pyalcs,7,0,flip,wrapper-default,0.8,acs2er,,,,true,10000,1000,3,,,SUCCESS,300000,1.0,219,6.01,38,60055,0.0,12174.6,24.64,300000,at-verdict
 slurm_mpx37_s42_er1.out,,1,37,42,pyalcs,7,0,flip,wrapper-default,0.8,acs2er,,,,true,10000,1000,1,,,SUCCESS,960000,1.0,144,6.0,38,6124,0.0,278.9,3442.09,960000,at-verdict
+slurm_mpx37_s42_smoke37,slurm_mpx37_s42_smoke37_seg5869135.out,1,37,42,pyalcs,7,0,flip,header,0.8,acs2,60000,93812a9,smoke37,true,,,,false,process-lifetime,SUCCESS,780000,1.0,148,6.0,38,6893,0.03,148.9,5238.42,780000,at-verdict
 slurm_mpx37_s42_u10.out,,1,37,42,pyalcs,10,0,flip,wrapper-default,0.8,,,,,true,,,,,,SUCCESS,810000,1.0,151,6.22,38,15251,0.0,354.3,2286.2,810000,at-verdict
 slurm_mpx37_s42_u11.out,,1,37,42,pyalcs,11,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,SUCCESS,870000,1.0,148,6.24,38,17630,0.0,588.5,1478.33,870000,at-verdict
 slurm_mpx37_s42_u12.out,,1,37,42,pyalcs,12,0,flip,wrapper-default,0.8,,,,,true,,,,,,SUCCESS,900000,1.0,164,6.85,38,16022,0.0,381.2,2360.97,900000,at-verdict
@@ -35,6 +36,7 @@ slurm_mpx70_s42_cover.out,,1,70,42,pyalcs,8,0,flip,wrapper-default,0.8,,,,,true,
 slurm_mpx70_s42_er.out,,1,70,42,pyalcs,8,0,flip,wrapper-default,0.8,acs2er,,,,true,10000,1000,3,,,SUCCESS,3960000,1.0,318,7.0,71,198695,0.0,576327.6,6.87,3960000,at-verdict
 slurm_mpx70_s42_er1.out,,1,70,42,pyalcs,8,0,flip,wrapper-default,0.8,acs2er,,,,true,10000,1000,1,,,SUCCESS,12120000,1.0,268,7.0,71,15547,0.0,15566.4,778.6,12120000,at-verdict
 slurm_mpx70_s42_qdetail.out,,1,70,42,pyalcs,8,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,SUCCESS,17880000,1.0,277,7.04,71,16326,0.0,10541.5,1696.15,17880000,at-verdict
+slurm_mpx70_s42_smoke70,slurm_mpx70_s42_smoke70_seg5869132.out,1,70,42,pyalcs,8,0,flip,header,0.8,acs2,60000,93812a9,smoke70,true,,,,false,process-lifetime,TIME-LIMITED,2157500,,153,8.22,71,10741,0.1,1800.6,1198.21,,unmeasured
 mpx_m2b_reach70.log,,1,70,43,pyalcs,8,1,flip,wrapper-default,0.8,,,,,true,,,,,,TIME-LIMITED,1555000,0.1349,75,9.2,71,6951,0.13,600.1,2591.23,,legacy-unverified
 slurm_mpx70_s43.out,,1,70,43,pyalcs,8,0,flip,wrapper-default,0.8,,,,,true,,,,,,SUCCESS,17820000,1.0,269,7.0,71,16789,0.0,13692.1,1301.48,17820000,at-verdict
 slurm_mpx70_s43_cover.out,,1,70,43,pyalcs,8,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,SUCCESS,17820000,1.0,269,7.0,71,16789,0.0,13150.6,1355.07,17820000,at-verdict
