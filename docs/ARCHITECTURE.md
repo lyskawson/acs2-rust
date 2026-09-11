@@ -1269,6 +1269,27 @@ If a k=264 population reaches the hundreds of thousands, that is the moment to s
 render into the staging file and borrow the population instead of cloning it; until then the
 simpler code is worth more than the headroom.
 
+**Measured on the first production segment (job 5872532).** The checkpoint at 100,000
+trials is **24,905,571 B for 13,394 classifiers — 1,859 B each**, above the 1,542 B measured
+at 500 trials because the mark fills as a run proceeds and it is 84.8% of a classifier.
+Peak RSS over the same stretch is **397.50 MB** (`sstat -j <id>.batch`). Anchoring the
+model to that reading:
+
+```
+RSS(pop) ~ 172 MB + pop x 16,867 B        # 7,504 live + 7,504 clone + 1,859 text
+```
+
+which puts a population of 300,000 at 5.23 GB and 750,000 at 12.8 GB.
+
+**The binary's own cap is not `--mem`.** `DEFAULT_RSS_CAP_BYTES` is 5.6 GB and the loop
+breaks on it with a `MEMORY-LIMITED` verdict, so before `RSS_CAP_GB` existed every cluster
+run carried 5.6 GB however much memory it had been allocated — a k=264 population near
+300,000 would have stopped a job holding 16 GB. Set the internal cap below `--mem`: SLURM
+kills a job that exceeds the allocation and loses everything since the last periodic save,
+while the internal cap stops cleanly and writes a checkpoint. At `--mem=16G` and
+`RSS_CAP_GB=13` the headroom reaches roughly 750,000 classifiers, above the largest
+population this project has recorded (459,284 at k=135, `u_max=16`).
+
 ### Budgeting the measurement itself
 
 An evaluation is two sweeps over 50,000 sampled inputs, and they do not cost the same.
@@ -1285,8 +1306,23 @@ the entire cost of a measurement.
 
 Both used to hang off `--eval-interval`, so a knowledge grid fine enough to watch a run
 climb bought a sweep that does not need to be that dense. `--accuracy-every N` separates
-them: knowledge every `--eval-interval` trials, accuracy every `N` of those. `N=1` is the
-default and reproduces the previous output exactly — checked against the pre-change binary
+them: knowledge every `--eval-interval` trials, accuracy every `N` of those.
+
+**Measured at k=264, seed 42, `outcome`, `u_max=12`.** Two runs of the same seed reach the
+same trial with the same population, so the wall-clock difference is the measurement and
+nothing else:
+
+| `--eval-interval` | `--accuracy-every` | 100,000 trials | 120,000 trials | knowledge points |
+|---|---|---|---|---|
+| 5,000 | 1 | 1,962 s | 2,523 s | every 5,000 |
+| 5,000 | 20 | **825 s** | **1,097 s** | every 5,000 |
+| 40,000 | 1 | — | 1,031 s | every 40,000 |
+
+A 2.3x difference at an identical knowledge grid, and the thinned run matches the speed of
+one measuring eight times less often. Both runs shared a node with other jobs, so these are
+production conditions rather than an isolated benchmark.
+
+`N=1` is the default and reproduces the previous output exactly — checked against the pre-change binary
 at k=20, where every learning column, knowledge value and accuracy value matches line for
 line and SUCCESS lands at the same 67,000 trials.
 

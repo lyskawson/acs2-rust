@@ -302,12 +302,13 @@ Three things that cost days before:
 Verified live on 2026-09-11. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**One job running. Grant: 4575 h of 15,000 spent, so ~10,400 h are available** and the
-~300 h still owed to that job barely dents it. The budget stopped being the constraint on
-2026-09-11.
+**Grant: 4580 h of 15,000 spent on 2026-09-11, so ~10,420 h are available.** The k=264
+chain commits up to 5,000 h of that; `eps135_s42b` owes ~264 h. The budget stopped being
+the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
+| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. 130,000 trials, knowledge 0.0000, reliable 0, pop 15,939. `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000` | **The 264-bit run.** `reliable=0` is expected this early — the k=264 probe read 0 for all 58 of its points out to 1.16 M trials. |
 | `eps135_s42b` (5856652) | 92.52 M trials, knowledge **0.5831**, 352 reliable, spec 8.45, pop 3 283; classes 0.0000 / 0.5981 / 0.8737 / 0.8611; 11 d of wall left | **The one that matters.** Climbing steadily and one wrong-answer class is already at 0.8737. Seed 43 opened its second class at 404.5 M trials; this run is at 92.5 M, so it is early, not stuck. If it closes, the canonical k=135 result stands on two seeds instead of one. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
@@ -555,7 +556,34 @@ ceremony:
 For checkpointing specifically, point the reviewer at the determinism property: a
 save/restore that is subtly non-identical will pass a casual reading.
 
-### Step 3 — k=264 — ACTIVE, this is your task
+### Step 3 — k=264 — RUNNING since 2026-09-11, seed 42
+
+**The chain is submitted: job 5872532 plus nine `afterany` successors (5872872-5872880),
+500 h each.** Two things were measured before it went out and both changed the command
+below; the original is kept after them because its reasoning still holds.
+
+**The accuracy sweep, not the knowledge grid, is what an evaluation costs.**
+`answer_accuracy` forms a match set over the whole population for each of 50,000 sampled
+inputs. `evaluate_knowledge` filters to reliable classifiers first, and at k=264 that set
+is empty for the whole measured range, so it is nearly free. Tying both to
+`--eval-interval 5000` would have paid for 10 population sweeps per trial of learning.
+`--accuracy-every` separates them; `ARCHITECTURE.md` has the measured table. At an
+identical knowledge grid the run reaches 120,000 trials in **1,097 s against 2,523 s**.
+
+**The binary stops itself at 5.6 GB and the wrapper never exposed that.** It is not
+`--mem`. Measured on this run, a population of 300,000 reaches 5.23 GB at the moment of a
+save, so the default would have ended a job holding 16 GB. `RSS_CAP_GB=13` under
+`--mem=16G` carries to roughly 750,000 classifiers.
+
+The chain therefore runs with `ACCURACY_EVERY=20` and `RSS_CAP_GB=13` added, everything
+else as step 3 specified. Its first measurements: checkpoint **24,905,571 B for 13,394
+classifiers**, peak RSS **397.50 MB**, and the render does **not** need to stream yet.
+
+**Seeds 43 and 44 are not submitted, and the budget does not fit them.** One chain commits
+up to 5,000 h against ~10,400 available. At the low end of the estimate (700 h/seed) three
+seeds fit; at the high end (4,500 h) one does. Decide from what seed 42 actually costs.
+
+### The original step 3, for its reasoning
 
 **The grant increase was approved on 2026-09-11: 15,000 CPU-hours total, ~10,400
 available.** Checkpointing is merged and proven on the cluster (Step 1a). Nothing blocks
