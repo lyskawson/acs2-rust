@@ -63,7 +63,8 @@ mod regression {
             trials_cap: 1500, time_cap: Duration::from_secs(60), eval_interval: 1000,
             log_trajectory: false, log_diagnostics: false, log_coverage: false,
             log_quadrant_detail: false, encoding: Encoding::Flip, epsilon: 0.8,
-            log_accuracy: false, rss_cap_bytes: u64::MAX, strict_resource_limits: false,
+            log_accuracy: false, accuracy_every: 1, rss_cap_bytes: u64::MAX,
+            strict_resource_limits: false,
         }
     }
 
@@ -164,6 +165,7 @@ mod regression {
             encoding: Encoding::Flip,
             epsilon: 0.8,
             log_accuracy: false,
+            accuracy_every: 1,
             rss_cap_bytes: u64::MAX,
             strict_resource_limits: false,
         }
@@ -308,6 +310,134 @@ mod regression {
                 "{kind}: population, RNG streams and counters must land where an uninterrupted run leaves them"
             );
         }
+
+        std::fs::remove_dir_all(&directory).ok();
+    }
+
+    const ACCURACY_EVERY: u64 = 2;
+    // A multiple of TIME_CHECK_BATCH, unlike CHECKPOINT_EVAL_INTERVAL: the grid then lands
+    // on the interval instead of overshooting it, which is what the cluster configurations
+    // do and what makes the expected accuracy trials stateable.
+    const ACCURACY_EVAL_INTERVAL: u64 = 1000;
+    const ACCURACY_STEP: u64 = ACCURACY_EVAL_INTERVAL * ACCURACY_EVERY;
+    // k=6 reaches knowledge 1.0 on its second measurement, which ends the run before a
+    // break can sit between two sweeps. k=20 is the size the kill regression already uses
+    // for the same reason.
+    const ACCURACY_SIZE: usize = 20;
+    // The break lands exactly on an accuracy point, so the resumed segment has to know that
+    // one was already paid and measure at the next step rather than at its own first
+    // evaluation.
+    const ACCURACY_SPLIT_TRIALS: u64 = ACCURACY_STEP * 2;
+    const ACCURACY_TOTAL_TRIALS: u64 = ACCURACY_STEP * 5;
+    const ACCURACY_TEST: &str = "regression::an_accuracy_cadence_survives_a_resume";
+
+    fn accuracy_limits(trials_cap: u64) -> ReachLimits {
+        ReachLimits {
+            eval_interval: ACCURACY_EVAL_INTERVAL,
+            log_accuracy: true,
+            accuracy_every: ACCURACY_EVERY,
+            ..checkpoint_limits(trials_cap)
+        }
+    }
+
+    fn accuracy_worker(mode: &str) {
+        let directory = PathBuf::from(std::env::var_os("ACS2_CHECKPOINT_DIR").unwrap());
+        let (path, trials_cap, every) = match mode {
+            "whole" => (directory.join("accuracy-whole.ckpt"), ACCURACY_TOTAL_TRIALS, 0),
+            "part1" => (directory.join("accuracy-split.ckpt"), ACCURACY_SPLIT_TRIALS, 500),
+            "part2" => (directory.join("accuracy-split.ckpt"), ACCURACY_TOTAL_TRIALS, 500),
+            other => panic!("unknown accuracy worker segment {other}"),
+        };
+        let settings = CheckpointSettings { path, every, allow_eval_interval_change: false };
+        run_reach_repeat::<21>(
+            ACCURACY_SIZE,
+            CHECKPOINT_SEED,
+            GenConfig {
+                do_ga: true,
+                u_max: derived_u_max(ACCURACY_SIZE, AlpGenVariant::Pyalcs),
+                alp_gen_variant: AlpGenVariant::Pyalcs,
+            },
+            AgentOptions::default(),
+            &accuracy_limits(trials_cap),
+            Some(&settings),
+        );
+    }
+
+    // One invocation yields both grids. Running the worker twice would hand the second a
+    // checkpoint the first closed, and the reopen path restates a verdict without measuring.
+    fn accuracy_worker_lines(mode: &str, directory: &Path) -> (Vec<String>, Vec<String>) {
+        let output = worker_command("ACS2_ACCURACY_REGRESSION", mode, ACCURACY_TEST, directory)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "accuracy worker {mode} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let text = String::from_utf8(output.stdout).unwrap();
+        let lines = |marker: &str| {
+            text.lines()
+                .filter(|line| line.contains(marker))
+                .map(without_volatile_fields)
+                .collect::<Vec<_>>()
+        };
+        (lines(" acc: "), lines(" traj: "))
+    }
+
+    /// `--accuracy-every` thins the sweep that dominates a large run's cost, so the grid it
+    /// leaves has to be a property of the trial count and nothing else. The threshold is
+    /// recomputed from `trials_used` rather than carried in the checkpoint: a resume that
+    /// reset it to the first step would measure again at the boundary and shift every later
+    /// point, which is the defect the review caught on the knowledge grid.
+    #[test]
+    fn an_accuracy_cadence_survives_a_resume() {
+        if let Some(mode) = std::env::var_os("ACS2_ACCURACY_REGRESSION") {
+            accuracy_worker(&mode.to_string_lossy());
+            return;
+        }
+
+        let directory = std::env::temp_dir().join(format!(
+            "acs2-accuracy-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+
+        let (uninterrupted, knowledge_grid) = accuracy_worker_lines("whole", &directory);
+        let (before_the_break, _) = accuracy_worker_lines("part1", &directory);
+        let (after_the_break, _) = accuracy_worker_lines("part2", &directory);
+
+        let trials_of = |line: &String| {
+            line.split_whitespace()
+                .find_map(|token| token.strip_prefix("trials=").map(str::to_owned))
+                .expect("an accuracy line names its trial")
+                .parse::<u64>()
+                .unwrap()
+        };
+        assert!(
+            uninterrupted
+                .iter()
+                .all(|line| trials_of(line) % ACCURACY_STEP == 0),
+            "every sweep must land on the declared step: {uninterrupted:?}"
+        );
+        assert!(
+            uninterrupted.len() < knowledge_grid.len(),
+            "a thinned sweep must be rarer than the knowledge grid it hangs off: \
+{uninterrupted:?} against {knowledge_grid:?}"
+        );
+        assert!(
+            !before_the_break.is_empty() && !after_the_break.is_empty(),
+            "both segments must carry a sweep for the boundary to be exercised: \
+{before_the_break:?} then {after_the_break:?}"
+        );
+        assert_eq!(
+            [before_the_break, after_the_break].concat(),
+            uninterrupted,
+            "a resumed accuracy grid must be identical to an uninterrupted one, trial for trial"
+        );
 
         std::fs::remove_dir_all(&directory).ok();
     }

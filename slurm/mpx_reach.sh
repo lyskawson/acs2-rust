@@ -157,6 +157,7 @@ exec "${MPX_BINARY:-$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach}" \
   --log-trajectory \
   --log-accuracy \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
+  --accuracy-every "${ACCURACY_EVERY:-1}" \
   ${CHECKPOINT_ARGS[@]+"${CHECKPOINT_ARGS[@]}"} \
   "$@" \
   >>"$OUT" 2>&1

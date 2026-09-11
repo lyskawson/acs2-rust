@@ -365,6 +365,10 @@ fn population_diagnostics<const N: usize>(population: &Population<N>) -> Populat
     }
 }
 
+fn next_accuracy_trial(trials_used: u64, step: u64) -> u64 {
+    (trials_used / step).saturating_add(1).saturating_mul(step)
+}
+
 struct ReachLimits {
     trials_cap: u64,
     time_cap: Duration,
@@ -376,11 +380,18 @@ struct ReachLimits {
     encoding: Encoding,
     epsilon: f64,
     log_accuracy: bool,
+    accuracy_every: u64,
     rss_cap_bytes: u64,
     strict_resource_limits: bool,
 }
 
 impl ReachLimits {
+    fn accuracy_step(&self) -> u64 {
+        self.eval_interval
+            .saturating_mul(self.accuracy_every)
+            .max(self.eval_interval)
+    }
+
     fn resource_verdict(&self, elapsed: Duration, peak_rss: u64) -> Option<Verdict> {
         if peak_rss > self.rss_cap_bytes {
             Some(Verdict::MemoryLimited)
@@ -534,6 +545,8 @@ pass --checkpoint-allow-eval-change to splice the two sampling rates deliberatel
         }
     }
 
+    let mut accuracy_due_at = next_accuracy_trial(trials_used, limits.accuracy_step());
+
     let verdict = match resumed_verdict {
         Some(verdict) => verdict,
         None => loop {
@@ -629,7 +642,8 @@ pass --checkpoint-allow-eval-change to splice the two sampling rates deliberatel
                         detail.fraction(3), detail.best_quality[3],
                     );
                 }
-                if limits.log_accuracy {
+                if limits.log_accuracy && trials_used >= accuracy_due_at {
+                    accuracy_due_at = next_accuracy_trial(trials_used, limits.accuracy_step());
                     let accuracy = answer_accuracy(
                         agent.population(),
                         Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
@@ -850,6 +864,7 @@ struct Options {
     encoding: Encoding,
     epsilon: f64,
     log_accuracy: bool,
+    accuracy_every: u64,
     rss_cap_bytes: u64,
     agent: AgentOptions,
     strict_resource_limits: bool,
@@ -877,6 +892,7 @@ impl Options {
             encoding: Encoding::Flip,
             epsilon: EXPLORE_EPSILON,
             log_accuracy: false,
+            accuracy_every: 1,
             rss_cap_bytes: DEFAULT_RSS_CAP_BYTES,
             agent: AgentOptions::default(),
             strict_resource_limits: false,
@@ -923,6 +939,17 @@ impl Options {
                 "--log-quadrant-detail" => options.log_quadrant_detail = true,
                 "--epsilon" => options.epsilon = args.next().unwrap().parse().unwrap(),
                 "--log-accuracy" => options.log_accuracy = true,
+                "--accuracy-every" => {
+                    options.accuracy_every = args
+                        .next()
+                        .expect("--accuracy-every needs a value")
+                        .parse()
+                        .expect("--accuracy-every must be a positive integer");
+                    assert!(
+                        options.accuracy_every > 0,
+                        "--accuracy-every must be at least 1"
+                    );
+                }
                 "--strict-resource-limits" => options.strict_resource_limits = true,
                 "--isolate-repeats" => options.isolate_repeats = true,
                 "--checkpoint-path" => {
@@ -1007,7 +1034,7 @@ fn main() {
     });
 
     println!(
-        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={} strict_resource_limits={} rss_scope={} checkpoint={} checkpoint_every={}",
+        "acs2-bench mpx-reach: {} sizes={:?} n_exp={} seed={} rss_cap={}GB time_cap={}s do_ga={} alp_gen_variant={} epsilon={} encoding={} eval_interval={} accuracy_every={} strict_resource_limits={} rss_scope={} checkpoint={} checkpoint_every={}",
         options.agent.describe(),
         options.sizes,
         options.n_exp,
@@ -1019,6 +1046,7 @@ fn main() {
         options.epsilon,
         encoding_label(options.encoding),
         options.eval_interval,
+        options.accuracy_every,
         options.strict_resource_limits,
         if options.isolate_repeats && isolated_worker { "repeat-process" } else { "process-lifetime" },
         if checkpoint.is_some() { "on" } else { "off" },
@@ -1053,6 +1081,7 @@ fn main() {
             encoding: options.encoding,
             epsilon: options.epsilon,
             log_accuracy: options.log_accuracy,
+            accuracy_every: options.accuracy_every,
             rss_cap_bytes: options.rss_cap_bytes,
             strict_resource_limits: options.strict_resource_limits,
         };
