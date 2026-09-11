@@ -2316,3 +2316,18 @@ acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=42 rss_cap=5.6GB time_
   mpx-135 traj: trials=92520000 wall=171300s knowledge=0.5831 reliable=352 spec=8.45 pop=3283
   mpx-135 cover: trials=92520000 overall=0.5831 a0_nochange=0.0000 a0_change=0.5981 a1_nochange=0.8737 a1_change=0.8611 matched_but_wrong=5
   mpx-135 acc: trials=92520000 accuracy=0.8543
+  mpx-135 traj: trials=92640000 wall=171393s knowledge=0.5797 reliable=343 spec=8.45 pop=2938
+  mpx-135 cover: trials=92640000 overall=0.5797 a0_nochange=0.0000 a0_change=0.5989 a1_nochange=0.8700 a1_change=0.8503 matched_but_wrong=3
+  mpx-135 acc: trials=92640000 accuracy=0.8480
+  mpx-135 traj: trials=92760000 wall=171487s knowledge=0.5795 reliable=348 spec=8.52 pop=2987
+  mpx-135 cover: trials=92760000 overall=0.5795 a0_nochange=0.0000 a0_change=0.5999 a1_nochange=0.8631 a1_change=0.8552 matched_but_wrong=7
+  mpx-135 acc: trials=92760000 accuracy=0.8581
+  mpx-135 traj: trials=92880000 wall=171649s knowledge=0.5854 reliable=351 spec=8.47 pop=4479
+  mpx-135 cover: trials=92880000 overall=0.5854 a0_nochange=0.0000 a0_change=0.5993 a1_nochange=0.8737 a1_change=0.8688 matched_but_wrong=0
+  mpx-135 acc: trials=92880000 accuracy=0.8523
+  mpx-135 traj: trials=93000000 wall=171767s knowledge=0.5821 reliable=338 spec=8.41 pop=2981
+  mpx-135 cover: trials=93000000 overall=0.5821 a0_nochange=0.0000 a0_change=0.5994 a1_nochange=0.8636 a1_change=0.8655 matched_but_wrong=11
+  mpx-135 acc: trials=93000000 accuracy=0.8496
+  mpx-135 traj: trials=93120000 wall=171890s knowledge=0.5821 reliable=342 spec=8.39 pop=3270
+  mpx-135 cover: trials=93120000 overall=0.5821 a0_nochange=0.0000 a0_change=0.6031 a1_nochange=0.8665 a1_change=0.8589 matched_but_wrong=0
+  mpx-135 acc: trials=93120000 accuracy=0.8337

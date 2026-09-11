@@ -57,7 +57,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 | seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | 301440000 | - | 393 | 8.01 | - | - | - | - | 166.7 | 502 | `135_s42_eps1_u11` |
-| 42 | pyalcs | 11 | running | 92 520 000 | 0.5831 | 92520000 | 0.8543 | 352 | 8.45 | 0.0000 | 0.5981 | 0.8737 | 0.8611 | 47.6 | 540 | `135_s42_eps1b_u11` |
+| 42 | pyalcs | 11 | running | 93 120 000 | 0.5821 | 93120000 | 0.8337 | 342 | 8.39 | 0.0000 | 0.6031 | 0.8665 | 0.8589 | 47.7 | 542 | `135_s42_eps1b_u11` |
 | 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | 427920000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
