@@ -57,11 +57,12 @@ the file. The commits and the docs they corrected are the durable record.
 - Conversation in Polish. Code, comments, commits, docs and identifiers in English.
 - No comments in code.
 - Idiomatic Rust, SOLID, injected RNG, determinism from the seed.
-- Commit and push to `feature/checkpointing` after each completed group.
+- Commit and push to `feature/mpx264` after each completed group.
 - Experiments run on the cluster, never on the user's laptop — it overheats. Test
   gates locally are fine.
 - **Check the grant before submitting anything.** `sshare -U -u alelys2099 -o
-  RawUsage -n` gives CPU-seconds used against the 5000-hour grant, and it is
+  RawUsage -n` gives CPU-seconds used against the grant (15,000 h since the
+  increase landed 2026-09-11), and it is
   SLURM-enforced with `DenyOnLimit`: once spent, `sbatch` refuses. §5 of the handoff
   has the commands and the traps.
 - Emails to the supervisor are Polish, plain, free of AI phrasing. **The user sends

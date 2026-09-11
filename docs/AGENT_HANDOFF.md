@@ -6,14 +6,15 @@ project is, `docs/ARCHITECTURE.md` how it is built, `reports/MPX_final.md` is th
 scientific narrative, `reports/MPX<k>_runs.md` every run at a size in one table. This
 file carries only the **live state**.
 
-**Your task, in order, is §8.** Checkpointing is **implemented, reviewed and gated**
-(2026-09-10), and the archive reads a chained run as one run. What remains is step 3:
-once the new WCSS grant lands, k=264, plus watching the two jobs already running.
+**Your task is §8 step 3: run the 264-bit multiplexer.** Checkpointing — the only thing
+that was blocking it — is merged, reviewed six times and proven on the cluster. The WCSS
+grant increase landed on 2026-09-11, so the budget is no longer a constraint either. Start
+the chain, watch it, and keep an eye on the k=135 job still running.
 
-**Branch: `feature/checkpointing`**, cut from `main` on 2026-09-10. `main` is level with
-it. `develop` was retired: it never differed from `main` in a solo workflow. `feature/mpx`,
-`feature/mpx264`, `feature/acs2er` and `feature/cpuSingleComp` were merged and deleted.
-The cluster clone `~/acs2-rust-repo` tracks `feature/checkpointing` too.
+**Branch: `feature/mpx264`**, cut from `main` on 2026-09-11 — checkpointing is merged and
+`main` is level with it. `feature/checkpointing`, `feature/mpx`, `feature/mpx264` (the
+earlier one), `feature/acs2er`, `feature/cpuSingleComp` and `develop` were all merged and
+deleted. The cluster clone `~/acs2-rust-repo` tracks `feature/mpx264` too.
 
 **Git history was rewritten on 2026-09-09** to drop agent co-author trailers; every commit
 is authored solely by the user, and GitHub lists one contributor. Check before any merge
@@ -216,8 +217,9 @@ running job.
 
 ### Budget — read this before submitting anything
 
-Grant: 5000 CPU-hours, 2026-07-23 to 2027-07-24, 200 GB disk (27 MB used; disk is a
-non-issue).
+Grant: **15,000 CPU-hours** since the increase was approved on 2026-09-11 (5000
+originally + 10,000), 2026-07-23 to 2027-07-24, 200 GB disk (160 MB used; disk is a
+non-issue, and the increase asked for no more).
 
 **Measured 2026-09-09: 4457 h consumed, 543 h left, 476 h of it already committed to
 running jobs — roughly 67 h genuinely free.** A new grant application is being filed;
@@ -270,7 +272,7 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
 ```
 
 - `bem2-cpu-short` 3 d, **`bem2-cpu-normal` 21 d**, `bem2-cpu-interactive` 6 h.
-- The 5000 h **is SLURM-enforced**: `GrpTRESMins=cpu=300000` with flags
+- The grant **is SLURM-enforced**: `GrpTRESMins=cpu=900000` (was 300000) with flags
   `DenyOnLimit,NoDecay`. `NoDecay` is why `RawUsage` is the lifetime total.
   `DenyOnLimit` means exhaustion makes **`sbatch` reject new jobs**; running jobs are
   not killed, because `GrpTRESRunMins` is unset.
@@ -297,20 +299,30 @@ Three things that cost days before:
 
 ## 6. Experiments in flight
 
-Verified live on 2026-09-10. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
+Verified live on 2026-09-11. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Two jobs running. Grant: 4574 h of 5000 spent (`RawUsage` read 2026-09-11), 426 h
-left, most of it committed to these two.** Roughly 56 h genuinely free, so submit nothing
-new until the extension lands.
+**One job running. Grant: 4575 h of 15,000 spent, so ~10,400 h are available** and the
+~300 h still owed to that job barely dents it. The budget stopped being the constraint on
+2026-09-11.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `eps135_s42b` (5856652) | 66.36 M trials, knowledge **0.2863**, 169 reliable, spec **9.20**, pop 3 284; 11 d 12 h of wall left | **The one that matters.** Knowledge 0.1800 → 0.2863 and specificity 11.14 → 9.20 in a day: the bloat phase is resolving toward the ideal 8 and the population has collapsed from 15 883 to 3 284, which is condensation, not stalling. If it closes, the canonical k=135 result stands on two seeds instead of one. |
-| `encU9_s42` (5828411) | 37.20 M trials, knowledge **0.2400**, 125 reliable, spec **8.15**; 4 d 20 h left | Still climbing, specificity settled at the ideal. Under the canonical encoding this configuration produced a hard zero across 105.6 M trials. |
+| `eps135_s42b` (5856652) | 92.52 M trials, knowledge **0.5831**, 352 reliable, spec 8.45, pop 3 283; classes 0.0000 / 0.5981 / 0.8737 / 0.8611; 11 d of wall left | **The one that matters.** Climbing steadily and one wrong-answer class is already at 0.8737. Seed 43 opened its second class at 404.5 M trials; this run is at 92.5 M, so it is early, not stuck. If it closes, the canonical k=135 result stands on two seeds instead of one. |
 
-Neither job is checkpointed: both predate the feature and restarting them to gain
-resumability would throw away a month of trials. The first chained run is k=264.
+It is not checkpointed — it predates the feature, and restarting it to gain resumability
+would throw away a month of trials. The first chained run is k=264.
+
+### `encU9_s42` was killed by the node, not by the algorithm
+
+The `u_max` = 9 control **FAILED after 3 d 02 h** with SLURM exit `0:7` — signal 7,
+SIGBUS — at MaxRSS 215 MB against 8 GB requested. Not memory, not the wall clock: a node
+fault. Its last reading was 44.52 M trials, knowledge **0.2479**, accuracy 0.9030, with
+`a0_change` at 0.9919 and the other three classes at zero. It was progressing.
+
+**74 CPU-hours were lost because it had no checkpoint, and the question it was answering
+is still open.** This is the first real node failure on this project and it is exactly the
+case checkpointing exists for. Rerun it chained when convenient — the budget now allows it.
 
 ### The replay-volume question is unanswered, and the naive approach is unaffordable
 
@@ -544,26 +556,39 @@ ceremony:
 For checkpointing specifically, point the reviewer at the determinism property: a
 save/restore that is subtly non-identical will pass a casual reading.
 
-### Step 3 — when the new WCSS grant lands
+### Step 3 — k=264 — ACTIVE, this is your task
 
-Two things at once:
+**The grant increase was approved on 2026-09-11: 15,000 CPU-hours total, ~10,400
+available.** Checkpointing is merged and proven on the cluster (Step 1a). Nothing blocks
+k=264 any more.
 
-- **Watch what is already running** (§6). `eps135_s42b` is the one that matters; if it
-  closes, the canonical k=135 result is two seeds instead of one. `./tools/sync_runs.sh
-  --commit` after anything finishes.
-- **Start k=264** under `--encoding outcome`, `u_max = 12` (the `a + 4` analogue of the
-  11 that works at 135), with `CHECKPOINT=on` and a **small `--eval-interval`**. The
-  large-`m` replay jobs died having recorded nothing because their first evaluation point
-  was never reached (§6) — do not repeat that at a size where a job costs 504 h. Size
-  `--checkpoint-every` so writes stay rare: at k=264 a checkpoint is ~1.5 KB per
-  classifier, 12.5 MB at 8,107 of them.
+Start it under `--encoding outcome` and `u_max = 12` — the `a + 4` analogue of the 11 that
+works at 135 — with `CHECKPOINT=on`, chained jobs, and a **small `--eval-interval`**. The
+large-`m` replay jobs burned ~540 h and recorded nothing because their first evaluation
+point was never reached (§6); do not repeat that where a job costs 504 h.
 
-The grant application asks for 10,000 CPU-hours: ~700 h to finish current work, ~1000 h
-to close k=135 canonically on three seeds, ~4000–5000 h for k=264 on three seeds with
-controls, ~2000 h for replay. The original application's RAM figure needs correcting —
-it declared `< 1 GB`, ACS2ER measured 8–32 GB, but the k=264 probe measured only
-**0.86 GB**, so the driver is ACS2ER, not problem size. Wall-time was declared `>= 48h`
-against 21 days actually needed.
+```bash
+EXPORTS="ALL,TAG=k264,CHECKPOINT=on,CHECKPOINT_EVERY=100000,U_MAX=12,ENCODING=outcome,EVAL_INTERVAL=5000"
+prev=$(sbatch --parsable --time=21-00:00:00 --mem=16G --export="$EXPORTS" slurm/mpx_reach.sh 264 42 1800000)
+for _ in $(seq 9); do
+    prev=$(sbatch --parsable --time=21-00:00:00 --mem=16G --dependency=afterany:$prev \
+        --export="$EXPORTS" slurm/mpx_reach.sh 264 42 1800000)
+done
+```
+
+`afterany`, not `afterok`: a segment that stops on its wall clock has done its job. Nothing
+locks a checkpoint, so overlapping segments would corrupt each other — the dependency chain
+is what prevents that.
+
+**After the first segment, read two numbers that nobody has yet: the checkpoint file size
+and the peak RSS.** A save clones the population and renders it to a `String`, so it needs
+roughly 2.2x the population's resident size. At k=264 a classifier is 7,504 B resident and
+1,542 B as text; the smoke checkpoints were 12.5 MB at 8,107 classifiers, and the k=264
+population was already 60,366 after 1.16 M trials and still growing. If those numbers come
+back large, the render has to stream instead of cloning. Size `--mem` from what you measure,
+not from the 16G above.
+
+Three seeds are the target. Run the first alone, confirm the numbers, then start the others.
 
 ### Step 4 — the thesis core: prioritised experience replay
 
@@ -632,7 +657,7 @@ failure mode. This file carries the research state; that one carries the habits.
 
 Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
 injected RNG. Anything touching the measured path goes behind a flag with defaults
-preserving current behaviour. Commit and push to `feature/checkpointing` after each completed
+preserving current behaviour. Commit and push to `feature/mpx264` after each completed
 group. Measurements live in `reports/`, review/fix reports in `scratchpad/`, and the
 implementation record in `docs/ARCHITECTURE.md`.
 Ask the user only for scope decisions — new experiment phases, supervisor
