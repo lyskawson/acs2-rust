@@ -114,6 +114,16 @@ BASE="slurm_mpx${SIZE}_s${SEED}${TAG:+_$TAG}"
 #
 # Each job writes its own log. A single filename per run would leave only the last
 # segment, and the segments are where the trajectory lives.
+# The binary carries its own RSS cap (5.6 GB) and stops itself on it, which is not the
+# same number as --mem: SLURM kills a job that exceeds the allocation, losing everything
+# since the last periodic save, whereas the internal cap stops cleanly and writes one.
+# Left unset the binary's default stands, so nothing that ran before behaves differently.
+# Set it BELOW --mem, never above, or the allocation is reached first and nothing is saved.
+RSS_ARGS=()
+if [ -n "${RSS_CAP_GB:-}" ]; then
+  RSS_ARGS=(--rss-cap-gb "$RSS_CAP_GB")
+fi
+
 CHECKPOINT_ARGS=()
 if [ "${CHECKPOINT:-off}" = "on" ]; then
   CHECKPOINT_PATH="$RUNS/checkpoints/${BASE}.ckpt"
@@ -158,6 +168,7 @@ exec "${MPX_BINARY:-$REPO/target/x86_64-unknown-linux-musl/release/mpx_reach}" \
   --log-accuracy \
   --eval-interval "${EVAL_INTERVAL:-60000}" \
   --accuracy-every "${ACCURACY_EVERY:-1}" \
+  ${RSS_ARGS[@]+"${RSS_ARGS[@]}"} \
   ${CHECKPOINT_ARGS[@]+"${CHECKPOINT_ARGS[@]}"} \
   "$@" \
   >>"$OUT" 2>&1
