@@ -300,8 +300,8 @@ Three things that cost days before:
 Verified live on 2026-09-10. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Two jobs running. Grant: 4552 h of 5000 spent (`RawUsage` 16,387,127 CPU-s), 448 h
-left, 392 h of it committed to these two.** Roughly 56 h genuinely free, so submit nothing
+**Two jobs running. Grant: 4574 h of 5000 spent (`RawUsage` read 2026-09-11), 426 h
+left, most of it committed to these two.** Roughly 56 h genuinely free, so submit nothing
 new until the extension lands.
 
 | Job | State, 2026-09-11 | Why it matters |
@@ -443,6 +443,44 @@ Two things it deliberately does **not** do, both recorded in `ARCHITECTURE.md`:
   because PEE is not implemented.
 - The archive stitching that a chained run needs was found and built with it;
   `ARCHITECTURE.md` has the rules and the mistake that reads as correct.
+
+### Step 1a — the chain proved on the cluster — DONE (2026-09-11)
+
+Everything before this was measured on the user's M1 with stubs standing in for SLURM. Two
+dependent chains were run for real, at a total cost of **0.54 CPU-hours** measured by
+`sacct -o CPUTimeRAW -X`, not inferred from the grant balance.
+
+**The musl build links.** The checksum work brought `sha2` and its tree into `acs2-bench`,
+and the cluster binary is static against musl; nothing had linked that for real.
+`cargo build --release --target x86_64-unknown-linux-musl` succeeds on the login node.
+
+**Determinism holds across architectures on the checkpointed path too.** The musl binary
+saved at trial 500, resumed, and closed k=20 at **78,000 trials** — the same count the M1
+produces. §2 asserts machine independence for the plain path; it now covers this one.
+
+**Three real resumes, k=70, `smoke70` (jobs 5869130-2).** Each segment stopped on its
+600 s cap, saved, and the next resumed from it:
+
+| segment | resumed at | `since_eval` carried | measurements | ended |
+|---|---|---|---|---|
+| 1 | fresh | — | 9, 60 k → 540 k | 587,000 |
+| 2 | 587,000 | 47,000 | 12, 600 k → 1,260 k | 1,261,500 |
+| 3 | 1,261,500 | 1,500 | 14, 1,320 k → 2,100 k | 2,157,500 |
+
+The archive stitches those three logs into **one** run of 35 points, **and the step between
+every pair is exactly 60,000 with no duplicates**. That is the number to check if this is
+ever touched again: the evaluation grid survived two job boundaries intact. The first review
+round found this broken — a resumed run reported SUCCESS at 66,500 trials instead of 67,000
+— and `since_eval` being carried and paid is what holds it.
+
+**The reopen path, k=37, `smoke37` (jobs 5869133-5).** Segment 1 solved at 780,000 in
+2.5 minutes. Segments 2 and 3 found a closed checkpoint, restated the verdict marked
+`reopened=true` and exited in **one second each**. Three logs, one SUCCESS row.
+
+Also confirmed on real hardware: the `scontrol` allocation guard did not refuse a legitimate
+job; the derived checkpoint path, the per-segment log names and the `run-segment:` provenance
+all behaved; and both runs left a `.prev` generation on disk. Both chains render in
+`MPX70_runs.md` and `MPX37_runs.md` as ordinary single rows.
 
 ### Step 2 — independent review of the checkpointing — DONE (2026-09-10)
 
