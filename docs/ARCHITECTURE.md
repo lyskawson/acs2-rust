@@ -1269,6 +1269,45 @@ If a k=264 population reaches the hundreds of thousands, that is the moment to s
 render into the staging file and borrow the population instead of cloning it; until then the
 simpler code is worth more than the headroom.
 
+### Budgeting the measurement itself
+
+An evaluation is two sweeps over 50,000 sampled inputs, and they do not cost the same.
+
+`evaluate_knowledge` collects the **reliable** classifiers first and asks each transition
+whether any of them anticipates it, so its cost scales with the reliable set, not the
+population. At k=264 that set is empty for the whole measured range — every archived
+trajectory point reads `reliable=0` — and `.any()` over an empty slice returns immediately.
+What remains is building the 100,000 transitions, which is the same work at every call.
+
+`answer_accuracy` forms a match set over the **whole** population for each sampled input.
+That is the only `O(population x 50,000)` term in the loop, and at k=264 it is effectively
+the entire cost of a measurement.
+
+Both used to hang off `--eval-interval`, so a knowledge grid fine enough to watch a run
+climb bought a sweep that does not need to be that dense. `--accuracy-every N` separates
+them: knowledge every `--eval-interval` trials, accuracy every `N` of those. `N=1` is the
+default and reproduces the previous output exactly — checked against the pre-change binary
+at k=20, where every learning column, knowledge value and accuracy value matches line for
+line and SUCCESS lands at the same 67,000 trials.
+
+**The cadence is derived, not stored.** The next accuracy trial is recomputed from
+`trials_used` as `(trials_used / step + 1) * step`, so the checkpoint gains no field and the
+format is unchanged, and a resumed segment lands on the grid an uninterrupted run would have
+produced. Carrying a countdown instead would have reset it at the boundary and shifted every
+later sweep — the same defect the first review round found on the knowledge grid, where a
+resume moved SUCCESS from 67,000 trials to 66,500.
+
+`an_accuracy_cadence_survives_a_resume` pins this. It runs on the k=20 fixture rather than
+the k=6 one the other checkpoint tests use, because k=6 reaches knowledge 1.0 on its second
+measurement and ends the run before a break can sit between two sweeps. It was verified by
+sabotage: resetting the threshold on resume, advancing it by the evaluation interval instead
+of the step, and dropping the `+1` are each caught, the first as an extra sweep the
+uninterrupted run does not have.
+
+A caveat the flag does not remove: nothing gates `--log-accuracy` or `--accuracy-every`
+across a resume the way `--eval-interval` is gated. Changing either mid-chain thins or
+thickens the accuracy grid of a single run without complaint.
+
 ### What the fresh reviewer's second pass changed
 
 Its verification round confirmed the flag-override and stale-verdict fixes and found four
