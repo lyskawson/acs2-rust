@@ -79,4 +79,10 @@ slurm_mpx135_s42_outcome_u11.out,,1,135,42,pyalcs,11,0,outcome,filename,0.8,acs2
 slurm_mpx135_s43_outcome_u11.out,,1,135,43,pyalcs,11,0,outcome,filename,0.8,acs2,,,,true,,,,,,SUCCESS,46800000,1.0,539,8.0,136,76511,0.0,283679.5,164.97,46800000,at-verdict
 slurm_mpx135_s45_outcome_u11.out,,1,135,45,pyalcs,11,0,outcome,filename,0.8,acs2,,,,true,,,,,,SUCCESS,55560000,1.0,532,8.0,136,77985,0.0,291115.4,190.85,55560000,at-verdict
 slurm_mpx135_s46_outcome_u11.out,,1,135,46,pyalcs,11,0,outcome,filename,0.8,acs2,,,,true,,,,,,SUCCESS,30240000,1.0,535,8.01,136,82432,0.0,207223.6,145.93,30240000,at-verdict
+slurm_mpx264_s42_cal264c.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,40000,4c2a2e8,cal264c,true,,,,false,process-lifetime,TIME-LIMITED,429000,,0,0.0,265,32774,0.51,7207.7,59.52,,unmeasured
+slurm_mpx264_s42_cal264f.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,5000,4c2a2e8,cal264f,true,,,,false,process-lifetime,TIME-LIMITED,231500,,0,0.0,265,22584,0.4,7200.5,32.15,,unmeasured
+slurm_mpx264_s42_cal264m.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,20000,4c2a2e8,cal264m,true,,,,false,process-lifetime,TIME-LIMITED,323000,,0,0.0,265,27409,0.46,7201.1,44.85,,unmeasured
 slurm_mpx264_s42_probe264.out,,1,264,42,pyalcs,12,0,outcome,submission-record,0.8,acs2,,,,true,,,,,,TIME-LIMITED,1165000,0.0,0,0.0,265,60366,0.86,43201.7,26.97,1160000,stale
+slurm_mpx264_s42_seq264c.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,40000,2715bb7,seq264c,true,,,,false,process-lifetime,TIME-LIMITED,433000,,0,0.0,265,32815,0.51,7201.1,60.13,,unmeasured
+slurm_mpx264_s42_seq264f.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,5000,2715bb7,seq264f,true,,,,false,process-lifetime,TIME-LIMITED,290500,,0,0.0,265,25783,0.44,7257.6,40.03,,unmeasured
+slurm_mpx264_s42_seq264t.out,,1,264,42,pyalcs,12,0,outcome,header,0.8,acs2,5000,2715bb7,seq264t,true,,,,false,process-lifetime,TIME-LIMITED,276000,,0,0.0,265,25112,0.43,3602.8,76.61,,unmeasured

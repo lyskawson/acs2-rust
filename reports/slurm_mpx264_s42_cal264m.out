@@ -1,0 +1,39 @@
+run-provenance: commit=4c2a2e8 job=5872160 attempt=0 tag=cal264m size=264 seed=42 time_cap=7200s partition=bem2-cpu-short host=r22c01b03.bem2.kdm.wcss.pl started=2026-09-11T13:33:45+02:00
+run-argv:  
+acs2-bench mpx-reach: agent=acs2 sizes=[264] n_exp=1 seed=42 rss_cap=5.6GB time_cap=7200s do_ga=true alp_gen_variant=pyalcs epsilon=0.8 encoding=outcome eval_interval=20000 strict_resource_limits=false rss_scope=process-lifetime checkpoint=off checkpoint_every=0
+  mem mpx-264 (N=265): condition=530B effect=530B mark=6360B (stack) classifier=7504B  mark/classifier=84.8%  rss-cap pop-threshold=746268
+  mpx-264 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=12
+  mpx-264 traj: trials=20000 wall=229s knowledge=0.0000 reliable=0 spec=0.00 pop=7427
+  mpx-264 acc: trials=20000 accuracy=0.5020
+  mpx-264 traj: trials=40000 wall=442s knowledge=0.0000 reliable=0 spec=0.00 pop=9520
+  mpx-264 acc: trials=40000 accuracy=0.5001
+  mpx-264 traj: trials=60000 wall=668s knowledge=0.0000 reliable=0 spec=0.00 pop=10635
+  mpx-264 acc: trials=60000 accuracy=0.5038
+  mpx-264 traj: trials=80000 wall=930s knowledge=0.0000 reliable=0 spec=0.00 pop=12535
+  mpx-264 acc: trials=80000 accuracy=0.5004
+  mpx-264 traj: trials=100000 wall=1229s knowledge=0.0000 reliable=0 spec=0.00 pop=13394
+  mpx-264 acc: trials=100000 accuracy=0.5036
+  mpx-264 traj: trials=120000 wall=1556s knowledge=0.0000 reliable=0 spec=0.00 pop=14932
+  mpx-264 acc: trials=120000 accuracy=0.4977
+  mpx-264 traj: trials=140000 wall=1924s knowledge=0.0000 reliable=0 spec=0.00 pop=16498
+  mpx-264 acc: trials=140000 accuracy=0.5038
+  mpx-264 traj: trials=160000 wall=2375s knowledge=0.0000 reliable=0 spec=0.00 pop=18597
+  mpx-264 acc: trials=160000 accuracy=0.4988
+  mpx-264 traj: trials=180000 wall=2865s knowledge=0.0000 reliable=0 spec=0.00 pop=19948
+  mpx-264 acc: trials=180000 accuracy=0.5045
+  mpx-264 traj: trials=200000 wall=3392s knowledge=0.0000 reliable=0 spec=0.00 pop=21800
+  mpx-264 acc: trials=200000 accuracy=0.5017
+  mpx-264 traj: trials=220000 wall=4001s knowledge=0.0000 reliable=0 spec=0.00 pop=22389
+  mpx-264 acc: trials=220000 accuracy=0.4992
+  mpx-264 traj: trials=240000 wall=4567s knowledge=0.0000 reliable=0 spec=0.00 pop=22568
+  mpx-264 acc: trials=240000 accuracy=0.4996
+  mpx-264 traj: trials=260000 wall=5107s knowledge=0.0000 reliable=0 spec=0.00 pop=23731
+  mpx-264 acc: trials=260000 accuracy=0.5023
+  mpx-264 traj: trials=280000 wall=5672s knowledge=0.0000 reliable=0 spec=0.00 pop=25348
+  mpx-264 acc: trials=280000 accuracy=0.5012
+  mpx-264 traj: trials=300000 wall=6302s knowledge=0.0000 reliable=0 spec=0.00 pop=26718
+  mpx-264 acc: trials=300000 accuracy=0.5017
+  mpx-264 traj: trials=320000 wall=6941s knowledge=0.0000 reliable=0 spec=0.00 pop=26882
+  mpx-264 acc: trials=320000 accuracy=0.4965
+  mpx-264 repeat 0: TIME-LIMITED trials=323000 knowledge=unmeasured knowledge_trials=unmeasured reliable=0 spec=0.00/265 peak_macro=27409 peak_rss=0.46GB wall=7201.1s
+  mpx-264 verdict agreement across 1 repeats: ALL AGREE

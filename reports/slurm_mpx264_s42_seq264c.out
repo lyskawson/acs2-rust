@@ -1,0 +1,27 @@
+run-provenance: commit=2715bb7 job=5872298 attempt=0 tag=seq264c size=264 seed=42 time_cap=7200s partition=bem2-cpu-short host=r22c01b03.bem2.kdm.wcss.pl started=2026-09-11T18:35:45+02:00
+run-argv:  
+acs2-bench mpx-reach: agent=acs2 sizes=[264] n_exp=1 seed=42 rss_cap=5.6GB time_cap=7200s do_ga=true alp_gen_variant=pyalcs epsilon=0.8 encoding=outcome eval_interval=40000 accuracy_every=1 strict_resource_limits=false rss_scope=process-lifetime checkpoint=off checkpoint_every=0
+  mem mpx-264 (N=265): condition=530B effect=530B mark=6360B (stack) classifier=7504B  mark/classifier=84.8%  rss-cap pop-threshold=746268
+  mpx-264 trials_cap=18446744073709551615 (= 20000*2^(k-6)*10, clamped to u64::MAX) u_max=12
+  mpx-264 traj: trials=40000 wall=296s knowledge=0.0000 reliable=0 spec=0.00 pop=9520
+  mpx-264 acc: trials=40000 accuracy=0.5001
+  mpx-264 traj: trials=80000 wall=642s knowledge=0.0000 reliable=0 spec=0.00 pop=12535
+  mpx-264 acc: trials=80000 accuracy=0.5004
+  mpx-264 traj: trials=120000 wall=1076s knowledge=0.0000 reliable=0 spec=0.00 pop=14932
+  mpx-264 acc: trials=120000 accuracy=0.4977
+  mpx-264 traj: trials=160000 wall=1584s knowledge=0.0000 reliable=0 spec=0.00 pop=18597
+  mpx-264 acc: trials=160000 accuracy=0.4988
+  mpx-264 traj: trials=200000 wall=2220s knowledge=0.0000 reliable=0 spec=0.00 pop=21800
+  mpx-264 acc: trials=200000 accuracy=0.5017
+  mpx-264 traj: trials=240000 wall=2926s knowledge=0.0000 reliable=0 spec=0.00 pop=22568
+  mpx-264 acc: trials=240000 accuracy=0.4996
+  mpx-264 traj: trials=280000 wall=3666s knowledge=0.0000 reliable=0 spec=0.00 pop=25348
+  mpx-264 acc: trials=280000 accuracy=0.5012
+  mpx-264 traj: trials=320000 wall=4514s knowledge=0.0000 reliable=0 spec=0.00 pop=26882
+  mpx-264 acc: trials=320000 accuracy=0.4965
+  mpx-264 traj: trials=360000 wall=5387s knowledge=0.0000 reliable=0 spec=0.00 pop=28787
+  mpx-264 acc: trials=360000 accuracy=0.5035
+  mpx-264 traj: trials=400000 wall=6318s knowledge=0.0000 reliable=0 spec=0.00 pop=31585
+  mpx-264 acc: trials=400000 accuracy=0.4996
+  mpx-264 repeat 0: TIME-LIMITED trials=433000 knowledge=unmeasured knowledge_trials=unmeasured reliable=0 spec=0.00/265 peak_macro=32815 peak_rss=0.51GB wall=7201.1s
+  mpx-264 verdict agreement across 1 repeats: ALL AGREE
