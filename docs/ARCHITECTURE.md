@@ -1308,19 +1308,40 @@ Both used to hang off `--eval-interval`, so a knowledge grid fine enough to watc
 climb bought a sweep that does not need to be that dense. `--accuracy-every N` separates
 them: knowledge every `--eval-interval` trials, accuracy every `N` of those.
 
-**Measured at k=264, seed 42, `outcome`, `u_max=12`.** Two runs of the same seed reach the
-same trial with the same population, so the wall-clock difference is the measurement and
-nothing else:
+**Measured at k=264, seed 42, `outcome`, `u_max=12`,** on three runs submitted as a
+dependency chain so no two shared a node. Same seed means the same population at the same
+trial, so the wall-clock difference is the measurement and nothing else. Three
+configurations separate the two costs: `t` and `c` pay the same number of sweeps and differ
+only in knowledge evaluations, `f` and `t` differ only in sweeps.
 
-| `--eval-interval` | `--accuracy-every` | 100,000 trials | 120,000 trials | knowledge points |
+| trials | population | knowledge eval | accuracy sweep | ratio |
 |---|---|---|---|---|
-| 5,000 | 1 | 1,962 s | 2,523 s | every 5,000 |
-| 5,000 | 20 | **825 s** | **1,097 s** | every 5,000 |
-| 40,000 | 1 | — | 1,031 s | every 40,000 |
+| 40,000 | 9,520 | 0.43 s | 31.6 s | 74x |
+| 80,000 | 12,535 | 0.36 s | 36.6 s | 103x |
+| 120,000 | 14,932 | 0.38 s | 42.1 s | 110x |
+| 200,000 | 21,800 | 0.23 s | 54.2 s | 237x |
+| 240,000 | 22,568 | 0.26 s | 58.9 s | 225x |
 
-A 2.3x difference at an identical knowledge grid, and the thinned run matches the speed of
-one measuring eight times less often. Both runs shared a node with other jobs, so these are
-production conditions rather than an isolated benchmark.
+**A knowledge evaluation costs about 0.3 s and does not grow with the population**, because
+`reliable` is empty and what remains is building the 100,000 transitions. The sweep grows
+linearly and is two orders of magnitude dearer.
+
+**The slope from those populations understates it.** Fitting 9.5k-22.6k gives 2.09 ms per
+classifier, and the first production segment measures **4.90 ms** — the intervals carrying
+a sweep are separable in its own log, because only every twentieth does:
+
+| population | 5,000 trials, no sweep | with a sweep | sweep |
+|---|---|---|---|
+| 20-40k | 107.6 s | 253.0 s | 145.4 s |
+| 40-60k | 184.6 s | 440.3 s | 255.8 s |
+| 60-80k | 253.9 s | 594.1 s | 340.2 s |
+
+At 77,607 classifiers a sweep is 380 s against 265 s for 5,000 trials of learning: at
+`--accuracy-every 1` the measurement would cost **144%** of the learning, and at 20 it costs
+7.2%. Both terms scale with the population, so that ratio is roughly stable as a run grows.
+Over the segment's first 1,900,000 trials the thinning is worth **2.22x** — the same
+learning would have taken 45.9 h instead of 20.6 h, and after 20.6 h the run would have been
+at 1,140,000 trials instead of 1,900,000.
 
 `N=1` is the default and reproduces the previous output exactly — checked against the pre-change binary
 at k=20, where every learning column, knowledge value and accuracy value matches line for

@@ -308,8 +308,8 @@ the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. 130,000 trials, knowledge 0.0000, reliable 0, pop 15,939. `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000` | **The 264-bit run.** `reliable=0` is expected this early — the k=264 probe read 0 for all 58 of its points out to 1.16 M trials. |
-| `eps135_s42b` (5856652) | 92.52 M trials, knowledge **0.5831**, 352 reliable, spec 8.45, pop 3 283; classes 0.0000 / 0.5981 / 0.8737 / 0.8611; 11 d of wall left | **The one that matters.** Climbing steadily and one wrong-answer class is already at 0.8737. Seed 43 opened its second class at 404.5 M trials; this run is at 92.5 M, so it is early, not stuck. If it closes, the canonical k=135 result stands on two seeds instead of one. |
+| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **1,900,000 trials at 2026-09-12 11:19**, knowledge 0.0000, reliable 0, pop 77,607, 17.9 trials/s | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. `reliable=0` is expected this far in — the probe read 0 for all 58 of its points out to 1.16 M trials. Checkpoint 140 MB, RSS well inside the cap. The population is still growing; k=135 under `outcome` peaked near 80,000 and then condensed. |
+| `eps135_s42b` (5856652) | **163.68 M trials at 2026-09-12**, knowledge **0.6920**, 365 reliable, spec 8.02, pop 2 152; classes `a0_nochange` **0.0000**, `a0_change` 0.7684, `a1_nochange` 1.0000, `a1_change` 1.0000; 10 d of wall left at 654 trials/s | **The one that matters.** Two classes are closed and a third is climbing. `a0_nochange` at exactly 0.0000 is **not** a ceiling: seed 43 sat at exactly 0.0000 on *its* second class until 404.5 M trials and closed 23 M later, and this run is at 163.7 M. The wall that remains carries it to roughly 730 M trials, well past that point. If it closes, the canonical k=135 result stands on two seeds instead of one. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
@@ -565,10 +565,12 @@ below; the original is kept after them because its reasoning still holds.
 **The accuracy sweep, not the knowledge grid, is what an evaluation costs.**
 `answer_accuracy` forms a match set over the whole population for each of 50,000 sampled
 inputs. `evaluate_knowledge` filters to reliable classifiers first, and at k=264 that set
-is empty for the whole measured range, so it is nearly free. Tying both to
-`--eval-interval 5000` would have paid for 10 population sweeps per trial of learning.
-`--accuracy-every` separates them; `ARCHITECTURE.md` has the measured table. At an
-identical knowledge grid the run reaches 120,000 trials in **1,097 s against 2,523 s**.
+is empty for the whole measured range. Measured on a sequential chain so no two runs shared
+a node: a knowledge evaluation is **0.3 s and flat in population**, a sweep is **4.90 ms per
+classifier** and grows with it, 74x to 237x dearer over the range measured.
+`--accuracy-every` separates them. Worth **2.22x** over the segment's first 1.9 M trials —
+the same learning would have taken 45.9 h instead of 20.6 h. `ARCHITECTURE.md` has both
+tables.
 
 **The binary stops itself at 5.6 GB and the wrapper never exposed that.** It is not
 `--mem`. Measured on this run, a population of 300,000 reaches 5.23 GB at the moment of a
