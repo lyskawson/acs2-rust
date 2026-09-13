@@ -308,11 +308,37 @@ the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **1,900,000 trials at 2026-09-12 11:19**, knowledge 0.0000, reliable 0, pop 77,607, 17.9 trials/s | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. `reliable=0` is expected this far in — the probe read 0 for all 58 of its points out to 1.16 M trials. Checkpoint 140 MB, RSS well inside the cap. The population is still growing; k=135 under `outcome` peaked near 80,000 and then condensed. |
-| `eps135_s42b` (5856652) | **163.68 M trials at 2026-09-12**, knowledge **0.6920**, 365 reliable, spec 8.02, pop 2 152; classes `a0_nochange` **0.0000**, `a0_change` 0.7684, `a1_nochange` 1.0000, `a1_change` 1.0000; 10 d of wall left at 654 trials/s | **The one that matters.** Two classes are closed and a third is climbing. `a0_nochange` at exactly 0.0000 is **not** a ceiling: seed 43 sat at exactly 0.0000 on *its* second class until 404.5 M trials and closed 23 M later, and this run is at 163.7 M. The wall that remains carries it to roughly 730 M trials, well past that point. If it closes, the canonical k=135 result stands on two seeds instead of one. |
+| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **3,815,000 trials at 2026-09-13 23:45**, knowledge 0.0000, reliable 0, pop 96,603, 15.0 trials/s, checkpoint 175 MB | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. Read it by the population, not by knowledge — see below. |
+| `eps135_s42b` (5856652) | **293.28 M trials at 2026-09-13**, knowledge **0.7422**, 386 reliable, spec 8.00, pop 1 715; classes `a0_nochange` **0.0000**, `a0_change` **0.9692**, `a1_nochange` 1.0000, `a1_change` 1.0000; 8 d 14 h of wall left at 769 trials/s | **The one that matters.** Two classes are closed and a third is climbing. `a0_nochange` at exactly 0.0000 is **not** a ceiling: seed 43 sat at exactly 0.0000 on *its* second class until 404.5 M trials and closed 23 M later, and this run is at 293.3 M. It reaches 404.5 M in roughly 40 h, and the wall that remains carries it to about 860 M. If it closes, the canonical k=135 result stands on two seeds instead of one. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
+
+### Read a k=264 run by its population, not by its knowledge
+
+All five k=135 `outcome` seeds have the same shape, and it is the reason a long stretch of
+`knowledge=0.0000` says nothing:
+
+| seed | peak population | at trials | knowledge **at the peak** | solved |
+|---|---|---|---|---|
+| 42 | 80,696 | 2.76 M | 0.0352 | 43.2 M |
+| 43 | 75,861 | 2.40 M | 0.0158 | 46.8 M |
+| 44 | 81,551 | 3.36 M | 0.0206 | cancelled mid-collapse at 4.8 M, knowledge 0.1583 and rising |
+| 45 | 77,069 | 2.52 M | 0.0279 | 55.6 M |
+| 46 | 82,050 | 2.76 M | 0.0375 | 30.2 M |
+
+The population bloats, knowledge stays near zero throughout, and then the population
+collapses 10-15x within about 5 M trials while knowledge climbs from ~0.03 to ~0.85. Seed
+42 went 80,696 -> 6,418 between 2.76 M and 7.8 M trials, and knowledge went 0.0352 -> 0.8527
+over the same stretch. Success comes later, at a population near 2,500-3,100.
+
+**So the leading indicator is the population turning over, and it arrives long before any
+knowledge signal.** At 3.815 M trials k=264 sits at 96,603 — already above every k=135
+peak — with growth decelerating from +19,362 per 500 k trials early on to about +4,000 now.
+That is the bloat phase behaving as it did at k=135, not a stalled run.
+
+What this does **not** establish: that k=264 collapses at all, or when. No k=264 run has yet
+reached a peak, and the k=135 shape is an analogy, not a measurement of this size.
 
 ### `encU9_s42` was killed by the node, not by the algorithm
 
