@@ -302,14 +302,13 @@ Three things that cost days before:
 Verified live on 2026-09-11. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Grant: 4580 h of 15,000 spent on 2026-09-11, so ~10,420 h are available.** The k=264
-chain commits up to 5,000 h of that; `eps135_s42b` owes ~264 h. The budget stopped being
+**Grant: 4999 h of 15,000 spent on 2026-09-23, so ~10,000 h are available.** The k=264
+chain commits up to 5,000 h of that and is the only job running. The budget stopped being
 the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **3,815,000 trials at 2026-09-13 23:45**, knowledge 0.0000, reliable 0, pop 96,603, 15.0 trials/s, checkpoint 175 MB | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. Read it by the population, not by knowledge — see below. |
-| `eps135_s42b` (5856652) | **293.28 M trials at 2026-09-13**, knowledge **0.7422**, 386 reliable, spec 8.00, pop 1 715; classes `a0_nochange` **0.0000**, `a0_change` **0.9692**, `a1_nochange` 1.0000, `a1_change` 1.0000; 8 d 14 h of wall left at 769 trials/s | **The one that matters.** Two classes are closed and a third is climbing. `a0_nochange` at exactly 0.0000 is **not** a ceiling: seed 43 sat at exactly 0.0000 on *its* second class until 404.5 M trials and closed 23 M later, and this run is at 293.3 M. It reaches 404.5 M in roughly 40 h, and the wall that remains carries it to about 860 M. If it closes, the canonical k=135 result stands on two seeds instead of one. |
+| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **14,250,000 trials at 2026-09-23 22:51**, knowledge 0.0000, reliable 0, pop 114,503, 12.7 trials/s, checkpoint 206 MB, 8 d 15 h of segment left | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. **The population has plateaued** — max 116,253 at 12.87 M trials, flat to within ±2,000 since about 9 M, and throughput steady at 12.7 trials/s. It has not yet collapsed. Read it by the population, not by knowledge — see below. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
@@ -339,6 +338,36 @@ That is the bloat phase behaving as it did at k=135, not a stalled run.
 
 What this does **not** establish: that k=264 collapses at all, or when. No k=264 run has yet
 reached a peak, and the k=135 shape is an analogy, not a measurement of this size.
+
+### `eps135_s42b` was killed by the node too, at 518.64 M trials
+
+**FAILED 2026-09-16 11:02:53 with SLURM exit `0:7` — SIGBUS**, on node `r22c01b03`, at
+MaxRSS 704 MB against 8 GB, after 6 d 21 h and **165 CPU-hours with no checkpoint**. It
+predates the feature. This is the **second** node fault on this project and the second on an
+un-checkpointed run; `encU9_s42` went the same way. Nothing replaced it for the seven days
+before the failure was noticed.
+
+Its final reading is the substantive part: **518,640,000 trials, knowledge 0.7499, sampled
+accuracy 1.0000**, 398 reliable at specificity 8.00, and three of the four coverage classes
+fully closed:
+
+| class | closed at |
+|---|---|
+| `a1_nochange` | 104.40 M |
+| `a1_change` | 127.08 M |
+| `a0_change` | **443.76 M** |
+| `a0_nochange` | **still exactly 0.0000 at 518.64 M** |
+
+`a0_change` closing at 443.76 M says the run was still making structural progress late. What
+it did not do is open its second wrong-answer class. Seed 43's two wrong-answer classes
+opened 384.3 M trials apart (20.2 M and 404.5 M); seed 42 is now **414 M apart and open**,
+having passed seed 43's gap by 30 M trials without closing.
+
+**That is not a ceiling and must not be written as one.** It is one seed against one seed,
+and the measured seed variance at k=70 is 3.73x, which would put seed 42's closure anywhere
+up to about 1.5 billion trials. What it does do is remove the expectation that seed 42 was
+about to close: two attempts have now ended without it, at 301.4 M (wall limit) and 518.6 M
+(node fault).
 
 ### `encU9_s42` was killed by the node, not by the algorithm
 
@@ -419,6 +448,12 @@ columns. Check the raw evidence and distinguish candidates from reliable rules.
 - **A complete address is not necessary for every correct minimal MPX rule.** The
   historical `correct` diagnostic is a narrower structural proxy, not a completeness
   test for correct candidates.
+- **Re-running seed 42 was not "the highest-probability route to a second full closure".**
+  This file argued it was, "well above a fresh seed of unknown cost", on the reasoning that
+  seed 42 had been stopped 100 M trials before seed 43's second class opened. The rerun
+  reached 518.64 M — 114 M past that point — with `a0_nochange` still at exactly 0.0000.
+  The reasoning was sound and the prediction was wrong; a fresh seed is now the cheaper
+  expectation, not the dearer one.
 - **The k=135 ACS2ER runs were cancelled too early.** They looked dead at one
   evaluation point per day, but the eval interval had been sized for ACS2's
   throughput. The one point they did produce showed ER touching the starved class
