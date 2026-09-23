@@ -304,13 +304,14 @@ Three things that cost days before:
 Verified live on 2026-09-11. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Grant: 4999 h of 15,000 spent on 2026-09-23, so ~10,000 h are available.** The k=264
-chain commits up to 5,000 h of that and is the only job running. The budget stopped being
+**Grant: 5000 h of 15,000 spent on 2026-09-23, so ~10,000 h are available.** The k=264
+chain commits up to 5,000 h of that and `eps1_s44` up to 500 h. The budget stopped being
 the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
 | `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **14,250,000 trials at 2026-09-23 22:51**, knowledge 0.0000, reliable 0, pop 114,503, 12.7 trials/s, checkpoint 206 MB, 8 d 15 h of segment left | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. **The population has plateaued** — max 116,253 at 12.87 M trials, flat to within ±2,000 since about 9 M, and throughput steady at 12.7 trials/s. It has not yet collapsed. Read it by the population, not by knowledge — see below. |
+| `eps1_s44` (5937978) | submitted 2026-09-23, not yet started. k=135, canonical `flip`, `u_max=11`, `epsilon=1`, checkpointed, 500 h cap | **The second seed for the literature-comparable result.** Seed 43 closed at 427.92 M trials in 152.3 h; this cap reaches roughly 1.4 billion. Watch the two `*_nochange` coverage classes, not overall knowledge — they are what decides it. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
@@ -371,13 +372,22 @@ up to about 1.5 billion trials. What it does do is remove the expectation that s
 about to close: two attempts have now ended without it, at 301.4 M (wall limit) and 518.6 M
 (node fault).
 
-**Decided 2026-09-23: nothing is relaunched.** The options were two fresh checkpointed seeds
-(~600 h), one fresh seed, a checkpointed rerun of seed 42, or nothing; the user chose
-nothing, to keep the grant and the attention on k=264 and on step 4. So **the canonical
-`epsilon = 1` result at k=135 stands on one seed and the thesis must say so**, alongside
-seed 42's 518.64 M trials with three of four classes closed — which is the honest shape of
-the evidence and is itself worth reporting. Do not re-propose a relaunch without new
-reasons; this one was weighed and declined.
+**Decided 2026-09-23, then revisited the same day: one fresh seed is running.** The first
+call was to relaunch nothing and keep everything on k=264 and step 4. The user reopened it
+and `eps1_s44` (5937978) went out: seed 44, canonical `flip`, `u_max=11`, `epsilon=1`,
+`EVAL_INTERVAL=120000` to match seed 43's grid, `ACCURACY_EVERY=5`, `CHECKPOINT=on`,
+`--log-coverage`, 500 h cap.
+
+The argument that changed it: **neither previous attempt at a second seed stopped for a
+reason internal to the model** — 301.4 M ended on the wall limit, 518.6 M on a node fault —
+and checkpointing, which neither run had, removes both. Seed 42 is excluded because it
+twice failed to open its fourth class. The seed number itself is arbitrary; 44, 45 and 46
+are all untried under `epsilon = 1`.
+
+Until it closes, **the canonical result stands on one seed and the thesis must say so**,
+alongside seed 42's 518.64 M trials with three of four classes closed. At 3.73x measured
+seed variance this run may not close either; 500 h at ~780 trials/s reaches about 1.4
+billion trials, well past both earlier stopping points.
 
 ### `encU9_s42` was killed by the node, not by the algorithm
 
