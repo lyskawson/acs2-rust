@@ -55,7 +55,9 @@ At canonical encoding and epsilon 0.8, four time-limited runs ended at last samp
 knowledge 0.7499 (s42) and 0.4980 / 0.4980 / 0.4918 (s43–45). These are finite-run
 readings, not ceilings. The class-level diagnosis is in §3.
 
-**`epsilon = 1` reaches sampled knowledge 1.0 at k=135 under canonical encoding.**
+**`epsilon = 1` reaches sampled knowledge 1.0 at k=135 under canonical encoding, on one
+seed.** The second seed was attempted twice and closed neither time — §6 has the numbers and
+the decision not to try again.
 Seed 43 reached it at **427,920,000 trials**, with 532 reliable rules at specificity
 8.02 and all four sampled coverage classes at 1.0000, in 152.3 h. This result rests
 on one seed in the committed archive. Seed 42's first run hit its wall-clock cap at
@@ -368,6 +370,14 @@ and the measured seed variance at k=70 is 3.73x, which would put seed 42's closu
 up to about 1.5 billion trials. What it does do is remove the expectation that seed 42 was
 about to close: two attempts have now ended without it, at 301.4 M (wall limit) and 518.6 M
 (node fault).
+
+**Decided 2026-09-23: nothing is relaunched.** The options were two fresh checkpointed seeds
+(~600 h), one fresh seed, a checkpointed rerun of seed 42, or nothing; the user chose
+nothing, to keep the grant and the attention on k=264 and on step 4. So **the canonical
+`epsilon = 1` result at k=135 stands on one seed and the thesis must say so**, alongside
+seed 42's 518.64 M trials with three of four classes closed — which is the honest shape of
+the evidence and is itself worth reporting. Do not re-propose a relaunch without new
+reasons; this one was weighed and declined.
 
 ### `encU9_s42` was killed by the node, not by the algorithm
 
