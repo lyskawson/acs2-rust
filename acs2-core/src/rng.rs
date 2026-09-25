@@ -41,6 +41,12 @@ impl ChaChaRandomSource {
         }
     }
 
+    pub fn from_seed_and_stream(seed: u64, stream: u64) -> Self {
+        let mut inner = ChaCha8Rng::seed_from_u64(seed);
+        inner.set_stream(stream);
+        Self { inner }
+    }
+
     pub fn from_state(state: &RngState) -> Self {
         let mut inner = ChaCha8Rng::from_seed(state.seed);
         inner.set_stream(state.stream);
@@ -132,6 +138,34 @@ mod tests {
             let replayed: Vec<u64> = (0..4).map(|_| restored.gen_range(usize::MAX) as u64).collect();
             assert_eq!(replayed, expected, "diverged after {consumed} words");
         }
+    }
+
+    #[test]
+    fn stream_zero_is_the_plain_seeded_source() {
+        let mut plain = ChaChaRandomSource::from_seed(42);
+        let mut streamed = ChaChaRandomSource::from_seed_and_stream(42, 0);
+        let expected: Vec<usize> = (0..64).map(|_| plain.gen_range(1_000)).collect();
+        let actual: Vec<usize> = (0..64).map(|_| streamed.gen_range(1_000)).collect();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn streams_of_one_seed_are_distinct_and_reproducible() {
+        let draw = |stream: u64| -> Vec<usize> {
+            let mut source = ChaChaRandomSource::from_seed_and_stream(42, stream);
+            (0..64).map(|_| source.gen_range(1_000)).collect()
+        };
+        assert_eq!(draw(1), draw(1));
+        assert_ne!(draw(1), draw(2));
+        assert_ne!(draw(0), draw(1));
+
+        let mut source = ChaChaRandomSource::from_seed_and_stream(42, 7);
+        source.gen_unit();
+        let state = source.capture_state().unwrap();
+        assert_eq!(state.stream, 7);
+        let expected: Vec<f64> = (0..8).map(|_| source.gen_unit()).collect();
+        let mut restored = ChaChaRandomSource::from_state(&state);
+        assert_eq!((0..8).map(|_| restored.gen_unit()).collect::<Vec<_>>(), expected);
     }
 
     #[test]

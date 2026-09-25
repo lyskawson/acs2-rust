@@ -1561,3 +1561,98 @@ correct and was caught only by running a real chain through the parser.
 `--eval-interval` must stay constant across a chain — `mpx_reach` refuses a resume that
 changes it without `--checkpoint-allow-eval-change` — or the stitched series carries two
 sampling rates and trials-to-success stops meaning anything.
+
+## Goal port — the trajectory-utility line
+
+Added on `feature/trajectory-utility`. HER, trajectory utility and every agent compared with
+them need what `Environment<N>` does not have: a goal, and the reward and termination of a
+stored transition recomputed for a goal the transition was not collected under.
+`acs2-core::goal` supplies that as a second port. It is additive — `Environment<N>`,
+`StepOutcome`, `Info`, `Configuration`, `Classifier` and the checkpoint codec are unchanged,
+and the maze and multiplexer paths do not see it.
+
+### Nothing on the MPX path may move
+
+The checkpoint identity renders the whole `Configuration` through `Debug`
+(`checkpoint_identity` in `mpx_reach.rs`), and a resume asserts that identity. A new
+`Configuration` field therefore stops every checkpointed chain on its next segment once the
+cluster binary is rebuilt, and the reader accepts format 3 only. Parameters of goal agents
+live in their own types, as `ReplayConfiguration` does for ACS2ER, and the goal line runs
+through its own binaries rather than `mpx_reach`, whose source `reach_regressions.rs`
+includes verbatim.
+
+### Reward and termination are derived, not reported
+
+A goal environment reports what it cannot avoid knowing — the observation, the goal the step
+**achieved**, whether the new state ends the episode under every goal (`terminal_state`),
+and whether the time limit was hit (`time_limit_reached`). `GoalStep::outcome(objective,
+desired)` derives the rest:
+
+- `reward = objective.reward(achieved, desired)`
+- `terminated = terminal_state || objective.is_reached(achieved, desired)`
+- `truncated = !terminated && time_limit_reached`
+
+The last rule is the gym `TimeLimit` exclusivity that `Maze::step` already follows: a goal
+reached on the limit terminates. Because the environment never states a reward, relabeling a
+transition with another goal cannot disagree with what the environment would have said.
+pyalcs is the counterexample: its three ACS2HER variants relabel with 1/0, 0/−1 and a
+user function, none on the environment's 1000/0 scale, and mark every relabeled sample
+`done=False` even when it reaches its goal. The price is a restriction: a goal task's reward
+must be a pure function of (achieved, desired).
+
+**NAMED HAZARD — goal rewards must be non-negative.** `Population::get_maximum_fitness`
+folds from `0.0`, so a bootstrap over classifiers with negative fitness is clipped to zero.
+The 0/−1 scheme of the HER literature (and TUCA-HER, Eq. 1) would bias every ACS2 value
+estimate; goal tasks here pay `ExactMatch { reward_on_reach: 1000.0 }` and zero otherwise.
+
+### The achieved goal comes from the environment
+
+A goal is not assumed to be a function of the observation. Perception goals alias: in 15 of
+the 27 mazes in this repository the goal cell's 8-neighbour perception also occurs at another
+walkable cell (MazeF3 and the canonical Woods100 among them), so `achieved == desired` on
+perceptions is not the environment's success there. Maze4/5/7 and Woods1 are free of it.
+Each environment chooses a goal representation it can report exactly.
+
+### `M = S + G` without generic const expressions
+
+`[Symbol; S + G]` in a generic signature is rejected on stable Rust (rustc 1.96: "generic
+parameters may not be used in const operations"). `GoalLayout<S, G, M>` takes all three as
+independent parameters and asserts `S + G == M` in an associated constant, evaluated after
+monomorphization — the pattern `Multiplexer::CONTROL_BITS` already uses. `GoalConditioned::new`
+references it, so a wrong triple is a compile error, not a runtime one. Agents stay generic
+over one length `M` and never learn that part of their perception is a goal;
+`GoalLayout::goal_positions()` is there for code that must know, such as diagnostics.
+
+### ACS2 and ACS2ER run on goal tasks unchanged
+
+`GoalConditioned<E, S, G, M>` implements `Environment<M>` for any `GoalEnvironment<S, G>` by
+appending the desired goal to every observation, so an agent that has never heard of goals
+learns a goal-conditioned task through it. `tests/goal_port.rs` runs the unmodified `Agent` on
+a goal corridor and pins determinism from the seed. `reset_with_goal` starts an episode on a
+chosen goal, which evaluation needs.
+
+### Separate random streams
+
+`ChaChaRandomSource::from_seed_and_stream(seed, stream)` gives each consumer of one seed its
+own ChaCha stream; stream 0 is `from_seed(seed)` exactly. The existing runners hand the
+environment and the agent the same seed on stream 0, so both draw the same word sequence.
+That stays as it is — changing it would change every archived result and the P9 gate — and
+the goal line gives agent, environment and evaluation separate streams.
+
+### Why a plain goal suffix is enough — measured before building
+
+The worry was that ALP never specializes on goal positions, because dynamics do not depend on
+the goal, leaving values goal-agnostic and trajectory utility tied across goals. `tu_probe`
+(commit `03af5eb`) measured it on Maze4 with a goal drawn per episode, perception and
+coordinate goals, goal-conditioned ACS2 and a store-time HER, 3 seeds. After 2000 episodes
+66–87% of classifiers specify a goal symbol (0% with a fixed goal — the variation is the
+cause: marks record the goal of a failure like any other wildcard position, and
+`get_differences` specializes on it), `V(s|g)` differs across goals on 38–100% of steps, and
+the utility argmax is unique for 77–99% of trajectories and picks goals near the trajectory
+more often than chance. Utility is not flat. Its margins are small (2–5% of the maximum),
+it can point the wrong way early in training, and the goal specialization that produces it
+grows the population 3–7x against the single-goal task.
+
+What is deliberately absent: a goal-set API (the real goal set is the set of desired goals an
+agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
+any change to `Classifier`.

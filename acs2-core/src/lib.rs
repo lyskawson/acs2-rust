@@ -18,3 +18,4 @@ pub mod agent;
 pub mod acs2er;
 pub mod knowledge;
 pub mod checkpoint;
+pub mod goal;
