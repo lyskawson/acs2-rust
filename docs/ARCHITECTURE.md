@@ -1281,6 +1281,21 @@ RSS(pop) ~ 172 MB + pop x 16,867 B        # 7,504 live + 7,504 clone + 1,859 tex
 
 which puts a population of 300,000 at 5.23 GB and 750,000 at 12.8 GB.
 
+**A save also costs time, and it scales with the population.** Separable from the first
+production segment's own log, because only every twentieth interval carries one:
+
+| population | 5,000 trials, no save | with a save | the save |
+|---|---|---|---|
+| 40-70k | 199 s | 482 s | 284 s |
+| 70-95k | 305 s | 711 s | 406 s |
+| 95-120k | 411 s | 1,081 s | **670 s** |
+
+That is 5-6 ms per classifier, and it is the clone plus the per-classifier text rendering
+rather than the I/O — 209 MB written in 670 s would be 0.3 MB/s, which no disk is. At
+`CHECKPOINT_EVERY=100000` and 11.7 trials/s it costs **7.8%** of the run. The lever that
+does not touch code is `CHECKPOINT_EVERY`: doubling it halves the overhead and doubles the
+work a node fault can take, which at 100,000 trials is about 2.4 h against 500 h segments.
+
 **The binary's own cap is not `--mem`.** `DEFAULT_RSS_CAP_BYTES` is 5.6 GB and the loop
 breaks on it with a `MEMORY-LIMITED` verdict, so before `RSS_CAP_GB` existed every cluster
 run carried 5.6 GB however much memory it had been allocated — a k=264 population near
