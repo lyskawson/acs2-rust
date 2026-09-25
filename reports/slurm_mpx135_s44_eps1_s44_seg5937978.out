@@ -802,3 +802,8 @@ acs2-bench mpx-reach: agent=acs2 sizes=[135] n_exp=1 seed=44 rss_cap=5.6GB time_
   mpx-135 cover: trials=43440000 overall=0.1154 a0_nochange=0.0000 a0_change=0.0074 a1_nochange=0.0000 a1_change=0.4540 matched_but_wrong=0
   mpx-135 traj: trials=43560000 wall=141259s knowledge=0.1159 reliable=117 spec=10.47 pop=5147
   mpx-135 cover: trials=43560000 overall=0.1159 a0_nochange=0.0000 a0_change=0.0074 a1_nochange=0.0000 a1_change=0.4561 matched_but_wrong=0
+  mpx-135 traj: trials=43680000 wall=141635s knowledge=0.1171 reliable=120 spec=10.51 pop=5451
+  mpx-135 cover: trials=43680000 overall=0.1171 a0_nochange=0.0000 a0_change=0.0074 a1_nochange=0.0000 a1_change=0.4608 matched_but_wrong=0
+  mpx-135 traj: trials=43800000 wall=141976s knowledge=0.1169 reliable=116 spec=10.46 pop=4776
+  mpx-135 cover: trials=43800000 overall=0.1169 a0_nochange=0.0000 a0_change=0.0074 a1_nochange=0.0000 a1_change=0.4600 matched_but_wrong=2
+  mpx-135 acc: trials=43800000 accuracy=0.6402

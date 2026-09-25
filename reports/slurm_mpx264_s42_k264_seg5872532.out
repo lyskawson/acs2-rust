@@ -3168,3 +3168,14 @@ acs2-bench mpx-reach: agent=acs2 sizes=[264] n_exp=1 seed=42 rss_cap=5.6GB time_
   mpx-264 traj: trials=15060000 wall=1207103s knowledge=0.0000 reliable=0 spec=0.00 pop=114614
   mpx-264 traj: trials=15065000 wall=1207971s knowledge=0.0000 reliable=0 spec=0.00 pop=115094
   mpx-264 traj: trials=15070000 wall=1208789s knowledge=0.0000 reliable=0 spec=0.00 pop=115438
+  mpx-264 traj: trials=15075000 wall=1209671s knowledge=0.0000 reliable=0 spec=0.00 pop=115874
+  mpx-264 traj: trials=15080000 wall=1210370s knowledge=0.0000 reliable=0 spec=0.00 pop=115998
+  mpx-264 traj: trials=15085000 wall=1210834s knowledge=0.0000 reliable=0 spec=0.00 pop=115600
+  mpx-264 traj: trials=15090000 wall=1211230s knowledge=0.0000 reliable=0 spec=0.00 pop=116173
+  mpx-264 traj: trials=15095000 wall=1211633s knowledge=0.0000 reliable=0 spec=0.00 pop=116475
+  mpx-264 traj: trials=15100000 wall=1212116s knowledge=0.0000 reliable=0 spec=0.00 pop=115904
+  mpx-264 acc: trials=15100000 accuracy=0.4999
+  mpx-264 traj: trials=15105000 wall=1213244s knowledge=0.0000 reliable=0 spec=0.00 pop=115506
+  mpx-264 traj: trials=15110000 wall=1213691s knowledge=0.0000 reliable=0 spec=0.00 pop=115198
+  mpx-264 traj: trials=15115000 wall=1214088s knowledge=0.0000 reliable=0 spec=0.00 pop=114910
+  mpx-264 traj: trials=15120000 wall=1214490s knowledge=0.0000 reliable=0 spec=0.00 pop=114539
