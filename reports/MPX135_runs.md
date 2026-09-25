@@ -59,6 +59,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 | 42 | pyalcs | 11 | running | 518 640 000 | 0.7499 | 518640000 | 1.0000 | 398 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 165.3 | 872 | `135_s42_eps1b_u11` |
 | 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | 301440000 | - | 393 | 8.01 | - | - | - | - | 166.7 | 502 | `135_s42_eps1_u11` |
 | 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | 427920000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
+| 44 | pyalcs | 11 | running | 43 560 000 | 0.1159 | 43560000 | - | 117 | 10.47 | 0.0000 | 0.0074 | 0.0000 | 0.4561 | 39.2 | 308 | `135_s44_eps1_s44` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
@@ -73,7 +74,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 
 ## Summary
 
-- archived runs: **37**
+- archived runs: **38**
 - solved (knowledge = 1.0): **5**
 - fewest trials: seed 46, 30 240 000 trials, 57.6 h, encoding outcome, epsilon 0.8, acs2, variant pyalcs
 - shortest wall time: seed 42, 43 200 000 trials, 50.5 h, encoding outcome, epsilon 0.8, acs2, variant pyalcs
