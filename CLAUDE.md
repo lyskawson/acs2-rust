@@ -1,8 +1,20 @@
 # ACS2 Rust — instructions for agents
 
-Read `docs/AGENT_HANDOFF.md` first. It is the live state of the research: results,
-what is running on the cluster, which claims were corrected, and how the user works.
-`docs/PROJECT_CONTEXT.md` says what the project is, `docs/ARCHITECTURE.md` how it is
+**Two lines of work share this repository. Establish which one you are on before
+anything else**, because the cluster rules below belong to one of them:
+
+| line | what it is | branch | its live state |
+|---|---|---|---|
+| **MPX scaling** | multiplexer sizes past the literature's 135 bits, on WCSS | `feature/mpx264` | `docs/AGENT_HANDOFF.md` |
+| **Trajectory utility** | the thesis core: goal and experience selection, ACS2HER/TU | `feature/trajectory-utility` | its own notes, outside the checkout |
+
+MPX scaling is additional research, not the thesis. If nobody told you which line you are
+on, ask before touching anything.
+
+`docs/AGENT_HANDOFF.md` is the live state of the MPX line: results, what is running on the
+cluster, which claims were corrected, and how the user works. Read it first if you are on
+that line; read §2, §7 and §11 anyway, because the invariants and the withdrawn claims bind
+both. `docs/PROJECT_CONTEXT.md` says what the project is, `docs/ARCHITECTURE.md` how it is
 built, `reports/MPX_final.md` the scientific narrative.
 
 **Every document in this repository is written for an agent working on the code**, in
@@ -10,13 +22,14 @@ English. Personal study notes, one-off reports and anything written for the user
 than for the work are kept outside the checkout. Do not add a document here that only a
 human learner would read.
 
-## Sync the cluster runs — do this without being asked
+## Sync the cluster runs — MPX line only, and do it without being asked
 
 ```bash
 ./tools/sync_runs.sh --commit
 ```
 
-**At the start of every session, and again after any cluster batch finishes.**
+**At the start of every MPX session, and again after any cluster batch finishes.** It
+commits to the current branch, so a session on another line must not run it.
 
 A SLURM job writes only to `~/mpx_runs/` on the cluster, outside any checkout, and
 nothing pulls it. Until this runs, every result exists in exactly one copy, on an
@@ -57,7 +70,14 @@ the file. The commits and the docs they corrected are the durable record.
 - Conversation in Polish. Code, comments, commits, docs and identifiers in English.
 - No comments in code.
 - Idiomatic Rust, SOLID, injected RNG, determinism from the seed.
-- Commit and push to `feature/mpx264` after each completed group.
+- Commit and push after each completed group, to your own line's branch.
+- **An agent's own parameters belong in its own type, never in `Configuration`.**
+  `checkpoint_identity` embeds the whole `Configuration` and a resume asserts on it, so a
+  new field there invalidates every existing checkpoint and would end the running k=264
+  chain. `ReplayConfiguration` in `acs2-core/src/acs2er/replay.rs` is the pattern to copy;
+  §5 of the handoff has the live identity string to compare against.
+- **Only the MPX line submits to the cluster.** Do not submit, cancel or rebuild there on
+  any other line — a rebuild reaches every pending segment that has not started yet.
 - Experiments run on the cluster, never on the user's laptop — it overheats. Test
   gates locally are fine.
 - **Check the grant before submitting anything.** `sshare -U -u alelys2099 -o
