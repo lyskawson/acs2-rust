@@ -1656,3 +1656,31 @@ grows the population 3–7x against the single-goal task.
 What is deliberately absent: a goal-set API (the real goal set is the set of desired goals an
 agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
 any change to `Classifier`.
+
+## Clippy — the determinism invariants, checked by machine
+
+`clippy.toml` at the workspace root turns two claims this document makes into lints:
+
+- **No `HashMap` or `HashSet` anywhere.** Their iteration order is randomized per process.
+  "No container's iteration order became load-bearing" (checkpointing, above) is now checked
+  rather than asserted.
+- **No transcendental float functions** — `powf`, `exp`, `ln`, the logarithms, `cbrt`,
+  `hypot`, the trigonometric family. They come from the platform libm, whose last bits differ
+  between macOS and Linux musl, and the M1/Bem2 bit-identity of every archived run rests on
+  their absence. `sqrt` is correctly rounded by IEEE 754 and `powi` goes through
+  `compiler-builtins`, so both are allowed; `ga.rs` uses `powi(3)`.
+
+Measured on 2026-09-25: the whole workspace has zero violations of either rule, confirmed
+with a planted violation that the configuration catches from a member crate. The file affects
+`cargo clippy` only; no build, including the cluster's musl build, reads it. An exception is
+made locally and in the open — `#[expect(clippy::disallowed_methods, reason = "…")]` on code
+that feeds neither learning nor a reported number.
+
+```bash
+cargo clippy --workspace --all-targets --release
+```
+
+The baseline is 17 style and complexity warnings in files that predate the goal line —
+`ga.rs`, the nine-argument `apply_alp`, `mark.rs`, `population.rs`, `multiplexer.rs` and six
+test files — and none concerns correctness. They stay on this branch because fixing them
+edits the measured path. Code added by the goal line is held to zero warnings.

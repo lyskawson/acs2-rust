@@ -1,0 +1,27 @@
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "iteration order is randomized per process; use BTreeMap or Vec so learning and output stay deterministic from the seed" },
+    { path = "std::collections::HashSet", reason = "iteration order is randomized per process; use BTreeSet or Vec so learning and output stay deterministic from the seed" },
+]
+
+disallowed-methods = [
+    { path = "f64::powf", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::exp", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::exp2", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::exp_m1", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::ln", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::ln_1p", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::log", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::log2", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::log10", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::cbrt", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::hypot", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::sin", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::cos", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::tan", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::tanh", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::atan", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f64::atan2", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f32::powf", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f32::exp", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+    { path = "f32::ln", reason = "platform libm: results differ between macOS and Linux musl, breaking M1/Bem2 bit-identity" },
+]
