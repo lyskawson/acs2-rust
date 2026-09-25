@@ -288,6 +288,38 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
   out (Lem is contended; Bem2 starts next day). Never used. A one-hour benchmark would
   say whether its cores are faster.
 
+### Two of our own one-CPU jobs on one socket halve the big one (2026-09-25)
+
+`k264` ran alone at **11.66 trials/s**. `eps1_s44` — a single-core k=135 job — started on the
+same node and k264 dropped to **5.86**. Forty further CPUs of other users' work arriving over
+the next four hours moved it only to 5.47. The drop is attributable to one core of our own,
+not to the node filling up:
+
+| on the node | k264 |
+|---|---|
+| k264 alone | 11.66 trials/s |
+| + `eps1_s44`, 1 CPU, ours | **5.86** |
+| + another user, 24 CPU | 5.76 |
+| + another user, 16 CPU | 5.47 |
+
+`ThreadsPerCore=1`, so this is not hyperthread sharing; the two jobs held CPUs 4 and 12, both
+on socket 0, and the node is 2 sockets of 24. The mechanism that fits is **L3**: a k=264
+population is ~870 MB and entirely DRAM-bound, while a k=135 population is ~20 MB, fits in
+L3, and at 308 trials/s against k264's 5.5 it turns that cache over fast enough to evict
+everything k264 has cached.
+
+**So do not put a small-k job on the same node as a running large-k one.** Submit with
+`--exclude=<node>`; `sinfo -p bem2-cpu-normal` usually shows whole idle nodes. Cost of not
+doing it here: k264 at half speed for 1.6 days, and the grant paying twice for the same work.
+
+**A running job cannot be moved.** `scontrol update jobid=N ExcNodeList=...` is refused once
+the job starts, and `scontrol requeue` is refused too because jobs here are submitted with
+`Requeue=0` by default. The way across is `scancel` then resubmit with the **same TAG, size
+and seed**, so the derived checkpoint path is unchanged and the new job resumes where the old
+one stopped — verified on 5937978 -> 5954234, which restored trials=43,800,000 with
+`since_eval=0` and lost nothing. **Pass `--requeue` on submission** so that a node fault
+auto-resumes instead of ending the run the way `eps135_s42b` ended.
+
 Three things that cost days before:
 - **Budget wall-clock generously.** Nodes run packed, so throughput is ~2.7x below the
   M1 and degrades within a run. A run without `CHECKPOINT=on` restarts from zero when it
