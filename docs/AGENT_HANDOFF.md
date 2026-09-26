@@ -308,7 +308,12 @@ do_action_planning:false,do_subsumption:true,alp_gen_variant:Pyalcs}
 ```
 
 **So: do not rebuild the cluster binary while the chain has pending segments**, unless the
-identity is verified unchanged first. A pending segment `exec`s whatever is in `target/`
+identity is verified unchanged first. **A reference copy is pinned** at
+`~/mpx_bin/mpx_reach_9c737da` on the cluster — the exact executable the chain's segments
+`exec` — so an accidental rebuild is recoverable by copying it back over
+`target/x86_64-unknown-linux-musl/release/mpx_reach`. `tools/sync_runs.sh` now refuses to
+run on any branch but `feature/mpx264`, so the archive cannot be committed onto another
+line's branch by accident. A pending segment `exec`s whatever is in `target/`
 at its own start time, so a rebuild reaches every segment that has not started yet. The
 running one already exec'd and is safe.
 
