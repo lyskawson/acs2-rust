@@ -1,3 +1,4 @@
+pub mod bit_flipping;
 pub mod maze;
 
 use acs2_core::goal::ExactMatch;

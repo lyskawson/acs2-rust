@@ -1713,7 +1713,7 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
 | GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
 | Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `tests/goal_maze.rs` |
-| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `roles::RESEARCH_TASKS`; phase 2 group 3 |
+| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
 | HandEye | Thesis research; simulator and knowledge parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 4 |
 | Taxi | Thesis research; gym transition-table parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 5 |
 | Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
@@ -1812,6 +1812,44 @@ their matrices contain multiple reward cells. The dumper extracts those literal 
 matrices only for comparison and records `reference_initializable=false`; it does not patch
 the reference. Their ALCS geometries have one reward and can be passed to the unmodified
 knowledge utility normally. Native environment parity is not claimed for these two.
+
+### BitFlipping — canonical HER task and the ACS2 limitation
+
+`goal::bit_flipping::BitFlipping<N>` implements `GoalEnvironment<N, N>`. State and goal
+use ASCII `0/1` symbols, action `i` flips exactly position `i`, and the goal stays fixed.
+`new` uses cap `N`; `with_step_cap` takes a positive explicit cap. Start and goal are
+uniform binary vectors conditioned on being different. `reset_with_goal` samples that
+same conditional start distribution. `reset_at` supports deterministic oracles, and
+`distance_to_goal` is the exact Hamming distance. The whole real goal pool is exposed as
+a lazy `BitGoals<N>` iterator to avoid allocating `2^N` vectors in an environment.
+`knowledge_transitions` lazily enumerates every binary state times every action.
+
+The task follows [Andrychowicz et al., HER, §3.1 and Appendix A](https://arxiv.org/abs/1707.01495)
+in its bit dynamics, episode cap and success at any visited step. Two deliberate differences:
+our objective pays 1000 for reach and zero otherwise rather than the paper's 0/−1, because
+ACS2 ranks by `q*r`; and reach immediately terminates, whereas the paper describes
+fixed-length episodes with an any-step success measure. Starts already satisfying the goal
+are excluded explicitly. The cap truncates an unsuccessful episode and success wins on
+its final step.
+
+This is a research task about a limitation, not a claim that every canonical HER task
+supports an unchanged ACS2 goal-conditioned value. Covering specifies positions that
+changed; subsequent specialization comes from failed anticipations and their marks.
+In BitFlipping, the transition rules never fail in another goal context, so no goal
+position is added to a condition and reward estimates remain on goal-agnostic classifiers.
+Walls in a maze, or the held/unheld context in HandEye, can create those failures and make
+a goal position a mark difference. HER only changes goals and rewards, not transitions;
+therefore it cannot itself supply the missing failed anticipations. This is a working
+criterion for selecting tasks, not a theorem about all ACS2 variants or all configurations.
+
+`no_failed_anticipation_means_acs2_cannot_specialize_on_bit_flipping_goals` runs unchanged
+ACS2 through the adapter, N=4/6/8, seeds 42–44, GA off and on, 300 exploration episodes.
+After each episode it requires wildcard goal condition/effect positions and no marks;
+the final population is exactly `2*N`. Exhaustive N=4 tests check every start/goal/action,
+non-negative objective rewards, termination versus truncation at cap one, flip index,
+and Hamming distance. Seeded adapter tests pin the goal suffix and `reset_with_goal`.
+The task remains useful for exact relabeling oracles even though unchanged ACS2 cannot
+learn goal-dependent values here. No policy-quality comparison or HER agent is added.
 
 ### Single-goal equivalence and mutation coverage
 
