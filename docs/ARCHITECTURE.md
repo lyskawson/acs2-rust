@@ -1631,6 +1631,12 @@ learns a goal-conditioned task through it. `tests/goal_port.rs` runs the unmodif
 a goal corridor and pins determinism from the seed. `reset_with_goal` starts an episode on a
 chosen goal, which evaluation needs.
 
+The adapter owns the desired goal of the running episode and nothing else may change it: there
+is no mutable access to the wrapped environment, because resetting it behind the adapter's back
+would leave every later observation labelled, and every reward computed, for the old goal. The
+goal is forgotten when an episode ends, so a step without a fresh reset is refused rather than
+scored against a goal that no longer applies.
+
 ### Separate random streams
 
 `ChaChaRandomSource::from_seed_and_stream(seed, stream)` gives each consumer of one seed its
@@ -1643,15 +1649,36 @@ the goal line gives agent, environment and evaluation separate streams.
 
 The worry was that ALP never specializes on goal positions, because dynamics do not depend on
 the goal, leaving values goal-agnostic and trajectory utility tied across goals. `tu_probe`
-(commit `03af5eb`) measured it on Maze4 with a goal drawn per episode, perception and
-coordinate goals, goal-conditioned ACS2 and a store-time HER, 3 seeds. After 2000 episodes
-66–87% of classifiers specify a goal symbol (0% with a fixed goal — the variation is the
-cause: marks record the goal of a failure like any other wildcard position, and
-`get_differences` specializes on it), `V(s|g)` differs across goals on 38–100% of steps, and
-the utility argmax is unique for 77–99% of trajectories and picks goals near the trajectory
-more often than chance. Utility is not flat. Its margins are small (2–5% of the maximum),
-it can point the wrong way early in training, and the goal specialization that produces it
-grows the population 3–7x against the single-goal task.
+measured it on Maze4 with a goal drawn per episode from all 27 walkable cells or from a fixed
+subset of 4, perception and coordinate goals, goal-conditioned ACS2 and a store-time HER,
+3 seeds, up to 2000 episodes.
+
+**What counts as the agent's value.** `Q(s,a|g)` is the maximum fitness over the
+change-anticipating classifiers of the action set for `s‖g`, and `V(s|g)` its maximum over
+actions — exactly the classifiers `best_change_anticipating_action` and
+`Population::get_maximum_fitness` consult. The first version of the probe took every matching
+classifier; an independent review pointed out that a goal-specific no-change classifier the
+agent never consults could then create goal dependence on its own. The probe now reports both
+scopes, and `a_goal_specific_classifier_the_agent_ignores_moves_only_the_all_scope` pins the
+difference. Chance baselines are averaged over the same trajectories as the hits they are
+compared with — those whose utility has a unique maximum.
+
+After 2000 episodes, agent scope: 66–87% of all classifiers and 69–89% of change-anticipating
+ones specify a goal symbol (0% with a fixed goal — the variation is the cause: marks record the
+goal of a failure like any other wildcard position, and `get_differences` specializes on it);
+`V(s|g)` differs across goals on 37–99% of steps; the utility argmax is unique for 77–99% of
+trajectories and names the goal nearest the trajectory at 0.64–0.80 against a chance rate of
+0.37–0.58, with rank correlation to proximity 0.25–0.52. Utility is not flat. Per seed, 23 of
+24 seed-configurations beat chance by at least 0.10; one sits at chance with a positive rank
+correlation. Its margins are small (2–5% of the maximum). Early in training it is weak rather
+than inverted — at 125 episodes the mean rank correlation is 0.04–0.35 and the 27-goal
+perception ACS2 configuration is at chance, with single seeds down to −0.19 against chance.
+The goal specialization that produces it grows the population 3–7x against the single-goal
+task. The all-classifier scope reproduces the first version exactly, 120 rows by 19 fields.
+
+HER relabels with achieved cells whether or not they belong to the goal subset. That is the
+definition of HER — its goals are the non-target states a trajectory reached — and it is what
+trajectory utility is meant to complement with goals from the real set.
 
 What is deliberately absent: a goal-set API (the real goal set is the set of desired goals an
 agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
@@ -1664,23 +1691,38 @@ any change to `Classifier`.
 - **No `HashMap` or `HashSet` anywhere.** Their iteration order is randomized per process.
   "No container's iteration order became load-bearing" (checkpointing, above) is now checked
   rather than asserted.
-- **No transcendental float functions** — `powf`, `exp`, `ln`, the logarithms, `cbrt`,
-  `hypot`, the trigonometric family. They come from the platform libm, whose last bits differ
-  between macOS and Linux musl, and the M1/Bem2 bit-identity of every archived run rests on
-  their absence. `sqrt` is correctly rounded by IEEE 754 and `powi` goes through
-  `compiler-builtins`, so both are allowed; `ga.rs` uses `powi(3)`.
+- **No float function whose precision Rust documents as non-deterministic** — for `f64` and
+  `f32`: `powi`, `powf`, the exponentials and logarithms, `cbrt`, `hypot`, and the
+  trigonometric and hyperbolic families. The standard library states that their precision
+  "varies by platform, Rust version, and can even differ within the same execution"; most
+  call the platform libm. `sqrt` and `mul_add` are documented as correctly rounded and stay
+  allowed. Squares are written as products.
 
-Measured on 2026-09-25: the whole workspace has zero violations of either rule, confirmed
-with a planted violation that the configuration catches from a member crate. The file affects
-`cargo clippy` only; no build, including the cluster's musl build, reads it. An exception is
-made locally and in the open — `#[expect(clippy::disallowed_methods, reason = "…")]` on code
-that feeds neither learning nor a reported number.
+The file affects `cargo clippy` only; no build, including the cluster's musl build, reads it. An
+exception is made locally and in the open — `#[expect(clippy::disallowed_methods, reason = "…")]`
+on code that feeds neither learning nor a reported number.
 
 ```bash
+cargo clean --release -p acs2-core -p acs2-envs -p acs2-bench
 cargo clippy --workspace --all-targets --release
 ```
 
-The baseline is 17 style and complexity warnings in files that predate the goal line —
-`ga.rs`, the nine-argument `apply_alp`, `mark.rs`, `population.rs`, `multiplexer.rs` and six
-test files — and none concerns correctness. They stay on this branch because fixing them
-edits the measured path. Code added by the goal line is held to zero warnings.
+**Clean first.** Cargo replays cached diagnostics for crates that did not change, and it does
+not treat `clippy.toml` as an input. The first version of this section claimed zero violations
+from a run that had only re-linted a freshly planted file; the rest was replayed from a cache
+built before the rules existed. A run from clean on 2026-09-26 finds 22 warnings, none in code
+added by the goal line:
+
+- **5 violations**, all in files that predate the rules. `ga.rs:65` squares quality with
+  `powi(3)` on the learning path, and `acs2-bench/src/main.rs:99` and `bin/mpx.rs:202` compute
+  standard deviations with `powi(2)` — in P9 that is column 4, one of the columns compared
+  byte for byte across machines. Bit-identity between the M1 and Bem2 has been measured on runs
+  that use them, not guaranteed; LLVM lowers a small constant `powi` to multiplications, and
+  writing them explicitly would be bit-identical under that lowering, but these files belong to
+  the measured path of the multiplexer line. `acs2-envs/tests/unold_geometry.rs` uses a
+  `HashSet` for membership only, never iterating it.
+- **17 style and complexity warnings** — `ga.rs`, the nine-argument `apply_alp`, `mark.rs`,
+  `population.rs`, `multiplexer.rs` and six test files. None concerns correctness.
+
+All 22 stay on this branch because fixing them edits the measured path. Code added by the goal
+line is held to zero.
