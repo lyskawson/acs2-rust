@@ -200,9 +200,17 @@ impl<E: MazeGoalEncoding<G>, const G: usize> GoalMaze<E, G> {
     }
 
     pub fn distance_to_goal(&self, start: Cell, desired: &Goal<G>) -> Option<u32> {
-        let index = self.goals.iter().position(|goal| goal == desired)?;
-        self.topology
-            .shortest_distance(start, self.goal_cells[index])
+        let mut matches = self
+            .topology
+            .walkable_cells()
+            .iter()
+            .copied()
+            .filter(|&cell| E::encode(&self.topology, cell) == *desired);
+        let target = matches.next()?;
+        if matches.next().is_some() {
+            return None;
+        }
+        self.topology.shortest_distance(start, target)
     }
 
     pub fn reset_at(&mut self, start: Cell, desired: Goal<G>) -> GoalStart<MAZE_PERCEPTION_LEN, G> {

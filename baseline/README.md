@@ -149,3 +149,13 @@ The baseline additionally pins `pygame==2.6.1`, required by gym 0.23's toy-text 
 without rendering. Run `uv run python -B dump_taxi_references.py` after sync.
 `fixtures/taxi.json` contains all 3000 transition-table probes, 300 equally probable
 initial tuples and shortest distances for the 125 physical states and four goals.
+
+## Exact random-policy success
+
+`uv run python -B compute_random_policy.py --out /tmp/tu-random-policy.json` counts
+absorbing-state action sequences with integers and outputs exact fractions plus decimal
+views for the research mazes, BitFlipping 4–16, HandEye 3–5 and Taxi. It uses the committed
+reference kernels and each task's exact start distribution, including half-held HandEye.
+Output must be outside the checkout. From the repository root, run
+`baseline/.venv/bin/python -B -m unittest baseline/test_random_policy.py` for its four
+independent analytical oracles. See ARCHITECTURE.md for the table and recurrence.

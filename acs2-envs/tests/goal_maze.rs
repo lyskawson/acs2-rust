@@ -536,3 +536,18 @@ fn invalid_pools_and_zero_caps_are_refused() {
         );
     }
 }
+
+#[test]
+fn maze_distances_also_cover_unambiguous_goals_outside_the_real_pool() {
+    let maze = CoordinateGoalMaze::multi_goal(&pyalcs::MAZE4, vec![(1, 1)], 3, rng(0)).unwrap();
+    assert_eq!(
+        maze.distance_to_goal((1, 5), &maze.goal_at((1, 6))),
+        Some(1)
+    );
+    let ambiguous =
+        PerceptionGoalMaze::multi_goal(&pyalcs::MAZEF3, vec![(1, 1)], 3, rng(0)).unwrap();
+    assert_eq!(
+        ambiguous.distance_to_goal((1, 1), &ambiguous.goal_at((1, 4))),
+        None
+    );
+}

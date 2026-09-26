@@ -1,5 +1,6 @@
 pub mod bit_flipping;
 pub mod hand_eye;
+pub mod knowledge;
 pub mod maze;
 pub mod taxi;
 

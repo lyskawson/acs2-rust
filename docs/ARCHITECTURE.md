@@ -1645,7 +1645,7 @@ provenance catalogue, so adding a geometry cannot silently extend P9.
 `PERFORMANCE_MAZES` is the existing 22-geometry ALCS comparison.
 `RESEARCH_MAZES` names Maze4/5/6/7 and the pyalcs MazeF3/MazeB research geometries.
 `RESEARCH_TASKS`, `VALIDATION_ORACLES` and `PERFORMANCE_BENCHMARKS` state the task families.
-The task-family names include the remaining phase-2 environments as well as GoalMaze.
+All four phase-2 goal task families are implemented under `goal/`.
 
 Geometry and role are independent: the same Maze4 data drives the validated single-goal
 `Maze` and the research goal maze. The data tree records kind and provenance, with one copy
@@ -1661,7 +1661,7 @@ acs2-envs/src/
   maze/geometries/mod.rs      MazeGeometry, MazeSource::{Pyalcs, Alcs}, lookup
   maze/geometries/pyalcs/     gym_maze geometry data
   maze/geometries/alcs/       ALCS geometry data
-  goal/maze.rs                GoalMaze and its coordinate/perception encodings
+  goal/                       maze, bit_flipping, hand_eye, taxi, knowledge helpers
   roles.rs                    role sets, independent of provenance
   multiplexer.rs              MPX dynamics and knowledge, unchanged
 ```
@@ -1739,7 +1739,8 @@ The pool does not restrict starts. `reset_with_goal` accepts every pool goal; `r
 a deterministic start/goal entry point. `goal_pool`, `goal_cells`, `position`, `step_cap`
 and `distance_to_goal` give the runner the data it needs. None is an agent goal-set port.
 The shortest distance is over the eight compass moves, including diagonal moves permitted
-by pyalcs; `None` means a wall/invalid start, an unknown goal, or no route. The unchanged
+by pyalcs, and also supports unambiguous goals outside the real pool; `None` means a
+wall/invalid start, an unknown or ambiguous goal, or no route. The unchanged
 ALCS Woods101_5 and Woods102 geometries contain disconnected walkable areas.
 
 In multi-goal mode `9` is traversable and can be entered and left. It remains visible as `9`
@@ -1936,6 +1937,100 @@ Wrong-stand dropoff stays active before the cap; cap-one success terminates excl
 Seeded goal evaluation covers every real goal. Native reward parity is deliberately not
 claimed: those rewards are replaced by the objective.
 
+### Phase-2 environment interface and exact random-policy sparsity
+
+The core port stays unchanged. The runner can read each concrete environment's `step_cap`,
+`goal_pool`, current physical state (`position` for mazes, `state` for the other tasks), and
+`distance_to_goal`; every task implements `reset_with_goal` for its real pool and provides
+`reset_at` for deterministic oracles. BitFlipping's full binary pool is lazy; other pools
+are slices. Coordinate maze distances also work for valid achieved goals outside the real
+pool. Perception distances refuse ambiguity. `goal::knowledge::with_wildcard_goals<S,G,M>`
+lifts any state-only knowledge iterator to joined perceptions, with wildcard suffixes on
+both ends. Maze's named generators keep their own convenience wrapper.
+
+The pool belongs to the runner, not the agent. TU still collects desired goals from the
+agent's episodes. No goal-agent trait, learning runner, budget accounting, evaluation layer,
+HER agent, or truncation-bootstrap fix is added in this phase. Randomness enters only via
+the injected `RandomSource`; callers use separate seeded ChaCha streams for environment,
+agent and evaluation. Tests pin same-seed resets and complete trajectories for every task.
+
+`baseline/compute_random_policy.py --out <outside-checkout.json>` computes the following
+success probabilities **exactly as rational numbers**, storing those fractions alongside
+rounded decimal views. This is an analytical environment tool, not a training runner.
+For an A-action kernel, count sequences of length t hitting the goal by t: start with
+`C_0(s,g)=1[s reaches g]`; at a reached state `C_t=A^t`, otherwise
+`C_t(s,g)=sum_a C_(t-1)(next(s,a),g)`. Integer counts divided by `A^t` give the absorbing-state
+probability. Average with the exact task start and desired-goal weights. No simulation,
+RNG, fitted model or floating-point recurrence enters the calculation. BitFlipping uses
+its Hamming-distance birth/death chain and binomial initial weights instead of all `2^n`
+states. Python `Fraction` retains exactness at caps up to 200.
+
+All tables are **percentages**. Maze starts/goals range over all walkable cells, including
+`9`, with start != goal and eight uniformly sampled actions. BitFlipping conditions out
+already-reached starts. HandEye uses the simulator's half-held distribution, then conditions
+out the desired block location, and succeeds without release. Taxi uses gym's exact
+300-state initial distribution and six actions. These are baselines for phase 3 to choose
+configurations from, not evidence about ACS2 or HER policy quality.
+
+Maze cap columns, descending:
+
+| Task | 50 | 25 | 20 | 10 | 5 | 2 | 1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Maze4-v0 | 46.302073 | 29.331725 | 25.065609 | 15.005831 | 8.645630 | 3.939637 | 2.101140 |
+| Maze5-v0 | 31.587719 | 19.421485 | 16.521240 | 9.844277 | 5.688921 | 2.604167 | 1.388889 |
+| Maze6-v0 | 32.504069 | 20.172753 | 17.190554 | 10.264440 | 5.927366 | 2.709741 | 1.445195 |
+| Maze7-v0 | 30.863918 | 19.652193 | 16.846240 | 10.188956 | 5.923050 | 2.715774 | 1.448413 |
+
+| Bits (= cap) | Success (%) |
+|---:|---:|
+| 4 | 21.041667 |
+| 5 | 13.135484 |
+| 6 | 7.935691 |
+| 7 | 4.696347 |
+| 8 | 2.720795 |
+| 9 | 1.551231 |
+| 10 | 0.871945 |
+| 11 | 0.484560 |
+| 12 | 0.266658 |
+| 13 | 0.145554 |
+| 14 | 0.078896 |
+| 15 | 0.042509 |
+| 16 | 0.022786 |
+
+| Cap | HandEye 3 (%) | HandEye 4 (%) | HandEye 5 (%) |
+|---:|---:|---:|---:|
+| 1 | 2.777778 | 1.666667 | 1.111111 |
+| 2 | 4.681070 | 2.795139 | 1.859259 |
+| 5 | 8.554813 | 5.097683 | 3.389626 |
+| 10 | 12.315083 | 7.271381 | 4.811615 |
+| 20 | 16.594623 | 9.545986 | 6.215131 |
+| 30 | 19.610849 | 10.972070 | 7.018367 |
+| 50 | 24.739549 | 13.196164 | 8.167293 |
+| 100 | 35.772248 | 18.023233 | 10.510389 |
+
+| Cap | Taxi success (%) |
+|---:|---:|
+| 50 | 0.333072 |
+| 75 | 0.809786 |
+| 100 | 1.426356 |
+| 150 | 2.938676 |
+| 200 | 4.673316 |
+
+Maze4 cap 50 is **46.302073%**, rather than the probe's finite-sample 49–53% range; it is
+still not a sparse task. Caps around 2–5 reduce the four maze baselines to roughly 3–9%.
+Taxi cap 50 is **0.333072%**, not a mathematical zero; seeing no successes in a finite probe
+is consistent with that probability. At cap 200 it is 4.673316%. BitFlipping n=8 is
+2.720795% and n=16 is 0.022786%. HandEye g=3 cap 30 is 19.610849%, g=4 cap 50 is
+13.196164%, and g=5 cap 50 is 8.167293%. Changing HandEye's initial holding probability or
+requiring release would invalidate these numbers.
+
+`baseline/test_random_policy.py` validates the counting method against every action
+sequence for four-bit flipping, the maze one-step edge count, the HandEye one-step
+half-held distribution and Taxi's impossible delivery in its first two steps. These four
+analytical tests are separate from the 45 existing tests under `tools/`. The JSON table and
+one-off report stay outside the checkout; the reproducible calculator and key numbers live
+here. No archived measurement under `reports/` is edited.
+
 ### Single-goal equivalence and mutation coverage
 
 `tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
@@ -2005,7 +2100,7 @@ HER relabels with achieved cells whether or not they belong to the goal subset. 
 definition of HER — its goals are the non-target states a trajectory reached — and it is what
 trajectory utility is meant to complement with goals from the real set.
 
-What is deliberately absent: a goal-set API (the real goal set is the set of desired goals an
+What is deliberately absent: an agent goal-set API (the real goal set is the set of desired goals an
 agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
 any change to `Classifier`.
 
