@@ -1714,7 +1714,7 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
 | Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `tests/goal_maze.rs` |
 | BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
-| HandEye | Thesis research; simulator and knowledge parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 4 |
+| HandEye | Thesis research; simulator and knowledge parity oracle | `goal/hand_eye.rs`, `tests/hand_eye.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
 | Taxi | Thesis research; gym transition-table parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 5 |
 | Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
 | Multiplexer | Performance and limits for this thesis; MPX-line research | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
@@ -1850,6 +1850,46 @@ non-negative objective rewards, termination versus truncation at cap one, flip i
 and Hamming distance. Seeded adapter tests pin the goal suffix and `reset_with_goal`.
 The task remains useful for exact relabeling oracles even though unchanged ACS2 cannot
 learn goal-dependent values here. No policy-quality comparison or HER agent is added.
+
+### HandEye — simulator parity and block-position goals
+
+`goal::hand_eye::HandEye<SIDE, S>` enforces `S=SIDE*SIDE+1`; aliases `HandEye3`,
+`HandEye4`, `HandEye5` have state lengths 10/17/26 and joined lengths 12/19/28.
+The pure `HandEyeState` holds gripper `(x,y)`, block `(x,y)` and held status. A held block
+must occupy the gripper cell. Actions are N, E, S, W, grip, release in simulator order;
+borders block moves. The row-major observation uses `w/b/g`; the gripper hides an unheld
+block below it, a held block appears as `b`, and the tactile symbol is `0/1/2` with
+`note_in_hand=True`. Coordinates are raw token values `(x,y)`, unlike the maze's `(row,col)`.
+The achieved goal always comes from the physical block position, including when hidden.
+
+The desired goal is uniform over all `SIDE*SIDE` cells except the block's start.
+The default start distribution is exactly the simulator's distribution: uniform block,
+half held (gripper at block), otherwise an independently uniform gripper. This is **not**
+uniform over the reachable states: a particular held state is `SIDE*SIDE` times as likely
+as a particular unheld state. `reset_with_goal` conditions that same distribution on
+block position differing from the desired goal. Constructor caps are positive and explicit.
+Seeded draw-order tests pin the default distribution; evaluation never needs an agent goal pool.
+
+Success uses the Fetch block-position convention: transport into the goal while still
+holding the block pays 1000 and terminates, with no release requirement. Requiring a release
+would add an extra predicate and make the task different from the chosen position goal.
+Distance is zero if the block is already at the goal; otherwise held starts need block-to-goal
+Manhattan distance, and unheld starts need gripper-to-block distance + one grip + transport.
+All distances are checked against networkx BFS over the independent simulator fixture.
+`states`, `goal_pool`, `state`, `distance_to_goal`, `reset_at` and `reset_with_goal` provide the
+runner and deterministic oracles with world state and real goals.
+
+`baseline/dump_hand_eye_references.py` runs the unmodified simulator on every reachable
+state times six actions: 90/272/650 states and 540/1632/3900 probes for grids 3/4/5.
+`fixtures/hand_eye.json` records complete before/after perceptions and physical states.
+Knowledge comes directly from `gym_handeye/utils/utils.py:get_all_possible_transitions`:
+only perception-changing transitions, 258/848/2130 respectively. Rust compares multisets,
+keeping multiplicities, and checks every admissible start/goal/action's objective and flags
+at cap one. A held block reaching the goal on a later cap step also terminates exclusively.
+The fixture catches a held block not moving with the gripper, an x/y swap, changed action
+order, a visible gripper hiding/holding the wrong symbol, and a tactile sensor missing `2`.
+The reference's sequential goal generator is deliberately absent: this task uses block
+position goals, not its move/grip/release sequence. No claim covers `note_in_hand=False`.
 
 ### Single-goal equivalence and mutation coverage
 

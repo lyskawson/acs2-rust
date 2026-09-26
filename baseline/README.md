@@ -136,3 +136,9 @@ and `fixtures/maze_knowledge.json` (all geometry variants, pyalcs knowledge mult
 and networkx shortest distances). It leaves the original maze and episode fixtures
 unchanged. Geometry source comparisons, native caps and uninitializable native
 classes are explicit in the fixture; see ARCHITECTURE.md's GoalMaze sections.
+
+## HandEye parity and knowledge fixture
+
+Run `uv run python -B dump_hand_eye_references.py` after the locked baseline sync.
+`fixtures/hand_eye.json` exhausts reachable states and six actions at grids 3, 4 and 5,
+with `note_in_hand=True`, plus the original knowledge multisets and BFS distances.
