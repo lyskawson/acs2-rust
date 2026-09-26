@@ -6,7 +6,7 @@ anything else**, because the cluster rules below belong to one of them:
 | line | what it is | branch | its live state |
 |---|---|---|---|
 | **MPX scaling** | multiplexer sizes past the literature's 135 bits, on WCSS | `feature/mpx264` | `docs/AGENT_HANDOFF.md` |
-| **Trajectory utility** | the thesis core: goal and experience selection, ACS2HER/TU | `feature/trajectory-utility` | its own notes, outside the checkout |
+| **Trajectory utility** | the thesis core: goal and experience selection, ACS2HER/TU | `feature/trajectory-utility` | `~/Desktop/acs2-notatki/tu-stan.md`, outside the checkout |
 
 MPX scaling is additional research, not the thesis. If nobody told you which line you are
 on, ask before touching anything.
@@ -47,18 +47,43 @@ and are worth archiving.
 ## Gates — before any change to the core
 
 ```bash
-cargo test --workspace --release          # 102 tests, including reach regressions
+cargo test --workspace --release          # 102 on feature/mpx264, 121 on feature/trajectory-utility
 uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 45 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
+cargo clean --release -p acs2-core -p acs2-envs -p acs2-bench
+cargo clippy --workspace --all-targets --release
 ```
 
 Compare columns 1-7 of `reports/bench_rust.csv` against the committed version. The
 last three are wall-clock and are expected to differ between machines; restore the
 file afterwards so timing noise is not committed.
 
-Anything touching the measured path goes behind a flag whose default preserves
-current behaviour.
+Clippy runs where `clippy.toml` exists. It forbids `HashMap`/`HashSet` and the float
+functions Rust documents as non-deterministic. Clean first: cargo replays cached
+diagnostics and does not treat `clippy.toml` as an input. The baseline is 22 warnings in
+files older than `clippy.toml`; new code adds none.
+
+**Defaults give the corrected behaviour.** pyalcs is the validation oracle, not the
+definition of this implementation. Where pyalcs is wrong, the default here is right, and
+pyalcs behaviour exists only as a mode that the validation tools select explicitly:
+P8, P11, the maze-parity tests and `acs2-bench` (P9). Those stay byte-identical without
+any change to how they are invoked. One known case still defaults to pyalcs: a truncated
+episode bootstraps 0 (`agent.rs`, `trial.rs`, `acs2er/mod.rs`). The fix is scheduled on
+the trajectory-utility line.
+
+Parameters are not behaviours. `Configuration` defaults stay as they are, because the
+checkpoint identity embeds them, and every experiment states its parameters explicitly.
+
+A default change in the shared core must meet three conditions:
+
+- it is inert for the MPX line (show why) or agreed with that line;
+- it leaves `Configuration`, `ReplaySample` and the checkpoint codec unchanged;
+- it keeps source-compatible the core API that `mpx_reach.rs` compiles against.
+
+This replaces the older rule, "behind a flag whose default preserves current
+behaviour", which `docs/AGENT_HANDOFF.md` §11 still quotes. The §2 P9 invariant is met
+through the validation mode.
 
 One-off reports — code reviews, fix summaries, handover notes for a single task — are
 not committed. `reports/` holds measurements; a document *about* the repository is not
@@ -78,6 +103,9 @@ the file. The commits and the docs they corrected are the durable record.
   §5 of the handoff has the live identity string to compare against.
 - **Only the MPX line submits to the cluster.** Do not submit, cancel or rebuild there on
   any other line — a rebuild reaches every pending segment that has not started yet.
+  Another line runs on the cluster only after the user explicitly opens it to that line.
+  It then works from its own clone, never rebuilds the MPX one, and checks the shared
+  grant first.
 - Experiments run on the cluster, never on the user's laptop — it overheats. Test
   gates locally are fine.
 - **Check the grant before submitting anything.** `sshare -U -u alelys2099 -o
