@@ -142,3 +142,10 @@ classes are explicit in the fixture; see ARCHITECTURE.md's GoalMaze sections.
 Run `uv run python -B dump_hand_eye_references.py` after the locked baseline sync.
 `fixtures/hand_eye.json` exhausts reachable states and six actions at grids 3, 4 and 5,
 with `note_in_hand=True`, plus the original knowledge multisets and BFS distances.
+
+## Taxi parity fixture
+
+The baseline additionally pins `pygame==2.6.1`, required by gym 0.23's toy-text imports
+without rendering. Run `uv run python -B dump_taxi_references.py` after sync.
+`fixtures/taxi.json` contains all 3000 transition-table probes, 300 equally probable
+initial tuples and shortest distances for the 125 physical states and four goals.

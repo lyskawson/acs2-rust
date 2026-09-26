@@ -1715,7 +1715,7 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `tests/goal_maze.rs` |
 | BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
 | HandEye | Thesis research; simulator and knowledge parity oracle | `goal/hand_eye.rs`, `tests/hand_eye.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
-| Taxi | Thesis research; gym transition-table parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 5 |
+| Taxi | Thesis research; gym transition-table parity oracle | `goal/taxi.rs`, `tests/taxi.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
 | Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
 | Multiplexer | Performance and limits for this thesis; MPX-line research | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
 
@@ -1890,6 +1890,51 @@ The fixture catches a held block not moving with the gripper, an x/y swap, chang
 order, a visible gripper hiding/holding the wrong symbol, and a tactile sensor missing `2`.
 The reference's sequential goal generator is deliberately absent: this task uses block
 position goals, not its move/grip/release sequence. No claim covers `note_in_hand=False`.
+
+### Taxi — a four-goal delivery task
+
+`goal::taxi::Taxi` implements `GoalEnvironment<3,1>` (joined length 4). Observation is
+raw numeric tokens `(row,column,passenger_location)`, with 0–3 for R/G/Y/B and 4 for in
+Taxi; the desired goal is a stand token, and achieved is the actual passenger location.
+Being in the taxi at the goal stand is not success: dropoff must place the passenger there.
+The pool has exactly four goals; its small size is a task property, not grounds for adding
+artificial destinations. All caps are explicit positive constructor parameters.
+
+The pure `TaxiState::after_action` implements gym 0.23's 5×5 map and action order
+south, north, east, west, pickup, dropoff. Dropoff at any stand places the passenger there;
+only the desired stand ends the goal task. Illegal actions and wall bumps leave state
+unchanged. Native gym rewards −1/−10/+20 are replaced by the shared 0/1000 objective;
+no native penalty enters ACS2. Each state-changing transition is independent of the desired
+stand, so it remains valid under goal relabeling. Gym 0.23's successful dropoff explicitly
+sets passenger location to the destination; it does not leave the passenger in the taxi.
+
+Reset is uniform over gym's 300 admissible initial tuples: taxi in any of 25 cells,
+passenger at one of four stands and destination at a different stand. `reset_with_goal`
+conditions on the chosen destination and `reset_at` permits deterministic admissible starts.
+`goal_pool`, `state` and BFS `distance_to_goal` expose what phase 3 needs. Distances count
+pickup and dropoff actions as well as movement and include all internal walls.
+
+`baseline/dump_taxi_references.py` reads the pinned gym transition table `P`: 500 encoded
+states × six actions = 3000 probes. All decoded next states match Rust exactly, including
+states outside the initial distribution. Native done flags agree with the goal objective
+for starts whose passenger is not already at the desired stand; starts already satisfying
+the goal are refused by task resets. Networkx distances agree for all 125 physical states
+and four goals. The fixture also pins the 300 equally weighted initial states.
+Importing gym 0.23's toy-text package requires `pygame` even with no rendering, so baseline
+now pins `pygame==2.6.1`; gym and numpy pins are unchanged. Reference source is unmodified.
+
+There is no pyalcs Taxi knowledge utility. `knowledge_transitions` enumerates all 125
+physical states × six actions and keeps only observation-changing transitions, following
+HandEye's convention. There are 348 transitions. It does not multiply them by the four
+unused destination labels. The exhaustive `P` comparison validates this set independently;
+no claim is made that it is a literature denominator.
+
+The tests catch missing taxi walls, wrong action ordering or stand coordinates, passenger
+removal on wrong-stand dropoff, rewarding proximity while still carrying the passenger,
+negative native rewards leaking into the task, cap/goal flag swaps, and a wrong suffix offset.
+Wrong-stand dropoff stays active before the cap; cap-one success terminates exclusively.
+Seeded goal evaluation covers every real goal. Native reward parity is deliberately not
+claimed: those rewards are replaced by the objective.
 
 ### Single-goal equivalence and mutation coverage
 

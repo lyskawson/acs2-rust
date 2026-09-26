@@ -13,6 +13,7 @@ dependencies = [
     "dataslots>=1.0.1",
     "dill",
     "mlflow-skinny",
+    "pygame==2.6.1",
 ]
 
 [tool.uv]
