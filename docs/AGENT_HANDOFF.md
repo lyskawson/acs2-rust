@@ -829,15 +829,12 @@ eliminating. Write it to the scratchpad and hand the user the file.
 
 ## 11. Standing rules
 
-**`CLAUDE.md` at the repo root carries the operational rules** and is loaded into
-every session automatically — the cluster sync, the gates, and the mid-run-reading
-failure mode. This file carries the research state; that one carries the habits.
+**`CLAUDE.md` at the repo root carries the operational rules** and is loaded into every
+session automatically. **It is the only copy.** This section used to restate them and the
+restatement went stale — it still said to push to `feature/mpx264` after that became
+per-line, and it still carried a flag-default rule that the other line has since replaced.
+A rule written twice is a rule that will disagree with itself. Read it there.
 
-
-Idiomatic Rust, SOLID, no code comments, English identifiers and commit messages,
-injected RNG. Anything touching the measured path goes behind a flag with defaults
-preserving current behaviour. Commit and push to `feature/mpx264` after each completed
-group. Measurements live in `reports/`, review/fix reports in `scratchpad/`, and the
-implementation record in `docs/ARCHITECTURE.md`.
-Ask the user only for scope decisions — new experiment phases, supervisor
-communication, cancelling running jobs; execution decisions are yours.
+What lives where, which is this file's to say: measurements in `reports/`, the
+implementation record in `docs/ARCHITECTURE.md`, one-off reports outside the checkout
+entirely.
