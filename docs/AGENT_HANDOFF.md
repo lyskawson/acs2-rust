@@ -288,6 +288,36 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
   out (Lem is contended; Bem2 starts next day). Never used. A one-hour benchmark would
   say whether its cores are faster.
 
+### A new field in `Configuration` would kill the k=264 chain (2026-09-25)
+
+`checkpoint_identity` embeds `format!("{config:?}")` — the whole `Configuration` — and a
+resume does `assert_eq!` on it. That was deliberate: nothing on the command line reaches
+`beta` or `theta_r`, so a hand-listed subset would let a later executable change one and
+still satisfy the gate. The cost is that **adding any field to `Configuration` changes the
+identity of every existing checkpoint**, and the nine pending k=264 segments each resume
+from one.
+
+The live chain's identity, for comparison before any rebuild:
+
+```
+size=264 seed=42 agent=acs2 encoding=outcome eval_sample=50000/1836087345
+config=Configuration{number_of_possible_actions:2,beta:0.05,gamma:0.95,theta_i:0.1,
+theta_r:0.9,theta_exp:20,theta_as:20,theta_ga:100,mu:0.3,chi:0.8,u_max:12,epsilon:0.8,
+initial_q:0.5,initial_r:0.5,initial_ir:0.0,do_ga:true,do_pee:false,
+do_action_planning:false,do_subsumption:true,alp_gen_variant:Pyalcs}
+```
+
+**So: do not rebuild the cluster binary while the chain has pending segments**, unless the
+identity is verified unchanged first. A pending segment `exec`s whatever is in `target/`
+at its own start time, so a rebuild reaches every segment that has not started yet. The
+running one already exec'd and is safe.
+
+This matters now because a second line of work (trajectory utility, `feature/trajectory-utility`)
+is adding agents to this repository. The rule that keeps both alive is the one ACS2ER
+already follows: **an agent's own parameters live in its own type** — `ReplayConfiguration`
+sits in `acs2-core/src/acs2er/replay.rs`, not in `Configuration` — and reach the identity
+through `AgentOptions::describe()` instead.
+
 ### Two of our own one-CPU jobs on one socket halve the big one (2026-09-25)
 
 `k264` ran alone at **11.66 trials/s**. `eps1_s44` — a single-core k=135 job — started on the
