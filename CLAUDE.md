@@ -22,6 +22,10 @@ English. Personal study notes, one-off reports and anything written for the user
 than for the work are kept outside the checkout. Do not add a document here that only a
 human learner would read.
 
+`AGENTS.md` is a symlink to this file, so Codex and Claude read the same rules. Edit
+`CLAUDE.md` only; a tool that writes through `AGENTS.md` can replace the link with a copy
+that then drifts.
+
 ## Sync the cluster runs — MPX line only, and do it without being asked
 
 ```bash
