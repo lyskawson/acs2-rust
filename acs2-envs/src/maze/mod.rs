@@ -1,4 +1,6 @@
 pub mod geometries;
+pub mod knowledge;
+pub mod topology;
 
 use acs2_core::environment::{Environment, StepOutcome};
 use acs2_core::perception::Perception;
@@ -14,7 +16,7 @@ const WALL_CODE: u8 = 1;
 const REWARD_CODE: u8 = 9;
 const DIGIT_ZERO: u8 = b'0';
 
-const NEIGHBOUR_OFFSETS: [(isize, isize); MAZE_PERCEPTION_LEN] = [
+pub(crate) const NEIGHBOUR_OFFSETS: [(isize, isize); MAZE_PERCEPTION_LEN] = [
     (-1, 0),
     (-1, 1),
     (0, 1),

@@ -127,3 +127,12 @@ the gate configuration uses `theta_i = 0` so the count must stay at 0.
   port (P7).
 - gym 0.23 prints a NumPy-2.0 deprecation banner and "Overriding environment"
   registration warnings on stderr. Both are harmless.
+
+## Goal-maze parity and knowledge fixtures
+
+After `uv sync --locked`, run `uv run python -B dump_goal_maze_references.py`.
+This writes only the additive `fixtures/goal_maze_probes.json` (Maze6, MazeF3, MazeB)
+and `fixtures/maze_knowledge.json` (all geometry variants, pyalcs knowledge multisets
+and networkx shortest distances). It leaves the original maze and episode fixtures
+unchanged. Geometry source comparisons, native caps and uninitializable native
+classes are explicit in the fixture; see ARCHITECTURE.md's GoalMaze sections.

@@ -13,9 +13,10 @@ pub const PERFORMANCE_MAZES: &[MazeGeometry] = alcs::GEOMETRIES;
 pub const RESEARCH_MAZES: &[MazeGeometry] = &[
     pyalcs::MAZE4,
     pyalcs::MAZE5,
+    pyalcs::MAZE6,
     pyalcs::MAZE7,
-    alcs::MAZEF3,
-    alcs::MAZEB,
+    pyalcs::MAZEF3,
+    pyalcs::MAZEB,
 ];
 
 pub const RESEARCH_TASKS: &[&str] = &["GoalMaze", "HandEye", "Taxi", "BitFlipping"];

@@ -1643,9 +1643,9 @@ scored against a goal that no longer applies.
 geometries and order (Maze4, Maze5, Maze7, Woods1, Woods100); it is independent of the
 provenance catalogue, so adding a geometry cannot silently extend P9.
 `PERFORMANCE_MAZES` is the existing 22-geometry ALCS comparison.
-`RESEARCH_MAZES` names the multi-goal maze geometries; Maze6 is added in phase 2 group 2.
+`RESEARCH_MAZES` names Maze4/5/6/7 and the pyalcs MazeF3/MazeB research geometries.
 `RESEARCH_TASKS`, `VALIDATION_ORACLES` and `PERFORMANCE_BENCHMARKS` state the task families.
-These task-family names include phase-2 work not implemented by the group-1 refactor.
+The task-family names include the remaining phase-2 environments as well as GoalMaze.
 
 Geometry and role are independent: the same Maze4 data drives the validated single-goal
 `Maze` and the research goal maze. The data tree records kind and provenance, with one copy
@@ -1656,9 +1656,12 @@ The `Maze` and multiplexer public paths stay unchanged.
 ```
 acs2-envs/src/
   maze/mod.rs                 validated single-goal dynamics
+  maze/topology.rs            walkable cells, pristine perception, shortest distances
+  maze/knowledge.rs           pyalcs and multi-goal transition sets
   maze/geometries/mod.rs      MazeGeometry, MazeSource::{Pyalcs, Alcs}, lookup
   maze/geometries/pyalcs/     gym_maze geometry data
   maze/geometries/alcs/       ALCS geometry data
+  goal/maze.rs                GoalMaze and its coordinate/perception encodings
   roles.rs                    role sets, independent of provenance
   multiplexer.rs              MPX dynamics and knowledge, unchanged
 ```
@@ -1675,6 +1678,9 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 |---|---|---|
 | `Maze4-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze4.rs` |
 | `Maze5-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze5.rs` |
+| `Maze6-v0` | Research (multi-goal); added parity oracle | `maze/geometries/pyalcs/maze6.rs` |
+| `MazeB-v0` | Research (coordinate goals); added parity oracle | `maze/geometries/pyalcs/mazeb.rs` |
+| `MazeF3-v0` | Research (coordinate goals); added parity oracle | `maze/geometries/pyalcs/mazef3.rs` |
 | `Maze7-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze7.rs` |
 | `Woods1-v0` | Validation (P7, P8, P11), performance (P9) | `maze/geometries/pyalcs/woods1.rs` |
 | `Woods100-v0` | Validation (P7, P8, P11), performance (P9) | `maze/geometries/pyalcs/woods100.rs` |
@@ -1685,13 +1691,13 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | `Maze4-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/maze4.rs` |
 | `Maze7-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/maze7.rs` |
 | `MazeA-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazea.rs` |
-| `MazeB-ounold` | Performance (ALCS comparison); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/alcs/mazeb.rs` |
+| `MazeB-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazeb.rs` |
 | `MazeD-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazed.rs` |
 | `MazeE1-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee1.rs` |
 | `MazeE2-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee2.rs` |
 | `MazeE3-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee3.rs` |
 | `MazeF2-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazef2.rs` |
-| `MazeF3-ounold` | Performance (ALCS comparison); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/alcs/mazef3.rs` |
+| `MazeF3-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazef3.rs` |
 | `MazeF4-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazef4.rs` |
 | `MiyazakiA-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/miyazakia.rs` |
 | `MiyazakiB-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/miyazakib.rs` |
@@ -1704,9 +1710,9 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | Environment or task | Role | Definition |
 |---|---|---|
 | `Maze` | Validation oracle; P9 and ALCS performance | `maze/mod.rs`, `roles::VALIDATION_MAZES`, `roles::PERFORMANCE_MAZES` |
-| Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `roles::RESEARCH_MAZES`; goal implementation in phase 2 group 2 |
-| GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `roles::RESEARCH_MAZES`; phase 2 group 2 |
-| Single-goal GoalMaze | Validation bridge to `Maze` | Phase 2 group 2 |
+| Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
+| GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
+| Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `tests/goal_maze.rs` |
 | BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `roles::RESEARCH_TASKS`; phase 2 group 3 |
 | HandEye | Thesis research; simulator and knowledge parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 4 |
 | Taxi | Thesis research; gym transition-table parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 5 |
@@ -1716,6 +1722,122 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 The group-1 refactor changes no dynamics, matrix, cap, fixture or archived measurement.
 The ALCS geometry tests keep their assertions and warning baseline, now under
 `acs2-envs/tests/performance_geometry.rs`.
+
+### GoalMaze — task, representation and starts
+
+`goal::maze::GoalMaze<E, G>` implements `GoalEnvironment<8, G>` with the sealed encodings
+`Coordinates` and `NeighbourPerception`. The convenient aliases are `CoordinateGoalMaze`
+(`G=2`, joined length 10) and `PerceptionGoalMaze` (`G=8`, joined length 16).
+Observation always has pyalcs's eight neighbour symbols, including the original `9` landmark.
+Coordinate goal symbols are raw `Token(row as u8), Token(column as u8)`; perception goal
+symbols use pyalcs's ASCII digit alphabet. No learning code or `Configuration` changes.
+
+`multi_goal` takes an explicit cell pool and positive cap. `all_walkable` includes both `0`
+and `9` cells. The desired goal is uniform in the pool and the start uniform over all
+walkable cells except that goal, using one bounded draw and skipping the excluded index.
+The pool does not restrict starts. `reset_with_goal` accepts every pool goal; `reset_at` is
+a deterministic start/goal entry point. `goal_pool`, `goal_cells`, `position`, `step_cap`
+and `distance_to_goal` give the runner the data it needs. None is an agent goal-set port.
+The shortest distance is over the eight compass moves, including diagonal moves permitted
+by pyalcs; `None` means a wall/invalid start, an unknown goal, or no route. The unchanged
+ALCS Woods101_5 and Woods102 geometries contain disconnected walkable areas.
+
+In multi-goal mode `9` is traversable and can be entered and left. It remains visible as `9`
+in every pristine perception but has no native reward or terminal status. Converting it to
+`0` would alter the validated perception alphabet; making it absorbing would remove real
+start/goal pairs. Every step reports an achieved goal encoded from the actual cell, never
+read back from the observation. `terminal_state` is false, and the objective alone decides
+success (`ExactMatch`, 1000/0). The cap sets `time_limit_reached`; the port and adapter keep
+termination and truncation separate and give success priority on the limit step. Direct
+steps after either kind of episode end are refused until reset.
+
+For perception goals, construction checks each pool cell against **all** walkable cells.
+A twin outside the pool is still grounds for refusal; silently dropping ambiguous goals
+would alter the caller's task distribution. Coordinates retain the full pool on every
+geometry. Maze4/5/6/7 have 27/37/37/36 walkable cells respectively, all with unique
+perceptions. MazeB has 20 of 26 unique, MazeF3 7 of 9. The original 27-geometry catalogue
+has 15 reward-cell twins, confirmed exhaustively. MazeF3's `(1,4)` and `(3,3)` both see
+`11111101`; the coordinate twin test enters `(3,3)` with desired `(1,4)` and gets zero.
+`goal_at` can encode an achieved cell outside the real pool; it does not authorize that
+encoding as a desired pool goal or make ambiguous perception relabeling safe.
+
+`single_goal` fixes the pool to the reward cell and uses the geometry's cap;
+`single_goal_with_cap` permits an explicit cap. Its reset consumes **no goal draw** and uses
+exactly `Maze::reset`'s row-major path-cell list and one bounded start draw. This is a
+validation bridge, separate from the uniform multi-goal start distribution. Coordinate
+single-goal mode works on every geometry; perception single-goal mode still refuses twins
+(including Woods100 and MazeF3).
+
+### Added pyalcs geometries and reference provenance
+
+Maze6 is copied from `gym_maze.envs.Maze6`, with cap 50. Exhaustive probes and a direct
+matrix comparison pin its only difference from Maze7: `(3,5)` changes from wall to path.
+The pyalcs MazeF3 and MazeB matrices equal the respective ALCS matrices byte for byte, but
+pyalcs caps are 50 versus ALCS's 200. The research set chooses new `MazeF3-v0` and `MazeB-v0`
+data with the reference caps; the archived `-ounold` versions stay in the performance set.
+Explicit research caps are still constructor parameters. Reusing the ALCS variants would
+hide the inherited cap difference behind the geometry ID. These additions do not enter
+`VALIDATION_MAZES` or the 22-geometry performance set.
+
+`baseline/dump_goal_maze_references.py`, run in the locked baseline environment, creates
+`fixtures/goal_maze_probes.json` for these three additions. The original P7 and episode
+fixtures remain byte-untouched. New tests compare every path cell times eight actions,
+including perceptions, rewards and terminal flags.
+
+### Maze knowledge — two denominators with explicit names
+
+`maze::knowledge::pyalcs_transitions` (`MazeKnowledgeSet::PyalcsPaths`) reproduces
+`gym_maze/utils/utils.py:get_all_possible_transitions`: all moves from `0` cells to
+non-wall cells, no wall bumps, no starts at `9`. Duplicate perceptual transitions are kept,
+so geometry aliases retain pyalcs's weighting. A physical move with identical before/after
+perceptions is still included. Maze4 has exactly 115 transitions.
+
+`multi_goal_transitions` (`MultiGoalWalkable`) adds moves **out of `9`**, which a multi-goal
+agent can now make. It still excludes wall bumps to keep the measure comparable. This is
+the appropriate world-model denominator for the multi-goal task; the pyalcs denominator
+remains the literature reference. `goal_transitions<G, M>` appends wildcard goals to both
+ends through `GoalLayout<8, G, M>`, matching the ACS2HER maze scripts' knowledge convention.
+The multiplexer generator and its inclusion of no-change transitions are unchanged.
+
+`fixtures/maze_knowledge.json` stores 3073 reference transitions for all 30 geometry
+variants plus networkx shortest distances between all walkable cells. Rust comparison
+uses sorted **multisets**, not sets. Each entry records its reference ID, native cap,
+matrix comparison and whether the reference class can initialize. For differing ALCS
+matrices (Maze7, MiyazakiA, Woods1, Woods101_5, Woods102), the unmodified pyalcs utility
+runs on the exact ALCS matrix; the native pyalcs matrix is retained separately. This proves
+the generator convention without pretending that the geometries are identical.
+
+Two native reference classes, Woods101demi and Woods102, assert during construction because
+their matrices contain multiple reward cells. The dumper extracts those literal native
+matrices only for comparison and records `reference_initializable=false`; it does not patch
+the reference. Their ALCS geometries have one reward and can be passed to the unmodified
+knowledge utility normally. Native environment parity is not claimed for these two.
+
+### Single-goal equivalence and mutation coverage
+
+`tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
+30 geometries, seeds 42–44, 20 complete random-action episodes per case: reset state and
+position, every next observation's state part, reward, termination and truncation.
+For learning, all eight pyalcs geometries, the same seeds and 100 exploration episodes are
+compared after **every episode**, with GA off: steps, total reward, population order and
+size, first-eight condition/effect/mark attributes, action, numerosity, experience, ALP/GA
+timestamps, `ee`, and bit patterns of `q`, `r`, `ir`, `tav`, plus agent RNG state.
+Coordinate suffixes always pass; perception suffixes pass wherever construction is safe.
+Suffix condition/effect positions remain wildcards and each suffix mark holds at most one
+symbol. Full marks across dimensions are not equal: a constant suffix may be recorded in a
+mark, but cannot contribute a difference. No equality claim is made for GA-on learning.
+
+The tests catch: goal derived from the perception (MazeF3 coordinate twin), swapped terminal
+and truncation flags, wrong goal join offset (adapter suffix and bridge state), extra goal
+RNG drawing or altered start enumeration in single-goal mode, lost/relabelled `9` landmarks,
+perception-twin checks restricted to the pool, omitted reward-cell departures, inclusion of
+wall bumps or starts at `9` in the pyalcs set, collapsed duplicate transitions, and incorrect
+shortest distances including disconnected cells. Every coordinate transition on every
+geometry is checked against physical cell success and the objective at cap one; this also
+pins non-negative rewards and success winning on the limit step. Seeded reset/move parity
+and complete start-index enumeration pin determinism and the conditional uniform start.
+The tests do not prove arbitrary future objectives, GA-on equivalence, or safe HER relabeling
+with ambiguous perception goals; those are outside this bridge's contract.
 
 ### Separate random streams
 
