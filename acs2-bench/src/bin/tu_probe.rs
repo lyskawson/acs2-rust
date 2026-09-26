@@ -13,7 +13,7 @@ use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
 use acs2_core::trial::LearningAgent;
-use acs2_envs::maze_data::{geometry_by_id, MazeGeometry};
+use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 
 const STATE_LEN: usize = 8;
 const ACTIONS: usize = 8;

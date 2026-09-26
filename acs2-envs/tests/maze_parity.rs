@@ -3,7 +3,7 @@ use acs2_core::perception::Perception;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
-use acs2_envs::maze_data::{geometry_by_id, MazeGeometry};
+use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 use serde_json::Value;
 
 fn load_probes() -> Value {

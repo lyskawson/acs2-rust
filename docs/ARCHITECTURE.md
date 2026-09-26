@@ -201,7 +201,7 @@ The eight offsets `N,NE,E,SE,S,SW,W,NW` use the **`maze_utils.adjacent_cell_valu
 convention** (x = row, y = col):
 `(-1,0),(-1,1),(0,1),(1,1),(1,0),(1,-1),(0,-1),(-1,-1)`. `maze_impl.move` shares
 this exact convention, so the **same offset table drives both perception and
-transition** (`NEIGHBOUR_OFFSETS` in `maze.rs`). The sibling helper
+transition** (`NEIGHBOUR_OFFSETS` in `maze/mod.rs`). The sibling helper
 `maze_utils.get_possible_neighbour_cords` uses a *different* (x = col) ordering but
 is reachable only from the off-by-default action-planning path — it is **not** used.
 
@@ -1609,7 +1609,7 @@ estimate; goal tasks here pay `ExactMatch { reward_on_reach: 1000.0 }` and zero 
 
 A goal is not assumed to be a function of the observation. Perception goals alias: in 15 of
 the 27 mazes in this repository the goal cell's 8-neighbour perception also occurs at another
-walkable cell (MazeF3 and the canonical Woods100 among them), so `achieved == desired` on
+walkable cell (MazeF3 and the pyalcs Woods100 among them), so `achieved == desired` on
 perceptions is not the environment's success there. Maze4/5/7 and Woods1 are free of it.
 Each environment chooses a goal representation it can report exactly.
 
@@ -1636,6 +1636,86 @@ is no mutable access to the wrapped environment, because resetting it behind the
 would leave every later observation labelled, and every reward computed, for the old goal. The
 goal is forgotten when an episode ends, so a step without a fresh reset is refused rather than
 scored against a goal that no longer applies.
+
+### Environment roles and geometry provenance
+
+`acs2-envs/src/roles.rs` is the role registry. `VALIDATION_MAZES` pins P9's exact five
+geometries and order (Maze4, Maze5, Maze7, Woods1, Woods100); it is independent of the
+provenance catalogue, so adding a geometry cannot silently extend P9.
+`PERFORMANCE_MAZES` is the existing 22-geometry ALCS comparison.
+`RESEARCH_MAZES` names the multi-goal maze geometries; Maze6 is added in phase 2 group 2.
+`RESEARCH_TASKS`, `VALIDATION_ORACLES` and `PERFORMANCE_BENCHMARKS` state the task families.
+These task-family names include phase-2 work not implemented by the group-1 refactor.
+
+Geometry and role are independent: the same Maze4 data drives the validated single-goal
+`Maze` and the research goal maze. The data tree records kind and provenance, with one copy
+of each geometry, while the role sets choose uses. The previous `maze_data` re-export shim
+is removed; geometry types and lookup now live at `acs2_envs::maze::geometries`.
+The `Maze` and multiplexer public paths stay unchanged.
+
+```
+acs2-envs/src/
+  maze/mod.rs                 validated single-goal dynamics
+  maze/geometries/mod.rs      MazeGeometry, MazeSource::{Pyalcs, Alcs}, lookup
+  maze/geometries/pyalcs/     gym_maze geometry data
+  maze/geometries/alcs/       ALCS geometry data
+  roles.rs                    role sets, independent of provenance
+  multiplexer.rs              MPX dynamics and knowledge, unchanged
+```
+
+**Geometry IDs are archive keys.** IDs including `-v0` and `-ounold` remain exactly as
+committed in `reports/bench_rust.csv`, `bench_rust_unold.csv` and `unold_smoke.csv`.
+Do not rename them to match the new module names. Directory and Rust identifier renames
+are independent of these persisted keys. Historical documents in `docs/archive/` retain
+the old names.
+
+Paths below are relative to `acs2-envs/src/` unless stated otherwise.
+
+| Geometry | Role | Definition |
+|---|---|---|
+| `Maze4-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze4.rs` |
+| `Maze5-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze5.rs` |
+| `Maze7-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze7.rs` |
+| `Woods1-v0` | Validation (P7, P8, P11), performance (P9) | `maze/geometries/pyalcs/woods1.rs` |
+| `Woods100-v0` | Validation (P7, P8, P11), performance (P9) | `maze/geometries/pyalcs/woods100.rs` |
+| `Cassandra4x4-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/cassandra4x4.rs` |
+| `Littman57-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/littman57.rs` |
+| `Littman89-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/littman89.rs` |
+| `Maze10-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/maze10.rs` |
+| `Maze4-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/maze4.rs` |
+| `Maze7-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/maze7.rs` |
+| `MazeA-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazea.rs` |
+| `MazeB-ounold` | Performance (ALCS comparison); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/alcs/mazeb.rs` |
+| `MazeD-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazed.rs` |
+| `MazeE1-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee1.rs` |
+| `MazeE2-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee2.rs` |
+| `MazeE3-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazee3.rs` |
+| `MazeF2-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazef2.rs` |
+| `MazeF3-ounold` | Performance (ALCS comparison); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/alcs/mazef3.rs` |
+| `MazeF4-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/mazef4.rs` |
+| `MiyazakiA-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/miyazakia.rs` |
+| `MiyazakiB-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/miyazakib.rs` |
+| `Woods1-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/woods1.rs` |
+| `Woods100-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/woods100.rs` |
+| `Woods101-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/woods101.rs` |
+| `Woods101_5-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/woods1015.rs` |
+| `Woods102-ounold` | Performance (ALCS comparison) | `maze/geometries/alcs/woods102.rs` |
+
+| Environment or task | Role | Definition |
+|---|---|---|
+| `Maze` | Validation oracle; P9 and ALCS performance | `maze/mod.rs`, `roles::VALIDATION_MAZES`, `roles::PERFORMANCE_MAZES` |
+| Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `roles::RESEARCH_MAZES`; goal implementation in phase 2 group 2 |
+| GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `roles::RESEARCH_MAZES`; phase 2 group 2 |
+| Single-goal GoalMaze | Validation bridge to `Maze` | Phase 2 group 2 |
+| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `roles::RESEARCH_TASKS`; phase 2 group 3 |
+| HandEye | Thesis research; simulator and knowledge parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 4 |
+| Taxi | Thesis research; gym transition-table parity oracle | `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES`; phase 2 group 5 |
+| Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
+| Multiplexer | Performance and limits for this thesis; MPX-line research | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
+
+The group-1 refactor changes no dynamics, matrix, cap, fixture or archived measurement.
+The ALCS geometry tests keep their assertions and warning baseline, now under
+`acs2-envs/tests/performance_geometry.rs`.
 
 ### Separate random streams
 
@@ -1719,7 +1799,7 @@ added by the goal line:
   byte for byte across machines. Bit-identity between the M1 and Bem2 has been measured on runs
   that use them, not guaranteed; LLVM lowers a small constant `powi` to multiplications, and
   writing them explicitly would be bit-identical under that lowering, but these files belong to
-  the measured path of the multiplexer line. `acs2-envs/tests/unold_geometry.rs` uses a
+  the measured path of the multiplexer line. `acs2-envs/tests/performance_geometry.rs` uses a
   `HashSet` for membership only, never iterating it.
 - **17 style and complexity warnings** — `ga.rs`, the nine-argument `apply_alp`, `mark.rs`,
   `population.rs`, `multiplexer.rs` and six test files. None concerns correctness.

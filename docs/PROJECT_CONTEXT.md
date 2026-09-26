@@ -250,13 +250,14 @@ acs2/                      (Cargo workspace)
 │   └── agent               single shared trial loop (explore / exploit)
 │                           bootstrap value is a parameter  <-- CRITIC SEAM
 ├── acs2-envs/   (lib)     Maze + Multiplexer implement acs2-core's Environment trait
-│   ├── maze                8-sensor perception, compass actions, reward scheme
-│   ├── maze_data           re-export shim (MazeGeometry, geometry_by_id, MAZE_GEOMETRIES)
-│   └── mazes               geometry defs, one file per maze, tagged by MazeSource
-│       ├── canonical        5 pyalcs mazes (Maze4/5/7, Woods1, Woods100)
-│       │                    = MAZE_GEOMETRIES, the default benchmark run
-│       └── unold            22 ounold/ALCS mazes = UNOLD_GEOMETRIES,
-│                            opt-in only via --mazes (NOT in the default run)
+│   ├── maze                8-sensor dynamics (maze/mod.rs), geometry lookup
+│   │   └── geometries      one file per maze, tagged by MazeSource
+│   │       ├── pyalcs      geometry from gym_maze
+│   │       └── alcs        22 ALCS comparison geometries
+│   ├── roles               validation, research and performance sets
+│   │                       VALIDATION_MAZES pins the five-maze P9 order;
+│   │                       PERFORMANCE_MAZES pins the 22-maze comparison
+│   └── multiplexer.rs      unchanged MPX environment and public path
 ├── acs2-bench/  (bin)     runs the suite, computes metrics, emits CSV + timing
 └── acs2-py/     (lib, LATER, optional)   PyO3 bindings exposing a Gymnasium agent
 ```

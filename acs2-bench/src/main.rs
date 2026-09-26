@@ -10,7 +10,8 @@ use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::trial::LearningAgent;
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
-use acs2_envs::maze_data::{geometry_by_id, MazeGeometry, MAZE_GEOMETRIES};
+use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
+use acs2_envs::roles::VALIDATION_MAZES;
 
 const EXPLORE_EPSILON: f64 = 0.8;
 
@@ -29,7 +30,7 @@ struct Options {
 impl Options {
     fn parse() -> Self {
         let mut options = Options {
-            mazes: MAZE_GEOMETRIES.iter().map(|g| g.id.to_string()).collect(),
+            mazes: VALIDATION_MAZES.iter().map(|g| g.id.to_string()).collect(),
             n_exp: 10,
             seed: 42,
             do_ga: false,
