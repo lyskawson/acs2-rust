@@ -497,15 +497,41 @@ fn future_goals(
     chosen.into_iter().map(|position| candidates[position]).collect()
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ValueScope {
+    ChangeAnticipating,
+    AllClassifiers,
+}
+
+const VALUE_SCOPES: [ValueScope; 2] = [ValueScope::ChangeAnticipating, ValueScope::AllClassifiers];
+
+impl ValueScope {
+    fn label(self) -> &'static str {
+        match self {
+            ValueScope::ChangeAnticipating => "change",
+            ValueScope::AllClassifiers => "all",
+        }
+    }
+
+    fn admits<const M: usize>(self, classifier: &Classifier<M>) -> bool {
+        match self {
+            ValueScope::ChangeAnticipating => classifier.does_anticipate_change(),
+            ValueScope::AllClassifiers => true,
+        }
+    }
+}
+
 fn action_values<const G: usize, const M: usize>(
     population: &Population<M>,
     task: &GoalTask<G, M>,
     cell: usize,
+    scope: ValueScope,
 ) -> Vec<[f64; ACTIONS]> {
     let state = &task.states[cell];
     let candidates: Vec<(usize, &[Symbol], f64)> = population
         .classifiers()
         .iter()
+        .filter(|classifier| scope.admits(classifier))
         .filter_map(|classifier| {
             let action = classifier.action?;
             let symbols = &classifier.condition.symbols;
@@ -545,6 +571,7 @@ fn trajectory_utility<const G: usize, const M: usize>(
     population: &Population<M>,
     task: &GoalTask<G, M>,
     trajectory: &Trajectory,
+    scope: ValueScope,
 ) -> TrajectoryUtility {
     let goal_count = task.goal_pool.len();
     let mut utility = TrajectoryUtility {
@@ -555,7 +582,7 @@ fn trajectory_utility<const G: usize, const M: usize>(
         steps: trajectory.actions.len(),
     };
     for (step, &action) in trajectory.actions.iter().enumerate() {
-        let values = action_values(population, task, trajectory.cells[step]);
+        let values = action_values(population, task, trajectory.cells[step], scope);
         let logged_here: Vec<f64> = values.iter().map(|per_action| per_action[action]).collect();
         let value_here: Vec<f64> = values
             .iter()
@@ -615,9 +642,11 @@ fn rank_correlation(left: &[f64], right: &[f64]) -> Option<f64> {
     let mut left_spread = 0.0;
     let mut right_spread = 0.0;
     for (a, b) in left.iter().zip(right.iter()) {
-        covariance += (a - left_mean) * (b - right_mean);
-        left_spread += (a - left_mean).powi(2);
-        right_spread += (b - right_mean).powi(2);
+        let left_deviation = a - left_mean;
+        let right_deviation = b - right_mean;
+        covariance += left_deviation * right_deviation;
+        left_spread += left_deviation * left_deviation;
+        right_spread += right_deviation * right_deviation;
     }
     if left_spread == 0.0 || right_spread == 0.0 {
         None
@@ -635,23 +664,25 @@ struct UtilityReport {
     unique_value: f64,
     hit_logged: f64,
     hit_value: f64,
-    hit_baseline: f64,
+    hit_baseline_logged: f64,
+    hit_baseline_value: f64,
     rank_correlation: f64,
     constant_value: f64,
     spread_value: f64,
     nearest_value: f64,
-    nearest_baseline: f64,
+    nearest_baseline_value: f64,
 }
 
 fn evaluate_utility<'a, const G: usize, const M: usize>(
     population: &Population<M>,
     task: &GoalTask<G, M>,
     trajectories: impl IntoIterator<Item = &'a Trajectory>,
+    scope: ValueScope,
 ) -> UtilityReport {
     let pool = &task.goal_pool;
     let goal_count = pool.len();
     let mut nearest_value = 0usize;
-    let mut nearest_baseline = 0.0;
+    let mut nearest_baseline_value = 0.0;
     let mut counted = 0usize;
     let mut steps = 0usize;
     let mut flat_logged = 0usize;
@@ -660,7 +691,8 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
     let mut unique_value = 0usize;
     let mut hit_logged = 0usize;
     let mut hit_value = 0usize;
-    let mut baseline = 0.0;
+    let mut hit_baseline_logged = 0.0;
+    let mut hit_baseline_value = 0.0;
     let mut constant = 0usize;
     let mut correlation_sum = 0.0;
     let mut correlation_count = 0usize;
@@ -668,7 +700,7 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
 
     for trajectory in trajectories {
         counted += 1;
-        let utility = trajectory_utility(population, task, trajectory);
+        let utility = trajectory_utility(population, task, trajectory, scope);
         let highest = utility.value.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let lowest = utility.value.iter().copied().fold(f64::INFINITY, f64::min);
         if highest > 0.0 {
@@ -678,7 +710,7 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
         flat_logged += utility.flat_logged_steps;
         flat_value += utility.flat_value_steps;
         let visited: BTreeSet<usize> = trajectory.cells[1..].iter().copied().collect();
-        baseline +=
+        let visited_share =
             pool.iter().filter(|goal| visited.contains(goal)).count() as f64 / goal_count as f64;
         let proximity: Vec<f64> = pool
             .iter()
@@ -696,15 +728,18 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
         let nearest_positions: Vec<usize> = (0..goal_count)
             .filter(|&position| proximity[position] == closest)
             .collect();
-        nearest_baseline += nearest_positions.len() as f64 / goal_count as f64;
+        let nearest_share = nearest_positions.len() as f64 / goal_count as f64;
         if let Some(best) = unique_argmax(&utility.logged) {
             unique_logged += 1;
             hit_logged += usize::from(visited.contains(&pool[best]));
+            hit_baseline_logged += visited_share;
         }
         if let Some(best) = unique_argmax(&utility.value) {
             unique_value += 1;
             hit_value += usize::from(visited.contains(&pool[best]));
+            hit_baseline_value += visited_share;
             nearest_value += usize::from(nearest_positions.contains(&best));
+            nearest_baseline_value += nearest_share;
         }
         match rank_correlation(&utility.value, &proximity) {
             Some(correlation) => {
@@ -722,6 +757,13 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
             numerator as f64 / denominator as f64
         }
     };
+    let mean = |sum: f64, count: usize| {
+        if count == 0 {
+            f64::NAN
+        } else {
+            sum / count as f64
+        }
+    };
     UtilityReport {
         trajectories: counted,
         flat_logged_steps: share(flat_logged, steps),
@@ -730,20 +772,13 @@ fn evaluate_utility<'a, const G: usize, const M: usize>(
         unique_value: share(unique_value, counted),
         hit_logged: share(hit_logged, unique_logged),
         hit_value: share(hit_value, unique_value),
-        hit_baseline: if counted == 0 { f64::NAN } else { baseline / counted as f64 },
-        rank_correlation: if correlation_count == 0 {
-            f64::NAN
-        } else {
-            correlation_sum / correlation_count as f64
-        },
+        hit_baseline_logged: mean(hit_baseline_logged, unique_logged),
+        hit_baseline_value: mean(hit_baseline_value, unique_value),
+        rank_correlation: mean(correlation_sum, correlation_count),
         constant_value: share(constant, counted),
-        spread_value: if counted == 0 { f64::NAN } else { spread_sum / counted as f64 },
+        spread_value: mean(spread_sum, counted),
         nearest_value: share(nearest_value, unique_value),
-        nearest_baseline: if counted == 0 {
-            f64::NAN
-        } else {
-            nearest_baseline / counted as f64
-        },
+        nearest_baseline_value: mean(nearest_baseline_value, unique_value),
     }
 }
 
@@ -787,10 +822,11 @@ struct Snapshot {
     reliable: usize,
     goal_specific: f64,
     goal_specific_reliable: f64,
+    goal_specific_change: f64,
     goal_positions_mean: f64,
     fully_goal_specific: f64,
     success: f64,
-    utility: UtilityReport,
+    utilities: Vec<(ValueScope, UtilityReport)>,
     wall_seconds: f64,
     capped: bool,
 }
@@ -822,6 +858,15 @@ fn snapshot<const G: usize, const M: usize, L: Learner<G, M>>(
         .iter()
         .filter(|classifier| specified_goal_positions(classifier) > 0)
         .count();
+    let change_anticipating: Vec<&Classifier<M>> = population
+        .classifiers()
+        .iter()
+        .filter(|classifier| classifier.does_anticipate_change())
+        .collect();
+    let specific_change = change_anticipating
+        .iter()
+        .filter(|classifier| specified_goal_positions(classifier) > 0)
+        .count();
     let fraction = |numerator: usize, denominator: usize| {
         if denominator == 0 {
             0.0
@@ -839,10 +884,14 @@ fn snapshot<const G: usize, const M: usize, L: Learner<G, M>>(
         reliable: reliable.len(),
         goal_specific: fraction(specific_all, population.len()),
         goal_specific_reliable: fraction(specific_reliable, reliable.len()),
+        goal_specific_change: fraction(specific_change, change_anticipating.len()),
         goal_positions_mean: fraction(specified_total, specific_all),
         fully_goal_specific: fraction(fully_specific, population.len()),
         success: policy_success(population, task, &greedy),
-        utility: evaluate_utility(population, task, env.recent.iter()),
+        utilities: VALUE_SCOPES
+            .iter()
+            .map(|&scope| (scope, evaluate_utility(population, task, env.recent.iter(), scope)))
+            .collect(),
         wall_seconds: started.elapsed().as_secs_f64(),
         capped,
     }
@@ -985,18 +1034,27 @@ impl Options {
     }
 }
 
-fn format_snapshot(maze: &str, regime: Regime, encoding: GoalEncoding, seed: u64, snapshot: &Snapshot) -> String {
-    let utility = &snapshot.utility;
+fn format_snapshot(
+    maze: &str,
+    regime: Regime,
+    encoding: GoalEncoding,
+    seed: u64,
+    snapshot: &Snapshot,
+    scope: ValueScope,
+    utility: &UtilityReport,
+) -> String {
     format!(
-        "tu-probe maze={maze} regime={} goal={} seed={seed} episodes={} env_steps={} pop={} reliable={} goal_spec={:.3} goal_spec_rel={:.3} goal_pos={:.2} goal_full={:.3} success={:.3} flat_q={:.3} flat_v={:.3} unique_q={:.3} unique_v={:.3} hit_q={:.3} hit_v={:.3} hit_base={:.3} rank_corr={:.3} const_v={:.3} spread_v={:.3} nearest_v={:.3} nearest_base={:.3} trajectories={} wall={:.1}s{}",
+        "tu-probe maze={maze} regime={} goal={} scope={} seed={seed} episodes={} env_steps={} pop={} reliable={} goal_spec={:.3} goal_spec_rel={:.3} goal_spec_change={:.3} goal_pos={:.2} goal_full={:.3} success={:.3} flat_q={:.3} flat_v={:.3} unique_q={:.3} unique_v={:.3} hit_q={:.3} hit_base_q={:.3} hit_v={:.3} hit_base_v={:.3} nearest_v={:.3} nearest_base_v={:.3} rank_corr={:.3} const_v={:.3} spread_v={:.3} trajectories={} wall={:.1}s{}",
         regime.label(),
         encoding.label(),
+        scope.label(),
         snapshot.episodes,
         snapshot.env_steps,
         snapshot.population,
         snapshot.reliable,
         snapshot.goal_specific,
         snapshot.goal_specific_reliable,
+        snapshot.goal_specific_change,
         snapshot.goal_positions_mean,
         snapshot.fully_goal_specific,
         snapshot.success,
@@ -1005,13 +1063,14 @@ fn format_snapshot(maze: &str, regime: Regime, encoding: GoalEncoding, seed: u64
         utility.unique_logged,
         utility.unique_value,
         utility.hit_logged,
+        utility.hit_baseline_logged,
         utility.hit_value,
-        utility.hit_baseline,
+        utility.hit_baseline_value,
+        utility.nearest_value,
+        utility.nearest_baseline_value,
         utility.rank_correlation,
         utility.constant_value,
         utility.spread_value,
-        utility.nearest_value,
-        utility.nearest_baseline,
         utility.trajectories,
         snapshot.wall_seconds,
         if snapshot.capped { " capped=true" } else { "" },
@@ -1052,7 +1111,12 @@ fn run_encoding<const G: usize, const M: usize>(options: &Options, encoding: Goa
                 }
             };
             for snapshot in &snapshots {
-                println!("{}", format_snapshot(&options.maze, regime, encoding, seed, snapshot));
+                for (scope, utility) in &snapshot.utilities {
+                    println!(
+                        "{}",
+                        format_snapshot(&options.maze, regime, encoding, seed, snapshot, *scope, utility)
+                    );
+                }
             }
         }
     }
@@ -1093,7 +1157,11 @@ mod tests {
     }
 
     fn walk(task: &GoalTask<8, 16>, goal: usize, actions: &[usize]) -> Trajectory {
-        let mut cells = vec![0];
+        walk_from(task, 0, goal, actions)
+    }
+
+    fn walk_from(task: &GoalTask<8, 16>, start: usize, goal: usize, actions: &[usize]) -> Trajectory {
+        let mut cells = vec![start];
         for &action in actions {
             let next = task.next(*cells.last().unwrap(), action);
             cells.push(next);
@@ -1105,18 +1173,38 @@ mod tests {
         }
     }
 
-    fn goal_agnostic(action: usize, reward: f64) -> Classifier<16> {
+    fn goal_agnostic(action: usize, reward: f64, anticipates_change: bool) -> Classifier<16> {
         let mut classifier =
             Classifier::general(Some(action), &Configuration::default_protocol());
         classifier.q = 1.0;
         classifier.r = reward;
+        if anticipates_change {
+            classifier.effect.set(0, Symbol::Token(b'1'));
+        }
         classifier
     }
 
     fn agnostic_population() -> Vec<Classifier<16>> {
         (0..ACTIONS)
-            .map(|action| goal_agnostic(action, 100.0 * (action + 1) as f64))
+            .map(|action| goal_agnostic(action, 100.0 * (action + 1) as f64, true))
             .collect()
+    }
+
+    fn favouring(
+        task: &GoalTask<8, 16>,
+        favoured: usize,
+        action: usize,
+        anticipates_change: bool,
+        in_state: Option<usize>,
+    ) -> Classifier<16> {
+        let mut specific = goal_agnostic(action, 900.0, anticipates_change);
+        for index in 0..STATE_LEN {
+            specific.condition.symbols[STATE_LEN + index] = task.goals[favoured][index];
+            if let Some(cell) = in_state {
+                specific.condition.symbols[index] = task.states[cell][index];
+            }
+        }
+        specific
     }
 
     #[test]
@@ -1125,33 +1213,79 @@ mod tests {
         let trajectory = walk(&task, 7, &[2, 4, 4, 2, 0, 6]);
         let population = Population::from_classifiers(agnostic_population());
 
-        let report = evaluate_utility(&population, &task, [&trajectory]);
-
-        assert_eq!(report.flat_logged_steps, 1.0);
-        assert_eq!(report.flat_value_steps, 1.0);
-        assert_eq!(report.unique_value, 0.0);
-        assert_eq!(report.constant_value, 1.0);
+        for scope in VALUE_SCOPES {
+            let report = evaluate_utility(&population, &task, [&trajectory], scope);
+            assert_eq!(report.flat_logged_steps, 1.0);
+            assert_eq!(report.flat_value_steps, 1.0);
+            assert_eq!(report.unique_value, 0.0);
+            assert_eq!(report.constant_value, 1.0);
+        }
     }
 
     #[test]
-    fn a_goal_specific_classifier_makes_its_goal_the_unique_argmax() {
+    fn a_goal_specific_change_classifier_makes_its_goal_the_unique_argmax() {
         let task = maze4_task();
         let trajectory = walk(&task, 7, &[2, 4, 4, 2, 0, 6]);
         let favoured = 11;
-        let mut specific = goal_agnostic(trajectory.actions[0], 900.0);
-        for index in 0..STATE_LEN {
-            specific.condition.symbols[STATE_LEN + index] = task.goals[favoured][index];
-        }
         let mut classifiers = agnostic_population();
-        classifiers.push(specific);
+        classifiers.push(favouring(&task, favoured, trajectory.actions[0], true, None));
         let population = Population::from_classifiers(classifiers);
 
-        let utility = trajectory_utility(&population, &task, &trajectory);
+        for scope in VALUE_SCOPES {
+            let utility = trajectory_utility(&population, &task, &trajectory, scope);
+            assert_eq!(unique_argmax(&utility.value), Some(favoured));
+            assert_eq!(unique_argmax(&utility.logged), Some(favoured));
+            assert_eq!(utility.flat_value_steps, 0);
+            assert!(utility.flat_logged_steps < utility.steps);
+        }
+    }
 
-        assert_eq!(unique_argmax(&utility.value), Some(favoured));
-        assert_eq!(unique_argmax(&utility.logged), Some(favoured));
-        assert_eq!(utility.flat_value_steps, 0);
-        assert!(utility.flat_logged_steps < utility.steps);
+    #[test]
+    fn a_goal_specific_classifier_the_agent_ignores_moves_only_the_all_scope() {
+        let task = maze4_task();
+        let trajectory = walk(&task, 7, &[2, 4, 4, 2, 0, 6]);
+        let favoured = 11;
+        let mut classifiers = agnostic_population();
+        classifiers.push(favouring(&task, favoured, trajectory.actions[0], false, None));
+        let population = Population::from_classifiers(classifiers);
+
+        let agent_view =
+            trajectory_utility(&population, &task, &trajectory, ValueScope::ChangeAnticipating);
+        assert_eq!(unique_argmax(&agent_view.value), None);
+        assert_eq!(agent_view.flat_value_steps, agent_view.steps);
+        assert_eq!(agent_view.flat_logged_steps, agent_view.steps);
+
+        let every_classifier =
+            trajectory_utility(&population, &task, &trajectory, ValueScope::AllClassifiers);
+        assert_eq!(unique_argmax(&every_classifier.value), Some(favoured));
+    }
+
+    #[test]
+    fn chance_baselines_cover_only_the_trajectories_their_hits_cover() {
+        let task = maze4_task();
+        let short = walk(&task, 7, &[2]);
+        let elsewhere = task.index_of((4, 1));
+        let long = walk_from(&task, elsewhere, 7, &[2, 4, 4, 2, 0, 6, 4, 4, 2, 2]);
+        assert!(!long.cells.contains(&short.cells[0]));
+        let favoured = short.cells[1];
+        let mut classifiers = agnostic_population();
+        classifiers.push(favouring(&task, favoured, short.actions[0], true, Some(short.cells[0])));
+        let population = Population::from_classifiers(classifiers);
+
+        let report = evaluate_utility(
+            &population,
+            &task,
+            [&short, &long],
+            ValueScope::ChangeAnticipating,
+        );
+
+        let visited_by_short = 1.0 / task.cell_count() as f64;
+        let visited_by_long = long.cells[1..].iter().collect::<BTreeSet<_>>().len() as f64
+            / task.cell_count() as f64;
+        assert!(visited_by_long > visited_by_short);
+        assert_eq!(report.unique_value, 0.5);
+        assert_eq!(report.hit_value, 1.0);
+        assert_eq!(report.hit_baseline_value, visited_by_short);
     }
 
     #[test]
