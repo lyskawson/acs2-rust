@@ -22,20 +22,52 @@ fn position_symbol(position: u8) -> Symbol {
     Symbol::Token(b'0' + position)
 }
 
-struct Corridor {
+fn position_of(goal: &Goal<1>) -> u8 {
+    match goal.symbols[0] {
+        Symbol::Token(value) => value - b'0',
+        Symbol::Wildcard => panic!("a corridor goal is a position"),
+    }
+}
+
+struct ReachOrPass;
+
+impl GoalObjective<1> for ReachOrPass {
+    fn reward(&self, achieved: &Goal<1>, desired: &Goal<1>) -> f64 {
+        if self.is_reached(achieved, desired) {
+            100.0 * f64::from(position_of(achieved))
+        } else {
+            0.0
+        }
+    }
+
+    fn is_reached(&self, achieved: &Goal<1>, desired: &Goal<1>) -> bool {
+        position_of(achieved) >= position_of(desired)
+    }
+}
+
+struct Corridor<O> {
     rng: ChaChaRandomSource,
-    objective: ExactMatch,
+    objective: O,
     position: u8,
     elapsed: u32,
 }
 
-impl Corridor {
+impl Corridor<ExactMatch> {
     fn new(seed: u64) -> Self {
-        Self {
-            rng: ChaChaRandomSource::from_seed_and_stream(seed, 2),
-            objective: ExactMatch {
+        Self::with_objective(
+            seed,
+            ExactMatch {
                 reward_on_reach: REWARD_ON_REACH,
             },
+        )
+    }
+}
+
+impl<O> Corridor<O> {
+    fn with_objective(seed: u64, objective: O) -> Self {
+        Self {
+            rng: ChaChaRandomSource::from_seed_and_stream(seed, 2),
+            objective,
             position: 0,
             elapsed: 0,
         }
@@ -48,11 +80,7 @@ impl Corridor {
 
     fn start(&mut self, desired: Goal<1>) -> GoalStart<1, 1> {
         let offset = 1 + self.rng.gen_range(LENGTH as usize - 1) as u8;
-        let goal_position = match desired.symbols[0] {
-            Symbol::Token(value) => value - b'0',
-            Symbol::Wildcard => panic!("a corridor goal is a position"),
-        };
-        self.position = (goal_position + offset) % LENGTH;
+        self.position = (position_of(&desired) + offset) % LENGTH;
         self.elapsed = 0;
         let (observation, achieved) = self.observe();
         GoalStart {
@@ -63,10 +91,10 @@ impl Corridor {
     }
 }
 
-impl GoalEnvironment<1, 1> for Corridor {
-    type Objective = ExactMatch;
+impl<O: GoalObjective<1>> GoalEnvironment<1, 1> for Corridor<O> {
+    type Objective = O;
 
-    fn objective(&self) -> &ExactMatch {
+    fn objective(&self) -> &O {
         &self.objective
     }
 
@@ -178,6 +206,30 @@ fn the_time_limit_truncates_an_episode_that_never_reaches_its_goal() {
 fn stepping_before_a_reset_is_refused() {
     let mut env = GoalConditioned::<_, 1, 1, 2>::new(Corridor::new(1));
     env.step(MOVE_RIGHT);
+}
+
+#[test]
+#[should_panic(expected = "must be reset before it is stepped")]
+fn stepping_after_the_episode_ended_is_refused() {
+    let mut env = GoalConditioned::<_, 1, 1, 2>::new(Corridor::with_objective(8, ReachOrPass));
+    env.reset_with_goal(Goal::new([position_symbol(0)]));
+    let outcome = env.step(MOVE_RIGHT);
+    assert!(outcome.terminated);
+    assert_eq!(env.desired(), None);
+    env.step(MOVE_RIGHT);
+}
+
+#[test]
+fn the_adapter_gives_the_objective_the_achieved_goal_before_the_desired_one() {
+    let mut env = GoalConditioned::<_, 1, 1, 2>::new(Corridor::with_objective(8, ReachOrPass));
+    env.reset_with_goal(Goal::new([position_symbol(0)]));
+    let outcome = env.step(MOVE_RIGHT);
+    let (state, carried) = GoalLayout::<1, 1, 2>::split(&outcome.observation);
+    let achieved = Goal::new(state.symbols);
+    assert_eq!(carried, Goal::new([position_symbol(0)]));
+    assert!(position_of(&achieved) >= 2);
+    assert!(outcome.terminated);
+    assert_eq!(outcome.reward, 100.0 * f64::from(position_of(&achieved)));
 }
 
 #[test]

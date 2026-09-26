@@ -135,10 +135,6 @@ where
         &self.environment
     }
 
-    pub fn environment_mut(&mut self) -> &mut E {
-        &mut self.environment
-    }
-
     pub fn into_environment(self) -> E {
         self.environment
     }
@@ -173,6 +169,9 @@ where
             .expect("a goal-conditioned environment must be reset before it is stepped");
         let step = self.environment.step(action);
         let outcome = step.outcome(self.environment.objective(), &desired);
+        if outcome.terminated || outcome.truncated {
+            self.desired = None;
+        }
         StepOutcome {
             observation: GoalLayout::<S, G, M>::join(&step.observation, &desired),
             reward: outcome.reward,
@@ -268,6 +267,51 @@ mod tests {
                 reward: 0.0,
                 terminated: false,
                 truncated: true
+            }
+        );
+    }
+
+    struct AtLeast;
+
+    fn level(goal: &Goal<2>) -> u8 {
+        match goal.symbols[0] {
+            Symbol::Token(value) => value - b'0',
+            Symbol::Wildcard => 0,
+        }
+    }
+
+    impl GoalObjective<2> for AtLeast {
+        fn reward(&self, achieved: &Goal<2>, desired: &Goal<2>) -> f64 {
+            if self.is_reached(achieved, desired) {
+                f64::from(level(achieved))
+            } else {
+                0.0
+            }
+        }
+
+        fn is_reached(&self, achieved: &Goal<2>, desired: &Goal<2>) -> bool {
+            level(achieved) >= level(desired)
+        }
+    }
+
+    #[test]
+    fn the_objective_receives_the_achieved_goal_before_the_desired_one() {
+        let passed = step(goal(5, 0), false, false);
+        assert_eq!(
+            passed.outcome(&AtLeast, &goal(3, 0)),
+            GoalOutcome {
+                reward: 5.0,
+                terminated: true,
+                truncated: false
+            }
+        );
+        let short = step(goal(2, 0), false, false);
+        assert_eq!(
+            short.outcome(&AtLeast, &goal(3, 0)),
+            GoalOutcome {
+                reward: 0.0,
+                terminated: false,
+                truncated: false
             }
         );
     }
