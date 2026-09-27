@@ -806,31 +806,69 @@ class ArchiveTests(unittest.TestCase):
             self.assertIn("| running |", rendered)
             self.assertIn("0.2000", rendered)
 
+    # The fixture names its own branch instead of inheriting init.defaultBranch, and tells
+    # the script that name. sync_runs.sh refuses to run anywhere but the MPX line's branch,
+    # because reports/ is that line's archive; which branch that is has nothing to do with
+    # the behaviour under test here.
+    FIXTURE_BRANCH = "mpx-fixture"
+
+    def _sync_fixture(self, root):
+        (root / "tools").mkdir()
+        (root / "reports").mkdir()
+        (root / "bin").mkdir()
+        shutil.copy(Path(__file__).with_name("sync_runs.sh"), root / "tools")
+        fake_python = root / "bin/python3"
+        fake_python.write_text("#!/bin/sh\nexit 0\n")
+        fake_python.chmod(0o755)
+
+        def git(*args):
+            return subprocess.check_output(["git", *args], cwd=root, text=True,
+                                           stderr=subprocess.STDOUT)
+
+        git("init", "-q", "-b", self.FIXTURE_BRANCH)
+        git("config", "user.name", "Archive Test")
+        git("config", "user.email", "archive-test@example.invalid")
+        git("add", "tools")
+        git("commit", "-qm", "fixture")
+        (root / "reports/slurm_header.out").write_text("acs2-bench mpx-reach: seed=42\n")
+        return git, {**os.environ, "PATH": f"{root / 'bin'}:{os.environ['PATH']}"}
+
     def test_sync_commits_an_untracked_header_only_log(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "tools").mkdir()
-            (root / "reports").mkdir()
-            (root / "bin").mkdir()
-            shutil.copy(Path(__file__).with_name("sync_runs.sh"), root / "tools")
-            fake_python = root / "bin/python3"
-            fake_python.write_text("#!/bin/sh\nexit 0\n")
-            fake_python.chmod(0o755)
-            env = {**os.environ, "PATH": f"{root / 'bin'}:{os.environ['PATH']}"}
-            def git(*args):
-                return subprocess.check_output(["git", *args], cwd=root, text=True,
-                                               stderr=subprocess.STDOUT)
-            git("init", "-q")
-            git("config", "user.name", "Archive Test")
-            git("config", "user.email", "archive-test@example.invalid")
-            git("add", "tools")
-            git("commit", "-qm", "fixture")
-            (root / "reports/slurm_header.out").write_text("acs2-bench mpx-reach: seed=42\n")
+            git, env = self._sync_fixture(root)
+            env["MPX_SYNC_BRANCH"] = self.FIXTURE_BRANCH
             result = subprocess.run(["bash", "tools/sync_runs.sh", "--local", "--commit"],
                                     cwd=root, env=env, text=True, capture_output=True, check=True)
             self.assertIn("==> committed", result.stdout)
             self.assertEqual(git("status", "--porcelain"), "?? bin/\n")
             self.assertIn("acs2-bench", git("show", "HEAD:reports/slurm_header.out"))
+
+    def test_sync_refuses_the_archive_on_another_lines_branch(self):
+        """reports/ is the MPX line's archive and this script commits it to whatever branch
+        is checked out. A second line of work shares the repository, so a cluster log could
+        land on a branch nobody merges from -- the single-copy state the script exists to
+        end. The refusal is the only thing enforcing that; CLAUDE.md cannot."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, env = self._sync_fixture(root)
+            env["MPX_SYNC_BRANCH"] = "feature/somewhere-else"
+            result = subprocess.run(["bash", "tools/sync_runs.sh", "--local", "--commit"],
+                                    cwd=root, env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("refusing to run", result.stderr)
+            self.assertIn(self.FIXTURE_BRANCH, result.stderr)
+            self.assertIn("?? reports/", git("status", "--porcelain"))
+
+    def test_sync_honours_an_explicit_any_branch_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            git, env = self._sync_fixture(root)
+            env["MPX_SYNC_BRANCH"] = "feature/somewhere-else"
+            env["MPX_SYNC_ANY_BRANCH"] = "1"
+            result = subprocess.run(["bash", "tools/sync_runs.sh", "--local", "--commit"],
+                                    cwd=root, env=env, text=True, capture_output=True, check=True)
+            self.assertIn("==> committed", result.stdout)
 
 
 if __name__ == "__main__":
