@@ -55,9 +55,33 @@ At canonical encoding and epsilon 0.8, four time-limited runs ended at last samp
 knowledge 0.7499 (s42) and 0.4980 / 0.4980 / 0.4918 (s43–45). These are finite-run
 readings, not ceilings. The class-level diagnosis is in §3.
 
-**`epsilon = 1` reaches sampled knowledge 1.0 at k=135 under canonical encoding, on one
-seed.** The second seed was attempted twice and closed neither time — §6 has the numbers and
-the decision not to try again.
+**`epsilon = 1` reaches sampled knowledge 1.0 at k=135 under canonical encoding, on two
+seeds.** Seed 43 at **427,920,000** trials (152.3 h) and seed 44 at **152,280,000** trials
+(66.3 h, 529 reliable at specificity 8.05). Seed 42 was attempted twice and closed neither
+time.
+
+**The strongest evidence for the claim is within seed 44, because it controls for the seed.**
+Same encoding, same `u_max=11`, only `epsilon` differs:
+
+| epsilon | verdict | trials | knowledge | reliable |
+|---|---|---|---|---|
+| 0.8 | TIME-LIMITED | 256,199,500 | 0.4980 | 260 |
+| 1 | **SUCCESS** | **152,280,000** | **1.0000** | 529 |
+
+Fewer trials and a complete result. Every earlier comparison of the two epsilons crossed
+seeds, where the 3.73x variance leaves room to argue.
+
+**Cost varies more than threefold and the inter-class gap is where it lives.** The two
+wrong-answer classes open far apart, and how far is the whole spread:
+
+| seed | first opens | second opens | gap | verdict |
+|---|---|---|---|---|
+| 43 | 20.2 M | 404.5 M | 384.3 M | SUCCESS at 427.9 M |
+| 44 | 55.1 M | 120.4 M | **65.3 M** | SUCCESS at 152.3 M |
+| 42 | 104.4 M | not by 518.6 M | >414 M | node fault, three of four closed |
+
+A run's position partway through says nothing about its total, which §7 already says about
+k=70 and now holds here too.
 Seed 43 reached it at **427,920,000 trials**, with 532 reliable rules at specificity
 8.02 and all four sampled coverage classes at 1.0000, in 152.3 h. This result rests
 on one seed in the committed archive. Seed 42's first run hit its wall-clock cap at
@@ -288,6 +312,19 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
   out (Lem is contended; Bem2 starts next day). Never used. A one-hour benchmark would
   say whether its cores are faster.
 
+### Checkpointing carried a real result through an interruption (2026-09-27)
+
+`eps1_s44` is the first production run to be interrupted and still reach SUCCESS. It was
+cancelled deliberately at 43.8 M trials to move it off a contended node, resumed from its
+checkpoint with `since_eval=0`, and solved at **152,280,000** trials. Two job logs, one
+archive row (`135_s44_eps1_s44`), one SUCCESS. Everything the feature was built for, on a
+result that counts rather than a smoke test.
+
+It also settles the decision it was submitted under. This file argued in §7 that re-running
+seed 42 beat a fresh seed, withdrew that after seed 42 reached 518.6 M without closing, and
+the fresh seed then closed at 152.3 M — cheaper than seed 43's 427.9 M and cheaper than
+either seed 42 attempt.
+
 ### A new field in `Configuration` would kill the k=264 chain (2026-09-25)
 
 `checkpoint_identity` embeds `format!("{config:?}")` — the whole `Configuration` — and a
@@ -371,14 +408,13 @@ Three things that cost days before:
 Verified live on 2026-09-11. `./slurm/mpx_status.sh`; logs in `~/mpx_runs/`. **Pull them
 into the repo with `./tools/sync_runs.sh --commit`** — nothing does it automatically.
 
-**Grant: 5000 h of 15,000 spent on 2026-09-23, so ~10,000 h are available.** The k=264
-chain commits up to 5,000 h of that and `eps1_s44` up to 500 h. The budget stopped being
+**Grant: 5162 h of 15,000 spent on 2026-09-27, so ~9,838 h are available.** The k=264 chain
+commits up to 4,500 h of that and is the only thing running; `eps1_s44` finished for 66.3 h. The budget stopped being
 the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
 | `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **14,250,000 trials at 2026-09-23 22:51**, knowledge 0.0000, reliable 0, pop 114,503, 12.7 trials/s, checkpoint 206 MB, 8 d 15 h of segment left | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. **The population has plateaued** — max 116,253 at 12.87 M trials, flat to within ±2,000 since about 9 M, and throughput steady at 12.7 trials/s. It has not yet collapsed. Read it by the population, not by knowledge — see below. |
-| `eps1_s44` (5937978) | submitted 2026-09-23, not yet started. k=135, canonical `flip`, `u_max=11`, `epsilon=1`, checkpointed, 500 h cap | **The second seed for the literature-comparable result.** Seed 43 closed at 427.92 M trials in 152.3 h; this cap reaches roughly 1.4 billion. Watch the two `*_nochange` coverage classes, not overall knowledge — they are what decides it. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
