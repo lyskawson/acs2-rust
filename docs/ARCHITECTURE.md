@@ -1756,8 +1756,9 @@ For perception goals, construction checks each pool cell against **all** walkabl
 A twin outside the pool is still grounds for refusal; silently dropping ambiguous goals
 would alter the caller's task distribution. Coordinates retain the full pool on every
 geometry. Maze4/5/6/7 have 27/37/37/36 walkable cells respectively, all with unique
-perceptions. MazeB has 20 of 26 unique, MazeF3 7 of 9. The original 27-geometry catalogue
-has 15 reward-cell twins, confirmed exhaustively. MazeF3's `(1,4)` and `(3,3)` both see
+perceptions. MazeB has 20 of 26 unique, MazeF3 7 of 9. In the original 27-geometry
+catalogue, 15 geometries have a reward-cell twin: 81 twin cells in all, 40 of them in
+MazeE3, confirmed exhaustively. MazeF3's `(1,4)` and `(3,3)` both see
 `11111101`; the coordinate twin test enters `(3,3)` with desired `(1,4)` and gets zero.
 `goal_at` can encode an achieved cell outside the real pool; it does not authorize that
 encoding as a desired pool goal or make ambiguous perception relabeling safe.
