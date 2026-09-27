@@ -59,7 +59,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 | 42 | pyalcs | 11 | running | 518 640 000 | 0.7499 | 518640000 | 1.0000 | 398 | 8.00 | 0.0000 | 1.0000 | 1.0000 | 1.0000 | 165.3 | 872 | `135_s42_eps1b_u11` |
 | 42 | pyalcs | 11 | TIME-LIMITED | 301 483 000 | 0.7442 | 301440000 | - | 393 | 8.01 | - | - | - | - | 166.7 | 502 | `135_s42_eps1_u11` |
 | 43 | pyalcs | 11 | **SUCCESS** | 427 920 000 | 1.0000 | 427920000 | - | 532 | 8.02 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 152.3 | 780 | `135_s43_eps1_u11` |
-| 44 | pyalcs | 11 | running | 46 680 000 | 0.1254 | 46680000 | - | 108 | 10.20 | 0.0000 | 0.0068 | 0.0000 | 0.4946 | 40.6 | 319 | `135_s44_eps1_s44` |
+| 44 | pyalcs | 11 | **SUCCESS** | 152 280 000 | 1.0000 | 152280000 | - | 529 | 8.05 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 66.3 | 638 | `135_s44_eps1_s44` |
 
 ## Encoding outcome · epsilon = 0.8 · agent = acs2 · GA = true
 
@@ -75,6 +75,6 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 ## Summary
 
 - archived runs: **38**
-- solved (knowledge = 1.0): **5**
+- solved (knowledge = 1.0): **6**
 - fewest trials: seed 46, 30 240 000 trials, 57.6 h, encoding outcome, epsilon 0.8, acs2, variant pyalcs
 - shortest wall time: seed 42, 43 200 000 trials, 50.5 h, encoding outcome, epsilon 0.8, acs2, variant pyalcs

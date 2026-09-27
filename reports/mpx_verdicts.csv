@@ -73,6 +73,7 @@ slurm_mpx135_s42_u9.out,,1,135,42,pyalcs,9,0,flip,wrapper-default,0.8,,,,,true,,
 slurm_mpx135_s43_eps1_u11.out,,1,135,43,pyalcs,11,0,flip,wrapper-default,1,acs2,,,,true,,,,,,SUCCESS,427920000,1.0,532,8.02,136,56663,0.0,548345.1,780.38,427920000,at-verdict
 slurm_mpx135_s43_u11cover.out,,1,135,43,pyalcs,11,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,TIME-LIMITED,281210000,0.498,257,8.05,136,48552,0.0,600008.0,468.68,281160000,stale
 slurm_mpx135_s43_u12long.out,,1,135,43,pyalcs,12,0,flip,wrapper-default,0.8,,,,,true,,,,,,TIME-LIMITED,353092500,0.4985,261,8.05,136,77760,0.0,600053.2,588.44,353040000,stale
+slurm_mpx135_s44_eps1_s44,slurm_mpx135_s44_eps1_s44_seg5954234.out,1,135,44,pyalcs,11,0,flip,header,1,acs2,120000,16a24bd,eps1_s44,true,,,,false,process-lifetime,SUCCESS,152280000,1.0,529,8.05,136,41713,0.58,238858.9,637.53,152280000,at-verdict
 slurm_mpx135_s44_u11cover.out,,1,135,44,pyalcs,11,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,TIME-LIMITED,256199500,0.498,260,8.01,136,59597,0.0,600027.0,426.98,256080000,stale
 slurm_mpx135_s45_u11cover.out,,1,135,45,pyalcs,11,0,flip,wrapper-default,0.8,acs2,,,,true,,,,,,TIME-LIMITED,233203500,0.4918,261,8.11,136,51873,0.0,600008.0,388.67,233160000,stale
 slurm_mpx135_s42_outcome_u11.out,,1,135,42,pyalcs,11,0,outcome,filename,0.8,acs2,,,,true,,,,,,SUCCESS,43200000,1.0,539,8.0,136,81276,0.0,181821.5,237.6,43200000,at-verdict
