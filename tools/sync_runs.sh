@@ -12,6 +12,7 @@
 set -euo pipefail
 
 REMOTE="alelys2099@ui.wcss.pl"
+MPX_SYNC_BRANCH="${MPX_SYNC_BRANCH:-feature/mpx264}"
 KEY="$HOME/.ssh/id_rsa_wcss"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STAGE="$(mktemp -d)"
@@ -28,6 +29,20 @@ for arg in "$@"; do
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
+
+# This script writes into reports/ and, with --commit, commits there. Two lines of work
+# share this repository, and reports/ is the MPX archive: committing it onto another line's
+# branch puts the one irreplaceable copy of a cluster result somewhere nobody will merge
+# from. CLAUDE.md says not to, but that file belongs to this line and the other line does not
+# edit it, so the rule lives here too, where it can refuse.
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo detached)"
+if [ "$BRANCH" != "$MPX_SYNC_BRANCH" ] && [ "${MPX_SYNC_ANY_BRANCH:-0}" != "1" ]; then
+  echo "refusing to run: the archive belongs on $MPX_SYNC_BRANCH and this checkout is on \
+'$BRANCH'. reports/ is the MPX line's archive and a cluster log committed to another branch \
+is a result nobody will merge from. Switch the checkout, or set MPX_SYNC_ANY_BRANCH=1 if the \
+branch has genuinely been renamed." >&2
+  exit 2
+fi
 
 new=0
 updated=0
