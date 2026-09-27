@@ -3,7 +3,7 @@ use acs2_core::agent::Agent;
 use acs2_core::config::Configuration;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::trial::LearningAgent;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze::geometries::geometry_by_id;
 use serde_json::Value;
@@ -29,7 +29,8 @@ fn run_rust_episode(maze_id: &str, seed: u64) -> RustEpisode {
     let config = Configuration::default_protocol();
     let mut env = Maze::from_geometry(geometry, Box::new(ChaChaRandomSource::from_seed(seed)));
     let mut agent =
-        Agent::<MAZE_PERCEPTION_LEN, _>::new(config, ChaChaRandomSource::from_seed(seed));
+        Agent::<MAZE_PERCEPTION_LEN, _>::new(config, ChaChaRandomSource::from_seed(seed))
+            .with_truncation_mode(TruncationMode::Pyalcs);
     let selector = EpsilonGreedy {
         number_of_possible_actions: agent.config().number_of_possible_actions,
         epsilon: 0.8,

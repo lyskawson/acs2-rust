@@ -8,7 +8,7 @@ use acs2_core::config::Configuration;
 use acs2_core::environment::Environment;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::trial::LearningAgent;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 use acs2_envs::roles::VALIDATION_MAZES;
@@ -163,7 +163,8 @@ fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatRe
             let mut agent = Agent::<MAZE_PERCEPTION_LEN, _>::new(
                 config,
                 ChaChaRandomSource::from_seed(seed),
-            );
+            )
+            .with_truncation_mode(TruncationMode::Pyalcs);
             run_protocol(&mut agent, &mut env, &selector, options)
         }
         AgentChoice::Acs2Er => {
@@ -171,7 +172,8 @@ fn run_repeat(geometry: &MazeGeometry, options: &Options, seed: u64) -> RepeatRe
                 config,
                 options.agent.replay,
                 ChaChaRandomSource::from_seed(seed),
-            );
+            )
+            .with_truncation_mode(TruncationMode::Pyalcs);
             run_protocol(&mut agent, &mut env, &selector, options)
         }
     }

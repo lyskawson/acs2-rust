@@ -51,7 +51,7 @@ and are worth archiving.
 ## Gates — before any change to the core
 
 ```bash
-cargo test --workspace --release          # 102 on feature/mpx264, 121 on feature/trajectory-utility
+cargo test --workspace --release          # 102 on feature/mpx264, 177 on feature/trajectory-utility
 uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 47 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
@@ -72,9 +72,9 @@ files older than `clippy.toml`; new code adds none.
 definition of this implementation. Where pyalcs is wrong, the default here is right, and
 pyalcs behaviour exists only as a mode that the validation tools select explicitly:
 P8, P11, the maze-parity tests and `acs2-bench` (P9). Those stay byte-identical without
-any change to how they are invoked. One known case still defaults to pyalcs: a truncated
-episode bootstraps 0 (`agent.rs`, `trial.rs`, `acs2er/mod.rs`). The fix is scheduled on
-the trajectory-utility line.
+any change to how they are invoked. Truncated episodes bootstrap from the next state by
+default (`agent.rs`, `trial.rs`, `acs2er/mod.rs`); terminated episodes bootstrap 0.
+`TruncationMode::Pyalcs` explicitly preserves bootstrap 0 on truncation for validation.
 
 Parameters are not behaviours. `Configuration` defaults stay as they are, because the
 checkpoint identity embeds them, and every experiment states its parameters explicitly.

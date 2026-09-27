@@ -172,11 +172,94 @@ Decided in P6, binding on P7. The shared trial loop (`agent.rs`,
 - **If the maze never raises `truncated`, a deterministic exploit trial on a maze the
   frozen policy cannot solve will infinite-loop** — the loop has nothing else to stop
   it. This is not a safety net the agent provides; the environment owns it.
-- **On `terminated` OR `truncated` the loop runs one terminal learning pass with
-  bootstrap `0`.** This is correct for parity: gym 0.23 folds `TimeLimit` into the
-  single `done` flag, so pyalcs also bootstraps `0` at the cap. **P8 asserts this and
-  must NOT "fix" it** to bootstrap on truncation — a truncation-bootstrap variant would
-  diverge from the baseline being measured.
+
+### Phase 2b — learning at an episode boundary
+
+`trial::TruncationMode` is an agent-owned option shared by ACS2 and ACS2ER.
+`Bootstrap` is the default of both `new` and `with_population`. An ended episode
+still stops on either flag, but its learning target is `reward + gamma * V(next)`
+when only `truncated` is true, and `reward` whenever `terminated` is true. Success
+on the limit step therefore has bootstrap zero, as does a transition raising both
+flags. Exploitation uses the same rule and still updates RL.
+
+A truncated ACS2 exploration step forms the next state's match set, applies ALP,
+reforms that set after covering/deletion, estimates the bootstrap and applies RL,
+then GA. This is the same learning pass as a continuing transition, at the same
+ALP/GA timestamp, without selecting another action or resetting first. Termination
+keeps the old learning pass. No transition or ALP/GA update is dropped at a cap.
+
+Select historical validation explicitly with
+`.with_truncation_mode(TruncationMode::Pyalcs)` before learning or restoring a
+checkpoint. This mode initializes the final exploration match set empty and
+bootstraps zero on either ending flag, reproducing the former loop exactly.
+P8 selects the pyalcs mode in its explicit time-limit regression; its original
+761 primitive differential vectors have no ending flags. P11, the episode
+differential and both P9 agents also select it in their own code. Maze parity
+checks the environment only, so it has no agent mode to select. Single-goal
+learning equivalence runs both agents in each mode, including the corrected one.
+`tu_probe` selects pyalcs for its online learner; its historical HER sample
+construction retains the old `done` rule. All five v2 logs were reproduced exactly
+except `wall`, with the existing commands.
+
+ACS2ER stores `done = terminated` by default and
+`done = terminated || truncated` in pyalcs mode; replay still gates its bootstrap
+and GA match set on that stored bit. The online loop ends on either environment
+flag independently of `done`. A mode switch with a nonempty replay buffer is
+refused because samples cannot be reinterpreted after their flags were folded.
+Direct callers of `replay_learning_step` own the meaning of the `done` they supply.
+
+The mode is absent from `Configuration`, `ReplaySample`, `AgentState`, the codec,
+`checkpoint_identity` and `AgentOptions::describe()`. Capture/restore save learning
+state, not this option; restore retains the caller's selected mode. A caller
+resuming a historical capped run must explicitly choose pyalcs first: the codec
+cannot identify the origin of an old `done` bit or convert it. MPX checkpoints
+need no special selection because `multiplexer.rs` always returns
+`terminated: true, truncated: false`; the unchanged reach regressions pass.
+
+This contract interprets caps as external training limits on a continuing task,
+following [Pardo et al. (ICML 2018)](https://proceedings.mlr.press/v80/pardo18a.html)
+and [Gymnasium's time-limit guidance](https://gymnasium.farama.org/tutorials/gymnasium_basics/handling_time_limits/).
+It does not turn an intrinsic finite-horizon objective into a continuing task;
+such an objective needs remaining time in the observation and terminal horizon
+semantics. Goal-task success within a short evaluation cap is a separate metric.
+
+`tests/truncation.rs` checks all four paths (ACS2 exploration/exploitation and
+ACS2ER replay/exploitation), a sample actually replayed twice after warmup,
+termination, both flags, success reward, constructor defaults, restore and the
+buffer guard. It also compares complete population fields and RNG after truncated
+and continuing exploration with GA off/on, and exercises next-match-set deletion
+and quality changes. `goal_maze.rs` adds an actual cap-one goal success in every
+path and mode. Deliberate mutations swapping modes, zeroing default truncation,
+bootstrapping termination and ignoring ACS2ER truncation each failed a focused
+test before being reverted. The P6 unreachable-goal regression keeps its original
+step-count assertions in the corrected default; it never asserted a zero target.
+
+### Short paired ACS2ER diagnostic (2026-09-27)
+
+Maze4-v0, all 27 coordinate goals, cap 5, 10,000 environment steps per mode and
+seed, agent/environment ChaCha streams 0/1. A final partial episode is truncated
+when the exact budget runs out. Configuration is `default_protocol()` with
+`epsilon=1`; GA/PEE/action planning off, subsumption on, ALP variant Pyalcs,
+`u_max=100000`, beta/gamma 0.05/0.95. Replay buffer 256, warmup 64, three samples
+per step. There are no exploit/evaluation episodes or relabeling. Uniform actions
+keep the learning inputs paired; both modes have equal episode/success counts,
+trajectory hashes and final population sizes for every seed.
+
+The cap metric is the mean maximum change-anticipating fitness `q*r` for the
+actual action/state just before truncation, read after that episode's replay.
+The classifier metric is the final unweighted mean `r` over change-anticipating
+classifiers. Values below are corrected default / pyalcs:
+
+| Seed | Episodes / successes / truncations | Population | Cap action fitness | Final change-classifier r |
+|---|---:|---:|---:|---:|
+| 42 | 2086 / 192 / 1894 | 1497 | 147.685801 / 99.176314 | 330.047309 / 207.838022 |
+| 43 | 2093 / 198 / 1895 | 1581 | 133.210605 / 90.070172 | 312.618406 / 205.506803 |
+| 44 | 2076 / 180 / 1896 | 1561 | 121.501090 / 85.766218 | 295.705382 / 202.088062 |
+
+These are short-run value differences under a random policy, not convergence,
+policy superiority or steps-to-goal evidence. Equal training success is expected
+at epsilon one. The diagnostic source and raw outputs are delivered outside the
+checkout; no runner or archived measurement is changed by this phase.
 
 ## P7 maze model — static geometry + agent coordinate (not matrix mutation)
 
@@ -219,9 +302,9 @@ P8 divergence — hence this note.
 `Maze::step` increments `elapsed_steps`, then sets
 `truncated = !terminated && elapsed_steps >= max_episode_steps`. A cap of 50 yields
 exactly 50-step episodes; **if goal and cap coincide on the same step, `terminated`
-wins and `truncated` stays false** (gym sets `TimeLimit.truncated = not done`). Both
-fold to bootstrap-0 so learning is unaffected, but steps-to-goal metrics depend on
-this boundary.
+wins and `truncated` stays false** (gym sets `TimeLimit.truncated = not done`). In
+pyalcs mode both episode endings bootstrap zero; the corrected default bootstraps
+only truncation. Steps-to-goal metrics also depend on this boundary.
 
 ### Differential probes (Gate P7)
 
@@ -2038,7 +2121,8 @@ here. No archived measurement under `reports/` is edited.
 30 geometries, seeds 42–44, 20 complete random-action episodes per case: reset state and
 position, every next observation's state part, reward, termination and truncation.
 For learning, all eight pyalcs geometries, the same seeds and 100 exploration episodes are
-compared after **every episode**, with GA off: steps, total reward, population order and
+compared after **every episode**, with GA off and both agents in the same
+truncation mode (each mode is checked): steps, total reward, population order and
 size, first-eight condition/effect/mark attributes, action, numerosity, experience, ALP/GA
 timestamps, `ee`, and bit patterns of `q`, `r`, `ir`, `tav`, plus agent RNG state.
 Coordinate suffixes always pass; perception suffixes pass wherever construction is safe.

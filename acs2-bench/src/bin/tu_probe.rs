@@ -12,7 +12,7 @@ use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
-use acs2_core::trial::LearningAgent;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 
 const STATE_LEN: usize = 8;
@@ -357,7 +357,8 @@ impl<const M: usize> OnlineLearner<M> {
             agent: Agent::new(
                 Configuration::default_protocol(),
                 seeded_stream(seed, AGENT_STREAM),
-            ),
+            )
+            .with_truncation_mode(TruncationMode::Pyalcs),
             selector: explore_selector(),
             time: 0,
         }

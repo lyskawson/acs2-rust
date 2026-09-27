@@ -9,7 +9,7 @@ use crate::ga::apply_ga;
 use crate::population::{ClassifierRef, Population};
 use crate::rl::{apply_reinforcement_learning, BootstrapEstimator};
 use crate::rng::RandomSource;
-use crate::trial::{self, LearningAgent, TrialMetrics};
+use crate::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 
 pub use replay::{ReplayConfiguration, ReplayMemory, ReplaySample};
 
@@ -19,6 +19,7 @@ pub struct Acs2ErAgent<const N: usize, R: RandomSource> {
     replay_config: ReplayConfiguration,
     replay_memory: ReplayMemory<N>,
     rng: R,
+    truncation_mode: TruncationMode,
 }
 
 impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
@@ -29,6 +30,7 @@ impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
             replay_config,
             replay_memory: ReplayMemory::new(replay_config.buffer_size),
             rng,
+            truncation_mode: TruncationMode::default(),
         }
     }
 
@@ -44,7 +46,17 @@ impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
             replay_config,
             replay_memory: ReplayMemory::new(replay_config.buffer_size),
             rng,
+            truncation_mode: TruncationMode::default(),
         }
+    }
+
+    pub fn with_truncation_mode(mut self, mode: TruncationMode) -> Self {
+        assert!(
+            self.replay_memory.is_empty() || mode == self.truncation_mode,
+            "truncation mode cannot change with stored replay samples"
+        );
+        self.truncation_mode = mode;
+        self
     }
 
     pub fn replay_config(&self) -> &ReplayConfiguration {
@@ -120,7 +132,9 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Acs2ErAgent<N, R> {
             let outcome = env.step(action);
             total_reward += outcome.reward;
             state = outcome.observation;
-            let done = outcome.terminated || outcome.truncated;
+            let done = self
+                .truncation_mode
+                .is_terminal(outcome.terminated, outcome.truncated);
 
             replay_memory.update(ReplaySample {
                 state: acting_state,
@@ -147,7 +161,7 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Acs2ErAgent<N, R> {
 
             steps += 1;
 
-            if done {
+            if outcome.terminated || outcome.truncated {
                 break;
             }
         }
@@ -164,12 +178,13 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Acs2ErAgent<N, R> {
         B: BootstrapEstimator<N>,
     {
         let _ = time;
-        trial::run_exploit_trial(
+        trial::run_exploit_trial_with_mode(
             &mut self.population,
             &self.config,
             &mut self.rng,
             env,
             bootstrap,
+            self.truncation_mode,
         )
     }
 }

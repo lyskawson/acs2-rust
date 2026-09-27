@@ -7,7 +7,7 @@ use crate::ga::apply_ga;
 use crate::population::{ClassifierRef, Population};
 use crate::rl::{apply_reinforcement_learning, BootstrapEstimator};
 use crate::rng::RandomSource;
-use crate::trial::{self, LearningAgent, TrialMetrics};
+use crate::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 
 struct PreviousStep<const N: usize> {
     action_set: Vec<ClassifierRef>,
@@ -20,6 +20,7 @@ pub struct Agent<const N: usize, R: RandomSource> {
     population: Population<N>,
     config: Configuration,
     rng: R,
+    truncation_mode: TruncationMode,
 }
 
 impl<const N: usize, R: RandomSource> Agent<N, R> {
@@ -28,6 +29,7 @@ impl<const N: usize, R: RandomSource> Agent<N, R> {
             population: Population::new(),
             config,
             rng,
+            truncation_mode: TruncationMode::default(),
         }
     }
 
@@ -36,7 +38,13 @@ impl<const N: usize, R: RandomSource> Agent<N, R> {
             population,
             config,
             rng,
+            truncation_mode: TruncationMode::default(),
         }
+    }
+
+    pub fn with_truncation_mode(mut self, mode: TruncationMode) -> Self {
+        self.truncation_mode = mode;
+        self
     }
 }
 
@@ -144,10 +152,17 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Agent<N, R> {
             steps += 1;
 
             if outcome.terminated || outcome.truncated {
-                let mut terminal_match: Vec<ClassifierRef> = Vec::new();
+                let terminal = self
+                    .truncation_mode
+                    .is_terminal(outcome.terminated, outcome.truncated);
+                let mut next_match = if terminal {
+                    Vec::new()
+                } else {
+                    population.form_match_set(&state)
+                };
                 apply_alp(
                     population,
-                    &mut terminal_match,
+                    &mut next_match,
                     &mut action_set,
                     &acting_state,
                     action,
@@ -156,11 +171,17 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Agent<N, R> {
                     config,
                     rng,
                 );
+                let bootstrap_value = if terminal {
+                    0.0
+                } else {
+                    next_match = population.form_match_set(&state);
+                    bootstrap.estimate(population, &next_match)
+                };
                 apply_reinforcement_learning(
                     population,
                     &action_set,
                     outcome.reward,
-                    0.0,
+                    bootstrap_value,
                     config.beta,
                     config.gamma,
                 );
@@ -168,7 +189,7 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Agent<N, R> {
                     apply_ga(
                         time + steps as u64,
                         population,
-                        &mut terminal_match,
+                        &mut next_match,
                         &mut action_set,
                         &state,
                         config,
@@ -198,12 +219,13 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Agent<N, R> {
         B: BootstrapEstimator<N>,
     {
         let _ = time;
-        trial::run_exploit_trial(
+        trial::run_exploit_trial_with_mode(
             &mut self.population,
             &self.config,
             &mut self.rng,
             env,
             bootstrap,
+            self.truncation_mode,
         )
     }
 }

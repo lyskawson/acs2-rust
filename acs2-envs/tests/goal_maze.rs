@@ -1,4 +1,6 @@
 use acs2_core::action_selection::EpsilonGreedy;
+use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration};
+use acs2_core::alp::cover;
 use acs2_core::agent::Agent;
 use acs2_core::checkpoint::Checkpointed;
 use acs2_core::classifier::Classifier;
@@ -6,10 +8,11 @@ use acs2_core::config::Configuration;
 use acs2_core::environment::Environment;
 use acs2_core::goal::{Goal, GoalConditioned, GoalEnvironment, GoalLayout};
 use acs2_core::perception::Perception;
+use acs2_core::population::Population;
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::symbol::Symbol;
-use acs2_core::trial::LearningAgent;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::goal::maze::{CoordinateGoalMaze, GoalMazeError, PerceptionGoalMaze};
 use acs2_envs::goal::SPARSE_GOAL_REWARD;
 use acs2_envs::maze::geometries::{alcs, geometry_by_id, pyalcs, MazeGeometry};
@@ -304,6 +307,82 @@ fn a_step_cap_truncates_at_the_exact_step_and_success_wins() {
 }
 
 #[test]
+fn limit_step_goal_success_has_zero_bootstrap_for_every_learning_path() {
+    fn check<A: LearningAgent<10>, E: Environment<10>>(agent: &mut A, env: &mut E, exploit: bool) {
+        let selector = EpsilonGreedy {
+            number_of_possible_actions: 8,
+            epsilon: 0.0,
+        };
+        let metrics = if exploit {
+            agent.run_exploit_trial(env, &MaxFitnessBootstrap, 100)
+        } else {
+            agent.run_explore_trial(env, &selector, &MaxFitnessBootstrap, 100)
+        };
+        assert_eq!(metrics.steps, 1);
+        assert_eq!(metrics.reward, 1_000.0);
+        assert_eq!(agent.population().get(0).r, 504.0);
+        assert_eq!(agent.population().get(1).r, 40.0);
+    }
+
+    for mode in [TruncationMode::Bootstrap, TruncationMode::Pyalcs] {
+        for replay in [false, true] {
+            for exploit in [false, true] {
+                let maze = CoordinateGoalMaze::multi_goal(
+                    &pyalcs::MAZEF3,
+                    vec![(1, 2)],
+                    1,
+                    Box::new(IndexRng(0)),
+                )
+                .unwrap();
+                let mut env = GoalConditioned::<_, 8, 2, 10>::new(maze);
+                let start = env.reset();
+                let outcome = env.step(2);
+                assert!(outcome.terminated);
+                assert!(!outcome.truncated);
+                let config = Configuration {
+                    beta: 0.5,
+                    gamma: 0.75,
+                    ..Configuration::default_protocol()
+                };
+                let mut acting = cover(&start, 2, &outcome.observation, 0, &config);
+                acting.r = 8.0;
+                let mut next = Classifier::general(Some(2), &config);
+                next.condition.symbols = outcome.observation.symbols;
+                next.effect.set(0, Symbol::Token(b'9'));
+                next.r = 40.0;
+                let population = Population::from_classifiers(vec![acting, next]);
+                if replay {
+                    let replay_config = ReplayConfiguration {
+                        buffer_size: 4,
+                        min_samples: 1,
+                        samples_number: 1,
+                    };
+                    let mut agent = Acs2ErAgent::with_population(
+                        config,
+                        replay_config,
+                        ChaChaRandomSource::from_seed(42),
+                        population,
+                    )
+                    .with_truncation_mode(mode);
+                    check(&mut agent, &mut env, exploit);
+                    if !exploit {
+                        assert!(agent.replay_memory().get(0).done);
+                    }
+                } else {
+                    let mut agent = Agent::with_population(
+                        config,
+                        ChaChaRandomSource::from_seed(42),
+                        population,
+                    )
+                    .with_truncation_mode(mode);
+                    check(&mut agent, &mut env, exploit);
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn single_goal_matches_maze_step_for_step_including_reset_randomness() {
     for geometry in all_geometries() {
         for seed in 42..45 {
@@ -367,10 +446,13 @@ fn learning_equivalence<const G: usize, const M: usize, E: GoalEnvironment<8, G>
     geometry: &MazeGeometry,
     seed: u64,
     goal_env: E,
+    mode: TruncationMode,
 ) {
     let config = Configuration::default_protocol();
-    let mut plain_agent = Agent::<8, _>::new(config.clone(), ChaChaRandomSource::from_seed(seed));
-    let mut goal_agent = Agent::<M, _>::new(config, ChaChaRandomSource::from_seed(seed));
+    let mut plain_agent = Agent::<8, _>::new(config.clone(), ChaChaRandomSource::from_seed(seed))
+        .with_truncation_mode(mode);
+    let mut goal_agent = Agent::<M, _>::new(config, ChaChaRandomSource::from_seed(seed))
+        .with_truncation_mode(mode);
     let mut plain = Maze::from_geometry(geometry, rng(seed));
     let mut joined = GoalConditioned::<_, 8, G, M>::new(goal_env);
     let selector = EpsilonGreedy {
@@ -403,14 +485,17 @@ fn learning_equivalence<const G: usize, const M: usize, E: GoalEnvironment<8, G>
 #[test]
 fn a_constant_goal_suffix_preserves_acs2_learning_and_rng_without_ga() {
     for geometry in pyalcs::GEOMETRIES {
-        for seed in 42..45 {
+        for (seed, mode) in (42..45).flat_map(|seed| {
+            [TruncationMode::Bootstrap, TruncationMode::Pyalcs].map(|mode| (seed, mode))
+        }) {
             learning_equivalence::<2, 10, _>(
                 geometry,
                 seed,
                 CoordinateGoalMaze::single_goal(geometry, rng(seed)).unwrap(),
+                mode,
             );
             if let Ok(goal) = PerceptionGoalMaze::single_goal(geometry, rng(seed)) {
-                learning_equivalence::<8, 16, _>(geometry, seed, goal);
+                learning_equivalence::<8, 16, _>(geometry, seed, goal, mode);
             }
         }
     }

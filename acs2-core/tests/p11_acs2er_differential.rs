@@ -10,7 +10,7 @@ use acs2_core::population::{ClassifierRef, Population};
 use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::RandomSource;
 use acs2_core::symbol::Symbol;
-use acs2_core::trial::LearningAgent;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 
 use common::{assert_classifier_matches, load};
 
@@ -194,7 +194,8 @@ fn acs2er_explore_run_matches_pyalcs() {
             draws,
             cursor: std::rc::Rc::clone(&rng_cursor),
         },
-    );
+    )
+    .with_truncation_mode(TruncationMode::Pyalcs);
     let bootstrap = MaxFitnessBootstrap;
 
     let expected_trial_steps: Vec<u32> = data["trial_steps"]

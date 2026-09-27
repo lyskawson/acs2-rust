@@ -1,14 +1,64 @@
 mod common;
 
 use acs2_core::alp::apply_alp;
+use acs2_core::action_selection::EpsilonGreedy;
+use acs2_core::agent::Agent;
 use acs2_core::classifier::Classifier;
 use acs2_core::config::Configuration;
+use acs2_core::environment::{Environment, StepOutcome};
+use acs2_core::perception::Perception;
 use acs2_core::population::{ClassifierRef, Population};
-use acs2_core::rl::apply_reinforcement_learning;
+use acs2_core::rl::{apply_reinforcement_learning, MaxFitnessBootstrap};
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::symbol::Symbol;
+use acs2_core::trial::{LearningAgent, TruncationMode};
 
 use common::{approx, assert_classifier_matches, classifier, load, perception};
+
+struct PyalcsTimeLimit;
+
+impl Environment<1> for PyalcsTimeLimit {
+    fn reset(&mut self) -> Perception<1> {
+        Perception::new([Symbol::Token(b'0')])
+    }
+
+    fn step(&mut self, _action: usize) -> StepOutcome<1> {
+        StepOutcome {
+            observation: Perception::new([Symbol::Token(b'1')]),
+            reward: 0.0,
+            terminated: false,
+            truncated: true,
+            info: (),
+        }
+    }
+}
+
+#[test]
+fn pyalcs_validation_zeroes_the_bootstrap_at_a_time_limit() {
+    let config = Configuration::default_protocol();
+    let mut acting = Classifier::general(Some(0), &config);
+    acting.condition.set(0, Symbol::Token(b'0'));
+    acting.effect.set(0, Symbol::Token(b'1'));
+    acting.r = 4.0;
+    let mut next = Classifier::general(Some(0), &config);
+    next.condition.set(0, Symbol::Token(b'1'));
+    next.effect.set(0, Symbol::Token(b'0'));
+    next.r = 100.0;
+    let expected = acting.r + config.beta * (0.0 - acting.r);
+    let mut agent = Agent::with_population(
+        config,
+        ChaChaRandomSource::from_seed(42),
+        Population::from_classifiers(vec![acting, next]),
+    )
+    .with_truncation_mode(TruncationMode::Pyalcs);
+    let selector = EpsilonGreedy {
+        number_of_possible_actions: 1,
+        epsilon: 1.0,
+    };
+    let metrics = agent.run_explore_trial(&mut PyalcsTimeLimit, &selector, &MaxFitnessBootstrap, 0);
+    assert_eq!(metrics.steps, 1);
+    assert_eq!(agent.population().get(0).r.to_bits(), expected.to_bits());
+}
 
 fn symbols_to_string<const N: usize>(symbols: &[Symbol; N]) -> String {
     symbols
