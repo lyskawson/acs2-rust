@@ -52,7 +52,7 @@ and are worth archiving.
 
 ```bash
 cargo test --workspace --release          # 102 on feature/mpx264, 121 on feature/trajectory-utility
-uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 45 tests
+uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 47 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
 cargo clean --release -p acs2-core -p acs2-envs -p acs2-bench
