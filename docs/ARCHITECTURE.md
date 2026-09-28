@@ -2189,6 +2189,90 @@ What is deliberately absent: an agent goal-set API (the real goal set is the set
 agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
 any change to `Classifier`.
 
+## Goal measurement layer — trajectory-utility phase 3a
+
+`acs2-measure` is a separate workspace package. Its CLI takes a typed research-task name,
+positive episode cap, an explicit goal pool (`full` or listed real goals), encoding, agent,
+seeds, ordered environment-step evaluation points and an output path outside the checkout.
+The task registry is `acs2-envs::roles::ResearchTask`; validation oracles and performance
+benchmarks are typed there too. `VALIDATION_MAZES` and geometry IDs remain unchanged. This
+package keeps experiment policy and output formats out of `acs2-core` and the MPX binaries;
+adding these to `acs2-bench` would mix thesis metrics with the multiplexer path.
+
+The runner owns the environment-step counter. One `GoalAgent::train_episode` call receives
+one `TrainingEnvironment` episode; a second reset, a step outside the episode or an
+unfinished episode fails. Evaluation is taken after the first completed episode meeting
+each nominal point, without cutting it. The actual count and nominal point are both in the
+row; overshoot is strictly less than the configured cap. An agent's returned trial metrics
+never set the budget. This excludes the K-heads/K-episodes-per-trial comparison defect.
+
+`GoalAgent` separates training, a named evaluation policy, read-only action and value
+selection, update counts, and component-size reports. `CoreAgent` wraps the unchanged
+`LearningAgent` implementations of ACS2 and ACS2ER and `GoalConditioned`. It declares
+`greedy_change_anticipating_population`: `BestAction` selects from the population on
+state concatenated with desired goal, and the reported first-action estimate is the
+`MaxFitnessBootstrap` maximum over that action set. A future multi-population agent must
+implement `eval_action` for its actual deployed policy and aggregate its population costs;
+the runner neither selects head zero nor assumes one population. It does not call
+`run_exploit_trial`, whose reinforcement-learning update would invalidate evaluation.
+
+Evaluation creates a separate environment and tie-break generator, never borrows the
+training generator or mutable population. It resets to each specified start–goal pair,
+then reports cap success, mean steps among successes, mean ratio of successful steps to
+shortest distance, and every pair's first action, estimated value and realized discounted
+return. Small tasks use all pairs with their task-defined weights; BitFlipping with more
+than 20,000 pairs uses a fixed 8,192-pair sample and reports a Bernoulli standard error.
+The seed and stream of that sample are fixed and recorded. A random rollout would be
+cheaper but would add avoidable noise for the small candidate tasks. An exploitation trial
+would learn, so it is not an evaluation substitute.
+
+The random-policy floor uses absorbing-state dynamic programming on the task's complete
+deterministic transition kernel, with uniform actions and exactly the evaluation's
+start–goal weighting. BitFlipping uses an equivalent Hamming-distance recurrence and
+binomial start-distance weights. These are exact probability algorithms represented as
+`f64` in output; the fixed rational oracles independently test key values. Maze4 cap 5
+has floor `2833/32768` with all 27 goals and `334385/3407872` with the restricted
+`[(2,5),(5,5),(6,3),(6,4)]` pool. HandEye4 cap 50 has floor
+`0.13196163920912146`. The ceiling is the weighted share whose exact shortest distance
+is within the cap. Two other fields distinguish a reachable pair beyond the cap from a
+missing or ambiguous distance. A simulation-derived floor or a ceiling based only on
+whether the goal is ever reachable would misstate short-cap tasks.
+
+The preset lists every `Configuration` field instead of silently inheriting
+`default_protocol()`: eight or six task actions, β `0.05`, γ `0.95`, θi `0.1`, θr `0.9`,
+θexp and θas `20`, θga `100`, μ `0.3`, χ `0.8`, `u_max=100000`, ε `0.8`, initial
+q/r/ir `0.5/0.5/0`, GA/PEE/planning off, subsumption on, Pyalcs ALP generalization,
+and corrected truncation bootstrap. ACS2ER uses a 10,000-sample FIFO, warmup one and
+three updates per environment step, a volume reserved for replay-based successors.
+Streams from one seed are agent `1`, training environment `2`, evaluation policy `3`,
+restricted-pool draw `4`, evaluation-pair sample `5`, evaluation environment `6`.
+The full-pool tasks keep their native reset draw order; restricted HandEye, Taxi and
+BitFlipping draw a real goal then call the task's `reset_with_goal`, retaining its
+goal-conditioned start law. A hidden default, shared random generator or a restricted
+pool that silently falls back to all goals would make cross-agent comparisons opaque.
+
+Costs are cumulative at each evaluation point. Environment steps and completed episodes
+come from the environment wrapper. ACS2 makes one online RL update per stepped
+transition; ACS2ER's replay count follows its buffer length, warmup and sampling rule
+exactly. `Population::form_match_set` increments an opt-in thread-local counter by one
+formation and the current population length in classifier–perception tests. The hook
+does no matching, learning or random draw and is disabled outside the runner; it is
+the only core edit. Evaluation pauses the counter, so training cost is not inflated by
+exhaustive measurement. The output keeps population classifier count and numerosity
+separate from inline classifier bytes, mark-entry count and a known-byte lower bound;
+replay sample count and payload bytes are separate, as is future trajectory storage.
+Allocator overhead, `BTreeSet` node overhead and unused vector capacity are not included
+in these logical sizes. Peak RSS would not separate components and is not used. Wall time
+is labelled secondary because shared-node load changes it.
+
+One JSONL row represents configuration × agent × seed × evaluation point. It repeats the
+commit, preset, pool, encoding, distribution, floor and reachability fractions, costs,
+component sizes and per-start diagnostics. This repetition permits a row to be read without
+its siblings. Raw experiment files stay outside the checkout and are never added to
+`reports/`. The tests pin the floor against independent rational references, read-only
+evaluation by final population and RNG identity, environment-owned budget, declared
+policy, fixed streams, equal replay update volume and goal-pool conditioning.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

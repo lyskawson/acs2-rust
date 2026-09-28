@@ -74,6 +74,27 @@ fn pyalcs_variant_generalizes_parent_and_leaves_child_specialized() {
 }
 
 #[test]
+fn pyalcs_finite_u_max_changes_only_the_parent_before_child_specialization() {
+    let p0 = Perception::new([token(1), token(1), token(1), token(1)]);
+    for limit in 1..=4 {
+        for seed in 0..64 {
+            let mut parent = over_specialized_classifier();
+            let child = expected_case(
+                &mut parent,
+                &p0,
+                10,
+                &config_with(AlpGenVariant::Pyalcs, limit),
+                &mut ChaChaRandomSource::from_seed(seed),
+            )
+            .unwrap();
+            assert_eq!(parent.condition.specificity(), 3.min((limit - 1) as usize));
+            assert_eq!(child.condition.specificity(), 4);
+            assert_eq!(child.condition.symbols[3], token(1));
+        }
+    }
+}
+
+#[test]
 fn butz_variant_generalizes_child_and_leaves_parent_untouched() {
     struct DifferenceFirst;
     impl RandomSource for DifferenceFirst {

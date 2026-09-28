@@ -42,6 +42,11 @@ class RandomPolicyOracles(unittest.TestCase):
         self.assertEqual(taxi_probabilities(data, [1, 2])[1], 0)
         self.assertEqual(taxi_probabilities(data, [1, 2])[2], 0)
 
+    def test_taxi_first_positive_horizon_counts_two_minimal_sequences(self):
+        data = json.loads((ROOT / "fixtures/taxi.json").read_text())
+        self.assertEqual(taxi_probabilities(data, [5, 6])[5], 0)
+        self.assertEqual(taxi_probabilities(data, [5, 6])[6], Fraction(2, 300 * 6 ** 6))
+
 
 if __name__ == "__main__":
     unittest.main()
