@@ -307,10 +307,20 @@ sacctmgr -n -P show qos name=hpc-alelys2099-1784823245 \
   choice, not a cluster constraint — the queue allows **504 h per job**. Three times
   the trials in one job, no checkpointing needed, at three times the budget per job.
 - **Lem is available to us and is far larger**: `lem-cpu-normal` has 17,920 CPUs
-  against Bem2's 2,304, same 21-day limit. Verified with
-  `sbatch --test-only --partition=lem-cpu-normal` — accepted, planned start six days
-  out (Lem is contended; Bem2 starts next day). Never used. A one-hour benchmark would
-  say whether its cores are faster.
+  against Bem2's 2,304, same 21-day limit. Never used. A one-hour benchmark would say
+  whether its cores are faster, and nothing has run one.
+  **Which partition starts sooner is not a fixed fact — probe it.** An earlier
+  `--test-only` put Lem six days out and Bem2 next day, and this file recorded that as
+  Lem being the contended one. Re-probed 2026-09-28: **Lem in 11 hours, Bem2 in four
+  days**, the other way round. Two `--test-only` calls cost nothing and the answer moves:
+
+  ```
+  sbatch --test-only --partition=lem-cpu-normal  --time=02:00:00 --mem=4G --wrap=true
+  sbatch --test-only --partition=bem2-cpu-normal --time=02:00:00 --mem=4G --wrap=true
+  ```
+
+  Bem2 reporting idle nodes does not mean a job starts on them now: `idle~` is power-save
+  and the backfill estimate accounts for higher-priority pending work.
 
 ### Checkpointing carried a real result through an interruption (2026-09-27)
 
