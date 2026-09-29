@@ -282,16 +282,40 @@ fn build_provenance_marks_dirty_and_non_git_sources() {
 fn build_provenance_watches_the_real_git_head() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let paths = build_script::git_watch_paths(&manifest);
-    let git_head = Command::new("git")
+    let branch = Command::new("git")
         .arg("-C")
         .arg(&manifest)
-        .args(["rev-parse", "--git-path", "HEAD"])
+        .args(["symbolic-ref", "HEAD"])
         .output()
         .unwrap();
-    let head = PathBuf::from(String::from_utf8(git_head.stdout).unwrap().trim());
-    assert!(paths.contains(&head));
-    assert!(paths.iter().any(|path| path.ends_with("index")));
-    assert!(paths.len() >= 3);
+    let mut names = vec![
+        "HEAD".to_owned(),
+        "index".to_owned(),
+        "packed-refs".to_owned(),
+    ];
+    if branch.status.success() {
+        names.push(String::from_utf8(branch.stdout).unwrap().trim().to_owned());
+    }
+    let expected: Vec<_> = names
+        .iter()
+        .map(|name| {
+            let output = Command::new("git")
+                .arg("-C")
+                .arg(&manifest)
+                .args(["rev-parse", "--git-path", name])
+                .output()
+                .unwrap();
+            assert!(output.status.success());
+            let path = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+            if path.is_absolute() {
+                path
+            } else {
+                manifest.join(path)
+            }
+        })
+        .collect();
+    assert_eq!(paths, expected);
+    assert!(paths[0].is_file());
 }
 
 #[test]

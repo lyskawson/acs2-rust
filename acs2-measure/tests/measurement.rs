@@ -5,21 +5,21 @@ use std::time::Duration;
 
 use acs2_core::checkpoint::Checkpointed;
 use acs2_core::environment::Environment;
-use acs2_core::goal::{Goal, GoalEnvironment};
+use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalObjective};
 use acs2_core::measurement::{read_match_counters, start_match_counting, stop_match_counting};
 use acs2_core::perception::Perception;
 use acs2_core::population::Population;
 use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::symbol::Symbol;
-use acs2_envs::goal::hand_eye::{position_goal, HandEye4};
+use acs2_envs::goal::hand_eye::{position_goal, HandEye4, HandEyeState};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::goal::taxi::passenger_goal;
 use acs2_envs::maze::geometries::pyalcs::{MAZE4, MAZEF3};
 use acs2_envs::roles::ResearchTask;
 use acs2_measure::reference::reference;
 use acs2_measure::runner::{
-    assert_evaluation_read_only, run, run_goal_agent, run_goal_agent_with_sink, AgentKind,
-    CoreAgent, GoalAgent, MeasuredEnvironment, Preset, RunMetadata, RunSettings,
+    assert_evaluation_read_only, evaluate, run, run_goal_agent, run_goal_agent_with_sink,
+    AgentKind, CoreAgent, GoalAgent, MeasuredEnvironment, Preset, RunMetadata, RunSettings,
     TrainingEnvironment, ENVIRONMENT_STREAM,
 };
 use acs2_measure::task::{BitTask, HandEyeTask, MazeTask, Task, TaxiTask};
@@ -406,7 +406,8 @@ struct ProbeAgent<const G: usize, const M: usize> {
     eval_delay: Duration,
     panic_at_step: Option<u64>,
     first_action: usize,
-    relabel: Option<(Goal<G>, Goal<G>, Goal<G>, bool)>,
+    handeye_policy: bool,
+    relabel: Option<(Goal<G>, Goal<G>, Goal<G>, bool, f64)>,
     relabel_checked: bool,
 }
 
@@ -420,6 +421,7 @@ impl<const G: usize, const M: usize> ProbeAgent<G, M> {
             eval_delay: Duration::ZERO,
             panic_at_step: None,
             first_action: 0,
+            handeye_policy: false,
             relabel: None,
             relabel_checked: false,
         }
@@ -444,7 +446,7 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
                 panic!("probe interruption");
             }
             if first {
-                if let Some((achieved, original, relabeled_goal, reached)) = self.relabel {
+                if let Some((achieved, original, relabeled_goal, reached, reward)) = self.relabel {
                     let transition = env.last_transition().expect("step transition");
                     assert_eq!(transition.step.achieved, achieved);
                     assert_eq!(transition.desired, original);
@@ -452,7 +454,7 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
                     assert_eq!(transition.outcome.truncated, outcome.truncated);
                     assert_eq!(transition.outcome.reward, outcome.reward);
                     assert_eq!(transition.outcome.reward > 0.0, achieved == original);
-                    first_transition = Some((transition, relabeled_goal, reached));
+                    first_transition = Some((transition, relabeled_goal, reached, reward));
                 }
             }
             first = false;
@@ -460,9 +462,13 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
                 break;
             }
         }
-        if let Some((transition, desired, reached)) = first_transition {
+        if let Some((transition, desired, reached, reward)) = first_transition {
+            assert_eq!(
+                env.relabel(&transition.step, &transition.desired),
+                transition.outcome
+            );
             let relabeled = env.relabel(&transition.step, &desired);
-            assert_eq!(relabeled.reward > 0.0, reached);
+            assert_eq!(relabeled.reward, reward);
             assert_eq!(relabeled.terminated, reached);
             assert_eq!(
                 relabeled.truncated,
@@ -476,7 +482,7 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
     }
     fn eval_action(
         &self,
-        _state: &Perception<M>,
+        state: &Perception<M>,
         _rng: &mut dyn acs2_core::rng::RandomSource,
     ) -> (usize, f64) {
         if self.mutate_on_eval {
@@ -484,6 +490,10 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
         }
         if self.eval_delay > Duration::ZERO {
             std::thread::sleep(self.eval_delay);
+        }
+        if self.handeye_policy {
+            let held = state.symbols[9] == Symbol::Token(b'2');
+            return (if held { 1 } else { 4 }, if held { 10.0 } else { 2.0 });
         }
         (0, 1.5)
     }
@@ -573,6 +583,53 @@ fn completed_rows_are_flushed_before_the_next_episode_panics() {
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["nominal_step"], 1);
     assert!(read_match_counters().is_none());
+}
+
+#[test]
+fn unequal_handeye_start_weights_change_value_aggregates() {
+    let goal = position_goal((1, 0));
+    let task = HandEyeTask::<3, 10>::new("handeye3".to_owned(), 2, vec![goal]);
+    let pairs = <HandEyeTask<3, 10> as Task<10, 2, 12>>::pairs(&task);
+    let pair = |held| {
+        pairs
+            .iter()
+            .copied()
+            .find(|(state, desired, _)| {
+                *state
+                    == HandEyeState {
+                        gripper: (0, 0),
+                        block: (0, 0),
+                        held,
+                    }
+                    && *desired == goal
+            })
+            .unwrap()
+    };
+    let held = pair(true);
+    let unheld = pair(false);
+    assert_eq!(held.2 / unheld.2, 9.0);
+    let total = held.2 + unheld.2;
+    let selected = [
+        (held.0, held.1, held.2 / total),
+        (unheld.0, unheld.1, unheld.2 / total),
+    ];
+    let mut agent = ProbeAgent::<2, 12>::new();
+    agent.handeye_policy = true;
+    let result = evaluate::<_, _, 10, 2, 12>(&task, &agent, &selected, 42, 0.95, true);
+    let expected_estimate = selected[0].2 * 10.0 + selected[1].2 * 2.0;
+    let expected_return = selected[0].2 * 1000.0 + selected[1].2 * 950.0;
+    assert!((result.success - 1.0).abs() < 1e-12);
+    assert!((result.estimated_first_action_value - expected_estimate).abs() < 1e-12);
+    assert!((result.discounted_return - expected_return).abs() < 1e-9);
+    assert!((result.value_gap - (expected_estimate - expected_return)).abs() < 1e-9);
+    assert!(
+        (result.successful_estimated_first_action_value.unwrap() - expected_estimate).abs() < 1e-12
+    );
+    assert!((result.successful_discounted_return.unwrap() - expected_return).abs() < 1e-9);
+    assert!(
+        (result.successful_value_gap.unwrap() - (expected_estimate - expected_return)).abs() < 1e-9
+    );
+    assert_eq!(result.starts.unwrap().len(), 2);
 }
 
 #[test]
@@ -805,7 +862,13 @@ fn relabeling_agent_distinguishes_maze_f3_coordinate_twins() {
             .expect("reachable training start");
         let mut agent = ProbeAgent::<2, 10>::new();
         agent.first_action = action;
-        agent.relabel = Some((achieved, desired, relabeled_goal, reached));
+        agent.relabel = Some((
+            achieved,
+            desired,
+            relabeled_goal,
+            reached,
+            task.template.objective().reward(&achieved, &relabeled_goal),
+        ));
         let rows = run_goal_agent(&task, &mut agent, seed, &[1], "test", false);
         assert!(agent.relabel_checked);
         assert_eq!(rows[0]["actual_steps"].as_u64().unwrap(), agent.steps_seen);
@@ -825,4 +888,49 @@ fn relabeling_agent_distinguishes_maze_f3_coordinate_twins() {
         })
         .expect("a predecessor of the goal");
     run_probe(start, action, relabeled_goal, true);
+}
+
+#[test]
+fn episode_start_exposes_the_exact_achieved_goal_before_the_first_step() {
+    let task = MazeTask::<Coordinates, 2>::new(
+        "mazef3".to_owned(),
+        &MAZEF3,
+        vec![(1, 4)],
+        5,
+        "coordinates",
+    );
+    let seed = (0..10_000)
+        .find(|&seed| {
+            let mut environment = <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::environment(
+                &task,
+                ChaChaRandomSource::from_seed_and_stream(seed, ENVIRONMENT_STREAM),
+            );
+            environment.reset();
+            environment.position() == (3, 3)
+        })
+        .expect("the perception twin is a possible start");
+    let environment = <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::environment(
+        &task,
+        ChaChaRandomSource::from_seed_and_stream(seed, ENVIRONMENT_STREAM),
+    );
+    let mut measured = TrainingEnvironment::new(
+        &task,
+        environment,
+        ChaChaRandomSource::from_seed_and_stream(seed, 4),
+    );
+    measured.begin_episode();
+    assert_eq!(measured.episode_start(), None);
+    let observation = measured.reset();
+    let start = measured.episode_start().unwrap();
+    assert_eq!(start.achieved, task.template.goal_at((3, 3)));
+    assert_eq!(start.desired, task.template.goal_at((1, 4)));
+    assert_ne!(start.achieved, start.desired);
+    assert_eq!(
+        start.observation,
+        task.template.topology().perception_at((1, 4))
+    );
+    assert_eq!(
+        observation,
+        GoalLayout::<8, 2, 10>::join(&start.observation, &start.desired)
+    );
 }

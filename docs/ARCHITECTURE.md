@@ -2211,11 +2211,13 @@ termination and truncation separate. An agent can retain steps until the episode
 call `relabel` on any retained step. That method calls the task environment's own objective
 through `GoalStep::outcome`, the same function used for the original transition. A MazeF3
 coordinate test checks that relabeling the perception twin `(3,3)` with `(1,4)` neither
-pays nor terminates, while entering `(1,4)` does both. The runner does not give the agent
-the full goal pool; agents needing a candidate set collect desired goals from their own
-episodes. Deriving achieved goals from observations would confuse MazeF3's twins; copying
-reward logic into agents would let training and relabeling disagree. The unchanged core
-`LearningAgent` API still receives an `Environment` from the wrapper.
+pays nor terminates, while entering `(1,4)` does both. `MeasuredEnvironment::episode_start`
+exposes the original `GoalStart` after reset, including the achieved goal of the initial
+state. The runner does not give the agent the full goal pool; agents needing a candidate
+set collect desired goals from their own episodes. Deriving achieved goals from
+observations would confuse MazeF3's twins; copying reward logic into agents would let
+training and relabeling disagree. The unchanged core `LearningAgent` API still receives
+an `Environment` from the wrapper.
 
 `GoalAgent` separates training, a named evaluation policy, read-only action and value
 selection, update counts, and component-size reports. `CoreAgent` adapts the unchanged
@@ -2300,13 +2302,16 @@ fractions, costs, component sizes and aggregate diagnostics. Build provenance co
 the `acs2-measure` build script rather than a Git query in the run directory. The output
 uses `goal_pool: "full"` for a task's complete pool and lists goals only for a restricted
 pool; this avoids repeating the 65,536 BitFlipping16 goals in every row. The output
-guard finds a checkout from the output path's runtime ancestors, without requiring the
-source path used at build time to exist. Holding all rows until completion would lose
-finished evaluation points on interruption; querying Git at run time could name a different
-checkout or no commit. Each row remains interpretable without its siblings. Raw experiment
-files stay outside the checkout and are never added to `reports/`. Tests pin the floor
-against independent rational references, read-only evaluation, environment-owned budget,
-declared policy, fixed streams, replay volume and goal-pool conditioning.
+guard rejects output inside any Git repository, including a linked worktree, by checking
+the output path's runtime ancestors for `.git`; it does not require the source path used
+at build time to exist. Holding all rows until completion would lose finished evaluation
+points on interruption; querying Git at run time could name a different checkout or no
+commit. A process killed during a write can leave an incomplete final JSONL line, which
+readers must discard. Each complete row remains interpretable without its siblings. Raw
+experiment files stay outside Git repositories and are never added to `reports/`. Tests
+pin the floor against independent rational references, read-only evaluation,
+environment-owned budget, declared policy, fixed streams, replay volume and goal-pool
+conditioning.
 
 ## Clippy — the determinism invariants, checked by machine
 

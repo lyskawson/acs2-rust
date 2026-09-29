@@ -7,7 +7,7 @@ use acs2_core::agent::Agent;
 use acs2_core::classifier::Classifier;
 use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalOutcome, GoalStep};
+use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalOutcome, GoalStart, GoalStep};
 use acs2_core::measurement::{
     read_match_counters, start_match_counting, stop_match_counting, MatchCounters,
 };
@@ -236,6 +236,7 @@ pub trait MeasuredEnvironment<const S: usize, const G: usize, const M: usize>:
 {
     fn measured_steps(&self) -> u64;
     fn desired_goal(&self) -> Option<Goal<G>>;
+    fn episode_start(&self) -> Option<GoalStart<S, G>>;
     fn last_transition(&self) -> Option<GoalTransition<S, G>>;
     fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome;
 }
@@ -250,6 +251,7 @@ where
     pub steps: u64,
     pub episodes: u64,
     desired: Option<Goal<G>>,
+    episode_start: Option<GoalStart<S, G>>,
     last_transition: Option<GoalTransition<S, G>>,
     active_call: bool,
     resets_in_call: u32,
@@ -272,6 +274,7 @@ where
             steps: 0,
             episodes: 0,
             desired: None,
+            episode_start: None,
             last_transition: None,
             active_call: false,
             resets_in_call: 0,
@@ -283,6 +286,7 @@ where
         self.active_call = true;
         self.resets_in_call = 0;
         self.episode_finished = false;
+        self.episode_start = None;
         self.last_transition = None;
     }
     pub fn end_episode(&mut self) {
@@ -310,6 +314,7 @@ where
             None => self.inner.reset(),
         };
         self.desired = Some(start.desired);
+        self.episode_start = Some(start);
         GoalLayout::<S, G, M>::join(&start.observation, &start.desired)
     }
     fn step(&mut self, action: usize) -> StepOutcome<M> {
@@ -352,6 +357,9 @@ where
     }
     fn desired_goal(&self) -> Option<Goal<G>> {
         self.desired
+    }
+    fn episode_start(&self) -> Option<GoalStart<S, G>> {
+        self.episode_start
     }
     fn last_transition(&self) -> Option<GoalTransition<S, G>> {
         self.last_transition
