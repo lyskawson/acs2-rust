@@ -209,6 +209,16 @@ fn command_text(program: &str, args: &[&str]) -> Option<String> {
     (!value.is_empty()).then(|| value.to_owned())
 }
 
+fn system_profiler_cpu(contents: &str) -> Option<String> {
+    contents.lines().find_map(|line| {
+        line.trim()
+            .strip_prefix("Chip:")
+            .or_else(|| line.trim().strip_prefix("Processor Name:"))
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+    })
+}
+
 fn hardware() -> (String, String) {
     let host = command_text("hostname", &[]).unwrap_or_else(|| "unknown".to_owned());
     let cpu = std::fs::read_to_string("/proc/cpuinfo")
@@ -221,7 +231,11 @@ fn hardware() -> (String, String) {
             })
         })
         .or_else(|| command_text("sysctl", &["-n", "machdep.cpu.brand_string"]))
-        .unwrap_or_else(|| std::env::consts::ARCH.to_owned());
+        .or_else(|| {
+            command_text("system_profiler", &["SPHardwareDataType"])
+                .and_then(|contents| system_profiler_cpu(&contents))
+        })
+        .unwrap_or_else(|| format!("unavailable ({})", std::env::consts::ARCH));
     (host, cpu)
 }
 
@@ -294,5 +308,23 @@ fn main() {
             16 => bit::<16, 32>(&options, &mut writer, &metadata),
             _ => unreachable!(),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::system_profiler_cpu;
+
+    #[test]
+    fn system_profiler_names_apple_and_intel_processors() {
+        assert_eq!(
+            system_profiler_cpu("Hardware:\n    Chip: Apple M1\n"),
+            Some("Apple M1".to_owned())
+        );
+        assert_eq!(
+            system_profiler_cpu("Hardware:\n    Processor Name: Intel Core i7\n"),
+            Some("Intel Core i7".to_owned())
+        );
+        assert_eq!(system_profiler_cpu("Hardware:\n"), None);
     }
 }
