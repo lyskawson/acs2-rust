@@ -1,5 +1,5 @@
 use std::mem::size_of;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration, ReplaySample};
 use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
@@ -7,7 +7,7 @@ use acs2_core::agent::Agent;
 use acs2_core::classifier::Classifier;
 use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::goal::{GoalConditioned, GoalEnvironment, GoalLayout};
+use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalOutcome, GoalStep};
 use acs2_core::measurement::{
     read_match_counters, start_match_counting, stop_match_counting, MatchCounters,
 };
@@ -100,9 +100,9 @@ impl Preset {
     }
 }
 
-pub trait GoalAgent<const M: usize> {
+pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn name(&self) -> &'static str;
-    fn train_episode<E: MeasuredEnvironment<M>>(&mut self, env: &mut E, time: u64);
+    fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64);
     fn declared_policy(&self) -> &'static str;
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64);
     fn online_updates(&self) -> u64;
@@ -127,7 +127,9 @@ pub struct CoreAgent<A, const M: usize> {
     pub updates: u64,
 }
 
-impl<A: LearningAgent<M>, const M: usize> GoalAgent<M> for CoreAgent<A, M> {
+impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M>
+    for CoreAgent<A, M>
+{
     fn name(&self) -> &'static str {
         if self.replay {
             "acs2er"
@@ -135,7 +137,7 @@ impl<A: LearningAgent<M>, const M: usize> GoalAgent<M> for CoreAgent<A, M> {
             "acs2"
         }
     }
-    fn train_episode<E: MeasuredEnvironment<M>>(&mut self, env: &mut E, time: u64) {
+    fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64) {
         let selector = EpsilonGreedy {
             number_of_possible_actions: self.agent.config().number_of_possible_actions,
             epsilon: self.agent.config().epsilon,
@@ -211,15 +213,31 @@ impl<A: LearningAgent<M>, const M: usize> GoalAgent<M> for CoreAgent<A, M> {
             .sum()
     }
     fn replay_logical_bytes(&self) -> usize {
-        self.replay_samples() * size_of::<ReplaySample<M>>()
+        if self.replay {
+            (self.steps as usize).min(self.preset.replay_capacity) * size_of::<ReplaySample<M>>()
+        } else {
+            0
+        }
     }
     fn agent_parameters(&self) -> Value {
         json!({ "replay": self.replay, "replay_capacity": self.preset.replay_capacity, "replay_warmup": self.preset.replay_warmup, "replay_updates_per_step": self.preset.replay_updates_per_step })
     }
 }
 
-pub trait MeasuredEnvironment<const M: usize>: Environment<M> {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GoalTransition<const S: usize, const G: usize> {
+    pub step: GoalStep<S, G>,
+    pub desired: Goal<G>,
+    pub outcome: GoalOutcome,
+}
+
+pub trait MeasuredEnvironment<const S: usize, const G: usize, const M: usize>:
+    Environment<M>
+{
     fn measured_steps(&self) -> u64;
+    fn desired_goal(&self) -> Option<Goal<G>>;
+    fn last_transition(&self) -> Option<GoalTransition<S, G>>;
+    fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome;
 }
 
 pub struct TrainingEnvironment<'a, T, const S: usize, const G: usize, const M: usize>
@@ -227,10 +245,12 @@ where
     T: Task<S, G, M>,
 {
     pub task: &'a T,
-    pub inner: GoalConditioned<T::Env, S, G, M>,
+    pub inner: T::Env,
     pub pool_rng: ChaChaRandomSource,
     pub steps: u64,
     pub episodes: u64,
+    desired: Option<Goal<G>>,
+    last_transition: Option<GoalTransition<S, G>>,
     active_call: bool,
     resets_in_call: u32,
     episode_finished: bool,
@@ -247,10 +267,12 @@ where
     ) -> TrainingEnvironment<'_, T, S, G, M> {
         TrainingEnvironment {
             task,
-            inner: GoalConditioned::new(environment),
+            inner: environment,
             pool_rng,
             steps: 0,
             episodes: 0,
+            desired: None,
+            last_transition: None,
             active_call: false,
             resets_in_call: 0,
             episode_finished: false,
@@ -261,6 +283,7 @@ where
         self.active_call = true;
         self.resets_in_call = 0;
         self.episode_finished = false;
+        self.last_transition = None;
     }
     pub fn end_episode(&mut self) {
         assert!(
@@ -282,27 +305,44 @@ where
             "one reset per training call"
         );
         self.resets_in_call += 1;
-        match self.task.training_goal(&mut self.pool_rng) {
+        let start = match self.task.training_goal(&mut self.pool_rng) {
             Some(goal) => self.inner.reset_with_goal(goal),
             None => self.inner.reset(),
-        }
+        };
+        self.desired = Some(start.desired);
+        GoalLayout::<S, G, M>::join(&start.observation, &start.desired)
     }
     fn step(&mut self, action: usize) -> StepOutcome<M> {
         assert!(
             self.active_call && self.resets_in_call == 1 && !self.episode_finished,
             "step requires an active episode"
         );
+        let desired = self.desired.expect("an active episode has a desired goal");
+        let step = self.inner.step(action);
+        let goal_outcome = step.outcome(self.inner.objective(), &desired);
         self.steps += 1;
-        let outcome = self.inner.step(action);
+        self.last_transition = Some(GoalTransition {
+            step,
+            desired,
+            outcome: goal_outcome,
+        });
+        let outcome = StepOutcome {
+            observation: GoalLayout::<S, G, M>::join(&step.observation, &desired),
+            reward: goal_outcome.reward,
+            terminated: goal_outcome.terminated,
+            truncated: goal_outcome.truncated,
+            info: (),
+        };
         if outcome.terminated || outcome.truncated {
             self.episode_finished = true;
             self.episodes += 1;
+            self.desired = None;
         }
         outcome
     }
 }
 
-impl<T, const S: usize, const G: usize, const M: usize> MeasuredEnvironment<M>
+impl<T, const S: usize, const G: usize, const M: usize> MeasuredEnvironment<S, G, M>
     for TrainingEnvironment<'_, T, S, G, M>
 where
     T: Task<S, G, M>,
@@ -310,14 +350,29 @@ where
     fn measured_steps(&self) -> u64 {
         self.steps
     }
+    fn desired_goal(&self) -> Option<Goal<G>> {
+        self.desired
+    }
+    fn last_transition(&self) -> Option<GoalTransition<S, G>> {
+        self.last_transition
+    }
+    fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome {
+        step.outcome(self.inner.objective(), desired)
+    }
 }
 
 #[derive(Default)]
 pub struct EvalResult {
     pub success: f64,
-    pub successful_steps: f64,
-    pub successful_step_ratio: f64,
-    pub starts: Vec<Value>,
+    pub successful_steps: Option<f64>,
+    pub successful_step_ratio: Option<f64>,
+    pub estimated_first_action_value: f64,
+    pub discounted_return: f64,
+    pub value_gap: f64,
+    pub successful_estimated_first_action_value: Option<f64>,
+    pub successful_discounted_return: Option<f64>,
+    pub successful_value_gap: Option<f64>,
+    pub starts: Option<Vec<Value>>,
 }
 
 pub fn evaluate<T, A, const S: usize, const G: usize, const M: usize>(
@@ -326,17 +381,25 @@ pub fn evaluate<T, A, const S: usize, const G: usize, const M: usize>(
     pairs: &[Pair<T::State, G>],
     seed: u64,
     gamma: f64,
+    record_starts: bool,
 ) -> EvalResult
 where
     T: Task<S, G, M>,
-    A: GoalAgent<M>,
+    A: GoalAgent<S, G, M>,
 {
     let mut env = task.environment(ChaChaRandomSource::from_seed_and_stream(
         seed,
         EVALUATION_ENVIRONMENT_STREAM,
     ));
     let mut rng = ChaChaRandomSource::from_seed_and_stream(seed, EVALUATION_STREAM);
-    let mut result = EvalResult::default();
+    let mut result = EvalResult {
+        starts: record_starts.then(Vec::new),
+        ..EvalResult::default()
+    };
+    let mut successful_steps = 0.0;
+    let mut successful_step_ratio = 0.0;
+    let mut successful_estimate = 0.0;
+    let mut successful_return = 0.0;
     for &(start, goal, weight) in pairs {
         let initial = task.reset_at(&mut env, start, goal);
         let mut state = GoalLayout::<S, G, M>::join(&initial.observation, &goal);
@@ -362,20 +425,31 @@ where
             state = GoalLayout::<S, G, M>::join(&step.observation, &goal);
         };
         let distance = task.distance(start, &goal);
+        result.estimated_first_action_value += weight * estimate;
+        result.discounted_return += weight * discounted_return;
         if success {
             result.success += weight;
-            result.successful_steps += weight * f64::from(steps);
+            successful_steps += weight * f64::from(steps);
+            successful_estimate += weight * estimate;
+            successful_return += weight * discounted_return;
             if let Some(distance) = distance {
-                result.successful_step_ratio += weight * f64::from(steps) / f64::from(distance);
+                successful_step_ratio += weight * f64::from(steps) / f64::from(distance);
             }
         }
-        result.starts.push(json!({"start": format!("{:?}", start), "goal": format!("{:?}", goal), "weight": weight,
-            "first_action": first_action, "estimated_first_action_value": estimate,
-            "discounted_return": discounted_return, "success": success, "steps": steps, "shortest_distance": distance}));
+        if let Some(starts) = &mut result.starts {
+            starts.push(json!({"start": format!("{:?}", start), "goal": format!("{:?}", goal), "weight": weight,
+                "first_action": first_action, "estimated_first_action_value": estimate,
+                "discounted_return": discounted_return, "success": success, "steps": steps, "shortest_distance": distance}));
+        }
     }
+    result.value_gap = result.estimated_first_action_value - result.discounted_return;
     if result.success > 0.0 {
-        result.successful_steps /= result.success;
-        result.successful_step_ratio /= result.success;
+        result.successful_steps = Some(successful_steps / result.success);
+        result.successful_step_ratio = Some(successful_step_ratio / result.success);
+        result.successful_estimated_first_action_value = Some(successful_estimate / result.success);
+        result.successful_discounted_return = Some(successful_return / result.success);
+        result.successful_value_gap =
+            Some((successful_estimate - successful_return) / result.success);
     }
     result
 }
@@ -384,6 +458,32 @@ pub struct RunOutput {
     pub rows: Vec<Value>,
     pub final_population: String,
     pub final_rng: String,
+}
+
+pub struct RunMetadata<'a> {
+    pub commit: &'a str,
+    pub source_state: &'a str,
+    pub host: &'a str,
+    pub cpu_model: &'a str,
+    pub record_starts: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct RunSettings {
+    pub evaluate_points: bool,
+    pub capture_final_state: bool,
+}
+
+impl<'a> RunMetadata<'a> {
+    pub fn test(commit: &'a str) -> Self {
+        Self {
+            commit,
+            source_state: "test",
+            host: "test",
+            cpu_model: "test",
+            record_starts: true,
+        }
+    }
 }
 
 pub fn run<T, const S: usize, const G: usize, const M: usize>(
@@ -396,6 +496,40 @@ pub fn run<T, const S: usize, const G: usize, const M: usize>(
 ) -> RunOutput
 where
     T: Task<S, G, M>,
+{
+    let mut rows = Vec::new();
+    let (final_population, final_rng) = run_with_sink(
+        task,
+        kind,
+        seed,
+        targets,
+        &RunMetadata::test(commit),
+        RunSettings {
+            evaluate_points,
+            capture_final_state: true,
+        },
+        &mut |row| rows.push(row),
+    )
+    .expect("state capture enabled");
+    RunOutput {
+        rows,
+        final_population,
+        final_rng,
+    }
+}
+
+pub fn run_with_sink<T, F, const S: usize, const G: usize, const M: usize>(
+    task: &T,
+    kind: AgentKind,
+    seed: u64,
+    targets: &[u64],
+    metadata: &RunMetadata<'_>,
+    settings: RunSettings,
+    emit: &mut F,
+) -> Option<(String, String)>
+where
+    T: Task<S, G, M>,
+    F: FnMut(Value),
 {
     let preset = Preset::thesis();
     let config = preset.config(task.actions());
@@ -410,13 +544,22 @@ where
                 steps: 0,
                 updates: 0,
             };
-            let rows = run_goal_agent(task, &mut agent, seed, targets, commit, evaluate_points);
-            let state = acs2_core::checkpoint::Checkpointed::capture(&agent.agent);
-            RunOutput {
-                rows,
-                final_population: format!("{:?}", state.population),
-                final_rng: format!("{:?}", state.rng),
-            }
+            run_goal_agent_with_sink(
+                task,
+                &mut agent,
+                seed,
+                targets,
+                metadata,
+                settings.evaluate_points,
+                emit,
+            );
+            settings.capture_final_state.then(|| {
+                let state = acs2_core::checkpoint::Checkpointed::capture(&agent.agent);
+                (
+                    format!("{:?}", state.population),
+                    format!("{:?}", state.rng),
+                )
+            })
         }
         AgentKind::Acs2Er => {
             let replay = ReplayConfiguration {
@@ -432,13 +575,22 @@ where
                 steps: 0,
                 updates: 0,
             };
-            let rows = run_goal_agent(task, &mut agent, seed, targets, commit, evaluate_points);
-            let state = acs2_core::checkpoint::Checkpointed::capture(&agent.agent);
-            RunOutput {
-                rows,
-                final_population: format!("{:?}", state.population),
-                final_rng: format!("{:?}", state.rng),
-            }
+            run_goal_agent_with_sink(
+                task,
+                &mut agent,
+                seed,
+                targets,
+                metadata,
+                settings.evaluate_points,
+                emit,
+            );
+            settings.capture_final_state.then(|| {
+                let state = acs2_core::checkpoint::Checkpointed::capture(&agent.agent);
+                (
+                    format!("{:?}", state.population),
+                    format!("{:?}", state.rng),
+                )
+            })
         }
     }
 }
@@ -453,7 +605,33 @@ pub fn run_goal_agent<T, A, const S: usize, const G: usize, const M: usize>(
 ) -> Vec<Value>
 where
     T: Task<S, G, M>,
-    A: GoalAgent<M>,
+    A: GoalAgent<S, G, M>,
+{
+    let mut rows = Vec::new();
+    run_goal_agent_with_sink(
+        task,
+        agent,
+        seed,
+        targets,
+        &RunMetadata::test(commit),
+        evaluate_points,
+        &mut |row| rows.push(row),
+    );
+    rows
+}
+
+pub fn run_goal_agent_with_sink<T, A, F, const S: usize, const G: usize, const M: usize>(
+    task: &T,
+    agent: &mut A,
+    seed: u64,
+    targets: &[u64],
+    metadata: &RunMetadata<'_>,
+    evaluate_points: bool,
+    emit: &mut F,
+) where
+    T: Task<S, G, M>,
+    A: GoalAgent<S, G, M>,
+    F: FnMut(Value),
 {
     let environment = task.environment(ChaChaRandomSource::from_seed_and_stream(
         seed,
@@ -471,11 +649,54 @@ where
         refs,
         seed,
         targets,
-        commit,
-        started: Instant::now(),
+        metadata,
         evaluate_points,
     };
-    run_inner(task, agent, &mut env, plan)
+    run_inner(task, agent, &mut env, plan, emit)
+}
+
+pub fn assert_evaluation_read_only<
+    T,
+    A,
+    Make,
+    Snapshot,
+    const S: usize,
+    const G: usize,
+    const M: usize,
+>(
+    task: &T,
+    seed: u64,
+    targets: &[u64],
+    make_agent: Make,
+    snapshot: Snapshot,
+) where
+    T: Task<S, G, M>,
+    A: GoalAgent<S, G, M>,
+    Make: Fn() -> A,
+    Snapshot: Fn(&A) -> String,
+{
+    let mut evaluated = make_agent();
+    let mut control = make_agent();
+    let metadata = RunMetadata::test("test");
+    run_goal_agent_with_sink(
+        task,
+        &mut evaluated,
+        seed,
+        targets,
+        &metadata,
+        true,
+        &mut |_| {},
+    );
+    run_goal_agent_with_sink(
+        task,
+        &mut control,
+        seed,
+        targets,
+        &metadata,
+        false,
+        &mut |_| {},
+    );
+    assert_eq!(snapshot(&evaluated), snapshot(&control));
 }
 
 struct RunPlan<'a, State, const G: usize> {
@@ -483,34 +704,53 @@ struct RunPlan<'a, State, const G: usize> {
     refs: Reference,
     seed: u64,
     targets: &'a [u64],
-    commit: &'a str,
-    started: Instant,
+    metadata: &'a RunMetadata<'a>,
     evaluate_points: bool,
 }
 
-fn run_inner<T, A, const S: usize, const G: usize, const M: usize>(
+struct MatchCountGuard;
+
+impl MatchCountGuard {
+    fn new() -> Self {
+        start_match_counting();
+        Self
+    }
+}
+
+impl Drop for MatchCountGuard {
+    fn drop(&mut self) {
+        stop_match_counting();
+    }
+}
+
+fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
     task: &T,
     agent: &mut A,
     env: &mut TrainingEnvironment<'_, T, S, G, M>,
     plan: RunPlan<'_, T::State, G>,
-) -> Vec<Value>
-where
+    emit: &mut F,
+) where
     T: Task<S, G, M>,
-    A: GoalAgent<M>,
+    A: GoalAgent<S, G, M>,
+    F: FnMut(Value),
 {
-    let mut rows = Vec::new();
     let mut cumulative = MatchCounters::default();
-    start_match_counting();
+    let mut train_elapsed = Duration::ZERO;
+    let mut eval_elapsed = Duration::ZERO;
+    let _counter = MatchCountGuard::new();
     for &target in plan.targets {
+        let train_started = Instant::now();
         while env.steps < target {
             env.begin_episode();
             agent.train_episode(env, env.steps);
             env.end_episode();
         }
+        train_elapsed += train_started.elapsed();
         let interval = read_match_counters().unwrap();
         cumulative.formations += interval.formations;
         cumulative.classifier_tests += interval.classifier_tests;
         stop_match_counting();
+        let eval_started = Instant::now();
         let eval = if plan.evaluate_points {
             evaluate(
                 task,
@@ -518,12 +758,16 @@ where
                 plan.pairs,
                 plan.seed,
                 Preset::thesis().config(task.actions()).gamma,
+                plan.metadata.record_starts,
             )
         } else {
             EvalResult::default()
         };
-        rows.push(json!({
-            "schema": 1, "commit": plan.commit, "task": task.name(), "cap": task.cap(), "goal_encoding": task.encoding(), "goal_pool": task.pool_label(),
+        eval_elapsed += eval_started.elapsed();
+        emit(json!({
+            "schema": 2, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
+            "host": plan.metadata.host, "cpu_model": plan.metadata.cpu_model,
+            "task": task.name(), "cap": task.cap(), "goal_encoding": task.encoding(), "goal_pool": task.pool_label(),
             "agent": agent.name(), "evaluated_policy": agent.declared_policy(), "seed": plan.seed, "nominal_step": target,
             "actual_steps": env.steps, "max_overshoot_exclusive": task.cap(), "episodes": env.episodes,
             "evaluation_distribution": if task.sampled_evaluation() { "fixed_seed_sample" } else { "exhaustive_exact_weights" },
@@ -532,7 +776,13 @@ where
             "evaluation_pairs": plan.pairs.len(),
             "evaluation_standard_error": if task.sampled_evaluation() { (eval.success * (1.0 - eval.success) / plan.pairs.len() as f64).sqrt() } else { 0.0 },
             "success": eval.success, "mean_success_steps": eval.successful_steps, "mean_success_steps_over_shortest": eval.successful_step_ratio,
-            "starts": eval.starts, "reference_distribution": "task_start_goal_distribution", "random_floor": plan.refs.random_success, "reachable_within_cap": plan.refs.reachable_within_cap,
+            "value_diagnostics": {"all": {"mean_first_action_estimate": eval.estimated_first_action_value,
+                "mean_discounted_return": eval.discounted_return, "mean_estimate_minus_return": eval.value_gap},
+                "successful": if eval.success > 0.0 { Some(json!({"mean_first_action_estimate": eval.successful_estimated_first_action_value,
+                    "mean_discounted_return": eval.successful_discounted_return,
+                    "mean_estimate_minus_return": eval.successful_value_gap})) } else { None }},
+            "starts": eval.starts, "reference_distribution": if task.sampled_evaluation() { "fixed_seed_sample" } else { "task_start_goal_distribution" },
+            "random_floor": plan.refs.random_success, "reachable_within_cap": plan.refs.reachable_within_cap,
             "reachable_after_cap": plan.refs.reachable_after_cap, "unreachable_or_ambiguous": plan.refs.unreachable_or_ambiguous,
             "online_updates": agent.online_updates(), "replay_updates": agent.replay_updates(),
             "match_formations_train": cumulative.formations, "classifier_perception_tests_train": cumulative.classifier_tests,
@@ -542,11 +792,10 @@ where
             "population_known_bytes_lower_bound": agent.population_logical_bytes() + agent.population_mark_entries() * size_of::<Symbol>(),
             "classifier_size_bytes": size_of::<Classifier<M>>(), "replay_sample_size_bytes": size_of::<ReplaySample<M>>(),
             "replay_samples": agent.replay_samples(), "replay_logical_bytes": agent.replay_logical_bytes(),
-            "trajectory_logical_bytes": agent.trajectory_logical_bytes(), "wall_seconds_train_and_eval": plan.started.elapsed().as_secs_f64(),
+            "trajectory_logical_bytes": agent.trajectory_logical_bytes(), "wall_seconds_train": train_elapsed.as_secs_f64(),
+            "wall_seconds_eval": eval_elapsed.as_secs_f64(), "wall_seconds_total": (train_elapsed + eval_elapsed).as_secs_f64(),
             "preset": Preset::thesis().json(task.actions()), "agent_parameters": agent.agent_parameters()
         }));
         start_match_counting();
     }
-    stop_match_counting();
-    rows
 }

@@ -98,7 +98,11 @@ impl<E: MazeGoalEncoding<G>, const G: usize, const M: usize> Task<8, G, M> for M
         self.encoding
     }
     fn pool_label(&self) -> String {
-        format!("{:?}", self.pool)
+        if self.pool.len() == self.template.topology().walkable_cells().len() {
+            "full".to_owned()
+        } else {
+            format!("{:?}", self.pool)
+        }
     }
     fn environment(&self, rng: ChaChaRandomSource) -> Self::Env {
         GoalMaze::multi_goal(self.geometry, self.pool.clone(), self.cap, Box::new(rng))
@@ -179,7 +183,11 @@ impl<const SIDE: usize, const S: usize, const M: usize> Task<S, 2, M> for HandEy
         "coordinates"
     }
     fn pool_label(&self) -> String {
-        format!("{:?}", self.pool)
+        if self.pool.len() == SIDE * SIDE {
+            "full".to_owned()
+        } else {
+            format!("{:?}", self.pool)
+        }
     }
     fn environment(&self, rng: ChaChaRandomSource) -> Self::Env {
         HandEye::new(self.cap, Box::new(rng))
@@ -285,7 +293,11 @@ impl Task<3, 1, 4> for TaxiTask {
         "stand"
     }
     fn pool_label(&self) -> String {
-        format!("{:?}", self.pool)
+        if self.pool.len() == 4 {
+            "full".to_owned()
+        } else {
+            format!("{:?}", self.pool)
+        }
     }
     fn environment(&self, rng: ChaChaRandomSource) -> Self::Env {
         Taxi::new(self.cap, Box::new(rng))
@@ -371,7 +383,11 @@ impl<const N: usize, const M: usize> Task<N, N, M> for BitTask<N> {
         "bits"
     }
     fn pool_label(&self) -> String {
-        format!("{:?}", self.pool)
+        if self.pool.len() == 1usize << N {
+            "full".to_owned()
+        } else {
+            format!("{:?}", self.pool)
+        }
     }
     fn environment(&self, rng: ChaChaRandomSource) -> Self::Env {
         BitFlipping::with_step_cap(self.cap, Box::new(rng))
@@ -447,7 +463,7 @@ impl<const N: usize, const M: usize> Task<N, N, M> for BitTask<N> {
     fn sampled_evaluation(&self) -> bool {
         self.pool.len() * ((1usize << N) - 1) > 20_000
     }
-    fn analytical_random_success(&self, _pairs: &[Pair<Self::State, N>]) -> Option<f64> {
+    fn analytical_random_success(&self, pairs: &[Pair<Self::State, N>]) -> Option<f64> {
         let mut current = vec![0.0; N + 1];
         current[0] = 1.0;
         for _ in 0..self.cap {
@@ -463,6 +479,22 @@ impl<const N: usize, const M: usize> Task<N, N, M> for BitTask<N> {
                     / N as f64;
             }
             current = next;
+        }
+        if self.pool.len() * ((1usize << N) - 1) > 20_000 {
+            return Some(
+                pairs
+                    .iter()
+                    .map(|&(state, goal, weight)| {
+                        let distance = state
+                            .symbols
+                            .iter()
+                            .zip(goal.symbols.iter())
+                            .filter(|(left, right)| left != right)
+                            .count();
+                        weight * current[distance]
+                    })
+                    .sum(),
+            );
         }
         let mut combinations = 1u64;
         let mut total = 0.0;

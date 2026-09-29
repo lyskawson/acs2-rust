@@ -1,16 +1,26 @@
+use std::cell::Cell;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::time::Duration;
+
+use acs2_core::checkpoint::Checkpointed;
 use acs2_core::environment::Environment;
+use acs2_core::goal::{Goal, GoalEnvironment};
 use acs2_core::measurement::{read_match_counters, start_match_counting, stop_match_counting};
 use acs2_core::perception::Perception;
 use acs2_core::population::Population;
+use acs2_core::rng::ChaChaRandomSource;
 use acs2_core::symbol::Symbol;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye4};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::goal::taxi::passenger_goal;
-use acs2_envs::maze::geometries::pyalcs::MAZE4;
+use acs2_envs::maze::geometries::pyalcs::{MAZE4, MAZEF3};
 use acs2_envs::roles::ResearchTask;
 use acs2_measure::reference::reference;
 use acs2_measure::runner::{
-    run, run_goal_agent, AgentKind, GoalAgent, MeasuredEnvironment, Preset, TrainingEnvironment,
+    assert_evaluation_read_only, run, run_goal_agent, run_goal_agent_with_sink, AgentKind,
+    CoreAgent, GoalAgent, MeasuredEnvironment, Preset, RunMetadata, RunSettings,
+    TrainingEnvironment, ENVIRONMENT_STREAM,
 };
 use acs2_measure::task::{BitTask, HandEyeTask, MazeTask, Task, TaxiTask};
 
@@ -44,6 +54,48 @@ fn exact_goal_pool_floors_and_caps_match_independent_oracles() {
     assert!(full_ref.reachable_within_cap < 1.0);
     assert!((full_pairs.iter().map(|pair| pair.2).sum::<f64>() - 1.0).abs() < 1e-12);
     assert!((restricted_pairs.iter().map(|pair| pair.2).sum::<f64>() - 1.0).abs() < 1e-12);
+}
+
+#[test]
+fn full_goal_pools_are_compact_and_restricted_pools_are_explicit() {
+    let full_maze = maze(None);
+    let restricted_maze = maze(Some(vec![(2, 5)]));
+    assert_eq!(
+        <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::pool_label(&full_maze),
+        "full"
+    );
+    assert_ne!(
+        <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::pool_label(&restricted_maze),
+        "full"
+    );
+
+    let handeye_goals = HandEye4::new(5, Box::new(ChaChaRandomSource::from_seed(0)))
+        .goal_pool()
+        .to_vec();
+    let full_handeye = HandEyeTask::<4, 17>::new("handeye4".to_owned(), 5, handeye_goals);
+    assert_eq!(
+        <HandEyeTask<4, 17> as Task<17, 2, 19>>::pool_label(&full_handeye),
+        "full"
+    );
+
+    let full_taxi = TaxiTask::new(5, (0..4).map(passenger_goal).collect());
+    assert_eq!(<TaxiTask as Task<3, 1, 4>>::pool_label(&full_taxi), "full");
+
+    let bit_goals = acs2_envs::goal::bit_flipping::BitFlipping::<8>::new(Box::new(
+        ChaChaRandomSource::from_seed(0),
+    ))
+    .goal_pool()
+    .collect();
+    let full_bit = BitTask::<8>::new(5, bit_goals);
+    assert_eq!(
+        <BitTask<8> as Task<8, 8, 16>>::pool_label(&full_bit),
+        "full"
+    );
+    let restricted_bit = BitTask::<8>::new(5, vec![Goal::new([Symbol::Token(b'0'); 8])]);
+    assert_ne!(
+        <BitTask<8> as Task<8, 8, 16>>::pool_label(&restricted_bit),
+        "full"
+    );
 }
 
 #[test]
@@ -144,13 +196,12 @@ fn seed_and_streams_reproduce_every_non_wall_field() {
     let b = run::<_, 8, 2, 10>(&task, AgentKind::Acs2, 43, &[80], "test", true);
     let mut left = a.rows[0].clone();
     let mut right = b.rows[0].clone();
-    left.as_object_mut()
-        .unwrap()
-        .remove("wall_seconds_train_and_eval");
-    right
-        .as_object_mut()
-        .unwrap()
-        .remove("wall_seconds_train_and_eval");
+    left.as_object_mut().unwrap().remove("wall_seconds_train");
+    left.as_object_mut().unwrap().remove("wall_seconds_eval");
+    left.as_object_mut().unwrap().remove("wall_seconds_total");
+    right.as_object_mut().unwrap().remove("wall_seconds_train");
+    right.as_object_mut().unwrap().remove("wall_seconds_eval");
+    right.as_object_mut().unwrap().remove("wall_seconds_total");
     assert_eq!(left, right);
     assert_eq!(a.final_population, b.final_population);
     assert_eq!(a.final_rng, b.final_rng);
@@ -200,13 +251,24 @@ fn large_bit_task_samples_evaluation_but_has_analytical_references() {
     let template = acs2_envs::goal::bit_flipping::BitFlipping::<16>::new(Box::new(
         acs2_core::rng::ChaChaRandomSource::from_seed(0),
     ));
-    let task = BitTask::<16>::new(16, template.goal_pool().collect());
+    let task = BitTask::<16>::new(1, template.goal_pool().collect());
     let pairs = <BitTask<16> as Task<16, 16, 32>>::pairs(&task);
     assert_eq!(pairs.len(), 8_192);
     assert!(<BitTask<16> as Task<16, 16, 32>>::sampled_evaluation(&task));
     let refs = reference::<_, 16, 16, 32>(&task, &pairs);
-    assert!((refs.random_success - 0.000_227_857_554_436_878_88).abs() < 1e-15);
-    assert_eq!(refs.reachable_within_cap, 1.0);
+    assert_eq!(
+        pairs
+            .iter()
+            .filter(
+                |pair| <BitTask<16> as Task<16, 16, 32>>::distance(&task, pair.0, &pair.1)
+                    == Some(1)
+            )
+            .count(),
+        1
+    );
+    assert!((refs.random_success - 1.0 / 131_072.0).abs() < 1e-15);
+    assert!((refs.reachable_within_cap - 1.0 / 8_192.0).abs() < 1e-15);
+    assert!((refs.reachable_after_cap - 8_191.0 / 8_192.0).abs() < 1e-12);
 }
 
 #[test]
@@ -243,10 +305,10 @@ fn restricted_training_uses_only_real_goals_and_conditioned_starts() {
     for _ in 0..30 {
         measured.begin_episode();
         measured.reset();
-        let goal = measured.inner.desired().unwrap();
+        let goal = measured.desired_goal().unwrap();
         assert!(pool.contains(&goal));
         assert_ne!(
-            measured.inner.environment().state().block,
+            measured.inner.state().block,
             match goal.symbols {
                 [Symbol::Token(x), Symbol::Token(y)] => (x as usize, y as usize),
                 _ => unreachable!(),
@@ -271,11 +333,11 @@ fn restricted_training_uses_only_real_goals_and_conditioned_starts() {
 
 struct LastActionPolicy;
 
-impl GoalAgent<10> for LastActionPolicy {
+impl GoalAgent<8, 2, 10> for LastActionPolicy {
     fn name(&self) -> &'static str {
         "last_action"
     }
-    fn train_episode<E: MeasuredEnvironment<10>>(&mut self, env: &mut E, _time: u64) {
+    fn train_episode<E: MeasuredEnvironment<8, 2, 10>>(&mut self, env: &mut E, _time: u64) {
         env.reset();
         loop {
             let outcome = env.step(0);
@@ -334,4 +396,433 @@ fn evaluation_uses_the_policy_the_agent_declares() {
         assert_eq!(start["first_action"], 7);
         assert_eq!(start["estimated_first_action_value"], 17.0);
     }
+}
+
+struct ProbeAgent<const G: usize, const M: usize> {
+    steps_seen: u64,
+    eval_calls: Cell<u64>,
+    mutate_on_eval: bool,
+    train_delay: Duration,
+    eval_delay: Duration,
+    panic_at_step: Option<u64>,
+    first_action: usize,
+    relabel: Option<(Goal<G>, Goal<G>, Goal<G>, bool)>,
+    relabel_checked: bool,
+}
+
+impl<const G: usize, const M: usize> ProbeAgent<G, M> {
+    fn new() -> Self {
+        Self {
+            steps_seen: 0,
+            eval_calls: Cell::new(0),
+            mutate_on_eval: false,
+            train_delay: Duration::ZERO,
+            eval_delay: Duration::ZERO,
+            panic_at_step: None,
+            first_action: 0,
+            relabel: None,
+            relabel_checked: false,
+        }
+    }
+}
+
+impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for ProbeAgent<G, M> {
+    fn name(&self) -> &'static str {
+        "probe"
+    }
+    fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, _time: u64) {
+        env.reset();
+        if self.train_delay > Duration::ZERO {
+            std::thread::sleep(self.train_delay);
+        }
+        let mut first = true;
+        let mut first_transition = None;
+        loop {
+            let outcome = env.step(if first { self.first_action } else { 0 });
+            self.steps_seen += 1;
+            if self.panic_at_step == Some(self.steps_seen) {
+                panic!("probe interruption");
+            }
+            if first {
+                if let Some((achieved, original, relabeled_goal, reached)) = self.relabel {
+                    let transition = env.last_transition().expect("step transition");
+                    assert_eq!(transition.step.achieved, achieved);
+                    assert_eq!(transition.desired, original);
+                    assert_eq!(transition.outcome.terminated, outcome.terminated);
+                    assert_eq!(transition.outcome.truncated, outcome.truncated);
+                    assert_eq!(transition.outcome.reward, outcome.reward);
+                    assert_eq!(transition.outcome.reward > 0.0, achieved == original);
+                    first_transition = Some((transition, relabeled_goal, reached));
+                }
+            }
+            first = false;
+            if outcome.terminated || outcome.truncated {
+                break;
+            }
+        }
+        if let Some((transition, desired, reached)) = first_transition {
+            let relabeled = env.relabel(&transition.step, &desired);
+            assert_eq!(relabeled.reward > 0.0, reached);
+            assert_eq!(relabeled.terminated, reached);
+            assert_eq!(
+                relabeled.truncated,
+                transition.step.time_limit_reached && !reached
+            );
+            self.relabel_checked = true;
+        }
+    }
+    fn declared_policy(&self) -> &'static str {
+        "probe_action_zero"
+    }
+    fn eval_action(
+        &self,
+        _state: &Perception<M>,
+        _rng: &mut dyn acs2_core::rng::RandomSource,
+    ) -> (usize, f64) {
+        if self.mutate_on_eval {
+            self.eval_calls.set(self.eval_calls.get() + 1);
+        }
+        if self.eval_delay > Duration::ZERO {
+            std::thread::sleep(self.eval_delay);
+        }
+        (0, 1.5)
+    }
+    fn online_updates(&self) -> u64 {
+        self.steps_seen
+    }
+    fn replay_updates(&self) -> u64 {
+        0
+    }
+    fn replay_samples(&self) -> usize {
+        0
+    }
+    fn population_classifiers(&self) -> usize {
+        0
+    }
+    fn population_numerosity(&self) -> u32 {
+        0
+    }
+    fn population_logical_bytes(&self) -> usize {
+        0
+    }
+    fn population_mark_entries(&self) -> usize {
+        0
+    }
+    fn replay_logical_bytes(&self) -> usize {
+        0
+    }
+    fn agent_parameters(&self) -> serde_json::Value {
+        serde_json::json!({})
+    }
+}
+
+#[test]
+fn environment_steps_equal_independently_observed_agent_steps() {
+    let task = maze(None);
+    let mut agent = ProbeAgent::<2, 10>::new();
+    agent.panic_at_step = Some(200);
+    let rows = run_goal_agent(&task, &mut agent, 42, &[20, 40], "test", false);
+    assert_eq!(rows[1]["actual_steps"].as_u64().unwrap(), agent.steps_seen);
+    assert_eq!(
+        rows[1]["online_updates"].as_u64().unwrap(),
+        agent.steps_seen
+    );
+    assert!(rows[1]["episodes"].as_u64().unwrap() > 1);
+}
+
+#[test]
+fn replay_match_formations_cross_check_update_count() {
+    let task = maze(None);
+    let output = run::<_, 8, 2, 10>(&task, AgentKind::Acs2Er, 42, &[50], "test", false);
+    let row = &output.rows[0];
+    let steps = row["actual_steps"].as_u64().unwrap();
+    let replay = row["replay_updates"].as_u64().unwrap();
+    let formations = row["match_formations_train"].as_u64().unwrap();
+    assert_eq!(formations, steps + 3 * replay);
+}
+
+#[test]
+fn completed_rows_are_flushed_before_the_next_episode_panics() {
+    let task = maze(None);
+    let mut agent = ProbeAgent::<2, 10>::new();
+    agent.panic_at_step = Some(6);
+    let path = std::env::temp_dir().join(format!("acs2-interrupted-{}.jsonl", std::process::id()));
+    let mut writer = BufWriter::new(File::create(&path).unwrap());
+    let metadata = RunMetadata::test("test");
+    let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_goal_agent_with_sink(
+            &task,
+            &mut agent,
+            42,
+            &[1, 100],
+            &metadata,
+            true,
+            &mut |row| {
+                writeln!(writer, "{row}").unwrap();
+                writer.flush().unwrap();
+            },
+        );
+    }));
+    assert!(interrupted.is_err());
+    let contents = std::fs::read_to_string(&path).unwrap();
+    std::fs::remove_file(path).unwrap();
+    let rows: Vec<serde_json::Value> = contents
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["nominal_step"], 1);
+    assert!(read_match_counters().is_none());
+}
+
+#[test]
+fn value_diagnostics_are_weighted_and_optional_per_start() {
+    let task = maze(None);
+    let output = run::<_, 8, 2, 10>(&task, AgentKind::Acs2, 42, &[20], "test", true);
+    let row = &output.rows[0];
+    let starts = row["starts"].as_array().unwrap();
+    let estimate: f64 = starts
+        .iter()
+        .map(|start| {
+            start["weight"].as_f64().unwrap()
+                * start["estimated_first_action_value"].as_f64().unwrap()
+        })
+        .sum();
+    let realized: f64 = starts
+        .iter()
+        .map(|start| {
+            start["weight"].as_f64().unwrap() * start["discounted_return"].as_f64().unwrap()
+        })
+        .sum();
+    assert!(
+        (row["value_diagnostics"]["all"]["mean_first_action_estimate"]
+            .as_f64()
+            .unwrap()
+            - estimate)
+            .abs()
+            < 1e-9
+    );
+    assert!(
+        (row["value_diagnostics"]["all"]["mean_discounted_return"]
+            .as_f64()
+            .unwrap()
+            - realized)
+            .abs()
+            < 1e-9
+    );
+    assert!(
+        (row["value_diagnostics"]["all"]["mean_estimate_minus_return"]
+            .as_f64()
+            .unwrap()
+            - (estimate - realized))
+            .abs()
+            < 1e-9
+    );
+    let success = row["success"].as_f64().unwrap();
+    let successful_estimate: f64 = starts
+        .iter()
+        .filter(|start| start["success"] == true)
+        .map(|start| {
+            start["weight"].as_f64().unwrap()
+                * start["estimated_first_action_value"].as_f64().unwrap()
+        })
+        .sum::<f64>()
+        / success;
+    assert!(
+        (row["value_diagnostics"]["successful"]["mean_first_action_estimate"]
+            .as_f64()
+            .unwrap()
+            - successful_estimate)
+            .abs()
+            < 1e-9
+    );
+    let metadata = RunMetadata {
+        record_starts: false,
+        ..RunMetadata::test("test")
+    };
+    let mut compact = Vec::new();
+    acs2_measure::runner::run_with_sink::<_, _, 8, 2, 10>(
+        &task,
+        AgentKind::Acs2,
+        42,
+        &[20],
+        &metadata,
+        RunSettings {
+            evaluate_points: true,
+            capture_final_state: false,
+        },
+        &mut |row| compact.push(row),
+    );
+    assert!(compact[0]["starts"].is_null());
+    assert_eq!(compact[0]["value_diagnostics"], row["value_diagnostics"]);
+}
+
+#[test]
+fn training_and_evaluation_timers_measure_separate_work() {
+    let task = BitTask::<1>::new(
+        1,
+        vec![
+            Goal::new([Symbol::Token(b'0')]),
+            Goal::new([Symbol::Token(b'1')]),
+        ],
+    );
+    let mut agent = ProbeAgent::<1, 2>::new();
+    agent.train_delay = Duration::from_millis(20);
+    agent.eval_delay = Duration::from_millis(10);
+    let rows = run_goal_agent(&task, &mut agent, 42, &[1], "test", true);
+    let row = &rows[0];
+    let training = row["wall_seconds_train"].as_f64().unwrap();
+    let evaluation = row["wall_seconds_eval"].as_f64().unwrap();
+    assert!(training >= 0.02);
+    assert!(evaluation >= 0.02);
+    assert!((row["wall_seconds_total"].as_f64().unwrap() - training - evaluation).abs() < 1e-9);
+}
+
+#[test]
+fn unsuccessful_conditional_means_are_absent() {
+    let task = TaxiTask::new(
+        1,
+        vec![
+            passenger_goal(0),
+            passenger_goal(1),
+            passenger_goal(2),
+            passenger_goal(3),
+        ],
+    );
+    let mut agent = ProbeAgent::<1, 4>::new();
+    let rows = run_goal_agent(&task, &mut agent, 42, &[1], "test", true);
+    let row = &rows[0];
+    assert_eq!(row["success"], 0.0);
+    assert!(row["mean_success_steps"].is_null());
+    assert!(row["mean_success_steps_over_shortest"].is_null());
+    assert!(row["value_diagnostics"]["successful"].is_null());
+}
+
+#[test]
+fn read_only_check_catches_interior_mutation() {
+    let task = maze(None);
+    let failure = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        assert_evaluation_read_only::<_, _, _, _, 8, 2, 10>(
+            &task,
+            42,
+            &[5, 10],
+            || {
+                let mut agent = ProbeAgent::<2, 10>::new();
+                agent.mutate_on_eval = true;
+                agent
+            },
+            |agent| format!("{}:{}", agent.steps_seen, agent.eval_calls.get()),
+        );
+    }));
+    assert!(failure.is_err());
+}
+
+#[test]
+fn core_agents_pass_reusable_read_only_check() {
+    let task = maze(None);
+    let preset = Preset::thesis();
+    assert_evaluation_read_only::<_, _, _, _, 8, 2, 10>(
+        &task,
+        42,
+        &[55, 110],
+        || CoreAgent {
+            agent: acs2_core::agent::Agent::<10, _>::new(
+                preset.config(8),
+                ChaChaRandomSource::from_seed_and_stream(42, 1),
+            )
+            .with_truncation_mode(preset.truncation),
+            preset,
+            replay: false,
+            steps: 0,
+            updates: 0,
+        },
+        |agent| {
+            format!(
+                "{:?};{};{}",
+                agent.agent.capture(),
+                agent.steps,
+                agent.updates
+            )
+        },
+    );
+    assert_evaluation_read_only::<_, _, _, _, 8, 2, 10>(
+        &task,
+        42,
+        &[55, 110],
+        || CoreAgent {
+            agent: acs2_core::acs2er::Acs2ErAgent::<10, _>::new(
+                preset.config(8),
+                acs2_core::acs2er::ReplayConfiguration {
+                    buffer_size: preset.replay_capacity,
+                    min_samples: preset.replay_warmup,
+                    samples_number: preset.replay_updates_per_step,
+                },
+                ChaChaRandomSource::from_seed_and_stream(42, 1),
+            )
+            .with_truncation_mode(preset.truncation),
+            preset,
+            replay: true,
+            steps: 0,
+            updates: 0,
+        },
+        |agent| {
+            format!(
+                "{:?};{};{}",
+                agent.agent.capture(),
+                agent.steps,
+                agent.updates
+            )
+        },
+    );
+}
+
+#[test]
+fn relabeling_agent_distinguishes_maze_f3_coordinate_twins() {
+    let task = MazeTask::<Coordinates, 2>::new(
+        "mazef3".to_owned(),
+        &MAZEF3,
+        vec![(3, 3)],
+        5,
+        "coordinates",
+    );
+    assert_eq!(
+        task.template.topology().perception_at((3, 3)),
+        task.template.topology().perception_at((1, 4))
+    );
+    let desired = task.template.goal_at((3, 3));
+    let relabeled_goal = task.template.goal_at((1, 4));
+    let twin = task.template.goal_at((3, 3));
+    let run_probe = |start: (usize, usize), action: usize, achieved: Goal<2>, reached: bool| {
+        let seed = (0..10_000)
+            .find(|&seed| {
+                let mut environment = <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::environment(
+                    &task,
+                    ChaChaRandomSource::from_seed_and_stream(seed, ENVIRONMENT_STREAM),
+                );
+                environment.reset();
+                environment.position() == start
+            })
+            .expect("reachable training start");
+        let mut agent = ProbeAgent::<2, 10>::new();
+        agent.first_action = action;
+        agent.relabel = Some((achieved, desired, relabeled_goal, reached));
+        let rows = run_goal_agent(&task, &mut agent, seed, &[1], "test", false);
+        assert!(agent.relabel_checked);
+        assert_eq!(rows[0]["actual_steps"].as_u64().unwrap(), agent.steps_seen);
+    };
+    run_probe((3, 2), 2, twin, false);
+    let (start, action) = task
+        .template
+        .topology()
+        .walkable_cells()
+        .iter()
+        .find_map(|&cell| {
+            (0..8)
+                .find(|&action| {
+                    cell != (1, 4) && task.template.topology().next_cell(cell, action) == (1, 4)
+                })
+                .map(|action| (cell, action))
+        })
+        .expect("a predecessor of the goal");
+    run_probe(start, action, relabeled_goal, true);
 }

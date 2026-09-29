@@ -2205,10 +2205,22 @@ unfinished episode fails. Evaluation is taken after the first completed episode 
 each nominal point, without cutting it. The actual count and nominal point are both in the
 row; overshoot is strictly less than the configured cap. An agent's returned trial metrics
 never set the budget. This excludes the K-heads/K-episodes-per-trial comparison defect.
+`MeasuredEnvironment` also exposes the desired goal and the last `GoalTransition`: its raw
+`GoalStep` contains the achieved goal and time-limit state, while its `GoalOutcome` keeps
+termination and truncation separate. An agent can retain steps until the episode ends and
+call `relabel` on any retained step. That method calls the task environment's own objective
+through `GoalStep::outcome`, the same function used for the original transition. A MazeF3
+coordinate test checks that relabeling the perception twin `(3,3)` with `(1,4)` neither
+pays nor terminates, while entering `(1,4)` does both. The runner does not give the agent
+the full goal pool; agents needing a candidate set collect desired goals from their own
+episodes. Deriving achieved goals from observations would confuse MazeF3's twins; copying
+reward logic into agents would let training and relabeling disagree. The unchanged core
+`LearningAgent` API still receives an `Environment` from the wrapper.
 
 `GoalAgent` separates training, a named evaluation policy, read-only action and value
-selection, update counts, and component-size reports. `CoreAgent` wraps the unchanged
-`LearningAgent` implementations of ACS2 and ACS2ER and `GoalConditioned`. It declares
+selection, update counts, and component-size reports. `CoreAgent` adapts the unchanged
+`LearningAgent` implementations of ACS2 and ACS2ER. `TrainingEnvironment` supplies their
+goal-concatenated observations while retaining the raw goal step. `CoreAgent` declares
 `greedy_change_anticipating_population`: `BestAction` selects from the population on
 state concatenated with desired goal, and the reported first-action estimate is the
 `MaxFitnessBootstrap` maximum over that action set. A future multi-population agent must
@@ -2219,8 +2231,11 @@ the runner neither selects head zero nor assumes one population. It does not cal
 Evaluation creates a separate environment and tie-break generator, never borrows the
 training generator or mutable population. It resets to each specified start–goal pair,
 then reports cap success, mean steps among successes, mean ratio of successful steps to
-shortest distance, and every pair's first action, estimated value and realized discounted
-return. Small tasks use all pairs with their task-defined weights; BitFlipping with more
+shortest distance, and weighted means of first-action estimate, realized discounted return,
+and their difference for all pairs and for successful pairs. The successful-pair means are
+absent when there are no successes. Per-start actions, estimates and returns are available
+with `--per-start`; the CLI omits them by default so long grids stay compact. Small tasks
+use all pairs with their task-defined weights; BitFlipping with more
 than 20,000 pairs uses a fixed 8,192-pair sample and reports a Bernoulli standard error.
 The seed and stream of that sample are fixed and recorded. A random rollout would be
 cheaper but would add avoidable noise for the small candidate tasks. An exploitation trial
@@ -2228,8 +2243,14 @@ would learn, so it is not an evaluation substitute.
 
 The random-policy floor uses absorbing-state dynamic programming on the task's complete
 deterministic transition kernel, with uniform actions and exactly the evaluation's
-start–goal weighting. BitFlipping uses an equivalent Hamming-distance recurrence and
-binomial start-distance weights. These are exact probability algorithms represented as
+start–goal weighting. BitFlipping uses an equivalent Hamming-distance recurrence. Exhaustive
+BitFlipping uses binomial start-distance weights; sampled BitFlipping weights the recurrence
+by the realized fixed sample. Reachability uses that sample's pair weights too. Consequently
+the floor and ceiling in every row describe the same evaluated distribution as success;
+the full-law analytical values are not emitted for sampled rows. At BitFlipping16 cap 1 the
+fixed sample has one distance-one pair, giving a floor of `1/131072` and a ceiling of
+`1/8192`, unlike the full-law `1/65535` and `16/65535`. These are exact probability
+algorithms represented as
 `f64` in output; the fixed rational oracles independently test key values. Maze4 cap 5
 has floor `2833/32768` with all 27 goals and `334385/3407872` with the restricted
 `[(2,5),(5,5),(6,3),(6,4)]` pool. HandEye4 cap 50 has floor
@@ -2255,23 +2276,37 @@ Costs are cumulative at each evaluation point. Environment steps and completed e
 come from the environment wrapper. ACS2 makes one online RL update per stepped
 transition; ACS2ER's replay count follows its buffer length, warmup and sampling rule
 exactly. `Population::form_match_set` increments an opt-in thread-local counter by one
-formation and the current population length in classifier–perception tests. The hook
-does no matching, learning or random draw and is disabled outside the runner; it is
-the only core edit. Evaluation pauses the counter, so training cost is not inflated by
-exhaustive measurement. The output keeps population classifier count and numerosity
+formation and the current population length in classifier–perception tests. This existing
+core hook does no matching, learning or random draw and is unchanged in this round. A
+guard disables counting on normal exit and during unwinding, including a caught agent
+panic. Evaluation pauses the counter, so training cost is not inflated by exhaustive
+measurement. The output keeps population classifier count and numerosity
 separate from inline classifier bytes, mark-entry count and a known-byte lower bound;
 replay sample count and payload bytes are separate, as is future trajectory storage.
 Allocator overhead, `BTreeSet` node overhead and unused vector capacity are not included
-in these logical sizes. Peak RSS would not separate components and is not used. Wall time
-is labelled secondary because shared-node load changes it.
+in these logical sizes. Peak RSS would not separate components and is not used. Cumulative
+training and evaluation wall seconds are separate fields, with their sum provided for
+convenience. Every row includes the runtime host name and CPU model; time remains secondary
+because shared-node load changes it. A reusable read-only test runs identical training
+with and without evaluation points and compares the full agent snapshot. It covers ACS2
+and ACS2ER and rejects an agent that mutates interior state through `eval_action(&self)`;
+the receiver type alone cannot guarantee read-only behavior.
 
-One JSONL row represents configuration × agent × seed × evaluation point. It repeats the
-commit, preset, pool, encoding, distribution, floor and reachability fractions, costs,
-component sizes and per-start diagnostics. This repetition permits a row to be read without
-its siblings. Raw experiment files stay outside the checkout and are never added to
-`reports/`. The tests pin the floor against independent rational references, read-only
-evaluation by final population and RNG identity, environment-owned budget, declared
-policy, fixed streams, equal replay update volume and goal-pool conditioning.
+One schema-2 JSONL row represents configuration × agent × seed × evaluation point. The
+runner emits it immediately after evaluation; the CLI writes and flushes it before the
+next training episode. It repeats the build-time commit and source state (`clean`, `dirty`
+or `not_git_checkout`), preset, pool, encoding, distribution, floor and reachability
+fractions, costs, component sizes and aggregate diagnostics. Build provenance comes from
+the `acs2-measure` build script rather than a Git query in the run directory. The output
+uses `goal_pool: "full"` for a task's complete pool and lists goals only for a restricted
+pool; this avoids repeating the 65,536 BitFlipping16 goals in every row. The output
+guard finds a checkout from the output path's runtime ancestors, without requiring the
+source path used at build time to exist. Holding all rows until completion would lose
+finished evaluation points on interruption; querying Git at run time could name a different
+checkout or no commit. Each row remains interpretable without its siblings. Raw experiment
+files stay outside the checkout and are never added to `reports/`. Tests pin the floor
+against independent rational references, read-only evaluation, environment-owned budget,
+declared policy, fixed streams, replay volume and goal-pool conditioning.
 
 ## Clippy — the determinism invariants, checked by machine
 

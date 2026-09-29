@@ -26,11 +26,13 @@ where
     result.random_success = task
         .analytical_random_success(pairs)
         .unwrap_or_else(|| generic_random_success(task, pairs));
-    if let Some((within, after, missing)) = task.analytical_reachability() {
-        result.reachable_within_cap = within;
-        result.reachable_after_cap = after;
-        result.unreachable_or_ambiguous = missing;
-        return result;
+    if !task.sampled_evaluation() {
+        if let Some((within, after, missing)) = task.analytical_reachability() {
+            result.reachable_within_cap = within;
+            result.reachable_after_cap = after;
+            result.unreachable_or_ambiguous = missing;
+            return result;
+        }
     }
     for &(state, goal, weight) in pairs {
         match task.distance(state, &goal) {

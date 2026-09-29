@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use acs2_core::goal::Goal;
@@ -11,10 +11,14 @@ use acs2_envs::goal::maze::{Coordinates, NeighbourPerception};
 use acs2_envs::goal::taxi::Taxi;
 use acs2_envs::maze::topology::MazeTopology;
 use acs2_envs::roles::ResearchTask;
-use acs2_measure::runner::{run, AgentKind};
+use acs2_measure::runner::{run_with_sink, AgentKind, RunMetadata, RunSettings};
 use acs2_measure::task::{
     bit_goal, parse_cells, taxi_goal, BitTask, HandEyeTask, MazeTask, Task, TaxiTask,
 };
+
+mod output;
+
+use output::output_path;
 
 struct Options {
     task: String,
@@ -25,6 +29,7 @@ struct Options {
     seeds: Vec<u64>,
     targets: Vec<u64>,
     out: PathBuf,
+    record_starts: bool,
 }
 
 impl Options {
@@ -37,8 +42,13 @@ impl Options {
         let mut seeds = vec![42, 43, 44, 45, 46];
         let mut targets = None;
         let mut out = None;
+        let mut record_starts = false;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
+            if flag == "--per-start" {
+                record_starts = true;
+                continue;
+            }
             let value = args
                 .next()
                 .unwrap_or_else(|| panic!("{flag} needs a value"));
@@ -100,46 +110,36 @@ impl Options {
             seeds,
             targets,
             out: out.expect("--out is required"),
+            record_starts,
         }
     }
-}
-
-fn output_path(out: &Path) -> PathBuf {
-    let absolute = if out.is_absolute() {
-        out.to_path_buf()
-    } else {
-        std::env::current_dir().unwrap().join(out)
-    };
-    let parent = absolute.parent().expect("output parent");
-    std::fs::create_dir_all(parent).expect("create output directory");
-    let parent = parent.canonicalize().expect("output parent exists");
-    let repo = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .canonicalize()
-        .unwrap();
-    assert!(
-        !parent.starts_with(repo),
-        "results belong outside the checkout"
-    );
-    parent.join(absolute.file_name().expect("output file name"))
 }
 
 fn execute<T, const S: usize, const G: usize, const M: usize>(
     task: &T,
     options: &Options,
     writer: &mut BufWriter<File>,
-    commit: &str,
+    metadata: &RunMetadata<'_>,
 ) where
     T: Task<S, G, M>,
 {
     for &seed in &options.seeds {
         for &kind in &options.agents {
-            let output = run(task, kind, seed, &options.targets, commit, true);
-            for row in output.rows {
-                writeln!(writer, "{}", row).expect("write result");
-            }
-            writer.flush().expect("flush result");
+            run_with_sink(
+                task,
+                kind,
+                seed,
+                &options.targets,
+                metadata,
+                RunSettings {
+                    evaluate_points: true,
+                    capture_final_state: false,
+                },
+                &mut |row| {
+                    writeln!(writer, "{}", row).expect("write result");
+                    writer.flush().expect("flush result");
+                },
+            );
         }
     }
 }
@@ -148,7 +148,7 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
     geometry: &'static acs2_envs::maze::geometries::MazeGeometry,
     options: &Options,
     writer: &mut BufWriter<File>,
-    commit: &str,
+    metadata: &RunMetadata<'_>,
     encoding: &'static str,
 ) {
     let topology = MazeTopology::new(geometry).expect("valid geometry");
@@ -158,13 +158,13 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
         parse_cells(&options.pool)
     };
     let task = MazeTask::<E, G>::new(options.task.clone(), geometry, pool, options.cap, encoding);
-    execute::<_, 8, G, M>(&task, options, writer, commit);
+    execute::<_, 8, G, M>(&task, options, writer, metadata);
 }
 
 fn handeye<const SIDE: usize, const S: usize, const M: usize>(
     options: &Options,
     writer: &mut BufWriter<File>,
-    commit: &str,
+    metadata: &RunMetadata<'_>,
 ) {
     assert_eq!(options.encoding, "coordinates");
     let pool: Vec<Goal<2>> = if options.pool == "full" {
@@ -179,13 +179,13 @@ fn handeye<const SIDE: usize, const S: usize, const M: usize>(
     };
     assert!(!pool.is_empty());
     let task = HandEyeTask::<SIDE, S>::new(options.task.clone(), options.cap, pool);
-    execute::<_, S, 2, M>(&task, options, writer, commit);
+    execute::<_, S, 2, M>(&task, options, writer, metadata);
 }
 
 fn bit<const N: usize, const M: usize>(
     options: &Options,
     writer: &mut BufWriter<File>,
-    commit: &str,
+    metadata: &RunMetadata<'_>,
 ) {
     assert!(options.encoding == "coordinates" || options.encoding == "bits");
     let template =
@@ -196,7 +196,33 @@ fn bit<const N: usize, const M: usize>(
         options.pool.split(',').map(bit_goal::<N>).collect()
     };
     let task = BitTask::<N>::new(options.cap, pool);
-    execute::<_, N, N, M>(&task, options, writer, commit);
+    execute::<_, N, N, M>(&task, options, writer, metadata);
+}
+
+fn command_text(program: &str, args: &[&str]) -> Option<String> {
+    let output = Command::new(program).args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8(output.stdout).ok()?;
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_owned())
+}
+
+fn hardware() -> (String, String) {
+    let host = command_text("hostname", &[]).unwrap_or_else(|| "unknown".to_owned());
+    let cpu = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|contents| {
+            contents.lines().find_map(|line| {
+                line.strip_prefix("model name")
+                    .and_then(|value| value.split_once(':'))
+                    .map(|(_, name)| name.trim().to_owned())
+            })
+        })
+        .or_else(|| command_text("sysctl", &["-n", "machdep.cpu.brand_string"]))
+        .unwrap_or_else(|| std::env::consts::ARCH.to_owned());
+    (host, cpu)
 }
 
 fn main() {
@@ -204,32 +230,35 @@ fn main() {
     let path = output_path(&options.out);
     let file = File::create(&path).expect("create results");
     let mut writer = BufWriter::new(file);
-    let commit = String::from_utf8(
-        Command::new("git")
-            .args(["rev-parse", "HEAD"])
-            .output()
-            .expect("git commit")
-            .stdout,
-    )
-    .unwrap();
-    let commit = commit.trim();
+    let (host, cpu_model) = hardware();
+    let metadata = RunMetadata {
+        commit: env!("ACS2_BUILD_COMMIT"),
+        source_state: env!("ACS2_BUILD_SOURCE_STATE"),
+        host: &host,
+        cpu_model: &cpu_model,
+        record_starts: options.record_starts,
+    };
     match ResearchTask::named(&options.task).expect("registered task") {
         ResearchTask::GoalMaze(geometry) => match options.encoding.as_str() {
-            "coordinates" => {
-                maze::<2, 10, Coordinates>(geometry, &options, &mut writer, commit, "coordinates")
-            }
+            "coordinates" => maze::<2, 10, Coordinates>(
+                geometry,
+                &options,
+                &mut writer,
+                &metadata,
+                "coordinates",
+            ),
             "perception" => maze::<8, 16, NeighbourPerception>(
                 geometry,
                 &options,
                 &mut writer,
-                commit,
+                &metadata,
                 "perception",
             ),
             _ => panic!("unknown maze encoding"),
         },
-        ResearchTask::HandEye(3) => handeye::<3, 10, 12>(&options, &mut writer, commit),
-        ResearchTask::HandEye(4) => handeye::<4, 17, 19>(&options, &mut writer, commit),
-        ResearchTask::HandEye(5) => handeye::<5, 26, 28>(&options, &mut writer, commit),
+        ResearchTask::HandEye(3) => handeye::<3, 10, 12>(&options, &mut writer, &metadata),
+        ResearchTask::HandEye(4) => handeye::<4, 17, 19>(&options, &mut writer, &metadata),
+        ResearchTask::HandEye(5) => handeye::<5, 26, 28>(&options, &mut writer, &metadata),
         ResearchTask::HandEye(_) => unreachable!(),
         ResearchTask::Taxi => {
             assert!(options.encoding == "coordinates" || options.encoding == "stand");
@@ -244,25 +273,25 @@ fn main() {
                     .collect()
             };
             let task = TaxiTask::new(options.cap, pool);
-            execute::<_, 3, 1, 4>(&task, &options, &mut writer, commit);
+            execute::<_, 3, 1, 4>(&task, &options, &mut writer, &metadata);
         }
         ResearchTask::BitFlipping(n) => match n {
-            1 => bit::<1, 2>(&options, &mut writer, commit),
-            2 => bit::<2, 4>(&options, &mut writer, commit),
-            3 => bit::<3, 6>(&options, &mut writer, commit),
-            4 => bit::<4, 8>(&options, &mut writer, commit),
-            5 => bit::<5, 10>(&options, &mut writer, commit),
-            6 => bit::<6, 12>(&options, &mut writer, commit),
-            7 => bit::<7, 14>(&options, &mut writer, commit),
-            8 => bit::<8, 16>(&options, &mut writer, commit),
-            9 => bit::<9, 18>(&options, &mut writer, commit),
-            10 => bit::<10, 20>(&options, &mut writer, commit),
-            11 => bit::<11, 22>(&options, &mut writer, commit),
-            12 => bit::<12, 24>(&options, &mut writer, commit),
-            13 => bit::<13, 26>(&options, &mut writer, commit),
-            14 => bit::<14, 28>(&options, &mut writer, commit),
-            15 => bit::<15, 30>(&options, &mut writer, commit),
-            16 => bit::<16, 32>(&options, &mut writer, commit),
+            1 => bit::<1, 2>(&options, &mut writer, &metadata),
+            2 => bit::<2, 4>(&options, &mut writer, &metadata),
+            3 => bit::<3, 6>(&options, &mut writer, &metadata),
+            4 => bit::<4, 8>(&options, &mut writer, &metadata),
+            5 => bit::<5, 10>(&options, &mut writer, &metadata),
+            6 => bit::<6, 12>(&options, &mut writer, &metadata),
+            7 => bit::<7, 14>(&options, &mut writer, &metadata),
+            8 => bit::<8, 16>(&options, &mut writer, &metadata),
+            9 => bit::<9, 18>(&options, &mut writer, &metadata),
+            10 => bit::<10, 20>(&options, &mut writer, &metadata),
+            11 => bit::<11, 22>(&options, &mut writer, &metadata),
+            12 => bit::<12, 24>(&options, &mut writer, &metadata),
+            13 => bit::<13, 26>(&options, &mut writer, &metadata),
+            14 => bit::<14, 28>(&options, &mut writer, &metadata),
+            15 => bit::<15, 30>(&options, &mut writer, &metadata),
+            16 => bit::<16, 32>(&options, &mut writer, &metadata),
             _ => unreachable!(),
         },
     }
