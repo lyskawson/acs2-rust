@@ -83,3 +83,48 @@ checked across the pilot; sharing a partition alone does not prove one CPU model
 Run the repository gates when changing this code. The scripts neither modify the core
 nor change what `acs2-measure` measures. A discovered runner defect stops the phase for
 reporting and a separately gated fix.
+
+## Approved stage 2
+
+The immutable plan is identified by SHA-256
+`862f77785f1cf73fc58e81a88fabeac4b708ee908082f227a499d5cb2e4efb98`.
+The approval and preregistration evidence live with the results, outside the checkout.
+Keep the measurement clone and musl binary at the pilot commit. Deploy these operational
+scripts from their own pushed commit into `~/tu_ops/<commit>/experiments/phase3b/`;
+do not update or rebuild the measurement clone.
+
+`grid_control.py` records every submission intent, grant check, test-only response,
+allocation snapshot and reservation in the grid directory. An unresolved submission
+intent requires reconciliation, never a blind retry. Each configuration uses four arrays:
+agent times seed parity, ten seeds per array, concurrency one per array. Thus at most four
+allocations run, at most two on each approved host. The initial batch is BitFlipping8,
+followed by restricted HandEye4, Maze7 and full HandEye4. `grid_protocol.ORDER` fixes
+the remaining order. Completed earlier batches require local verified analysis before
+the next configuration can be submitted. A fresh external monitor lease is required
+before submission and expires after one hour for queued jobs starting later.
+
+`grid_launch.py` validates source identity and resolves the actual allocation time limit
+at startup, leaving thirty seconds for collection and shutdown. It starts a separate
+collector process so preflight subprocess accounting cannot contaminate wait4 results.
+Hardware, binary identity and the full preset are checked before or during collection.
+Failures create a global STOP marker that prevents subsequent queued runs from learning.
+Investigate it before resuming. Preserve every failed attempt and its raw bytes.
+
+`analyze_grid.py --root GRID --pilot PILOT --configuration ID` requires exactly forty
+complete runs and all registered points. It validates the complete manifest, allocation
+assignment, reference distribution and preset, and compares every non-timing,
+non-hardware field of seed 42 against the pilot. JSON output contains pointwise t(19)
+intervals, equally weighted per-seed scores, paired differences, the registered verdict,
+per-run CPU/RSS and pointwise cost counters. It preserves incomplete tails and reports
+them as errors. Write analysis only outside a checkout. Copy the successful analysis
+to `GRID/verified/ID.json` on the cluster only after pulling and verifying the whole batch.
+
+The user permits two conditional execution adjustments, not changes to learning:
+restricted HandEye4 limits may increase for later runs up to four times the agent's pilot
+allocation elapsed if a run exceeds twice that elapsed, with a fresh phase budget check;
+host pins may be relaxed after six hours waiting exclusively for those pins, only to the
+same measured CPU model and retaining each seed's agent pair on one host. These actions
+require an explicit audit record; the scripts do not silently apply them. A different CPU
+model or a measurement-runner defect stops the phase. No new batch may be submitted while
+external supervision is unavailable. The final architecture summary is added only after
+the completed grid has been analyzed; raw data and the Polish report remain outside Git.

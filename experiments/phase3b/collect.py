@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import resource
+import socket
 import subprocess
 import time
 
@@ -90,10 +91,13 @@ def interval_cost(samples, observed, train_wall, eval_wall):
 
 def run(args):
     manifest = json.loads(Path(args.manifest).read_text())
-    configurations = manifest["configurations"]
-    config = configurations[args.index // 2]
-    agent = manifest["agents"][args.index % 2]
-    seed = manifest["pilot_seed"]
+    grid = "configuration" in manifest
+    if grid:
+        config, agent, seed = manifest["configuration"], manifest["agent"], manifest["seed"]
+    else:
+        config = manifest["configurations"][args.index // 2]
+        agent = manifest["agents"][args.index % 2]
+        seed = manifest["pilot_seed"]
     directory = outside_repository(Path(args.output) / f"{config['id']}_{agent}_s{seed}")
     directory.mkdir(parents=True, exist_ok=False)
     raw = directory / "rows.jsonl"
@@ -109,8 +113,18 @@ def run(args):
                 "sample_interval_seconds": args.sample_interval,
                 "cpu_attribution": "Estimated from schedstat samples and runner wall intervals ending at observed flush; includes polling and serialization alignment error. Process CPU total and peak RSS are wait4 measurements."}
     if metadata["partition"] != "lem-cpu-normal":
-        raise ValueError("pilot runs only on lem-cpu-normal")
+        raise ValueError("runs only on lem-cpu-normal")
     (directory / "launch.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    if grid:
+        try:
+            cpu = next(line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name'))
+            if cpu != manifest['expected_cpu_model'] or socket.gethostname().split('.')[0] != manifest['expected_host']:
+                raise ValueError('hardware differs from the approved run assignment')
+            if metadata['binary_sha256'] != manifest['expected_binary_sha256'] or args.commit != manifest['measurement_commit']:
+                raise ValueError('measurement binary identity mismatch')
+        except BaseException as error:
+            Path(manifest['stop_path']).write_text(json.dumps({'run': str(directory), 'error': str(error), 'time': time.time()}) + '\n')
+            raise
     started = time.monotonic()
     samples = [(0.0, 0.0)]
     peak = 0
@@ -148,6 +162,10 @@ def run(args):
                         line, pending = pending.split(b"\n", 1)
                         row = json.loads(line)
                         validate_row(row, config, agent, seed, args.commit, config["targets"][rows_seen])
+                        if grid and (row['cpu_model'] != manifest['expected_cpu_model'] or row['host'].split('.')[0] != manifest['expected_host'] or row['preset'] != manifest['expected_preset']):
+                            raise ValueError('row hardware or preset mismatch')
+                        if first_row is None and now > manifest['first_row_timeout_seconds']:
+                            raise TimeoutError('first row arrived after its deadline')
                         rows_seen += 1
                         if first_row is None:
                             first_row = now
@@ -167,7 +185,7 @@ def run(args):
                 if first_row is None and now > manifest["first_row_timeout_seconds"]:
                     raise TimeoutError("first row deadline exceeded")
                 if now > manifest["process_timeout_seconds"]:
-                    raise TimeoutError("pilot process deadline exceeded")
+                    raise TimeoutError("process deadline exceeded")
                 time.sleep(args.sample_interval)
         except BaseException as error:
             failure = f"{type(error).__name__}: {error}"
@@ -187,6 +205,8 @@ def run(args):
                   "peak_rss_kib": max(peak, usage.ru_maxrss), "finished_unix": time.time()}
         (directory / "completion.json").write_text(json.dumps(result, indent=2) + "\n")
     if failure or process.returncode or rows_seen != len(config["targets"]) or pending:
+        if grid:
+            Path(manifest['stop_path']).write_text(json.dumps({'run': str(directory), 'result': result, 'time': time.time()}) + '\n')
         raise SystemExit(json.dumps(result))
 
 
