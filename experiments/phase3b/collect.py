@@ -28,7 +28,7 @@ def complete_rows(path):
 def validate_row(row, config, agent, seed, commit, target):
     expected = {
         "schema": 2, "commit": commit, "source_state": "clean",
-        "task": config["task"], "cap": config["cap"], "agent": agent,
+        "task": config.get("row_task", config["task"]), "cap": config["cap"], "agent": agent,
         "seed": seed, "nominal_step": target, "starts": None,
         "goal_pool": config["row_pool"], "goal_encoding": config["encoding"],
         "evaluated_policy": "greedy_change_anticipating_population",
@@ -44,6 +44,8 @@ def validate_row(row, config, agent, seed, commit, target):
         raise ValueError("invalid episode overshoot")
     if row["preset"]["replay_updates_per_step"] != 3:
         raise ValueError("unexpected replay volume")
+    if config["task"].startswith("bitflip") and row["preset"]["number_of_possible_actions"] != int(config["task"][7:]):
+        raise ValueError("unexpected BitFlipping width")
     if agent == "acs2":
         expected_updates = (steps, 0)
     else:

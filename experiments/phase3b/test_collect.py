@@ -60,6 +60,13 @@ class CollectionTests(unittest.TestCase):
                            ("nominal_step", 999), ("actual_steps", 1005), ("replay_updates", 3012)):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 validate_row(dict(row, **{key: value}), config, "acs2er", 42, "a" * 40, 1000)
+        bit_config = dict(config, task="bitflip8", row_task="bitflipping", encoding="bits")
+        bit_row = dict(row, task="bitflipping", goal_encoding="bits",
+                       preset={"replay_updates_per_step": 3, "number_of_possible_actions": 8})
+        validate_row(bit_row, bit_config, "acs2er", 42, "a" * 40, 1000)
+        bit_row["preset"]["number_of_possible_actions"] = 16
+        with self.assertRaises(ValueError):
+            validate_row(bit_row, bit_config, "acs2er", 42, "a" * 40, 1000)
 
     def test_exited_writer_is_drained_and_missing_row_process_is_stopped(self):
         with tempfile.TemporaryDirectory() as temporary:

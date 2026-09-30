@@ -199,7 +199,8 @@
         100000,
         300000,
         1000000
-      ]
+      ],
+      "row_task": "bitflipping"
     },
     {
       "id": "handeye5_c50_full",
