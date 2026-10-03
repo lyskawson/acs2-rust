@@ -93,38 +93,64 @@ Keep the measurement clone and musl binary at the pilot commit. Deploy these ope
 scripts from their own pushed commit into `~/tu_ops/<commit>/experiments/phase3b/`;
 do not update or rebuild the measurement clone.
 
-`grid_control.py` records every submission intent, grant check, test-only response,
-allocation snapshot and reservation in the grid directory. An unresolved submission
-intent requires reconciliation, never a blind retry. Each configuration uses four arrays:
-agent times seed parity, ten seeds per array, concurrency one per array. Thus at most four
-allocations run, at most two on each approved host. The initial batch is BitFlipping8,
-followed by restricted HandEye4, Maze7 and full HandEye4. `grid_protocol.ORDER` fixes
-the remaining order. Completed earlier batches require local verified analysis before
-the next configuration can be submitted. A fresh external monitor lease is required
-before submission and expires after one hour for queued jobs starting later.
+`grid_control.py submit-chain --root GRID` records every submission intent, grant
+check, test-only response, allocation snapshot and reservation. An unresolved intent or
+an existing chain file requires reconciliation, never blind resubmission. It plans all
+missing approved keys and checks pilot + spent + reserved + every new limit against
+200 CPU-hours before submitting. Every array is initially held; release happens only
+after the entire chain and its ledger are recorded. Each configuration uses four arrays
+(two seed lanes per agent), each with concurrency one. Every configuration depends on
+successful completion of all arrays of its predecessor (`afterok`), so at most four runs
+execute at once and a failed allocation blocks downstream configurations. The recovery
+configuration can have fewer than forty runs. `grid_protocol.ORDER` fixes the order.
+
+Execution rules approved on 2026-10-03 supersede the original scheduling fields without
+changing the approved plan bytes. They are recorded separately in
+`GRID/execution-rules-v2.json`: no host pinning, no requirement for a seed's agent pair
+to share a host, and no external supervision lease at job start. Submission still checks
+the live accounting and STOP while the operator is active. Every row must report the
+approved AMD EPYC 9554 model; partition membership alone is insufficient. External reads
+have no deadline. When active, pull the complete grid without deleting, inspect STOP,
+and analyze completed configurations. All evidence must be local and verified before
+acceptance.
 
 `grid_launch.py` validates source identity and resolves the actual allocation time limit
 at startup, leaving thirty seconds for collection and shutdown. It starts a separate
 collector process so preflight subprocess accounting cannot contaminate wait4 results.
 Hardware, binary identity and the full preset are checked before or during collection.
-Failures create a global STOP marker that prevents subsequent queued runs from learning.
-Investigate it before resuming. Preserve every failed attempt and its raw bytes.
+The node enforces a sixty-second first-row watchdog, validates each row, and enforces
+the process deadline. Node failures create a global STOP marker without overwriting the
+first cause. Subsequent starts refuse measurement; blocked starts do not renew or
+create a supervision lease. An abnormal launcher/srun exit is also guarded. A node loss
+that cannot write STOP still blocks dependent configurations through `afterok`.
 
-`analyze_grid.py --root GRID --pilot PILOT --configuration ID` requires exactly forty
-complete runs and all registered points. It validates the complete manifest, allocation
-assignment, reference distribution and preset, and compares every non-timing,
-non-hardware field of seed 42 against the pilot. JSON output contains pointwise t(19)
+Every attempt has its own ledger identifier, directory and cause. Historical directories
+are retained. Recovery attempts are written under `GRID/attempts/ID/measurement/`.
+`grid_attempts.py` inventories empty and incomplete attempts without using them in
+estimates. For each configuration, agent and seed it selects the earliest complete
+attempt. Multiple complete attempts must agree on every learning field, excluding only
+host, CPU model and wall timings; disagreement stops node-side processing and fails the
+analysis. Every complete duplicate is independently validated by the analysis. Failed
+attempts and unterminated raw tails remain available. The monitor distinguishes explicitly
+accounted historical failures from unexplained new ones; it does not create STOP merely
+because an accounted old allocation failed. Terminal allocation accounting is retained
+in the ledger as a fallback when scheduler history is unavailable.
+
+`analyze_grid.py --root GRID --pilot PILOT --configuration ID` requires a complete attempt
+for each of the forty approved keys. It validates the full manifest, allocation assignment,
+reference distribution and preset, and compares every non-timing, non-hardware field of
+seed 42 against the pilot. JSON output contains the attempt inventory, pointwise t(19)
 intervals, equally weighted per-seed scores, paired differences, the registered verdict,
-per-run CPU/RSS and pointwise cost counters. It preserves incomplete tails and reports
-them as errors. Write analysis only outside a checkout. Copy the successful analysis
-to `GRID/verified/ID.json` on the cluster only after pulling and verifying the whole batch.
+per-run CPU/RSS and pointwise cost counters. Write analysis only outside a checkout.
+`grid_control.py seal --root GRID --configuration ID` hashes terminal configuration files,
+including failed attempts and logs. Verify this manifest after pulling, then copy the local
+successful analysis to `GRID/verified/ID.json`. Local analysis is no longer a dependency
+for the next configuration's start.
 
-The user permits two conditional execution adjustments, not changes to learning:
-restricted HandEye4 limits may increase for later runs up to four times the agent's pilot
-allocation elapsed if a run exceeds twice that elapsed, with a fresh phase budget check;
-host pins may be relaxed after six hours waiting exclusively for those pins, only to the
-same measured CPU model and retaining each seed's agent pair on one host. These actions
-require an explicit audit record; the scripts do not silently apply them. A different CPU
-model or a measurement-runner defect stops the phase. No new batch may be submitted while
-external supervision is unavailable. The final architecture summary is added only after
-the completed grid has been analyzed; raw data and the Polish report remain outside Git.
+Restricted HandEye4 limits may increase for later runs up to four times the agent's pilot
+allocation elapsed if a run exceeds twice that elapsed, with a fresh phase budget check
+and an explicit audit record. The scripts do not apply this adjustment automatically.
+A different CPU model or a measurement-runner defect stops the phase. The final architecture
+summary is added after the completed grid has been analyzed; raw data and the Polish report
+remain outside Git. Both historical supervision incidents remain in that report under the
+rules that applied when they occurred.

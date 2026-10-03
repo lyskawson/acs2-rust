@@ -3,6 +3,7 @@ import json
 import math
 from pathlib import Path
 import tempfile
+import shutil
 import unittest
 from unittest.mock import patch
 
@@ -117,6 +118,37 @@ class GridTests(unittest.TestCase):
                 result = analyze(root, pilot, 'fixture')
                 self.assertEqual(result['runs'], 40)
                 self.assertEqual(result['pilot_identity']['matched_runs'], 2)
+                original_dir = root / 'batches/01-fixture/runs/fixture_acs2_s42'
+                duplicate = root / 'attempts/duplicate/measurement/fixture_acs2_s42'
+                shutil.copytree(original_dir, duplicate)
+                duplicate_launch = json.loads((duplicate / 'launch.json').read_text())
+                duplicate_launch.update(array_job_id=99, array_task_id=0, started_unix=100)
+                (duplicate / 'launch.json').write_text(json.dumps(duplicate_launch))
+                extra = dict(configuration_id='fixture', array_id=99, runs=[dict(agent='acs2', seed=42,
+                             attempt_id='duplicate', relative_directory=str(duplicate.relative_to(root)))])
+                ledger.append(extra)
+                (root / 'ledger.json').write_text(json.dumps(ledger))
+                duplicate_row = json.loads((duplicate / 'rows.jsonl').read_text())
+                duplicate_row['host'] = 'other-approved-model-host'
+                (duplicate / 'rows.jsonl').write_text(json.dumps(duplicate_row) + '\n')
+                with_duplicates = analyze(root, pilot, 'fixture')
+                self.assertEqual(with_duplicates['points'], result['points'])
+                self.assertEqual(len(with_duplicates['attempts']), 41)
+                self.assertEqual(with_duplicates['pilot_identity']['matched_runs'], 2)
+                duplicate_row['cpu_model'] = 'different CPU'
+                (duplicate / 'rows.jsonl').write_text(json.dumps(duplicate_row) + '\n')
+                with self.assertRaisesRegex(ValueError, 'invalid runs'):
+                    analyze(root, pilot, 'fixture')
+                duplicate_row['cpu_model'] = 'cpu'
+                duplicate_row['success'] = 0.6
+                (duplicate / 'rows.jsonl').write_text(json.dumps(duplicate_row) + '\n')
+                with self.assertRaisesRegex(ValueError, 'disagree'):
+                    analyze(root, pilot, 'fixture')
+                ledger.pop()
+                (root / 'ledger.json').write_text(json.dumps(ledger))
+                with self.assertRaisesRegex(ValueError, 'unregistered'):
+                    analyze(root, pilot, 'fixture')
+                shutil.rmtree(root / 'attempts')
                 path = root / 'batches/01-fixture/runs/fixture_acs2_s42/rows.jsonl'
                 original = path.read_bytes()
                 path.write_bytes(original + b'{"partial":')

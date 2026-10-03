@@ -9,6 +9,8 @@ import socket
 import subprocess
 import time
 
+from grid_protocol import stop_phase
+
 
 def outside_repository(path):
     resolved = Path(path).resolve()
@@ -118,12 +120,12 @@ def run(args):
     if grid:
         try:
             cpu = next(line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name'))
-            if cpu != manifest['expected_cpu_model'] or socket.gethostname().split('.')[0] != manifest['expected_host']:
+            if cpu != manifest['expected_cpu_model'] or (manifest.get('expected_host') and socket.gethostname().split('.')[0] != manifest['expected_host']):
                 raise ValueError('hardware differs from the approved run assignment')
             if metadata['binary_sha256'] != manifest['expected_binary_sha256'] or args.commit != manifest['measurement_commit']:
                 raise ValueError('measurement binary identity mismatch')
         except BaseException as error:
-            Path(manifest['stop_path']).write_text(json.dumps({'run': str(directory), 'error': str(error), 'time': time.time()}) + '\n')
+            stop_phase(manifest['stop_path'], {'run': str(directory), 'error': str(error)})
             raise
     started = time.monotonic()
     samples = [(0.0, 0.0)]
@@ -162,7 +164,7 @@ def run(args):
                         line, pending = pending.split(b"\n", 1)
                         row = json.loads(line)
                         validate_row(row, config, agent, seed, args.commit, config["targets"][rows_seen])
-                        if grid and (row['cpu_model'] != manifest['expected_cpu_model'] or row['host'].split('.')[0] != manifest['expected_host'] or row['preset'] != manifest['expected_preset']):
+                        if grid and (row['cpu_model'] != manifest['expected_cpu_model'] or (manifest.get('expected_host') and row['host'].split('.')[0] != manifest['expected_host']) or row['preset'] != manifest['expected_preset']):
                             raise ValueError('row hardware or preset mismatch')
                         if first_row is None and now > manifest['first_row_timeout_seconds']:
                             raise TimeoutError('first row arrived after its deadline')
@@ -206,7 +208,7 @@ def run(args):
         (directory / "completion.json").write_text(json.dumps(result, indent=2) + "\n")
     if failure or process.returncode or rows_seen != len(config["targets"]) or pending:
         if grid:
-            Path(manifest['stop_path']).write_text(json.dumps({'run': str(directory), 'result': result, 'time': time.time()}) + '\n')
+            stop_phase(manifest['stop_path'], {'run': str(directory), 'result': result})
         raise SystemExit(json.dumps(result))
 
 

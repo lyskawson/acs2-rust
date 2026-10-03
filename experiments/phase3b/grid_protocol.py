@@ -5,6 +5,8 @@ import json
 import math
 from pathlib import Path
 import statistics
+import tempfile
+import time
 
 PLAN_SHA256 = '862f77785f1cf73fc58e81a88fabeac4b708ee908082f227a499d5cb2e4efb98'
 ORDER = ['bitflip8_c8_full', 'handeye4_c50_p4', 'maze7_c10_full', 'handeye4_c50_full',
@@ -23,9 +25,22 @@ def load_plan(path):
 
 def atomic_json(path, value):
     path = Path(path)
-    temporary = path.with_name(path.name + '.tmp')
-    temporary.write_text(json.dumps(value, indent=2) + '\n')
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix=path.name + '.', delete=False) as stream:
+        stream.write(json.dumps(value, indent=2) + '\n')
+        temporary = Path(stream.name)
     temporary.replace(path)
+
+
+def stop_phase(path, detail):
+    path = Path(path)
+    event = dict(detail, unix=time.time())
+    with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='STOP-event-', suffix='.json', delete=False) as stream:
+        json.dump(event, stream, indent=2)
+    try:
+        with path.open('x') as stream:
+            json.dump(event, stream, indent=2)
+    except FileExistsError:
+        pass
 
 
 def seconds(value):
@@ -46,7 +61,7 @@ def accounting(ledger, records):
             raise ValueError('unresolved submission intent; reconcile before submitting')
         for task, run in enumerate(entry['runs']):
             job = f"{entry['array_id']}_{task}"
-            row = known.get(job)
+            row = known.get(job, run.get('terminal_accounting'))
             limit = run['limit_seconds']
             if row:
                 consumed = float(row['CPUTimeRAW'])
