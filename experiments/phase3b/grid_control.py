@@ -2,6 +2,7 @@ import argparse
 import fcntl
 import json
 import hashlib
+import re
 from pathlib import Path
 import subprocess
 import time
@@ -67,7 +68,11 @@ def monitor(root, plan, ledger):
             bad = bad or bool(item.get('completion', {}).get('failure'))
             if bad:
                 audit = attempt.get('accounted_failure')
-                if audit and audit['state'] == status and audit['cpu_seconds'] == float(row['CPUTimeRAW']) and not rows:
+                raw_path = attempt['path'] / 'rows.jsonl'
+                preserved = not raw_path.exists()
+                if audit and audit.get('rows_sha256'):
+                    preserved = raw_path.exists() and audit['rows_sha256'] == hashlib.sha256(raw_path.read_bytes()).hexdigest()
+                if audit and audit['state'] == status and audit['cpu_seconds'] == float(row['CPUTimeRAW']) and preserved:
                     historical.append(dict(attempt_id=attempt['attempt_id'], job=job, audit=audit))
                 else:
                     failures.append(dict(attempt_id=attempt['attempt_id'], job=job, state=status, status=item['status']))
@@ -122,11 +127,16 @@ def submission_command(operations, root, assignment, logdir, config, group, depe
     return command + [str(operations / 'grid_job.sh'), str(operations), str(root), str(assignment)]
 
 
-def submit_chain(root, plan, ledger, operations, repo):
+def submit_chain(root, plan, ledger, operations, repo, chain_id=None):
+    if chain_id is not None and not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', chain_id):
+        raise ValueError('invalid chain identifier')
+    chain_directory = root / 'chains' / chain_id if chain_id is not None else root
+    chain_path = chain_directory / 'chain.json'
+    assignment_directory = chain_directory / 'assignments' if chain_id is not None else root / 'chain-assignments'
     report = monitor(root, plan, ledger)
     if report['stop'] or report['failures'] or report['balance']['reserved_seconds']:
         raise ValueError('STOP, unexplained failures or outstanding historical reservations')
-    if (root / 'chain.json').exists():
+    if chain_path.exists():
         raise ValueError('chain already planned; reconcile it without resubmitting')
     approval = json.loads((root / 'approval.json').read_text())
     rules = json.loads((root / 'execution-rules-v2.json').read_text())
@@ -137,16 +147,17 @@ def submit_chain(root, plan, ledger, operations, repo):
     batches = chain_plan(root, plan, ledger)
     remaining = sum(run['limit_seconds'] for batch in batches for group in batch['groups'] for run in group['runs'])
     bound = require_budget(plan['pilot_allocation_cpu_hours'] * 3600, report['balance'], remaining)
-    chain = dict(plan_sha256=PLAN_SHA256, new_limit_seconds=remaining, initial_balance=report['balance'],
+    chain_directory.mkdir(parents=True, exist_ok=True)
+    chain = dict(chain_id=chain_id, plan_sha256=PLAN_SHA256, new_limit_seconds=remaining, initial_balance=report['balance'],
                  pilot_seconds=plan['pilot_allocation_cpu_hours'] * 3600, bound_seconds=bound,
                  batches=batches, released=False, started_unix=time.time())
-    atomic_json(root / 'chain.json', chain)
+    atomic_json(chain_path, chain)
     operations_commit = json.loads((root / 'operations.json').read_text())['commit']
     dependencies = []
     for batch in batches:
         config_id = batch['configuration_id']
         config = next(item for item in plan['configurations'] if item['id'] == config_id)
-        directory = root / 'chain-assignments' / config_id
+        directory = assignment_directory / config_id
         (directory / 'logs').mkdir(parents=True, exist_ok=False)
         current = []
         for group in batch['groups']:
@@ -179,7 +190,7 @@ def submit_chain(root, plan, ledger, operations, repo):
             group['array_id'] = entry['array_id']
             current.append(entry['array_id'])
             remaining -= sum(run['limit_seconds'] for run in group['runs'])
-            atomic_json(root / 'chain.json', chain)
+            atomic_json(chain_path, chain)
             print(json.dumps(dict(configuration=config_id, array_id=entry['array_id'], runs=len(group['runs']), dependencies=dependencies, bound_hours=bound / 3600)), flush=True)
         dependencies = current
     state, records, queue = snapshot(root, ledger)
@@ -187,12 +198,12 @@ def submit_chain(root, plan, ledger, operations, repo):
     if (root / 'STOP.json').exists():
         raise ValueError('phase stopped; new arrays remain held')
     chain['release_started_unix'] = time.time()
-    atomic_json(root / 'chain.json', chain)
+    atomic_json(chain_path, chain)
     for batch in batches:
         for group in batch['groups']:
             execute(['scontrol', 'release', str(group['array_id'])])
     chain.update(released=True, released_unix=time.time())
-    atomic_json(root / 'chain.json', chain)
+    atomic_json(chain_path, chain)
 
 
 def seal(root, plan, ledger, config_id):
@@ -208,7 +219,7 @@ def seal(root, plan, ledger, config_id):
         if row.get('State', '').split()[0].split('+')[0] not in TERMINAL:
             raise ValueError('attempt still active; cannot seal')
         sources.extend(path for path in attempt['path'].rglob('*') if path.is_file())
-    for directory in [root / 'chain-assignments' / config_id, *list((root / 'batches').glob(f'*-{config_id}'))]:
+    for directory in [root / 'chain-assignments' / config_id, *list((root / 'batches').glob(f'*-{config_id}')), *list((root / 'chains').glob(f'*/assignments/{config_id}'))]:
         sources.extend(path for path in directory.rglob('*') if path.is_file())
     for attempt in attempts(root, ledger, config_id):
         if 'relative_directory' in attempt and attempt['path'].parts[-2] == 'measurement':
@@ -224,6 +235,7 @@ def main():
     parser.add_argument('action', choices=['monitor', 'submit-chain', 'seal'])
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--configuration')
+    parser.add_argument('--chain-id')
     parser.add_argument('--repository', type=Path, default=Path.home() / 'acs2-tu')
     args = parser.parse_args()
     root = outside_repository(args.root)
@@ -236,7 +248,7 @@ def main():
         elif args.action == 'seal':
             seal(root, plan, ledger, args.configuration)
         else:
-            submit_chain(root, plan, ledger, Path(__file__).resolve().parent, args.repository)
+            submit_chain(root, plan, ledger, Path(__file__).resolve().parent, args.repository, args.chain_id)
 
 
 if __name__ == '__main__':

@@ -154,3 +154,20 @@ A different CPU model or a measurement-runner defect stops the phase. The final 
 summary is added after the completed grid has been analyzed; raw data and the Polish report
 remain outside Git. Both historical supervision incidents remain in that report under the
 rules that applied when they occurred.
+
+## Allocation identity and replacement chains
+
+The launcher queries `scontrol` using the exact `ArrayJobId_ArrayTaskId` selector,
+requires a single record matching all three job identifiers, and preserves the raw
+response in `allocation-start.json`. A bare job ID can also be the array master ID;
+flattening a multi-record response can subtract another element's elapsed time from
+this run's watchdog. Only this element's runtime may reduce its approved time limit.
+
+After an investigated failure, a replacement chain can use `submit-chain --chain-id ID`.
+Its chain record and assignments live under `GRID/chains/ID/`; the original chain and
+all attempt directories remain unchanged. The controller still refuses while STOP,
+unexplained failures or outstanding reservations remain. A partial historical failure
+requires an explicit audit including its unchanged raw-row SHA-256, allocation state
+and CPU charge. Cancelling existing jobs requires user authorization; a chain identifier
+does not authorize cancellation, retries or a new scientific phase. Deploy corrected
+operations in a new directory rather than editing scripts used by queued jobs.

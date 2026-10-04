@@ -8,6 +8,17 @@ from grid_protocol import atomic_json, load_plan, seconds, stop_phase
 from grid_attempts import select_attempts
 
 
+def allocation_fields(details, job_id, array_id, task_id):
+    records = [line for line in details.splitlines() if line.strip()]
+    if len(records) != 1:
+        raise ValueError('expected exactly one allocation record')
+    fields = dict(field.split('=', 1) for field in records[0].split() if '=' in field)
+    expected = {'JobId': job_id, 'ArrayJobId': array_id, 'ArrayTaskId': task_id}
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError('allocation record does not match this array element')
+    return fields
+
+
 def main():
     root, assignment, index = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
     if (root / 'STOP.json').exists():
@@ -21,8 +32,16 @@ def main():
         dirty = subprocess.check_output(['git', '-C', str(repo), 'status', '--porcelain'], text=True).strip()
         if commit != plan['measurement_commit'] or dirty:
             raise ValueError('measurement source identity differs')
-        details = subprocess.check_output(['scontrol', 'show', 'job', '-o', os.environ['SLURM_JOB_ID']], text=True)
-        fields = dict(field.split('=', 1) for field in details.split() if '=' in field)
+        job_id = os.environ['SLURM_JOB_ID']
+        array_id = os.environ['SLURM_ARRAY_JOB_ID']
+        task_id = os.environ['SLURM_ARRAY_TASK_ID']
+        if int(task_id) != index:
+            raise ValueError('array task differs from assignment index')
+        selector = f'{array_id}_{task_id}'
+        details = subprocess.check_output(['scontrol', 'show', 'job', '-o', selector], text=True)
+        fields = allocation_fields(details, job_id, array_id, task_id)
+        output = (root / entry['relative_directory']).parent
+        atomic_json(output.parent / 'allocation-start.json', dict(selector=selector, response=details, fields=fields))
         limit = seconds(fields['TimeLimit'])
         runtime = seconds(fields['RunTime'])
         timeout = limit - runtime - 30
@@ -37,8 +56,6 @@ def main():
                         plan_sha256=assignments['plan_sha256'], first_row_timeout_seconds=60,
                         process_timeout_seconds=timeout, allocation_limit_seconds=limit,
                         stop_path=str(root / 'STOP.json'))
-        output = root / entry['relative_directory']
-        output = output.parent
         manifests = output.parent / 'resolved-manifests'
         manifests.mkdir(exist_ok=True)
         path = manifests / f"{config['id']}_{entry['agent']}_s{entry['seed']}.json"
