@@ -18,7 +18,7 @@ Encoding provenance remains in the CSV's `encoding_source` column.
 
 | seed | variant | u_max | state | trials | knowledge | knowledge trial | accuracy | reliable | spec | a0_nc | a0_c | a1_nc | a1_c | hours | trials/s | log |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | pyalcs | 12 | running | 17 375 000 | 0.0000 | 17375000 | - | 0 | 0.00 | - | - | - | - | 392.6 | 12 | `264_s42_k264` |
+| 42 | pyalcs | 12 | running | 24 090 000 | 0.0000 | 24090000 | - | 0 | 0.00 | - | - | - | - | 551.9 | 12 | `264_s42_k264` |
 | 42 | pyalcs | 12 | TIME-LIMITED | 1 165 000 | 0.0000 | 1160000 | - | 0 | 0.00 | - | - | - | - | 12.0 | 27 | `264_s42_probe264` |
 | 42 | pyalcs | 12 | TIME-LIMITED | 433 000 | - | unknown | - | 0 | 0.00 | - | - | - | - | 2.0 | 60 | `264_s42_seq264c` |
 | 42 | pyalcs | 12 | TIME-LIMITED | 429 000 | - | unknown | - | 0 | 0.00 | - | - | - | - | 2.0 | 60 | `264_s42_cal264c` |
