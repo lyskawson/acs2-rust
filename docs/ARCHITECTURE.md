@@ -2549,6 +2549,119 @@ HandEye4 and Taxi, checks research-family rewards, and exercises schema-3 diagno
 with read-only evaluation. Baseline regression, mutation results and random-policy
 composition are recorded with the phase-4 measurement below.
 
+### Random-policy composition before replay agents
+
+The probe uses all ten registered phase-3b configurations, seeds 42–61, and the
+first complete episode meeting 20,000 environment steps in each run. All 200 runs
+completed: **4,003,305 steps, 372,187 episodes**, about **154 seconds** in total on
+this laptop. Measurement source is clean `a86b7db2d80f04a9aac0693bd871b7ca8d8f6785`;
+the registered phase-3b plan hash and streams are repeated in every row. Actions are
+uniform from stream 1, environment resets use stream 2, and restricted-goal draws
+use stream 4. No learning or random diagnostic sampling occurs.
+
+Each completed episode is analyzed before the next reset against desired goals
+observed up to that completion. Aggregation weights episodes by their step counts,
+then averages the resulting per-seed shares equally over 20 seeds. This describes a
+uniform transition draw over the collected first 20k steps, rather than the final
+10k buffer alone. Relabel request proportion is one; an empty distribution falls
+back to the original goal, so final sample shares include fallback. Mean ± SE uses
+sample variance across seeds, without treating transitions as independent replicas.
+
+The complete output is 4,800 raw seed rows and 240 configuration/strategy/rule/filter
+summary cells. It includes final, future, episode and uniform real, all three rules,
+both filter settings, admissible source mass, both problematic-goal shares, done,
+outside-candidate share, empty-distribution share, mean reward and expected objective
+evaluations per draw. Raw output, summaries and the report stay outside the checkout.
+
+Key values below are **percentages**, except reward and objective evaluations. These
+are `Future`, `EveryTransition`, without the candidate filter; admissible mass is
+100% and empty-distribution share is zero for each.
+
+| Configuration | Already reached % ± SE | After counterfactual end % ± SE | Done % ± SE | Outside candidates % ± SE | Mean reward ± SE | Objective evaluations/draw ± SE |
+|---|---|---|---|---|---|---|
+| maze4_c5_full | 34.780 ± 0.085 | 44.224 ± 0.093 | 65.661 ± 0.050 | 0.630 ± 0.021 | 656.612 ± 0.500 | 5.769 ± 0.007 |
+| maze4_c5_p4 | 35.048 ± 0.062 | 44.414 ± 0.069 | 65.881 ± 0.045 | 85.703 ± 0.103 | 658.813 ± 0.450 | 5.748 ± 0.004 |
+| maze6_c10_full | 30.112 ± 0.076 | 45.610 ± 0.089 | 51.048 ± 0.055 | 1.752 ± 0.056 | 510.477 ± 0.551 | 10.882 ± 0.017 |
+| maze6_c10_p4 | 30.072 ± 0.093 | 45.739 ± 0.090 | 50.971 ± 0.073 | 89.439 ± 0.093 | 509.712 ± 0.733 | 10.881 ± 0.020 |
+| handeye4_c50_full | 86.393 ± 0.205 | 89.155 ± 0.151 | 88.076 ± 0.191 | 3.809 ± 0.221 | 880.757 ± 1.912 | 11.214 ± 0.185 |
+| handeye4_c50_p4 | 85.946 ± 0.232 | 88.903 ± 0.182 | 87.641 ± 0.210 | 78.601 ± 0.441 | 876.406 ± 2.103 | 11.520 ± 0.281 |
+| taxi_c200_full | 89.333 ± 0.379 | 92.641 ± 0.297 | 89.570 ± 0.372 | 19.360 ± 0.740 | 895.703 ± 3.723 | 23.417 ± 0.916 |
+| bitflip8_c8_full | 3.302 ± 0.018 | 10.543 ± 0.065 | 36.477 ± 0.015 | 9.927 ± 0.100 | 364.767 ± 0.147 | 15.427 ± 0.008 |
+| handeye5_c50_full | 88.094 ± 0.256 | 90.553 ± 0.200 | 89.552 ± 0.233 | 6.053 ± 0.319 | 895.520 ± 2.331 | 10.048 ± 0.255 |
+| maze7_c10_full | 31.047 ± 0.096 | 46.940 ± 0.101 | 51.692 ± 0.067 | 1.642 ± 0.065 | 516.915 ± 0.668 | 10.605 ± 0.021 |
+
+The non-goal rule zeros already-reached shares, but does not remove all transitions
+after an earlier reach. For unfiltered future:
+
+| Configuration | Non-goal: after-end % ± SE | Non-goal: empty/fallback % ± SE | Counterfactual: empty/fallback % ± SE |
+|---|---|---|---|
+| maze4_c5_full | 11.384 ± 0.067 | 19.463 ± 0.103 | 27.710 ± 0.119 |
+| maze4_c5_p4 | 11.293 ± 0.066 | 19.707 ± 0.076 | 27.916 ± 0.078 |
+| handeye4_c50_full | 4.070 ± 0.135 | 77.819 ± 0.291 | 80.032 ± 0.254 |
+| taxi_c200_full | 7.047 ± 0.401 | 70.678 ± 1.097 | 76.740 ± 0.883 |
+
+The counterfactual rule zeros both problematic-goal shares for every configuration
+and strategy; the candidate filter zeros outside-candidate shares. Neither changes
+draw volume because empty distributions produce original fallback. Uniform real has
+zero outside-candidate and empty-distribution shares under every rule: the valid
+original goal remains a candidate. Under every-transition, its already-reached share
+is 3.700 ± 0.001% on full Maze4, 6.203 ± 0.017% on full HandEye4, and
+21.395 ± 0.175% on Taxi; restricting goals to real ones alone does not exclude
+already-reached goals.
+
+Outside **observed candidates** is different from outside the runner's fixed real
+pool. In early episodes, even a full-pool task has achieved goals the agent has not
+yet received as desired goals. This explains positive full-pool Maze/HandEye/BitFlipping
+entries without leaking the pool into the store. Taxi additionally achieves passenger
+location 4, in the taxi, which is never a desired delivery goal.
+
+The step-2a comparison used epsilon-greedy ACS2 trajectories and five seeds, whereas
+this probe uses uniformly random actions and twenty seeds. For future, Maze4 full
+has 34.780 ± 0.085% already reached and 65.661 ± 0.050% done, versus 27–29% and
+about 62% in 2a; the restricted pool has 85.703 ± 0.103% outside candidates, versus
+79–84% outside its fixed pool. Full HandEye4 has 86.393 ± 0.205% already reached
+and 88.076 ± 0.191% done, versus 92–94% and 93–95%. Different action mixtures
+and revisit/block-motion behavior alter achieved-goal multiplicities, and online
+candidate discovery adds an early membership difference. Lower HandEye triviality is
+consistent with more transport under random actions; this comparison does not identify
+a causal learning mechanism or predict HER performance. The known 2a storage-window
+confound remains; it is not repaired retroactively by these composition numbers.
+
+### Mutation and baseline acceptance evidence
+
+Ten mutations were applied individually, compiled, and caused the named contract test
+to fail: reward forced to one; done forced false; cap copied directly into truncation;
+future including s_t; missing achieved goal at s_0; counterfactual using only current
+non-goal state; different goal on next perception; an achieved goal inserted into
+candidates; dropping fallback draws; and removing the negative-reward guard. Every
+source file was restored and the unmutated tests passed afterwards. The harness and
+individual failure logs are outside the checkout.
+
+Reference comparison uses `af3ce49`: the pre-change `c06b92c` source is identical in
+acs2-core, acs2-envs and acs2-measure, confirmed by an empty Git diff. Seed 42 on
+Maze4 cap 5 with its four goals, full HandEye4 cap 50 and full Taxi cap 200, both
+ACS2 and ACS2ER, at points 100/500/1000, produces **18 identical rows in 756 compared
+top-level fields**, including complete nested value diagnostics and every population,
+replay, update, match and success field. Only schema, optional diagnostics, build/host
+metadata and wall times are excluded. No learning path changes.
+
+Acceptance gates: **237 Rust tests** (211 previously), including MPX reach regressions;
+tools Python **47**, baseline oracles **5**, unchanged phase-3b tests **20**, phase-4
+analysis tests **6**. The benchmark builds and P9's first seven columns match all five
+archived rows byte for byte. A release clean includes acs2-trajectory before Clippy;
+there are **22 warnings in older files, zero in phase-4 code**. Build provenance also
+watches the new trajectory source directory, so editing only that dependency cannot
+leave a previously clean build label cached. Protected source,
+configuration, checkpoint, multiplexer, archived reports and phase-3b files remain
+unchanged.
+
+Reproduce the composition and its summary without writing results into a checkout:
+
+```bash
+cargo run --release -p acs2-measure --example trajectory_composition -- --out <outside-checkout>/composition-raw.jsonl
+python3 -B experiments/phase4/summarize.py <outside-checkout>/composition-raw.jsonl --out <outside-checkout>
+```
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

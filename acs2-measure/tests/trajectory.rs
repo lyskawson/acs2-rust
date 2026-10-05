@@ -7,10 +7,10 @@ use acs2_core::rl::MaxFitnessBootstrap;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::goal::bit_flipping::BitFlipping;
-use acs2_envs::goal::hand_eye::{HandEye4, HandEye5};
+use acs2_envs::goal::hand_eye::{HandEye3, HandEye4, HandEye5};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::goal::taxi::passenger_goal;
-use acs2_envs::maze::geometries::pyalcs::{MAZE4, MAZE6, MAZE7, MAZEF3};
+use acs2_envs::maze::geometries::pyalcs::{MAZE4, MAZE5, MAZE6, MAZE7, MAZEB, MAZEF3};
 use acs2_measure::runner::{
     assert_evaluation_read_only, run_goal_agent, GoalAgent, MeasuredEnvironment, Preset,
     TrainingEnvironment, AGENT_STREAM, ENVIRONMENT_STREAM, POOL_STREAM,
@@ -228,10 +228,19 @@ fn research_rewards<T: Task<S, G, M>, const S: usize, const G: usize, const M: u
     }
 }
 
+fn bit_rewards<const N: usize, const M: usize>() {
+    let pool = BitFlipping::<N>::new(Box::new(ChaChaRandomSource::from_seed(0)))
+        .goal_pool()
+        .collect();
+    research_rewards::<_, N, N, M>(&BitTask::<N>::new(N as u32, pool));
+}
+
 #[test]
 fn every_research_family_and_strategy_has_non_negative_objective_rewards() {
     research_rewards::<_, 8, 2, 10>(&maze());
     for (name, geometry, cap) in [
+        ("maze5", &MAZE5, 10),
+        ("mazeb", &MAZEB, 5),
         ("maze6", &MAZE6, 10),
         ("maze7", &MAZE7, 10),
         ("mazef3", &MAZEF3, 5),
@@ -245,6 +254,12 @@ fn every_research_family_and_strategy_has_non_negative_objective_rewards() {
             "coordinates",
         ));
     }
+    let handeye3 = HandEye3::new(30, Box::new(ChaChaRandomSource::from_seed(0)));
+    research_rewards::<_, 10, 2, 12>(&HandEyeTask::<3, 10>::new(
+        "handeye3".to_owned(),
+        30,
+        handeye3.goal_pool().to_vec(),
+    ));
     let handeye4 = HandEye4::new(50, Box::new(ChaChaRandomSource::from_seed(0)));
     research_rewards::<_, 17, 2, 19>(&HandEyeTask::<4, 17>::new(
         "handeye4".to_owned(),
@@ -258,10 +273,22 @@ fn every_research_family_and_strategy_has_non_negative_objective_rewards() {
         handeye5.goal_pool().to_vec(),
     ));
     research_rewards::<_, 3, 1, 4>(&TaxiTask::new(200, (0..4).map(passenger_goal).collect()));
-    let bits = BitFlipping::<8>::new(Box::new(ChaChaRandomSource::from_seed(0)))
-        .goal_pool()
-        .collect();
-    research_rewards::<_, 8, 8, 16>(&BitTask::<8>::new(8, bits));
+    bit_rewards::<1, 2>();
+    bit_rewards::<2, 4>();
+    bit_rewards::<3, 6>();
+    bit_rewards::<4, 8>();
+    bit_rewards::<5, 10>();
+    bit_rewards::<6, 12>();
+    bit_rewards::<7, 14>();
+    bit_rewards::<8, 16>();
+    bit_rewards::<9, 18>();
+    bit_rewards::<10, 20>();
+    bit_rewards::<11, 22>();
+    bit_rewards::<12, 24>();
+    bit_rewards::<13, 26>();
+    bit_rewards::<14, 28>();
+    bit_rewards::<15, 30>();
+    bit_rewards::<16, 32>();
 }
 
 struct RecordOnly {

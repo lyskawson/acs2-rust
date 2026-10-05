@@ -63,6 +63,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=../acs2-core/src");
     println!("cargo:rerun-if-changed=../acs2-envs/src");
+    println!("cargo:rerun-if-changed=../acs2-trajectory/src");
     println!("cargo:rerun-if-changed=../Cargo.lock");
     println!("cargo:rerun-if-changed=../.git");
     for path in git_watch_paths(Path::new(&manifest)) {
