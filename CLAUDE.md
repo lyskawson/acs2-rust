@@ -51,7 +51,7 @@ and are worth archiving.
 ## Gates — before any change to the core
 
 ```bash
-cargo test --workspace --release          # 102 on feature/mpx264, 235 on feature/trajectory-utility
+cargo test --workspace --release          # 102 on feature/mpx264, 237 on feature/trajectory-utility
 uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'  # 47 tests
 cargo build --release --bin acs2-bench
 ./target/release/acs2-bench               # P9 maze: learning columns byte-identical
