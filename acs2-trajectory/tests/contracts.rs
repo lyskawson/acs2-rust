@@ -449,6 +449,18 @@ fn terminal_cap_interior_and_cut_flags_are_recomputed_for_each_goal() {
         !cut_episode.samples[0].scored.outcome.terminated
             && !cut_episode.samples[0].scored.outcome.truncated
     );
+    let reached_on_cap = episode(&mut store, &[0, 4], 4, true);
+    let e = store.episode(reached_on_cap).unwrap();
+    let original =
+        build_sample::<1, 1, 2>(e, 0, &goal(4), &evaluator, TruncationMode::Bootstrap).unwrap();
+    assert!(original.outcome.terminated && !original.outcome.truncated);
+    let another =
+        relabel_episode::<1, 1, 2>(e, &goal(9), RULES[2], &evaluator, TruncationMode::Bootstrap)
+            .unwrap();
+    assert_eq!(another.end, EpisodeEnd::Truncated);
+    assert!(another.samples[0].scored.outcome.truncated);
+    assert!(!another.samples[0].scored.outcome.terminated);
+    assert!(!another.samples[0].scored.sample.done);
 }
 
 #[test]

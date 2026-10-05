@@ -2442,6 +2442,10 @@ time-limit flag on that step without termination. Reaching the new goal on the c
 therefore terminates; missing it truncates. In `Bootstrap`, truncation does not make
 `done` true. Ending the original episode on its own goal supplies no extra ending flag
 under another goal: the last relabeled step can be neither terminated nor truncated.
+If original success occurs exactly on the cap, however, the raw time-limit flag is
+true: under a different unreached goal that last step truncates. The statement that
+an original-goal ending always becomes a cut needs this exception; the task's
+`GoalStep::outcome` formula is authoritative. The cap/cut test checks both cases.
 
 States are s_0 through s_T; transition t moves s_t to s_(t+1). Strategies are:
 
