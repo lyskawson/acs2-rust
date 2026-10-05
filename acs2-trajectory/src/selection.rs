@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use acs2_core::goal::Goal;
 use acs2_core::rng::RandomSource;
@@ -157,22 +157,19 @@ pub(crate) fn source_goals<const S: usize, const G: usize>(
     weights
 }
 
-pub(crate) fn distribution_with<const S: usize, const G: usize>(
-    episode: &StoredEpisode<S, G>,
-    transition: usize,
+pub(crate) fn distribution_from_source<const G: usize>(
+    source: &BTreeMap<Goal<G>, usize>,
     selection: Selection,
-    candidates: &[Goal<G>],
+    candidates: &BTreeSet<Goal<G>>,
     mut facts_for: impl FnMut(&Goal<G>, &mut ObjectiveCost) -> GoalFacts,
 ) -> GoalDistribution<G> {
-    assert!(transition < episode.len());
-    let source = source_goals(episode, transition, selection.strategy, candidates);
     let mut result = GoalDistribution {
         source_count: source.values().sum(),
         admitted_count: 0,
-        choices: Vec::new(),
+        choices: Vec::with_capacity(source.len()),
         cost: ObjectiveCost::default(),
     };
-    for (goal, weight) in source {
+    for (&goal, &weight) in source {
         if selection.candidate_filter && !candidates.contains(&goal) {
             continue;
         }
@@ -200,7 +197,10 @@ pub fn goal_distribution<const S: usize, const G: usize>(
     candidates: &[Goal<G>],
     evaluator: &impl GoalEvaluator<S, G>,
 ) -> GoalDistribution<G> {
-    distribution_with(episode, transition, selection, candidates, |goal, cost| {
+    assert!(transition < episode.len());
+    let source = source_goals(episode, transition, selection.strategy, candidates);
+    let candidates = candidates.iter().copied().collect();
+    distribution_from_source(&source, selection, &candidates, |goal, cost| {
         goal_facts(episode, transition, goal, evaluator, cost)
     })
 }

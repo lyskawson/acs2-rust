@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use acs2_core::goal::Goal;
 
 use crate::relabel::{build_sample, GoalEvaluator, ObjectiveCost, SampleError};
 use crate::sampler::SamplerConfiguration;
-use crate::selection::{distribution_with, source_goals, GoalFacts, GoalStrategy};
+use crate::selection::{distribution_from_source, source_goals, GoalFacts, GoalStrategy};
 use crate::store::StoredEpisode;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -82,7 +82,9 @@ pub fn episode_composition<const S: usize, const G: usize, const M: usize>(
 ) -> Result<EpisodeComposition, SampleError> {
     configuration.validate();
     let mut histories = BTreeMap::new();
-    let mut goals = source_goals(episode, 0, configuration.selection.strategy, candidates);
+    let mut source = source_goals(episode, 0, configuration.selection.strategy, candidates);
+    let candidates: BTreeSet<_> = candidates.iter().copied().collect();
+    let mut goals = source.clone();
     if configuration.selection.candidate_filter {
         goals.retain(|goal, _| candidates.contains(goal));
     }
@@ -110,11 +112,10 @@ pub fn episode_composition<const S: usize, const G: usize, const M: usize>(
         configuration.relabeled_proportion
     };
     for transition in 0..episode.len() {
-        let distribution = distribution_with(
-            episode,
-            transition,
+        let distribution = distribution_from_source(
+            &source,
             configuration.selection,
-            candidates,
+            &candidates,
             |goal, cost| {
                 let history = &histories[goal];
                 cost.reach_evaluations += history.draw_queries(transition);
@@ -169,6 +170,14 @@ pub fn episode_composition<const S: usize, const G: usize, const M: usize>(
         result
             .expected
             .add_weighted(expected, 1.0 / episode.len() as f64);
+        if configuration.selection.strategy == GoalStrategy::Future {
+            let visited = episode.achieved(transition + 1);
+            let weight = source.get_mut(visited).expect("future state weight");
+            *weight -= 1;
+            if *weight == 0 {
+                source.remove(visited);
+            }
+        }
     }
     Ok(result)
 }
