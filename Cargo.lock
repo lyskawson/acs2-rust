@@ -35,7 +35,16 @@ version = "0.1.0"
 dependencies = [
  "acs2-core",
  "acs2-envs",
+ "acs2-trajectory",
  "serde_json",
+]
+
+[[package]]
+name = "acs2-trajectory"
+version = "0.1.0"
+dependencies = [
+ "acs2-core",
+ "acs2-envs",
 ]
 
 [[package]]

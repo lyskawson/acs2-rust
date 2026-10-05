@@ -7,7 +7,9 @@ use acs2_core::agent::Agent;
 use acs2_core::classifier::Classifier;
 use acs2_core::config::{AlpGenVariant, Configuration};
 use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalOutcome, GoalStart, GoalStep};
+use acs2_core::goal::{
+    Goal, GoalEnvironment, GoalLayout, GoalObjective, GoalOutcome, GoalStart, GoalStep,
+};
 use acs2_core::measurement::{
     read_match_counters, start_match_counting, stop_match_counting, MatchCounters,
 };
@@ -115,6 +117,9 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn replay_logical_bytes(&self) -> usize;
     fn trajectory_logical_bytes(&self) -> usize {
         0
+    }
+    fn replay_diagnostics(&self) -> Option<Value> {
+        None
     }
     fn agent_parameters(&self) -> Value;
 }
@@ -239,6 +244,7 @@ pub trait MeasuredEnvironment<const S: usize, const G: usize, const M: usize>:
     fn episode_start(&self) -> Option<GoalStart<S, G>>;
     fn last_transition(&self) -> Option<GoalTransition<S, G>>;
     fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome;
+    fn goal_reached(&self, achieved: &Goal<G>, desired: &Goal<G>) -> bool;
 }
 
 pub struct TrainingEnvironment<'a, T, const S: usize, const G: usize, const M: usize>
@@ -366,6 +372,9 @@ where
     }
     fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome {
         step.outcome(self.inner.objective(), desired)
+    }
+    fn goal_reached(&self, achieved: &Goal<G>, desired: &Goal<G>) -> bool {
+        self.inner.objective().is_reached(achieved, desired)
     }
 }
 
@@ -773,7 +782,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
         };
         eval_elapsed += eval_started.elapsed();
         emit(json!({
-            "schema": 2, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
+            "schema": 3, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
             "host": plan.metadata.host, "cpu_model": plan.metadata.cpu_model,
             "task": task.name(), "cap": task.cap(), "goal_encoding": task.encoding(), "goal_pool": task.pool_label(),
             "agent": agent.name(), "evaluated_policy": agent.declared_policy(), "seed": plan.seed, "nominal_step": target,
@@ -800,7 +809,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             "population_known_bytes_lower_bound": agent.population_logical_bytes() + agent.population_mark_entries() * size_of::<Symbol>(),
             "classifier_size_bytes": size_of::<Classifier<M>>(), "replay_sample_size_bytes": size_of::<ReplaySample<M>>(),
             "replay_samples": agent.replay_samples(), "replay_logical_bytes": agent.replay_logical_bytes(),
-            "trajectory_logical_bytes": agent.trajectory_logical_bytes(), "wall_seconds_train": train_elapsed.as_secs_f64(),
+            "trajectory_logical_bytes": agent.trajectory_logical_bytes(), "replay_diagnostics": agent.replay_diagnostics(), "wall_seconds_train": train_elapsed.as_secs_f64(),
             "wall_seconds_eval": eval_elapsed.as_secs_f64(), "wall_seconds_total": (train_elapsed + eval_elapsed).as_secs_f64(),
             "preset": Preset::thesis().json(task.actions()), "agent_parameters": agent.agent_parameters()
         }));

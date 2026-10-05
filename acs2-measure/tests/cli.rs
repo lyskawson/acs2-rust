@@ -55,7 +55,8 @@ fn one_row_contains_the_configuration_agent_seed_point_and_references() {
         .is_some_and(|commit| commit.len() == 40));
     assert!(row["preset"]["beta"].is_number());
     assert!(row["agent_parameters"].is_object());
-    assert_eq!(row["schema"], 2);
+    assert_eq!(row["schema"], 3);
+    assert!(row["replay_diagnostics"].is_null());
     assert!(row["starts"].is_null());
     assert!(row["host"].as_str().is_some_and(|value| !value.is_empty()));
     assert!(row["cpu_model"]

@@ -2386,6 +2386,169 @@ element, retains its allocation response and enforces node-side checks. Future c
 must preserve these scientific configurations and report floor cases, finite budgets and
 all attempts; a flat observed interval does not establish a learning ceiling.
 
+## Trajectory storage and relabeling — trajectory-utility phase 4
+
+`acs2-trajectory` depends only on `acs2-core`. It owns storage, selection, scoring,
+sampling and exact composition, without learning, task construction or output policy.
+Future HER, TU and VCP agents can live beside this layer and be constructed by
+`acs2-measure`, which depends on it. There is no dependency cycle and no dependency
+from `acs2-bench`, the multiplexer, or either shared core/environment package back to
+this layer. Nothing changes `Configuration`, `ReplaySample`, agent descriptions,
+checkpoint identities or codecs.
+
+### Raw history, identifiers and capacity
+
+`TrajectoryStore<S,G>` stores whole `StoredEpisode`s: the environment's `GoalStart`
+(observation, achieved goal, desired goal), then each action and unmodified `GoalStep`
+(observation, achieved goal, terminal-state and time-limit flags). It never stores an
+authoritative reward, terminated/truncated flag, done bit or joined perception.
+`begin_episode` registers the desired goal immediately, including the current episode;
+`insert` registers it for callers that built an `Episode` separately. Candidates are
+unique desired goals in symbol order and survive eviction. No constructor accepts the
+runner's real-goal pool. Achieved goals, including s_0, come from the environment.
+
+Capacity is a positive, strict limit in environment steps. Insertion evicts the oldest
+whole episodes until retained steps plus the new episode fit. Every retained episode
+keeps its full prefix, so counterfactual admissibility stays exact. After capacity has
+first forced eviction, with episode lengths at most L, occupancy is greater than
+capacity minus L and at most capacity. An episode exceeding capacity returns
+`StoreError::EpisodeTooLong` and does not evict history; a future agent must configure
+capacity at least as large as its environment cap. Empty episodes are rejected.
+Identifiers monotonically increase on successful insertion and never get reused;
+evicted identifiers cannot resolve. Episode payloads are immutable through the store.
+The caller records exactly one complete environment episode before insertion; the
+measurement boundary enforces completion. `Episode` refuses steps after a raw terminal
+or time-limit flag, but cannot independently infer goal termination without an objective.
+
+`logical_bytes` counts the inline store header, retained episode headers and starts,
+step payloads and persistent candidate-goal payloads. Unused capacity and allocator
+metadata are excluded. The agent reports this through `trajectory_logical_bytes`,
+separately from replay samples and population sizes. Candidate storage can grow after
+the step buffer fills, so the step bound is not a bound on all logical bytes.
+
+### One objective, one goal and three meanings of admissibility
+
+`GoalEvaluator` supplies scoring and reach predicates. `ObjectiveEvaluator` calls
+`GoalStep::outcome` and `GoalObjective::is_reached`; `MeasuredGoalEvaluator` calls
+`MeasuredEnvironment::relabel` and its task-owned `goal_reached` predicate. Thus reward
+and termination use exactly the same task objective as collection. No observation
+comparison or reward scheme is copied into this crate. `build_sample` joins the same
+goal to s_t and s_(t+1), preserves action and derives done with
+`TruncationMode::is_terminal`. Negative and non-finite rewards return explicit errors.
+There is no relabeling-specific done override or pyalcs reward mode.
+
+Termination is objective reach or a goal-independent terminal state. Truncation is a
+time-limit flag on that step without termination. Reaching the new goal on the cap step
+therefore terminates; missing it truncates. In `Bootstrap`, truncation does not make
+`done` true. Ending the original episode on its own goal supplies no extra ending flag
+under another goal: the last relabeled step can be neither terminated nor truncated.
+
+States are s_0 through s_T; transition t moves s_t to s_(t+1). Strategies are:
+
+- `Original`: the episode's desired goal.
+- `Final`: ach(s_T).
+- `Future`: uniformly weighted state indices t+1 through T.
+- `Episode`: uniformly weighted state indices 1 through T, excluding s_0.
+- `UniformReal`: uniform over desired goals observed by this agent at draw time.
+
+Repeated achieved goals keep their state-index multiplicities; they are not made
+uniform over unique goals. `GoalDistribution` exposes exact integer weights, their
+normalized probabilities, source and admitted counts, and a draw using injected RNG.
+Choices have deterministic symbol order. The optional candidate-set filter composes
+with every rule, removes goals outside the observed desired set before objective
+queries, and renormalizes the remaining index weights.
+
+`EveryTransition` admits every (t,g). `FromNonGoalState` requires that g is not reached
+at s_t. `CounterfactualEpisode` requires that g is reached at none of s_0 through s_t;
+it includes the transition arriving at the first reached state. Reach means the
+objective predicate, which need not be equality. The latter two rules are subsets of
+the preceding rule. Original-goal samples from valid collected task episodes pass all
+three. `GoalFacts` reports reach at the current state and whether the counterfactual
+end has already occurred, including when s_0 reached the new goal.
+
+`relabel_episode` returns indexed samples under one goal and rule. The counterfactual
+rule returns exactly the prefix ending on first reach, or no samples for an already
+reached start. End status distinguishes `Terminated`, `Truncated`, `Cut` and
+`AlreadyReachedAtStart`. A cut supplies no invented continuation. The less restrictive
+rules deliberately retain their different semantics; the non-goal rule can leave gaps,
+so indices are kept instead of pretending they form a feasible contiguous episode.
+
+### Drawing, provenance, composition and cost
+
+`SamplerConfiguration` is separate from every existing agent configuration. For each
+requested draw, `Sampler` selects a transition uniformly over retained steps, with
+replacement, then an independent Bernoulli coin requests relabeling in the configured
+proportion. Proportions zero and one skip the coin. `Original` always uses the original
+route. Every other strategy draws from its exact restricted distribution. An empty
+admissible distribution falls back to this transition's original goal and increments
+fallback counters. The transition is not redrawn and the requested number of samples
+does not change. Drawing a positive count from empty history returns `EmptyStore`;
+zero draws return an empty vector. ACS2ER draws without replacement within its small
+batch; both have uniform transition marginals, but their batch covariances differ.
+
+Each `DrawnSample` carries episode identifier, transition index, goal, scored sample,
+raw derived outcome, objective cost and provenance. Provenance names original versus
+relabeled route, effective and requested strategy, current-state reach, occurrence
+after the counterfactual end, done, membership outside candidates, and fallback.
+A successful relabeling remains relabeled even if its goal equals the original goal.
+Fallbacks and non-relabeling coin outcomes are original. Phase 5 can use this route to
+restrict goal-independent ALP, quality and rule creation to original samples while
+updating values on relabeled samples. No learner implements that policy in phase 4.
+Cumulative `ReplayCounters` retain all flags, strategy counts and objective costs.
+Scoring errors count the attempted objective work and `failed_draws` before returning
+an error; callers must abort that invalid replay operation rather than retry silently.
+
+Objective cost counts direct public reward and reach evaluations made by this layer.
+Scoring costs one reward call and, unless the raw terminal-state shortcut applies,
+one reach call. Selection/provenance costs are deterministic reach calls. Internal
+work inside an arbitrary objective is not instrumented. The distribution computes
+facts once per unique proposed goal, sharing them across duplicate state indices;
+this also defines the reference sampler's cost. No rejection loop has an unbounded
+query cost. Randomness enters only through the supplied `RandomSource`; thesis callers
+reserve ChaCha stream **7** for this sampler, leaving streams 1–6 unchanged.
+
+`episode_composition` computes expected shares under uniform transition drawing,
+including a supplied relabel proportion, candidate filter and original fallback,
+without any RNG. It reports admissible source mass, empty-distribution transition
+share, original/relabeled and fallback shares, both problematic-goal flags, done,
+outside-candidate share, mean reward, and expected objective evaluations of a draw.
+Its separate `analysis_cost` counts actual diagnostic work: it precomputes per-goal
+reach histories, then scores each weighted choice. Expected replay cost and cost of
+computing this diagnostic are distinct. The independent enumeration test checks both.
+
+`GoalAgent::replay_diagnostics` defaults to absent for ACS2 and ACS2ER. The runner emits
+this optional payload at every existing evaluation point, without agent-specific
+measurement branches. Rows advance to schema **3**; schema-2 archived baselines remain
+unchanged. `acs2-measure::trajectory::replay_diagnostics` serializes the common counters.
+A recording-only test agent passes `assert_evaluation_read_only`, including store,
+policy RNG, sampler RNG and diagnostics in its snapshot. There is no new CLI agent.
+
+### Rejected designs and executable evidence
+
+Relabeling at storage time multiplies history entries and confounds goal selection
+with the retained environment window. Storing finished samples makes derived reward
+and endings authoritative and loses termination/truncation information. Deriving
+achieved goals from observations confuses MazeF3's perceptual twins and hidden blocks.
+Single-step eviction without retained prefixes loses exact counterfactual semantics;
+retaining those prefixes can exceed a step payload bound. Whole episodes trade at most
+one episode's occupancy for simple exact semantics. Redrawing an ineligible transition
+would bias transition marginals; dropping it would change update volume. Goal lists
+from the runner would reveal unobserved real goals to TU. A second learning agent or
+checkpoint format would exceed this phase's scope.
+
+`acs2-trajectory/tests/contracts.rs` checks independent admissible enumeration on every
+four-bit transition under all goals/strategies/rules/filters, a stationary HandEye
+block, and a maze that leaves and returns. It checks a non-equality objective with
+non-1000 reward, MazeF3 twins, cap and cut flags, non-negative reward enforcement,
+identical goal suffixes, raw achieved goals, FIFO/identifier/candidate invariants,
+weighted duplicates, fixed-seed goal and transition frequencies, independent relabel
+share, fallback volume, route provenance, exact composition, and direct objective costs.
+`acs2-measure/tests/trajectory.rs` compares samples bit for bit and in order to actual
+ACS2ER memory through `TrainingEnvironment`, in both truncation modes on Maze4,
+HandEye4 and Taxi, checks research-family rewards, and exercises schema-3 diagnostics
+with read-only evaluation. Baseline regression, mutation results and random-policy
+composition are recorded with the phase-4 measurement below.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

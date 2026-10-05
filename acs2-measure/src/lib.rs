@@ -3,3 +3,4 @@
 pub mod reference;
 pub mod runner;
 pub mod task;
+pub mod trajectory;
