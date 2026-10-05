@@ -2313,6 +2313,79 @@ pin the floor against independent rational references, read-only evaluation,
 environment-owned budget, declared policy, fixed streams, replay volume and goal-pool
 conditioning.
 
+## Phase 3b: registered ACS2 and ACS2ER baselines
+
+The accepted grid fixes seeds 42–61, the thesis preset, equal interaction budgets and
+points for both agents, and the goal pools below. Plan SHA-256:
+`862f77785f1cf73fc58e81a88fabeac4b708ee908082f227a499d5cb2e4efb98`.
+Measurement commit `af3ce49b2df0f5a764efb49be9c48da54ebe0040`, clean musl binary
+SHA-256 `1643a9e5c365cbc43fb119cc5d5d136b680303f66bd77d4ff06c765ad0a7ec72`.
+All 400 selected runs and 3,800 rows passed manifest/provenance checks; both seed-42
+agents in every configuration match the pilot in 8,550 learning fields. Raw rows and
+full analysis remain outside the checkout under the TU phase-3b run archive.
+
+The primary score is the arithmetic mean success over registered points **within each
+seed**, with equal point weights. It is not a step-weighted integral. Values below are
+mean ± SE across 20 seeds; paired ER−ACS2 intervals use Student t(19). These are marginal
+95% intervals, without simultaneous multiplicity adjustment. They do not identify a
+causal mechanism or establish convergence.
+
+| Configuration | ACS2 score ± SE | ACS2ER score ± SE | Paired ER−ACS2 [95% CI] | Registered verdict |
+|---|---|---|---|---|
+| bitflip8_c8_full | 0.0064453 ± 0.0003737 | 0.0075884 ± 0.0002823 | 0.0011431 [0.0001608; 0.0021254] | floor_baselines_retain_for_successors |
+| handeye4_c50_p4 | 0.3070677 ± 0.0145898 | 0.3081432 ± 0.0175754 | 0.0010755 [-0.0376943; 0.0398453] | compare |
+| maze7_c10_full | 0.1871944 ± 0.0033240 | 0.1463968 ± 0.0037976 | -0.0407976 [-0.0511991; -0.0303961] | compare |
+| handeye4_c50_full | 0.2492734 ± 0.0097329 | 0.2211413 ± 0.0069083 | -0.0281322 [-0.0537877; -0.0024766] | compare |
+| maze6_c10_full | 0.1866517 ± 0.0031975 | 0.1462012 ± 0.0044128 | -0.0404505 [-0.0535013; -0.0273996] | compare |
+| maze6_c10_p4 | 0.4071875 ± 0.0099269 | 0.3809375 ± 0.0077742 | -0.0262500 [-0.0583797; 0.0058797] | compare |
+| handeye5_c50_full | 0.1170219 ± 0.0028896 | 0.1070583 ± 0.0027437 | -0.0099635 [-0.0185153; -0.0014118] | compare |
+| maze4_c5_p4 | 0.6241346 ± 0.0062924 | 0.6200481 ± 0.0140070 | -0.0040865 [-0.0364193; 0.0282463] | compare |
+| maze4_c5_full | 0.2196296 ± 0.0040457 | 0.1938604 ± 0.0034072 | -0.0257692 [-0.0373519; -0.0141865] | compare |
+| taxi_c200_full | 0.0029500 ± 0.0007747 | 0.0070833 ± 0.0014061 | 0.0041333 [0.0006426; 0.0076241] | floor_baselines_retain_for_successors |
+
+The registered floor verdict uses the **final-point** lower confidence bounds relative
+to the row's exact random-policy success; retain these configurations for HER/TU/VCP
+without ranking the baselines. Otherwise ACS2 at the first point reaching at least 90%
+of task reachability would be too easy; no configuration meets that condition. All
+remaining configurations are compared. Final-budget success is secondary:
+
+| Configuration | Steps | Floor | Reachable within cap | ACS2 final ± SE | ACS2ER final ± SE | Verdict | Train steps/CPU-s ≈ ACS2 / ER |
+|---|---|---|---|---|---|---|---|
+| bitflip8_c8_full | 1000000 | 0.0270763 | 1.0000000 | 0.0073303 ± 0.0009888 | 0.0072388 ± 0.0007424 | floor_baselines_retain_for_successors | 1515853 / 403656 |
+| handeye4_c50_p4 | 10000000 | 0.1203966 | 1.0000000 | 0.4747396 ± 0.0284969 | 0.4115885 ± 0.0299420 | compare | 57099 / 9481 |
+| maze7_c10_full | 10000000 | 0.1018896 | 1.0000000 | 0.2920238 ± 0.0109073 | 0.1767857 ± 0.0068345 | compare | 41418 / 10233 |
+| handeye4_c50_full | 10000000 | 0.1319616 | 1.0000000 | 0.3738997 ± 0.0195017 | 0.2931055 ± 0.0164063 | compare | 49201 / 9052 |
+| maze6_c10_full | 10000000 | 0.1026444 | 1.0000000 | 0.2911787 ± 0.0071204 | 0.1760511 ± 0.0067531 | compare | 45591 / 11718 |
+| maze6_c10_p4 | 10000000 | 0.0936023 | 1.0000000 | 0.5204861 ± 0.0221299 | 0.4711806 ± 0.0190932 | compare | 102650 / 14410 |
+| handeye5_c50_full | 2000000 | 0.0816729 | 1.0000000 | 0.2314667 ± 0.0098668 | 0.1719050 ± 0.0069123 | compare | 19053 / 3923 |
+| maze4_c5_p4 | 10000000 | 0.0981213 | 1.0000000 | 0.7504808 ± 0.0128527 | 0.7091346 ± 0.0204435 | compare | 154858 / 23454 |
+| maze4_c5_full | 10000000 | 0.0864563 | 0.9971510 | 0.3098291 ± 0.0079370 | 0.2399573 ± 0.0058747 | compare | 80143 / 20156 |
+| taxi_c200_full | 10000000 | 0.0467332 | 1.0000000 | 0.0000000 ± 0.0000000 | 0.0000000 ± 0.0000000 | floor_baselines_retain_for_successors | 950352 / 206112 |
+
+Throughput is the mean of per-run ratios on **AMD EPYC 9554 64-Core Processor**,
+`lem-cpu-normal`, one CPU per run. Training/evaluation CPU attribution estimates 20 ms
+schedstat samples aligned to runner wall intervals; total process CPU and peak RSS come
+from wait4. Shared-host load and timing alignment limit cost comparisons. BitFlipping8
+uses its fixed evaluation sample; between-seed intervals exclude that sample uncertainty.
+The full pointwise statistics, paired seed scores, resource counters and attempt audit
+are produced by `experiments/phase3b/analyze_grid.py`.
+
+Points are 1k, 3k, 10k, 30k, 100k, 300k, 1M, 2M, 5M, 10M, truncated at the listed
+budget. The restricted pools in CLI row:column coordinates are Maze4
+`2:5,5:5,6:3,6:4`, Maze6 `3:1,3:6,4:3,7:7`, and HandEye4 `0:0,0:2,2:3,3:1`.
+Other pools are full. Pool selection was fixed without outcomes. HandEye row encoding
+uses x,y; preserve the runner's CLI conversion when reusing these pools.
+
+All 667 attempts are retained: 400 complete selections, six lease-refused starts,
+260 zero-CPU cancellations and one nine-row incomplete attempt stopped by an operational
+watchdog error. The complete replacement agrees on all 405 shared learning fields.
+No measurement binary was changed. Allocated cost was 161,965 CPU-seconds for the grid
+plus 7,905 for the pilot: **47.186111 CPU-hours**, below 200. No active reservation remains.
+Operations are independently versioned; the final launcher selects the exact Slurm array
+element, retains its allocation response and enforces node-side checks. Future comparisons
+must preserve these scientific configurations and report floor cases, finite budgets and
+all attempts; a flat observed interval does not establish a learning ceiling.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
