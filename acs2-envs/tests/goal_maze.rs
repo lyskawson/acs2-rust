@@ -1,7 +1,7 @@
-use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration};
-use acs2_core::alp::cover;
+use acs2_core::action_selection::EpsilonGreedy;
 use acs2_core::agent::Agent;
+use acs2_core::alp::cover;
 use acs2_core::checkpoint::Checkpointed;
 use acs2_core::classifier::Classifier;
 use acs2_core::config::Configuration;
@@ -62,10 +62,10 @@ fn perception(value: &Value) -> Perception<8> {
 #[test]
 fn additions_match_exhaustive_pyalcs_probes_without_extending_p9() {
     let data = fixture("goal_maze_probes");
-    assert_eq!(data["mazes"].as_array().unwrap().len(), 3);
+    assert_eq!(data["mazes"].as_array().unwrap().len(), 5);
     assert_eq!(VALIDATION_MAZES.len(), 5);
     assert_eq!(PERFORMANCE_MAZES.len(), 22);
-    assert_eq!(RESEARCH_MAZES.len(), 6);
+    assert_eq!(RESEARCH_MAZES.len(), 8);
     for entry in data["mazes"].as_array().unwrap() {
         let geometry = geometry_by_id(entry["id"].as_str().unwrap()).unwrap();
         assert_eq!(
@@ -112,6 +112,55 @@ fn maze6_removes_only_the_documented_maze7_wall() {
         assert_eq!(research.matrix, comparison.matrix);
         assert_eq!(research.max_episode_steps, 50);
         assert_eq!(comparison.max_episode_steps, 200);
+    }
+}
+
+#[test]
+fn corridor_mazes_have_unique_walkable_perceptions_and_pinned_roles() {
+    assert_eq!(
+        VALIDATION_MAZES
+            .iter()
+            .map(|geometry| geometry.id)
+            .collect::<Vec<_>>(),
+        [
+            "Maze4-v0",
+            "Maze5-v0",
+            "Maze7-v0",
+            "Woods1-v0",
+            "Woods100-v0"
+        ]
+    );
+    for (geometry, cells, diameter, transitions) in
+        [(&pyalcs::WOODS14, 19, 18, 35), (&pyalcs::MAZEMA, 15, 9, 33)]
+    {
+        let topology = MazeTopology::new(geometry).unwrap();
+        let perceptions: std::collections::BTreeSet<_> = topology
+            .walkable_cells()
+            .iter()
+            .map(|&cell| topology.perception_at(cell).symbols)
+            .collect();
+        assert_eq!(topology.walkable_cells().len(), cells);
+        assert_eq!(perceptions.len(), cells);
+        assert_eq!(pyalcs_transitions(geometry).len(), transitions);
+        let maximum = topology
+            .walkable_cells()
+            .iter()
+            .flat_map(|&start| {
+                topology
+                    .walkable_cells()
+                    .iter()
+                    .map(move |&goal| (start, goal))
+            })
+            .map(|(start, goal)| topology.shortest_distance(start, goal).unwrap())
+            .max();
+        assert_eq!(maximum, Some(diameter));
+        assert!(RESEARCH_MAZES
+            .iter()
+            .any(|candidate| candidate.id == geometry.id));
+        assert!(!VALIDATION_MAZES
+            .iter()
+            .chain(PERFORMANCE_MAZES)
+            .any(|candidate| candidate.id == geometry.id));
     }
 }
 
@@ -451,8 +500,8 @@ fn learning_equivalence<const G: usize, const M: usize, E: GoalEnvironment<8, G>
     let config = Configuration::default_protocol();
     let mut plain_agent = Agent::<8, _>::new(config.clone(), ChaChaRandomSource::from_seed(seed))
         .with_truncation_mode(mode);
-    let mut goal_agent = Agent::<M, _>::new(config, ChaChaRandomSource::from_seed(seed))
-        .with_truncation_mode(mode);
+    let mut goal_agent =
+        Agent::<M, _>::new(config, ChaChaRandomSource::from_seed(seed)).with_truncation_mode(mode);
     let mut plain = Maze::from_geometry(geometry, rng(seed));
     let mut joined = GoalConditioned::<_, 8, G, M>::new(goal_env);
     let selector = EpsilonGreedy {

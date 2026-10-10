@@ -77,12 +77,15 @@ def dump_geometry(path):
 
 def main():
     paths = sorted(GEOMETRIES.glob("*/*.rs"))
+    paths = [path for path in paths if path.stem not in ["mazema", "woods14"]] + [
+        GEOMETRIES / "pyalcs" / "mazema.rs", GEOMETRIES / "pyalcs" / "woods14.rs"
+    ]
     entries = [dump_geometry(path) for path in paths if path.name != "mod.rs"]
     output = ROOT / "fixtures" / "maze_knowledge.json"
     output.write_text(json.dumps({"mazes": entries}, indent=2) + "\n")
     additions = [
         dump_maze(name + "-v0", getattr(environments, name))
-        for name in ["Maze6", "MazeF3", "MazeB"]
+        for name in ["Maze6", "MazeF3", "MazeB", "Woods14", "MazeMA"]
     ]
     (ROOT / "fixtures" / "goal_maze_probes.json").write_text(
         json.dumps({"mazes": additions}, indent=2) + "\n"

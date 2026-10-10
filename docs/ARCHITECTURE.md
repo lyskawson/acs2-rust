@@ -1771,7 +1771,7 @@ scored against a goal that no longer applies.
 geometries and order (Maze4, Maze5, Maze7, Woods1, Woods100); it is independent of the
 provenance catalogue, so adding a geometry cannot silently extend P9.
 `PERFORMANCE_MAZES` is the existing 22-geometry ALCS comparison.
-`RESEARCH_MAZES` names Maze4/5/6/7 and the pyalcs MazeF3/MazeB research geometries.
+`RESEARCH_MAZES` names Maze4/5/6/7, Woods14, MazeMA and the pyalcs MazeF3/MazeB research geometries.
 `RESEARCH_TASKS`, `VALIDATION_ORACLES` and `PERFORMANCE_BENCHMARKS` state the task families.
 All four goal task families are implemented under `acs2-envs/src/goal/`.
 
@@ -1807,6 +1807,8 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | `Maze4-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze4.rs` |
 | `Maze5-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze5.rs` |
 | `Maze6-v0` | Research (multi-goal); added parity oracle | `maze/geometries/pyalcs/maze6.rs` |
+| `Woods14-v0` | Research (multi-goal corridor); added parity oracle | `maze/geometries/pyalcs/woods14.rs` |
+| `MazeMA-v0` | Research (multi-goal branches); added parity oracle | `maze/geometries/pyalcs/mazema.rs` |
 | `MazeB-v0` | Research (coordinate goals); added parity oracle | `maze/geometries/pyalcs/mazeb.rs` |
 | `MazeF3-v0` | Research (coordinate goals); added parity oracle | `maze/geometries/pyalcs/mazef3.rs` |
 | `Maze7-v0` | Validation (P7, P8, P11), performance (P9); Research (multi-goal; coordinate goals for F3/B) | `maze/geometries/pyalcs/maze7.rs` |

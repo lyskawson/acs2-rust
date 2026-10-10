@@ -40,13 +40,14 @@ def weighted_success(successors, goal_cases, caps):
     return {cap: Fraction(numerators[cap], denominator * actions ** cap) for cap in caps}
 
 
-def maze_probabilities(entry, caps=MAZE_CAPS):
+def maze_probabilities(entry, caps=MAZE_CAPS, goals=None):
     cells = [tuple(cell) for cell in entry["walkable_cells"]]
     indices = {cell: i for i, cell in enumerate(cells)}
     successors = [[indices.get((row + dr, col + dc), i) for dr, dc in OFFSETS]
                   for i, (row, col) in enumerate(cells)]
     cases = [([i == goal for i in range(len(cells))],
-              [int(i != goal) for i in range(len(cells))]) for goal in range(len(cells))]
+              [int(i != goal) for i in range(len(cells))])
+             for goal in (range(len(cells)) if goals is None else [indices[tuple(cell)] for cell in goals])]
     return weighted_success(successors, cases, caps)
 
 
@@ -107,6 +108,9 @@ def calculate():
     for name in ["Maze4-v0", "Maze5-v0", "Maze6-v0", "Maze7-v0"]:
         entry = next(entry for entry in mazes if entry["id"] == name)
         rows.extend(row(name, cap, probability) for cap, probability in maze_probabilities(entry).items())
+    for name, cap in [("Maze5-v0", 8), ("Woods14-v0", 18), ("MazeMA-v0", 9)]:
+        entry = next(entry for entry in mazes if entry["id"] == name)
+        rows.append(row(name, cap, maze_probabilities(entry, [cap])[cap]))
     rows.extend(row(f"BitFlipping-{n}", n, bit_flipping_probability(n, n)) for n in range(4, 17))
     for entry in hands:
         rows.extend(row(f"HandEye-{entry['side']}", cap, probability)

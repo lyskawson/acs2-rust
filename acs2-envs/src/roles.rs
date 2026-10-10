@@ -17,6 +17,8 @@ pub const RESEARCH_MAZES: &[MazeGeometry] = &[
     pyalcs::MAZE7,
     pyalcs::MAZEF3,
     pyalcs::MAZEB,
+    pyalcs::WOODS14,
+    pyalcs::MAZEMA,
 ];
 
 #[derive(Clone, Copy)]
@@ -36,6 +38,8 @@ impl ResearchTask {
             "maze7" => Some(Self::GoalMaze(&pyalcs::MAZE7)),
             "mazef3" => Some(Self::GoalMaze(&pyalcs::MAZEF3)),
             "mazeb" => Some(Self::GoalMaze(&pyalcs::MAZEB)),
+            "woods14" => Some(Self::GoalMaze(&pyalcs::WOODS14)),
+            "mazema" => Some(Self::GoalMaze(&pyalcs::MAZEMA)),
             "handeye3" => Some(Self::HandEye(3)),
             "handeye4" => Some(Self::HandEye(4)),
             "handeye5" => Some(Self::HandEye(5)),
