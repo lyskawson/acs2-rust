@@ -2855,108 +2855,162 @@ python3 -B experiments/relabeling-composition/summarize.py <outside-checkout>/co
 The summary script reads schema-2 rows only; the original schema-1 output stays archived
 outside the checkout.
 
-## Start-goal pair registration
+## Start-goal pair holdout
 
-`maze-pairs-v1` replaces the goal split as the main baseline protocol. The
-geometry-only rule and all resulting pairs are in
-[`pair-protocol.json`](../experiments/maze-baselines/pair-protocol.json), reproduced by
-[`register_pairs.py`](../experiments/maze-baselines/register_pairs.py). For every
-goal, rank starts by shortest distance, row and column, then partition three
-balanced distance-rank strata. Segment endpoints enter validation/test and
-interiors training, alternating endpoint order by goal/stratum/segment parity.
-Every block has every goal, at least three starts per goal, all three strata,
-two distinct distances per goal and at least forty pairs. Proportions are
-approximately 60/20/20, with actual rational proportions registered per maze.
-The ordered distinct walkable pairs include the original `9` landmark.
+The main maze protocol is **`maze-pairs-v1`**, registered and pushed before any
+learning under it in `eef356cfe050f5e11502e7a1e9a4a229bda29de3`.
+[`pair-protocol.json`](../experiments/maze-baselines/pair-protocol.json) contains
+every pair; [`register_pairs.py`](../experiments/maze-baselines/register_pairs.py)
+reconstructs the registration using only the reference geometry and exact
+integer absorbing-state random-policy calculation. The reference geometry is
+unmodified pyalcs commit `79d9f862e35385ba6fbad3a75415c96b9b116500`.
 
-Training will draw a uniform goal followed by a uniform registered training
-start for that goal. Evaluation gives every pair equal weight separately in
-training, validation and test, using each block's exact integer random floor
-and reachability ceiling. The caps remain 5/8/10/10/18/9. The budget rule is
-registered before learning: `2M * ceil(graph diameter / 10)` interactions for
-both agents. `maze-goals-v1` is preserved unchanged as an auxiliary protocol;
-its twenty-seed proposal is superseded and must not be submitted.
+For each goal in row/column order, rank every other walkable start by shortest
+eight-action distance, row and column. Split ranks into three balanced contiguous
+strata, giving remainders to earlier strata. Within a stratum make
+`max(1, floor((size+2)/5))` balanced contiguous segments. Segment endpoints enter
+validation/test, with their order alternating by goal-index plus stratum-index
+plus segment-index parity; interiors enter training. Sort starts within each
+goal by row/column. No seed or learning result enters this rule.
 
-## Maze baselines with held-out goals
+Every goal must have at least three starts in each block, including one from
+each distance-rank stratum and two distinct distances; every maze block must
+have at least forty pairs. The disjoint union is all ordered distinct walkable
+pairs, including the original `9` landmark. The rounded proportions are near
+60/20/20; exact proportions and counts are registered explicitly.
 
-The final maze scope is Maze4, Maze5, Maze6, Maze7, Woods14 and MazeMA, with
-eight-neighbour perceptions and coordinate goals. Their geometry-only registration
-is [`experiments/maze-baselines/protocol.json`](../experiments/maze-baselines/protocol.json),
-committed before protocol learning in `15ed86132b27cde4658f2581d95ead27f481ad68`.
-The old same-goal grid remains a pilot. Final baseline results require a separately
-approved twenty-seed plan and are not inferred from the short diagnostics.
-
-Maze4=5, Maze6=10 and Maze7=10 preserve their pilot caps. Maze5=8, Woods14=18 and
-MazeMA=9 use the eight-action graph diameter, the smallest horizon covering all
-distinct start-goal pairs. The legacy Maze4 cap misses exactly `(1,1)->(6,6)` and
-the reverse, distance six; these remain explicit in the registration. Every other
-pair is within its maze's cap. Every block's exact random-policy floor is below
-0.20; rational values and their reachability ceilings are stored with the pools.
-
-| Maze | Cap | Training goals / pairs | Validation goals / pairs | Test goals / pairs | Random floor: training / validation / test |
+| Maze | Cap | Training pairs | Validation pairs | Test pairs | Training/validation/test proportions |
 |---|---:|---:|---:|---:|---|
-| Maze4 | 5 | 15 / 390 | 6 / 156 | 6 / 156 | 0.087140 / 0.085437 / 0.085767 |
-| Maze5 | 8 | 23 / 828 | 7 / 252 | 7 / 252 | 0.080953 / 0.083255 / 0.088569 |
-| Maze6 | 10 | 23 / 828 | 7 / 252 | 7 / 252 | 0.102138 / 0.094984 / 0.111968 |
-| Maze7 | 10 | 24 / 840 | 6 / 210 | 6 / 210 | 0.105097 / 0.097330 / 0.093619 |
-| Woods14 | 18 | 13 / 234 | 3 / 54 | 3 / 54 | 0.130578 / 0.138296 / 0.115840 |
-| MazeMA | 9 | 9 / 126 | 3 / 42 | 3 / 42 | 0.130235 / 0.098438 / 0.148073 |
+| Maze4 | 5 | 378 | 162 | 162 | 7/13, 3/13, 3/13 |
+| Maze5 | 8 | 888 | 222 | 222 | 2/3, 1/6, 1/6 |
+| Maze6 | 10 | 888 | 222 | 222 | 2/3, 1/6, 1/6 |
+| Maze7 | 10 | 828 | 216 | 216 | 23/35, 6/35, 6/35 |
+| Woods14 | 18 | 228 | 57 | 57 | 2/3, 1/6, 1/6 |
+| MazeMA | 9 | 120 | 45 | 45 | 4/7, 3/14, 3/14 |
 
-All ceilings are one except Maze4 training `389/390` and validation `155/156`.
-Goal difficulty is the integer sum of shortest distances from every other start.
-Rank by that sum, row and column; form three balanced contiguous strata. Within
-each, balanced segments contribute alternating endpoint goals to validation and
-test, and interior goals to training. The exact segment rule is in
-[`maze-baselines/README.md`](../experiments/maze-baselines/README.md) and its executable
-registration. A goal split needs at least three goals, forty pairs and all three
-difficulty strata in every block. All mazes meet this criterion; no pair split is
-needed. Three held-out goals in each small maze do not estimate variation across
-mazes or across arbitrary goal partitions.
+Caps are unchanged from the goal registration. Maze4 has two explicit six-step
+pairs beyond its legacy cap five: `(6,6)->(1,1)` and `(1,1)->(6,6)`, both in
+validation. Its validation ceiling is 160/162; other blocks' ceilings are one.
+Each block has its own exact random floor below 0.20. Test floors are respectively
+0.07961, 0.07676, 0.10023, 0.09960, 0.13635 and 0.11893.
 
-`MazeGoalDistributions` constructs separate tasks. `TaskProtocol` keeps evaluation
-tasks at the measurement boundary. Only its training task enters
-`TrainingEnvironment`, whose goal-registration and environment-pool interfaces
-contain training goals. Starts remain uniform over every other walkable cell,
-including held-out cells and the original reward landmark. Evaluation enumerates
-every pair of each block with weight `1/(goals*(cells-1))`. Immutable action calls
-use independent evaluation streams; complete state checks include replay and RNG.
-Raw achieved cells may equal held-out cells, as future HER needs. The held-out
-desired-goal sets may not enter training, sample selection or utility.
+Training draws a uniform goal from all walkable cells, then a uniform start from
+that goal's registered training starts. Every goal has the same number of starts
+in a block, so training is also uniform over training pairs. Both agents share
+this boundary and random-stream law. The agent receives all goal identifiers
+and training resets; the measurement layer retains validation/test pair sets.
+A held-out pair is an episode-start holdout: training trajectories may visit its
+start and traverse transitions also present in evaluation. It does not hold out
+transitions or guarantee generalization to an unseen goal or maze.
 
-Measurement rows advance to schema **4**. Split rows put evaluation fields inside
-`evaluation_blocks.training`, `.validation` and `.test`, each with its own floor,
-ceiling, pair count, success and optional per-start diagnostics. No ambiguous
-top-level success remains. Training counters and costs remain top-level; metadata
-embeds the registration. The full-pool path preserves old learning fields and adds
-`goal_protocol.id = full_pool` with null blocks. Schemas 2 and 3 remain readable via
-[`grid/row_schema.py`](../experiments/grid/row_schema.py). The archived regression
-fixture pins eighteen rows: three full-pool configurations, both agents, seed 42
-and three points each. Neither learner nor core configuration changes.
+Evaluation is read-only and exhaustive, with exact equal pair weights in each
+of the three blocks. Schema 5 adds goal-conditioned knowledge; schemas 2–4 remain
+readable through [`grid/row_schema.py`](../experiments/grid/row_schema.py). The
+full-pool learning regression remains eighteen rows against the archived oracle,
+with every original learning/evaluation field preserved. Neither learner nor
+core configuration, replay sample, checkpoint identity or codec changes.
+The budget rule was registered before pair-protocol learning:
+`2M * ceil(eight-action graph diameter / 10)` interactions, equal for both
+agents: 2M on five mazes, 4M on Woods14. This is a measurement horizon and
+makes no convergence claim.
 
-The composition example's registered path uses the complete training pool as its
-fixed candidate set; outside-candidate shares therefore mean outside training,
-not outside goals observed so far. Its rows use schema 3; the original schema-2
-composition path and archived summaries retain their meanings.
+## Goal holdout diagnostics
 
-[`experiments/grid/`](../experiments/grid/) is the single reusable copy of pilot
-execution tools. Experiment-specific manifests and analysis stay in
+The unchanged auxiliary protocol **`maze-goals-v1`** is in
+[`protocol.json`](../experiments/maze-baselines/protocol.json), preregistered in
+`15ed86132b27cde4658f2581d95ead27f481ad68`. Its SHA-256 remains
+`7baac478cbf6f7d4c2ab86d2784ce63c60399817fc22f8d20cee2bddcb9b8eff`.
+It partitions goals by their integer distance sum, with every other walkable
+cell eligible as a start. Training/validation/test goal counts are 15/6/6,
+23/7/7, 23/7/7, 24/6/6, 13/3/3 and 9/3/3 in the six-maze order above.
+There will be no twenty-seed grid for this protocol in the current scope.
+Its earlier proposal is superseded and the submission tools reject that stage.
+
+The diagnostic runs used clean measurement commit
+`4eecd194869680e44797228623dd9983849a4551`: both agents, seeds 42–46,
+checkpoints 1k/10k/100k/200k interactions, all six mazes and their registered
+caps. At 200k, across-seed mean success was:
+
+| Maze | ACS2 training/validation/test | ACS2ER training/validation/test | Test random floor |
+|---|---|---|---:|
+| Maze4 | 0.3503 / 0.0641 / 0.0397 | 0.3097 / 0.0410 / 0.1128 | 0.08577 |
+| Maze5 | 0.2094 / 0.0317 / 0.0929 | 0.2184 / 0.0437 / 0.0810 | 0.08857 |
+| Maze6 | 0.2447 / 0.0254 / 0.0635 | 0.2459 / 0.0675 / 0.0532 | 0.11197 |
+| Maze7 | 0.2576 / 0.0352 / 0.0352 | 0.2321 / 0.0800 / 0.0486 | 0.09362 |
+| Woods14 | 0.2581 / 0.1778 / 0.1259 | 0.1889 / 0.1741 / 0.0741 | 0.11584 |
+| MazeMA | 0.3238 / 0.1000 / 0.1476 | 0.3317 / 0.1476 / 0.2048 | 0.14807 |
+
+Transfer was weak and inconsistent compared with training improvement; these
+five-seed point means are not a universal proof of absence of transfer. Some
+held-out means exceed their floors, including MazeMA ACS2ER. The separate
+seed-42 cluster cost pilot evaluated through 10M interactions at
+1k/3k/10k/30k/100k/200k/300k/1M/2M/4M/5M/10M. At 10M its Maze4 ACS2 test
+success was 0.0256 against floor 0.08577; ACS2ER was 0.1731. One seed cannot
+establish a performance ceiling or an agent ranking.
+
+On the non-learning composition probe, seeds 42–46 and 10k interactions per
+maze, unfiltered achieved-goal strategies selected 31–46% of goals outside the
+fixed training set. This would give HER access to held-out desired goals while
+TU's fixed training-goal candidate set could not select them. Pair holdout
+keeps all goals in training and removes that goal-exposure imbalance. Together
+with poor transfer diagnostics, this motivated the preapproved alternative.
+The original geometry, goal pools, local data and cost-pilot data remain archived.
+
+## Goal-conditioned anticipation knowledge
+
+Every maze measurement row reports `knowledge`, the share of `(transition, goal)`
+cases correctly anticipated by at least one classifier with quality strictly
+above `theta_r`, using the core's existing `anticipation_fraction`. Enumerate all
+walkable transitions of the multi-goal maze, including departures from the
+original landmark `9`, exclude wall bumps, join every walkable goal to both
+sides, and exclude transitions starting at their own goal. The denominator is
+transition-count times `(goal-count - 1)`; this secondary metric is shared across
+blocks and is independent of the pair split and episode cap. Rows record it as
+`knowledge_transition_goal_pairs`. Other task types and unevaluated control
+runs use null until they provide a knowledge universe.
+
+Knowledge runs outside training timers and match counters, consumes no random
+stream, and takes immutable population access. Exhaustive populations score one,
+empty populations and quality exactly at the threshold score zero, goal-specific
+classifiers count only under their matching goal, and an independent geometry
+and symbol enumeration checks a fixed mixed population. State comparisons cover
+ACS2/ACS2ER populations, marks, numerosity, RNG, replay and training counters.
+
+This is related to the predecessors' knowledge metric, but their reported
+multi-goal values cannot be compared numerically without recomputation. Their
+pyalcs matching used a truncated `zip` that ignored the goal portion of the
+condition. This implementation matches the entire joined condition, including
+both coordinate goal symbols, and measures the corrected goal-dependent model.
+
+## Maze baseline execution and analysis
+
+[`experiments/grid/`](../experiments/grid/) is the single shared execution path;
+experiment-specific registrations and analysis stay in
 [`maze-baselines/`](../experiments/maze-baselines/). Node guards verify clean pinned
 source, musl binary hash, exact allocation identity, CPU model, preset and rows;
-they retain the first-row watchdog, process timeout and STOP on failure. Submission
-checks the shared grant and test-only scheduling, and accounts pilot plus spent,
-reserved and new limits against forty CPU-hours. It uses one CPU per job and
-20–40 concurrency, without host pinning, leases or laptop supervision. Raw data,
-resolved plans, approvals and allocation accounting stay outside the checkout.
+first-row and process watchdogs stop the phase on failure. Submission checks the
+shared grant and test-only scheduling, counting pilot plus spent, reserved and
+new hard limits against forty CPU-hours. Jobs use one CPU and 20–40 concurrency,
+without host pinning, leases or laptop supervision. Raw data, accounting,
+resolved plans, approvals and Polish reports stay outside Git.
 
-The pending [`maze-baselines/grid-plan.json`](../experiments/maze-baselines/grid-plan.json)
-uses `2M * ceil(graph diameter / 10)` interactions per agent/seed: 2M on five
-mazes and 4M on Woods14. Seeds 42–61 produce 240 runs and 1,960 rows. Its primary
-test score is each seed's equal mean over registered checkpoints; paired ER minus
-ACS2 differences use t(19) intervals. The threshold is half the test ceiling at
-the first registered point reaching it, without interpolation. The cost pilot
-completed twelve allocations and 144 rows, spending 4,475 allocated CPU-seconds.
-The proposed mixed-array hard limits plus that pilot total 31.91 CPU-hours.
-The plan remains pending; no final baseline verdict is attached to these diagnostics.
+The primary score is test success averaged equally over registered nominal
+checkpoints within a seed, then across seeds 42–61. Paired ACS2ER-minus-ACS2
+differences receive Student t(19) 95% intervals, critical value
+2.093024054408263. Training and validation are diagnostic side blocks. The
+threshold is the first registered nominal point where across-seed mean test
+success reaches half its own ceiling, with no interpolation and null if absent.
+If neither final lower 95% test bound exceeds its floor, retain the baseline for
+successor methods; otherwise flag a maze as too easy for speed ranking if ACS2
+already reaches 90% of its ceiling at the first point. Retain all configurations
+and all three blocks regardless of this diagnostic verdict.
+
+The completed goal cost pilot spent 4,475 allocated CPU-seconds in twelve
+allocations and 144 rows. The new twenty-seed pair grid requires its own
+registered costed plan and explicit approval of its exact bytes. The changed
+training distribution and knowledge evaluation are assessed before reusing
+that cost calibration. The composition example retains its explicit
+`maze-goals-v1` diagnostic path and the archived schema-2 full-pool path.
 
 ## Clippy — the determinism invariants, checked by machine
 

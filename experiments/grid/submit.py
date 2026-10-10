@@ -18,8 +18,10 @@ def execute(command):
 def require_authorization(root, plan, digest, approval_path=None):
     if plan['stage'] == 'authorized_cost_pilot' and plan['seeds'] == [42]:
         return
+    if plan['stage'] not in ('grid_pending_approval', 'approved_grid'):
+        raise ValueError('superseded or unsupported experiment stage')
     approval = json.loads(Path(approval_path or root / 'approval.json').read_text())
-    if plan['stage'] not in ('grid_pending_approval', 'approved_grid') or approval.get('plan_sha256') != digest or approval.get('approved') is not True:
+    if approval.get('plan_sha256') != digest or approval.get('approved') is not True:
         raise ValueError('grid requires explicit approval of these plan bytes')
 
 

@@ -398,7 +398,7 @@ fn recorder_passes_read_only_evaluation_and_reports_optional_provenance_and_stor
     );
     let mut agent = RecordOnly::new();
     let rows = run_goal_agent(&task, &mut agent, 42, &[50, 100], "test", true);
-    assert_eq!(rows[1]["schema"], 4);
+    assert_eq!(rows[1]["schema"], 5);
     assert_eq!(
         rows[1]["trajectory_logical_bytes"],
         agent.store.logical_bytes()

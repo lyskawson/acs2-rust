@@ -211,7 +211,7 @@ fn every_evaluation_block_uses_its_registered_goals_weights_floor_and_ceiling() 
             &mut |row| rows.push(row),
         );
         let row = &rows[0];
-        assert_eq!(row["schema"], 4);
+        assert_eq!(row["schema"], 5);
         assert!(row.get("success").is_none());
         assert_eq!(row["evaluation_blocks"].as_object().unwrap().len(), 3);
         for (block, task) in [

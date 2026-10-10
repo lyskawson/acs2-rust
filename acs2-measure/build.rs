@@ -66,6 +66,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../acs2-trajectory/src");
     println!("cargo:rerun-if-changed=../Cargo.lock");
     println!("cargo:rerun-if-changed=../experiments/maze-baselines/protocol.json");
+    println!("cargo:rerun-if-changed=../experiments/maze-baselines/pair-protocol.json");
     println!("cargo:rerun-if-changed=../.git");
     for path in git_watch_paths(Path::new(&manifest)) {
         println!("cargo:rerun-if-changed={}", path.display());

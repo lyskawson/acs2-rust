@@ -55,7 +55,7 @@ fn one_row_contains_the_configuration_agent_seed_point_and_references() {
         .is_some_and(|commit| commit.len() == 40));
     assert!(row["preset"]["beta"].is_number());
     assert!(row["agent_parameters"].is_object());
-    assert_eq!(row["schema"], 4);
+    assert_eq!(row["schema"], 5);
     assert!(row["replay_diagnostics"].is_null());
     assert!(row["starts"].is_null());
     assert!(row["host"].as_str().is_some_and(|value| !value.is_empty()));
@@ -415,7 +415,7 @@ fn registered_maze_cli_keeps_three_distributions_separate() {
     );
     let row: serde_json::Value =
         serde_json::from_str(fs::read_to_string(&out).unwrap().trim()).unwrap();
-    assert_eq!(row["schema"], 4);
+    assert_eq!(row["schema"], 5);
     assert!(row.get("success").is_none());
     assert_eq!(row["goal_protocol"]["id"], "maze-goals-v1");
     for (block, pairs) in [("training", 234), ("validation", 54), ("test", 54)] {
@@ -462,4 +462,49 @@ fn registered_maze_cli_rejects_unregistered_caps_pools_and_encodings() {
         assert!(!status.status.success());
         assert!(!out.exists());
     }
+}
+
+#[test]
+fn pair_protocol_cli_emits_three_pair_blocks_and_knowledge() {
+    let out = std::env::temp_dir().join(format!("acs2-pair-cli-{}.jsonl", std::process::id()));
+    let status = Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args([
+            "--task",
+            "mazema",
+            "--cap",
+            "9",
+            "--protocol",
+            "maze-pairs-v1",
+            "--agents",
+            "acs2,acs2er",
+            "--seeds",
+            "42",
+            "--targets",
+            "20",
+            "--out",
+        ])
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(
+        status.status.success(),
+        "{}",
+        String::from_utf8_lossy(&status.stderr)
+    );
+    let contents = fs::read_to_string(&out).unwrap();
+    let rows: Vec<serde_json::Value> = contents
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(rows.len(), 2);
+    for row in rows {
+        assert_eq!(row["schema"], 5);
+        assert_eq!(row["goal_protocol"]["id"], "maze-pairs-v1");
+        assert!(row["knowledge"].is_number());
+        assert_eq!(row["knowledge_transition_goal_pairs"], 476);
+        for (name, pairs) in [("training", 120), ("validation", 45), ("test", 45)] {
+            assert_eq!(row["evaluation_blocks"][name]["evaluation_pairs"], pairs);
+        }
+    }
+    fs::remove_file(out).unwrap();
 }

@@ -12,8 +12,9 @@ use acs2_envs::goal::taxi::Taxi;
 use acs2_envs::maze::topology::MazeTopology;
 use acs2_envs::roles::ResearchTask;
 use acs2_measure::goal_protocol::{
-    registered_configuration, MazeGoalDistributions, MAZE_PROTOCOL_ID,
+    registered_configuration, MazeGoalDistributions, TaskProtocol, MAZE_PROTOCOL_ID,
 };
+use acs2_measure::pair_protocol::{MazePairDistributions, MAZE_PAIR_PROTOCOL_ID};
 use acs2_measure::runner::run_protocol_with_sink;
 use acs2_measure::runner::{run_with_sink, AgentKind, RunMetadata, RunSettings};
 use acs2_measure::task::{
@@ -160,37 +161,29 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
     encoding: &'static str,
 ) {
     if let Some(protocol) = &options.protocol {
-        assert_eq!(protocol, MAZE_PROTOCOL_ID);
         assert_eq!(options.pool, "full", "registered protocol owns its pools");
         assert_eq!(
             encoding, "coordinates",
             "registered protocol uses coordinate goals"
         );
+        if protocol == MAZE_PAIR_PROTOCOL_ID {
+            let distributions = MazePairDistributions::<E, G>::registered(
+                &options.task,
+                geometry,
+                options.cap,
+                encoding,
+            );
+            execute_protocol::<_, 8, G, M>(&distributions.protocol(), options, writer, metadata);
+            return;
+        }
+        assert_eq!(protocol, MAZE_PROTOCOL_ID);
         let distributions = MazeGoalDistributions::<E, G>::registered(
             &options.task,
             geometry,
             options.cap,
             encoding,
         );
-        for &seed in &options.seeds {
-            for &kind in &options.agents {
-                run_protocol_with_sink::<_, _, 8, G, M>(
-                    &distributions.protocol(),
-                    kind,
-                    seed,
-                    &options.targets,
-                    metadata,
-                    RunSettings {
-                        evaluate_points: true,
-                        capture_final_state: false,
-                    },
-                    &mut |row| {
-                        writeln!(writer, "{row}").expect("write result");
-                        writer.flush().expect("flush result");
-                    },
-                );
-            }
-        }
+        execute_protocol::<_, 8, G, M>(&distributions.protocol(), options, writer, metadata);
         return;
     }
     let topology = MazeTopology::new(geometry).expect("valid geometry");
@@ -201,6 +194,35 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
     };
     let task = MazeTask::<E, G>::new(options.task.clone(), geometry, pool, options.cap, encoding);
     execute::<_, 8, G, M>(&task, options, writer, metadata);
+}
+
+fn execute_protocol<T, const S: usize, const G: usize, const M: usize>(
+    protocol: &TaskProtocol<'_, T>,
+    options: &Options,
+    writer: &mut BufWriter<File>,
+    metadata: &RunMetadata<'_>,
+) where
+    T: Task<S, G, M>,
+{
+    for &seed in &options.seeds {
+        for &kind in &options.agents {
+            run_protocol_with_sink::<_, _, S, G, M>(
+                protocol,
+                kind,
+                seed,
+                &options.targets,
+                metadata,
+                RunSettings {
+                    evaluate_points: true,
+                    capture_final_state: false,
+                },
+                &mut |row| {
+                    writeln!(writer, "{row}").expect("write result");
+                    writer.flush().expect("flush result");
+                },
+            );
+        }
+    }
 }
 
 fn handeye<const SIDE: usize, const S: usize, const M: usize>(
@@ -284,7 +306,10 @@ fn hardware() -> (String, String) {
 fn main() {
     let options = Options::parse();
     if let Some(protocol) = &options.protocol {
-        assert_eq!(protocol, MAZE_PROTOCOL_ID);
+        assert!(matches!(
+            protocol.as_str(),
+            MAZE_PROTOCOL_ID | MAZE_PAIR_PROTOCOL_ID
+        ));
         assert_eq!(options.pool, "full", "registered protocol owns its pools");
         assert_eq!(
             options.encoding, "coordinates",
@@ -297,9 +322,13 @@ fn main() {
             ),
             "goal partition protocol is for mazes"
         );
+        let configuration = if protocol == MAZE_PAIR_PROTOCOL_ID {
+            acs2_measure::pair_protocol::registered_configuration(&options.task)
+        } else {
+            registered_configuration(&options.task)
+        };
         assert_eq!(
-            registered_configuration(&options.task)["cap"],
-            options.cap,
+            configuration["cap"], options.cap,
             "use the registered episode cap"
         );
     }

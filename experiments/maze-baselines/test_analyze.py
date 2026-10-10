@@ -4,7 +4,7 @@ from pathlib import Path
 import statistics
 import unittest
 
-from analyze import analyze_values
+from analyze import analyze_knowledge, analyze_values
 from grid_protocol import require_budget
 
 
@@ -17,6 +17,15 @@ class MazeAnalysisTests(unittest.TestCase):
         self.assertEqual(result['primary_score']['acs2']['mean'], 2 / 3)
         self.assertEqual(result['paired_primary_difference']['mean'], 0)
         self.assertEqual(result['first_nominal_interactions_at_threshold']['acs2'], 2)
+
+    def test_knowledge_is_secondary_and_summarized_with_paired_seed_differences(self):
+        series = self.series([0, 1, 1])
+        series['acs2er', 42] = [0.3, 1, 1]
+        result = analyze_knowledge(series, [1, 2, 100])
+        self.assertEqual(result['checkpoint_mean']['acs2']['mean'], 2 / 3)
+        self.assertAlmostEqual(result['paired_checkpoint_mean_difference']['mean'], 0.005)
+        self.assertNotIn('verdict', result)
+        self.assertNotIn('first_nominal_interactions_at_threshold', result)
 
     def test_paired_interval_uses_twenty_differences_and_t19(self):
         series = self.series([0.2, 0.4])
@@ -52,8 +61,9 @@ class MazeAnalysisTests(unittest.TestCase):
     def test_proposed_budgets_use_geometry_and_keep_registered_distributions(self):
         root = Path(__file__).resolve().parent
         plan = json.loads((root / 'grid-plan.json').read_text())
-        registration = json.loads((root / 'protocol.json').read_text())
-        self.assertEqual(plan['stage'], 'grid_pending_approval')
+        registration_name = 'protocol.json' if plan['stage'] == 'superseded_goal_grid' else 'pair-protocol.json'
+        registration = json.loads((root / registration_name).read_text())
+        self.assertIn(plan['stage'], ('grid_pending_approval', 'superseded_goal_grid'))
         self.assertEqual(plan['seeds'], list(range(42, 62)))
         self.assertEqual(plan['agents'], ['acs2', 'acs2er'])
         self.assertEqual(len(plan['configurations']), 6)

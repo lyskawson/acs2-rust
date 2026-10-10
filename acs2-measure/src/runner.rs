@@ -16,6 +16,7 @@ use acs2_core::measurement::{
 use acs2_core::perception::Perception;
 use acs2_core::rl::{BootstrapEstimator, MaxFitnessBootstrap};
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::support::knowledge::{anticipation_fraction, Transition};
 use acs2_core::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use serde_json::{json, Value};
@@ -116,6 +117,9 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn population_numerosity(&self) -> u32;
     fn population_logical_bytes(&self) -> usize;
     fn population_mark_entries(&self) -> usize;
+    fn knowledge(&self, _transitions: &[Transition<M>]) -> Option<f64> {
+        None
+    }
     fn replay_logical_bytes(&self) -> usize;
     fn trajectory_logical_bytes(&self) -> usize {
         0
@@ -143,6 +147,15 @@ impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAg
         } else {
             "acs2"
         }
+    }
+    fn knowledge(&self, transitions: &[Transition<M>]) -> Option<f64> {
+        Some(anticipation_fraction(
+            self.agent.population(),
+            self.agent.config().theta_r,
+            transitions
+                .iter()
+                .map(|transition| Transition::new(transition.p0, transition.action, transition.p1)),
+        ))
     }
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64) {
         let selector = EpsilonGreedy {
@@ -320,10 +333,9 @@ where
             "one reset per training call"
         );
         self.resets_in_call += 1;
-        let start = match self.task.training_goal(&mut self.pool_rng) {
-            Some(goal) => self.inner.reset_with_goal(goal),
-            None => self.inner.reset(),
-        };
+        let start = self
+            .task
+            .reset_training(&mut self.inner, &mut self.pool_rng);
         self.desired = Some(start.desired);
         self.episode_start = Some(start);
         GoalLayout::<S, G, M>::join(&start.observation, &start.desired)
@@ -797,6 +809,8 @@ pub fn assert_protocol_evaluation_read_only<
     let mut evaluated = make_agent();
     let mut control = make_agent();
     let metadata = RunMetadata::test("test");
+    let mut evaluated_rows = Vec::new();
+    let mut control_rows = Vec::new();
     run_goal_agent_protocol_with_sink(
         protocol,
         &mut evaluated,
@@ -804,7 +818,7 @@ pub fn assert_protocol_evaluation_read_only<
         targets,
         &metadata,
         true,
-        &mut |_| {},
+        &mut |row| evaluated_rows.push(row),
     );
     run_goal_agent_protocol_with_sink(
         protocol,
@@ -813,9 +827,28 @@ pub fn assert_protocol_evaluation_read_only<
         targets,
         &metadata,
         false,
-        &mut |_| {},
+        &mut |row| control_rows.push(row),
     );
     assert_eq!(snapshot(&evaluated), snapshot(&control));
+    for (evaluated, control) in evaluated_rows.iter().zip(&control_rows) {
+        for key in [
+            "actual_steps",
+            "episodes",
+            "online_updates",
+            "replay_updates",
+            "match_formations_train",
+            "classifier_perception_tests_train",
+            "population_classifiers",
+            "population_numerosity",
+            "population_logical_bytes",
+            "population_mark_entries",
+            "replay_samples",
+            "replay_logical_bytes",
+            "replay_diagnostics",
+        ] {
+            assert_eq!(evaluated[key], control[key], "evaluation changed {key}");
+        }
+    }
 }
 
 struct EvaluationPlan<'a, T: Task<S, G, M>, const S: usize, const G: usize, const M: usize> {
@@ -863,6 +896,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
     let mut cumulative = MatchCounters::default();
     let mut train_elapsed = Duration::ZERO;
     let mut eval_elapsed = Duration::ZERO;
+    let knowledge_transitions = task.knowledge_transitions();
     let _counter = MatchCountGuard::new();
     for &target in plan.targets {
         let train_started = Instant::now();
@@ -893,7 +927,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             EvalResult::default()
         };
         let mut row = json!({
-            "schema": 4, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
+            "schema": 5, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
             "host": plan.metadata.host, "cpu_model": plan.metadata.cpu_model,
             "task": task.name(), "cap": task.cap(), "goal_encoding": task.encoding(), "goal_pool": task.pool_label(),
             "agent": agent.name(), "evaluated_policy": agent.declared_policy(), "seed": plan.seed, "nominal_step": target,
@@ -951,6 +985,15 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             row["goal_protocol"] = json!({"id": "full_pool"});
             row["evaluation_blocks"] = Value::Null;
         }
+        row["knowledge"] = json!(knowledge_transitions.as_ref().and_then(|transitions| {
+            if plan.evaluate_points {
+                agent.knowledge(transitions)
+            } else {
+                None
+            }
+        }));
+        row["knowledge_transition_goal_pairs"] =
+            json!(knowledge_transitions.as_ref().map(Vec::len));
         eval_elapsed += eval_started.elapsed();
         row["wall_seconds_eval"] = json!(eval_elapsed.as_secs_f64());
         row["wall_seconds_total"] = json!((train_elapsed + eval_elapsed).as_secs_f64());

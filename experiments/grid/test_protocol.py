@@ -39,8 +39,25 @@ def split_row():
 class SharedGridTests(unittest.TestCase):
     def test_old_schemas_remain_readable_without_relabeling_their_distribution(self):
         old = json.loads((ROOT / 'fixtures/goal_measurement_regression.json').read_text())['configurations'][0]['rows'][0]
-        for schema in (2, 3, 4):
+        for schema in (2, 3, 4, 5):
             self.assertEqual(evaluation_blocks(dict(old, schema=schema)), {'full_pool': {key: old[key] for key in evaluation_blocks(dict(old, schema=2))['full_pool']}})
+
+    def test_pair_rows_require_knowledge_and_the_registered_transition_universe(self):
+        config, row = split_row()
+        registered = json.loads((ROOT / 'experiments/maze-baselines/pair-protocol.json').read_text())['configurations'][4]
+        config = dict(config, registration=registered, protocol='maze-pairs-v1', row_schema=5,
+                      knowledge_transition_goal_pairs=648)
+        row = dict(row, schema=5, knowledge=0.25, knowledge_transition_goal_pairs=648)
+        row['goal_protocol'] = {'id': 'maze-pairs-v1', 'configuration': registered}
+        for name, reference in registered['blocks'].items():
+            row['evaluation_blocks'][name].update(evaluation_pairs=reference['evaluation_pairs'],
+                random_floor=reference['random_floor'], reachable_within_cap=reference['reachable_within_cap'])
+        validate_blocks(row, config)
+        for value in (None, float('nan'), -0.01, 1.01):
+            with self.assertRaises(ValueError):
+                validate_blocks(dict(row, knowledge=value), config)
+        with self.assertRaises(ValueError):
+            validate_blocks(dict(row, knowledge_transition_goal_pairs=647), config)
 
     def test_blocks_and_references_are_validated_separately(self):
         config, row = split_row()
@@ -101,6 +118,8 @@ class SharedGridTests(unittest.TestCase):
             require_authorization(root, plan, digest)
             with self.assertRaises(ValueError):
                 require_authorization(root, plan, 'wrong')
+            with self.assertRaises(ValueError):
+                require_authorization(root, dict(plan, stage='superseded_goal_grid'), digest)
 
     def test_missing_approval_leaves_no_result_root(self):
         with tempfile.TemporaryDirectory() as directory:

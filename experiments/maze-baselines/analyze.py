@@ -33,6 +33,20 @@ def analyze_values(series, targets, floor, ceiling, threshold=0.5):
             'first_nominal_interactions_at_threshold': crossings}
 
 
+def analyze_knowledge(series, targets):
+    expected = {(agent, seed) for agent in ('acs2', 'acs2er') for seed in range(42, 62)}
+    if set(series) != expected or any(len(values) != len(targets) for values in series.values()):
+        raise ValueError('knowledge analysis requires every registered seed and point')
+    points = {agent: [{'nominal_step': point, **summarize([series[agent, seed][index] for seed in range(42, 62)])}
+                      for index, point in enumerate(targets)] for agent in ('acs2', 'acs2er')}
+    scores = {key: statistics.mean(values) for key, values in series.items()}
+    return {'points': points,
+            'checkpoint_mean': {agent: summarize([scores[agent, seed] for seed in range(42, 62)])
+                                for agent in ('acs2', 'acs2er')},
+            'paired_checkpoint_mean_difference': summarize([scores['acs2er', seed] - scores['acs2', seed]
+                                                            for seed in range(42, 62)])}
+
+
 def analyze(root, pilot):
     digest = (root / 'plan.sha256').read_text().strip()
     plan = load_plan(root / 'plan.json', digest)
@@ -41,6 +55,17 @@ def analyze(root, pilot):
     approval = json.loads((root / 'approval.json').read_text())
     if not approval.get('approved') or approval['plan_sha256'] != digest:
         raise ValueError('no matching grid approval')
+    reference_mode = plan['seed42_learning_reference']['mode']
+    if reference_mode not in ('new_protocol_pilot', 'cost_only_previous_protocol'):
+        raise ValueError('unregistered seed-42 reference policy')
+    pilot_digest = (pilot / 'plan.sha256').read_text().strip()
+    if pilot_digest != plan['pilot_plan_sha256']:
+        raise ValueError('cost reference differs from the registered pilot')
+    pilot_plan = load_plan(pilot / 'plan.json', pilot_digest)
+    if reference_mode == 'new_protocol_pilot' and pilot_plan['measurement_commit'] != plan['measurement_commit']:
+        raise ValueError('seed-42 learning comparison needs the same measurement source')
+    if reference_mode == 'cost_only_previous_protocol' and not plan['seed42_learning_reference'].get('reason'):
+        raise ValueError('cost reuse must state why learning equality cannot be tested')
     ledger = json.loads((root / 'ledger.json').read_text())
     records = allocation_rows((root / 'accounting.psv').read_text())
     expected_jobs = {f"{entry['array_id']}_{index}" for entry in ledger for index, _ in enumerate(entry['runs'])}
@@ -56,6 +81,7 @@ def analyze(root, pilot):
         if set(selected) != {(agent, seed) for agent in plan['agents'] for seed in range(42, 62)}:
             raise ValueError(f"incomplete configuration: {config['id']}")
         series = {name: {} for name in ('training', 'validation', 'test')}
+        knowledge = {}
         costs, compared = [], 0
         for key, attempt in sorted(selected.items()):
             agent, seed = key
@@ -74,7 +100,8 @@ def analyze(root, pilot):
                     raise ValueError('CPU model or preset differs')
             for name in series:
                 series[name][key] = [evaluation_blocks(row)[name]['success'] for row in rows]
-            if seed == 42:
+            knowledge[key] = [row['knowledge'] for row in rows]
+            if seed == 42 and reference_mode == 'new_protocol_pilot':
                 pilot_paths = list(pilot.glob(f"attempts/*/measurement/{config['id']}_{agent}_s42/rows.jsonl"))
                 if len(pilot_paths) != 1:
                     raise ValueError('pilot seed must have one complete reference')
@@ -97,6 +124,7 @@ def analyze(root, pilot):
                     config['registration']['blocks'][name]['reachable_within_cap'], plan['threshold_fraction_of_ceiling'])
                   for name in series}
         results.append({'configuration': config['id'], 'primary_block': 'test', 'blocks': blocks,
+                        'knowledge': analyze_knowledge(knowledge, config['targets']),
                         'costs': costs, 'attempts': inventory, 'seed42_learning_fields_compared': compared})
     destination = outside_repository(root / 'analysis')
     destination.mkdir(exist_ok=True)

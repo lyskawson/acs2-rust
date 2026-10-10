@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use acs2_core::goal::{Goal, GoalEnvironment, GoalStart};
 use acs2_core::perception::Perception;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::support::knowledge::Transition;
 use acs2_core::symbol::Symbol;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye, HandEyeState};
@@ -33,6 +34,12 @@ pub trait Task<const S: usize, const G: usize, const M: usize> {
     fn training_goal(&self, _rng: &mut ChaChaRandomSource) -> Option<Goal<G>> {
         None
     }
+    fn reset_training(&self, env: &mut Self::Env, rng: &mut ChaChaRandomSource) -> GoalStart<S, G> {
+        match self.training_goal(rng) {
+            Some(goal) => env.reset_with_goal(goal),
+            None => env.reset(),
+        }
+    }
     fn training_goals(&self) -> Option<&[Goal<G>]> {
         None
     }
@@ -43,6 +50,9 @@ pub trait Task<const S: usize, const G: usize, const M: usize> {
         None
     }
     fn analytical_reachability(&self) -> Option<(f64, f64, f64)> {
+        None
+    }
+    fn knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
         None
     }
 }
@@ -141,6 +151,9 @@ impl<E: MazeGoalEncoding<G>, const G: usize, const M: usize> Task<8, G, M> for M
     }
     fn training_goals(&self) -> Option<&[Goal<G>]> {
         Some(self.template.goal_pool())
+    }
+    fn knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
+        Some(crate::knowledge::maze_transitions(&self.template))
     }
 }
 

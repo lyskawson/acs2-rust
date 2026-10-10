@@ -8,12 +8,12 @@ EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachab
 
 
 def evaluation_blocks(row):
-    if row.get('schema') not in (2, 3, 4):
+    if row.get('schema') not in (2, 3, 4, 5):
         raise ValueError('unsupported measurement row schema')
     blocks = row.get('evaluation_blocks')
     if blocks is None:
         return {'full_pool': {key: row[key] for key in EVALUATION_FIELDS}}
-    if row['schema'] != 4 or set(blocks) != {'training', 'validation', 'test'}:
+    if row['schema'] not in (4, 5) or set(blocks) != {'training', 'validation', 'test'}:
         raise ValueError('expected three separate evaluation blocks')
     if any(key in row for key in EVALUATION_FIELDS):
         raise ValueError('split row contains ambiguous top-level evaluation fields')
@@ -24,6 +24,12 @@ def evaluation_blocks(row):
 
 def validate_blocks(row, config):
     blocks = evaluation_blocks(row)
+    if row['schema'] == 5 and config.get('protocol') == 'maze-pairs-v1':
+        knowledge = row.get('knowledge')
+        if not isinstance(knowledge, (int, float)) or not math.isfinite(knowledge) or not 0 <= knowledge <= 1:
+            raise ValueError('pair protocol requires finite knowledge in every row')
+        if row.get('knowledge_transition_goal_pairs') != config['knowledge_transition_goal_pairs']:
+            raise ValueError('knowledge uses a different transition-goal universe')
     if 'protocol' not in config:
         if set(blocks) != {'full_pool'}:
             raise ValueError('legacy configuration requires a full-pool row')
