@@ -1,4 +1,4 @@
-use crate::symbol::Symbol;
+use crate::representation::symbol::Symbol;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Perception<const N: usize> {

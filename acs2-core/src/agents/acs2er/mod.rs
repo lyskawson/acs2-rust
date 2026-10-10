@@ -1,15 +1,15 @@
 pub mod replay;
 
-use crate::action_selection::ActionSelector;
-use crate::alp::apply_alp;
+use crate::learning::action_selection::ActionSelector;
+use crate::learning::alp::apply_alp;
 use crate::checkpoint::{AgentState, Checkpointed};
-use crate::config::Configuration;
-use crate::environment::Environment;
-use crate::ga::apply_ga;
-use crate::population::{ClassifierRef, Population};
-use crate::rl::{apply_reinforcement_learning, BootstrapEstimator};
-use crate::rng::RandomSource;
-use crate::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
+use crate::support::config::Configuration;
+use crate::ports::environment::Environment;
+use crate::learning::ga::apply_ga;
+use crate::representation::population::{ClassifierRef, Population};
+use crate::learning::rl::{apply_reinforcement_learning, BootstrapEstimator};
+use crate::support::rng::RandomSource;
+use crate::agents::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 
 pub use replay::{ReplayConfiguration, ReplayMemory, ReplaySample};
 

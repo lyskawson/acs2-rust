@@ -1,6 +1,6 @@
-use crate::classifier::Classifier;
-use crate::perception::Perception;
-use crate::population::Population;
+use crate::representation::classifier::Classifier;
+use crate::representation::perception::Perception;
+use crate::representation::population::Population;
 
 pub struct Transition<const N: usize> {
     pub p0: Perception<N>,
@@ -57,9 +57,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Configuration;
-    use crate::effect::Effect;
-    use crate::symbol::Symbol;
+    use crate::support::config::Configuration;
+    use crate::representation::effect::Effect;
+    use crate::representation::symbol::Symbol;
 
     const VALIDATION: usize = 2;
 

@@ -37,7 +37,7 @@ knowledge". This mirrors how RNG is already injected via a core trait (§8).
 
 Match sets and action sets are `Vec<ClassifierRef>` where
 `ClassifierRef = usize` indexes into `Population`'s internal `Vec<Classifier<N>>`
-(`population.rs`). This deliberately avoids pyalcs's shared-mutable aliasing of
+(`acs2-core/src/representation/population.rs`). This deliberately avoids pyalcs's shared-mutable aliasing of
 the same classifier objects across population/match-set/action-set.
 
 Consequence that must be honored in P4/P5: a positional index is invalidated by
@@ -135,7 +135,7 @@ Methodology constraints that make the timing claim valid:
   estimate (§8: minimize per-step heap churn).
 - **Const-generic genome length `N`.** Core carries no environment dimension;
   the maze fixes `N = 8` at the edge (`MAZE_PERCEPTION_LEN`).
-- **Subsumption is a relational strategy module** (`subsumption.rs`, added in P3),
+- **Subsumption is a relational strategy module** (`acs2-core/src/learning/subsumption.rs`, added in P3),
   not methods on `Classifier`: free `is_subsumer(&Classifier, theta_exp, theta_r)`
   and `does_subsume(cl, other, theta_exp, theta_r)`, mirroring pyalcs
   `lcs/strategies/subsumption.py` (SPEC F.4). ALP (P4/P5) and GA (P5) reuse it.
@@ -158,7 +158,7 @@ Methodology constraints that make the timing claim valid:
 
 ## Truncation contract — the trial loop has NO internal step cap (read before writing `Maze::step`)
 
-Decided in P6, binding on P7. The shared trial loop (`agent.rs`,
+Decided in P6, binding on P7. The shared trial loop (`acs2-core/src/agents/acs2/mod.rs`,
 `run_explore_trial` / `run_exploit_trial`) follows Gymnasium delegation: it has
 **no internal iteration limit** and runs until the `Environment` sets
 `terminated || truncated`. Consequences that `acs2-envs::Maze` MUST honor:
@@ -173,7 +173,7 @@ Decided in P6, binding on P7. The shared trial loop (`agent.rs`,
   frozen policy cannot solve will infinite-loop** — the loop has nothing else to stop
   it. This is not a safety net the agent provides; the environment owns it.
 
-### Phase 2b — learning at an episode boundary
+### Learning at an episode boundary
 
 `trial::TruncationMode` is an agent-owned option shared by ACS2 and ACS2ER.
 `Bootstrap` is the default of both `new` and `with_population`. An ended episode
@@ -223,12 +223,12 @@ It does not turn an intrinsic finite-horizon objective into a continuing task;
 such an objective needs remaining time in the observation and terminal horizon
 semantics. Goal-task success within a short evaluation cap is a separate metric.
 
-`tests/truncation.rs` checks all four paths (ACS2 exploration/exploitation and
+`acs2-core/tests/truncation.rs` checks all four paths (ACS2 exploration/exploitation and
 ACS2ER replay/exploitation), a sample actually replayed twice after warmup,
 termination, both flags, success reward, constructor defaults, restore and the
 buffer guard. It also compares complete population fields and RNG after truncated
 and continuing exploration with GA off/on, and exercises next-match-set deletion
-and quality changes. `goal_maze.rs` adds an actual cap-one goal success in every
+and quality changes. `acs2-envs/tests/goal_maze.rs` adds an actual cap-one goal success in every
 path and mode. Deliberate mutations swapping modes, zeroing default truncation,
 bootstrapping termination and ignoring ACS2ER truncation each failed a focused
 test before being reverted. The P6 unreachable-goal regression keeps its original
@@ -259,7 +259,7 @@ classifiers. Values below are corrected default / pyalcs:
 These are short-run value differences under a random policy, not convergence,
 policy superiority or steps-to-goal evidence. Equal training success is expected
 at epsilon one. The diagnostic source and raw outputs are delivered outside the
-checkout; no runner or archived measurement is changed by this phase.
+checkout; this diagnostic changes no runner or archived measurement.
 
 ## P7 maze model — static geometry + agent coordinate (not matrix mutation)
 
@@ -360,7 +360,7 @@ M1 adds the Multiplexer (MPX) task as a NEW environment plus a NEW knowledge-eva
 capability, reusing the P0–P9-validated `acs2-core` domain unchanged. The maze measured
 path is byte-untouched: the only edits to existing files are additive `pub mod` lines
 (`acs2-core/src/lib.rs`, `acs2-envs/src/lib.rs`) and an additive `Configuration::mpx()`
-(`config.rs`); everything else is new files (`acs2-envs::multiplexer`,
+(`acs2-core/src/support/config.rs`); everything else is new files (`acs2-envs::multiplexer`,
 `acs2-core::knowledge`, `acs2-bench/src/bin/mpx.rs`). All P3–P8 + maze-parity tests stay
 green.
 
@@ -501,12 +501,12 @@ reaches. The metric is COMPACTNESS, not just knowledge. All GA parameters are th
 canonical pyalcs ACS2 defaults — M2a is purely the `do_ga` flag, zero new tuning:
 `theta_ga=100` (`lcs/agents/acs2/Configuration.py:18`; SPEC §E.1), `mu=0.3`, `chi=0.8`,
 `theta_as=20`, `theta_exp=20`, `do_subsumption=true`. Rust does NOT reproduce pyalcs's
-inferred GA-deletion bug (SPEC §E.4 `cl.is_marked` bound-method): `ga.rs:116` calls the
+inferred GA-deletion bug (SPEC §E.4 `cl.is_marked` bound-method): `acs2-core/src/learning/ga.rs:116` calls the
 method correctly — Rust is the correct side.
 
 Additive changes only: `--do-ga` on `mpx.rs`; a new `acs2-bench/src/bin/mpx_reach.rs`
 (reach + per-component memory + 4-way verdict, with `--time-cap-secs`); `libc` dep on the
-bench crate (for `getrusage` peak-RSS). `ga.rs`/`subsumption.rs`/`agent.rs` and the maze
+bench crate (for `getrusage` peak-RSS). `acs2-core/src/learning/ga.rs`/`acs2-core/src/learning/subsumption.rs`/`acs2-core/src/agents/acs2/mod.rs` and the maze
 measured path are untouched; P5 GA, P3 subsumption, P8 differential, and maze-parity tests
 all stay green, and the maze P9 learning metrics reproduce BYTE-IDENTICAL (GA flag keeps
 the maze bench on GA-off).
@@ -1084,7 +1084,7 @@ the checkpoint stays complete if PEE lands, not because a trajectory depends on 
 `get_seed` / `get_stream` / `get_word_pos` and the matching setters, and those three
 values determine the generator exactly, including a capture taken mid-block —
 `get_word_pos` accounts for the position inside the buffered 4-block window. Both are
-pinned in `acs2-core/src/rng.rs`.
+pinned in `acs2-core/src/support/rng.rs`.
 
 `RandomSource` gains `capture_state` / `restore_state` with defaults that return
 `None` / `false`, so every existing test double compiles unchanged and a source that
@@ -1645,24 +1645,69 @@ correct and was caught only by running a real chain through the parser.
 changes it without `--checkpoint-allow-eval-change` — or the stitched series carries two
 sampling rates and trials-to-success stops meaning anything.
 
-## Goal port — the trajectory-utility line
+## Goal port
 
 Added on `feature/trajectory-utility`. HER, trajectory utility and every agent compared with
 them need what `Environment<N>` does not have: a goal, and the reward and termination of a
 stored transition recomputed for a goal the transition was not collected under.
-`acs2-core::goal` supplies that as a second port. It is additive — `Environment<N>`,
+`acs2_core::ports::goal` supplies that as a second port. It is additive — `Environment<N>`,
 `StepOutcome`, `Info`, `Configuration`, `Classifier` and the checkpoint codec are unchanged,
 and the maze and multiplexer paths do not see it.
 
-### Nothing on the MPX path may move
+### Core module groups and compatibility
+
+Core source is grouped by role; paths in this table are relative to `acs2-core/src/`:
+
+| Group | Modules |
+|---|---|
+| `representation/` | `symbol.rs`, `perception.rs`, `condition.rs`, `effect.rs`, `mark.rs`, `classifier.rs`, `population.rs`. |
+| `learning/` | `alp.rs`, `ga.rs`, `rl.rs`, `subsumption.rs`, `action_selection.rs`. |
+| `agents/` | `acs2/mod.rs` (formerly the root ACS2 file), `acs2er/mod.rs` and `acs2er/replay.rs`, `trial.rs` (shared contract and exploitation). |
+| `ports/` | `environment.rs`, `goal.rs`. |
+| `support/` | `config.rs`, `rng.rs`, `knowledge.rs`, `measurement.rs`. |
+| Root exception | `checkpoint.rs` stays in place for possible MPX capture changes. |
+
+Each group exposes its modules through its `mod.rs`. `lib.rs` re-exports every former
+crate-root module, including `agents::acs2` as `agent`. Existing imports outside core
+stay unchanged; new code uses the grouped paths. The thirteen module paths imported
+by `acs2-bench/src/bin/mpx_reach.rs` therefore still compile, as do all other existing
+public paths. The source of that binary and its included reach regressions are unchanged.
+This reorganization changes only locations, declarations, re-exports and internal paths.
+
+Remove compatibility re-exports only after the running MPX checkpoint chain has ended
+and both lines' gates pass; the current queue horizon is April 2027. New learning agents
+belong in a separate crate outside core (planned package name `acs2-agents`), one module
+directory per family with variants inside. That crate is not implemented yet. Shared
+mechanisms stay in the shared crates; ACS2 and ACS2ER remain in core for this compatibility
+period. `checkpoint.rs` also retains its bytes and its compatibility imports.
+
+### Commit-history labels
+
+These labels occur in older thesis-line commit messages. History is not rewritten;
+the sections below are named by their implementation or measurement:
+
+| Historical commit label | Section |
+|---|---|
+| phase 1 | [Goal port](#goal-port). |
+| phase 2 | [Goal environments and geometry provenance](#goal-environments-and-geometry-provenance), including the environment interface and random-policy sparsity. |
+| phase 2b | [Learning at an episode boundary](#learning-at-an-episode-boundary). |
+| phase 3a | [Goal measurement layer](#goal-measurement-layer). |
+| phase 3b | [Pilot grid: ACS2 and ACS2ER on ten goal configurations](#pilot-grid-acs2-and-acs2er-on-ten-goal-configurations). |
+| phase 4 | [Trajectory storage and relabeling](#trajectory-storage-and-relabeling). |
+
+### Checkpoint and multiplexer compatibility
 
 The checkpoint identity renders the whole `Configuration` through `Debug`
 (`checkpoint_identity` in `mpx_reach.rs`), and a resume asserts that identity. A new
 `Configuration` field therefore stops every checkpointed chain on its next segment once the
 cluster binary is rebuilt, and the reader accepts format 3 only. Parameters of goal agents
 live in their own types, as `ReplayConfiguration` does for ACS2ER, and the goal line runs
-through its own binaries rather than `mpx_reach`, whose source `reach_regressions.rs`
+through its own binaries rather than `mpx_reach`, whose source `acs2-bench/tests/reach_regressions.rs`
 includes verbatim.
+
+`Configuration`'s derived `Debug` contains its bare type name, without a module path.
+Grouping the source therefore leaves that identity string unchanged; neither
+`type_name` nor `module_path!` is introduced into identity or checkpoint handling.
 
 ### Reward and termination are derived, not reported
 
@@ -1710,7 +1755,7 @@ over one length `M` and never learn that part of their perception is a goal;
 
 `GoalConditioned<E, S, G, M>` implements `Environment<M>` for any `GoalEnvironment<S, G>` by
 appending the desired goal to every observation, so an agent that has never heard of goals
-learns a goal-conditioned task through it. `tests/goal_port.rs` runs the unmodified `Agent` on
+learns a goal-conditioned task through it. `acs2-core/tests/goal_port.rs` runs the unmodified `Agent` on
 a goal corridor and pins determinism from the seed. `reset_with_goal` starts an episode on a
 chosen goal, which evaluation needs.
 
@@ -1720,7 +1765,7 @@ would leave every later observation labelled, and every reward computed, for the
 goal is forgotten when an episode ends, so a step without a fresh reset is refused rather than
 scored against a goal that no longer applies.
 
-### Environment roles and geometry provenance
+### Goal environments and geometry provenance
 
 `acs2-envs/src/roles.rs` is the role registry. `VALIDATION_MAZES` pins P9's exact five
 geometries and order (Maze4, Maze5, Maze7, Woods1, Woods100); it is independent of the
@@ -1728,7 +1773,7 @@ provenance catalogue, so adding a geometry cannot silently extend P9.
 `PERFORMANCE_MAZES` is the existing 22-geometry ALCS comparison.
 `RESEARCH_MAZES` names Maze4/5/6/7 and the pyalcs MazeF3/MazeB research geometries.
 `RESEARCH_TASKS`, `VALIDATION_ORACLES` and `PERFORMANCE_BENCHMARKS` state the task families.
-All four phase-2 goal task families are implemented under `goal/`.
+All four goal task families are implemented under `acs2-envs/src/goal/`.
 
 Geometry and role are independent: the same Maze4 data drives the validated single-goal
 `Maze` and the research goal maze. The data tree records kind and provenance, with one copy
@@ -1750,7 +1795,7 @@ acs2-envs/src/
 ```
 
 **Geometry IDs are archive keys.** IDs including `-v0` and `-ounold` remain exactly as
-committed in `reports/bench_rust.csv`, `bench_rust_unold.csv` and `unold_smoke.csv`.
+committed in `reports/bench_rust.csv`, `reports/bench_rust_unold.csv` and `reports/unold_smoke.csv`.
 Do not rename them to match the new module names. Directory and Rust identifier renames
 are independent of these persisted keys. Historical documents in `docs/archive/` retain
 the old names.
@@ -1795,14 +1840,14 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | `Maze` | Validation oracle; P9 and ALCS performance | `maze/mod.rs`, `roles::VALIDATION_MAZES`, `roles::PERFORMANCE_MAZES` |
 | Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
 | GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
-| Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `tests/goal_maze.rs` |
-| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
-| HandEye | Thesis research; simulator and knowledge parity oracle | `goal/hand_eye.rs`, `tests/hand_eye.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
-| Taxi | Thesis research; gym transition-table parity oracle | `goal/taxi.rs`, `tests/taxi.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
+| Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `acs2-envs/tests/goal_maze.rs` |
+| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `acs2-envs/tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
+| HandEye | Thesis research; simulator and knowledge parity oracle | `goal/hand_eye.rs`, `acs2-envs/tests/hand_eye.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
+| Taxi | Thesis research; gym transition-table parity oracle | `goal/taxi.rs`, `acs2-envs/tests/taxi.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
 | Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
-| Multiplexer | Performance and limits for this thesis; MPX-line research | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
+| Multiplexer | Additional MPX scaling research and performance | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
 
-The group-1 refactor changes no dynamics, matrix, cap, fixture or archived measurement.
+The geometry reorganization changes no dynamics, matrix, cap, fixture or archived measurement.
 The ALCS geometry tests keep their assertions and warning baseline, now under
 `acs2-envs/tests/performance_geometry.rs`.
 
@@ -1996,7 +2041,7 @@ sets passenger location to the destination; it does not leave the passenger in t
 Reset is uniform over gym's 300 admissible initial tuples: taxi in any of 25 cells,
 passenger at one of four stands and destination at a different stand. `reset_with_goal`
 conditions on the chosen destination and `reset_at` permits deterministic admissible starts.
-`goal_pool`, `state` and BFS `distance_to_goal` expose what phase 3 needs. Distances count
+`goal_pool`, `state` and BFS `distance_to_goal` expose what the goal measurement layer needs. Distances count
 pickup and dropoff actions as well as movement and include all internal walls.
 
 `baseline/dump_taxi_references.py` reads the pinned gym transition table `P`: 500 encoded
@@ -2021,7 +2066,7 @@ Wrong-stand dropoff stays active before the cap; cap-one success terminates excl
 Seeded goal evaluation covers every real goal. Native reward parity is deliberately not
 claimed: those rewards are replaced by the objective.
 
-### Phase-2 environment interface and exact random-policy sparsity
+### Goal environment interface and exact random-policy sparsity
 
 The core port stays unchanged. The runner can read each concrete environment's `step_cap`,
 `goal_pool`, current physical state (`position` for mazes, `state` for the other tasks), and
@@ -2033,8 +2078,9 @@ lifts any state-only knowledge iterator to joined perceptions, with wildcard suf
 both ends. Maze's named generators keep their own convenience wrapper.
 
 The pool belongs to the runner, not the agent. TU still collects desired goals from the
-agent's episodes. No goal-agent trait, learning runner, budget accounting, evaluation layer,
-HER agent, or truncation-bootstrap fix is added in this phase. Randomness enters only via
+agent's episodes. These environment implementations provide task dynamics; the goal-agent
+contract, budget accounting and evaluation live in the measurement layer below. A HER
+agent is not implemented yet. Randomness enters only via
 the injected `RandomSource`; callers use separate seeded ChaCha streams for environment,
 agent and evaluation. Tests pin same-seed resets and complete trajectories for every task.
 
@@ -2053,7 +2099,7 @@ All tables are **percentages**. Maze starts/goals range over all walkable cells,
 `9`, with start != goal and eight uniformly sampled actions. BitFlipping conditions out
 already-reached starts. HandEye uses the simulator's half-held distribution, then conditions
 out the desired block location, and succeeds without release. Taxi uses gym's exact
-300-state initial distribution and six actions. These are baselines for phase 3 to choose
+300-state initial distribution and six actions. These are baselines for the pilot grid to choose
 configurations from, not evidence about ACS2 or HER policy quality.
 
 Maze cap columns, descending:
@@ -2117,7 +2163,7 @@ here. No archived measurement under `reports/` is edited.
 
 ### Single-goal equivalence and mutation coverage
 
-`tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
+`acs2-envs/tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
 30 geometries, seeds 42–44, 20 complete random-action episodes per case: reset state and
 position, every next observation's state part, reward, termination and truncation.
 For learning, all eight pyalcs geometries, the same seeds and 100 exploration episodes are
@@ -2189,7 +2235,7 @@ What is deliberately absent: an agent goal-set API (the real goal set is the set
 agent has been given — TUCA-HER collects it from episodes), checkpointing of goal agents, and
 any change to `Classifier`.
 
-## Goal measurement layer — trajectory-utility phase 3a
+## Goal measurement layer
 
 `acs2-measure` is a separate workspace package. Its CLI takes a typed research-task name,
 positive episode cap, an explicit goal pool (`full` or listed real goals), encoding, agent,
@@ -2313,7 +2359,13 @@ pin the floor against independent rational references, read-only evaluation,
 environment-owned budget, declared policy, fixed streams, replay volume and goal-pool
 conditioning.
 
-## Phase 3b: registered ACS2 and ACS2ER baselines
+## Pilot grid: ACS2 and ACS2ER on ten goal configurations
+
+This registered grid predates the supervisor's train/validation/test goal protocol.
+Its maze results are a pilot, not the final thesis comparison. HandEye, Taxi and
+BitFlipping results describe limitations outside the main discrete multi-goal maze
+comparison. The registration, data contracts and original tooling remain fixed;
+`experiments/README.md` indexes the question, provenance and reproduction commands.
 
 The accepted grid fixes seeds 42–61, the thesis preset, equal interaction budgets and
 points for both agents, and the goal pools below. Plan SHA-256:
@@ -2322,7 +2374,7 @@ Measurement commit `af3ce49b2df0f5a764efb49be9c48da54ebe0040`, clean musl binary
 SHA-256 `1643a9e5c365cbc43fb119cc5d5d136b680303f66bd77d4ff06c765ad0a7ec72`.
 All 400 selected runs and 3,800 rows passed manifest/provenance checks; both seed-42
 agents in every configuration match the pilot in 8,550 learning fields. Raw rows and
-full analysis remain outside the checkout under the TU phase-3b run archive.
+full analysis remain outside the checkout in the archived pilot grid.
 
 The primary score is the arithmetic mean success over registered points **within each
 seed**, with equal point weights. It is not a step-weighted integral. Values below are
@@ -2368,7 +2420,7 @@ schedstat samples aligned to runner wall intervals; total process CPU and peak R
 from wait4. Shared-host load and timing alignment limit cost comparisons. BitFlipping8
 uses its fixed evaluation sample; between-seed intervals exclude that sample uncertainty.
 The full pointwise statistics, paired seed scores, resource counters and attempt audit
-are produced by `experiments/phase3b/analyze_grid.py`.
+are produced by `experiments/baseline-pilot/analyze_grid.py`.
 
 Points are 1k, 3k, 10k, 30k, 100k, 300k, 1M, 2M, 5M, 10M, truncated at the listed
 budget. The restricted pools in CLI row:column coordinates are Maze4
@@ -2386,7 +2438,7 @@ element, retains its allocation response and enforces node-side checks. Future c
 must preserve these scientific configurations and report floor cases, finite budgets and
 all attempts; a flat observed interval does not establish a learning ceiling.
 
-## Trajectory storage and relabeling — trajectory-utility phase 4
+## Trajectory storage and relabeling
 
 `acs2-trajectory` depends only on `acs2-core`. It owns storage, selection, scoring,
 sampling and exact composition, without learning, task construction or output policy.
@@ -2499,9 +2551,9 @@ raw derived outcome, objective cost by purpose and provenance. Provenance names 
 versus relabeled route, effective and requested strategy, current-state reach, occurrence
 after the counterfactual end, done, membership outside candidates, and fallback.
 A successful relabeling remains relabeled even if its goal equals the original goal.
-Fallbacks and non-relabeling coin outcomes are original. Phase 5 can use this route to
+Fallbacks and non-relabeling coin outcomes are original. The future HER agent can use this route to
 restrict goal-independent ALP, quality and rule creation to original samples while
-updating values on relabeled samples. No learner implements that policy in phase 4.
+updating values on relabeled samples. No learner implements that policy yet.
 
 Cumulative `ReplayCounters` keep one `RouteCounters` per route — draws, the four flags
 (reached at s_t, after the counterfactual end, done, outside candidates) and the sum of
@@ -2535,10 +2587,10 @@ payload serializes the counters' split:
 - *Provenance* is every other call, made only to fill diagnostic flags: the facts a rule
   does not read, and the original goal's facts on every original-route draw. In a valid
   task episode those cost 1 + t reach calls; they are never selection, so a draw at
-  proportion zero — the phase-5 replay control — costs scoring and provenance only. In `relabel_episode`, calls the
+  proportion zero — the HER agent's original-only replay control — costs scoring and provenance only. In `relabel_episode`, calls the
   rule does not read count as provenance although that function returns no flags.
 
-For the same draws the three parts sum to the totals phase 4 reported. The distribution
+For the same draws the three parts sum to the earlier pooled objective-call totals. The distribution
 computes facts once per unique proposed goal, sharing them across duplicate state
 indices; this also defines the reference sampler's cost. No rejection loop has an
 unbounded query cost. Randomness enters only through the supplied `RandomSource`;
@@ -2552,7 +2604,7 @@ including a supplied relabel proportion, candidate filter and original fallback,
 without any RNG. Its pooled values — admissible source mass, empty-distribution
 transition share, fallback share, both problematic-goal flags, done, outside-candidate
 share, mean reward and expected reward and reach evaluations of a draw — are accumulated
-exactly as in phase 4. `original` and `relabeled` are `RouteComposition`s of joint
+exactly as before the purpose/route split. `original` and `relabeled` are `RouteComposition`s of joint
 expectations per draw: the route's share and, for example, P(relabeled ∧ done) and
 E[reward · 1{relabeled}]. Joint values add across transitions and episodes, and the two
 routes reproduce the pooled values up to rounding. `given_route` divides by the route
@@ -2567,7 +2619,7 @@ choice. It is the cost of the measurement rather than of replay and has no purpo
 this optional payload at every existing evaluation point, without agent-specific
 measurement branches. Rows advance to schema **3**; schema-2 archived baselines remain
 unchanged. `acs2-measure::trajectory::replay_diagnostics` serializes the pooled counters
-under their phase-4 names, `objective_evaluations_by_purpose` (reward, reach and total
+under their original schema field names, `objective_evaluations_by_purpose` (reward, reach and total
 calls for scoring, selection and provenance) and `routes` (per route: draws, the four
 flags, `reward_sum` and `mean_reward`, null without draws). A recording-only test agent
 passes `assert_evaluation_read_only`, including store, policy RNG, sampler RNG and
@@ -2584,7 +2636,7 @@ retaining those prefixes can exceed a step payload bound. Whole episodes trade a
 one episode's occupancy for simple exact semantics. Redrawing an ineligible transition
 would bias transition marginals; dropping it would change update volume. Goal lists
 from the runner would reveal unobserved real goals to TU. A second learning agent or
-checkpoint format would exceed this phase's scope.
+checkpoint format is outside the storage and relabeling layer.
 
 `acs2-trajectory/tests/contracts.rs` checks independent admissible enumeration on every
 four-bit transition under all goals/strategies/rules/filters, a stationary HandEye
@@ -2611,20 +2663,20 @@ HandEye4 and Taxi, checks research-family rewards, exercises schema-3 diagnostic
 read-only evaluation and maps every counter to its own key in the diagnostics payload.
 The probe's own tests map every composition field to its row key and aggregate routes
 as step-weighted joint quantities. Baseline regression, mutation results and
-random-policy composition are recorded with the phase-4 measurement below.
+random-policy composition are recorded with the composition measurement below.
 
 ### Random-policy composition before replay agents
 
-The probe uses all ten registered phase-3b configurations, seeds 42–61, and the
+The probe uses all ten registered pilot configurations, seeds 42–61, and the
 first complete episode meeting 20,000 environment steps in each run. All 200 runs
 completed: **4,003,305 steps, 372,187 episodes**, about **154 seconds** in total on
 this laptop. Measurement source is clean `a86b7db2d80f04a9aac0693bd871b7ca8d8f6785`;
-the registered phase-3b plan hash and streams are repeated in every row. Actions are
+the registered pilot plan hash and streams are repeated in every row. Actions are
 uniform from stream 1, environment resets use stream 2, and restricted-goal draws
 use stream 4. No learning or random diagnostic sampling occurs. The fix round re-ran
 the probe from clean `cd950fc805e6f99f86fbfe5dceb1e735955ec4f7` in about **156
 seconds**. Its rows advance to schema **2**, which adds the purposes and the routes;
-every field the phase-4 rows carried is bit-identical in all 4,800 rows.
+every field the original schema-1 rows carried is bit-identical in all 4,800 rows.
 
 Each completed episode is analyzed before the next reset against desired goals
 observed up to that completion. Aggregation weights episodes by their step counts,
@@ -2670,7 +2722,7 @@ terminal-state flag, and the every-transition rule reads no fact. The remaining 
 of these calls only fill provenance flags: the reach checks of each proposed goal at
 s_t and in the earlier states, which this rule never reads. Read as the cost of
 choosing HER's goals, the total column overstates it by up to an order of magnitude
-(23.4 calls against 2 on Taxi). A draw at proportion zero, the phase-5 replay control,
+(23.4 calls against 2 on Taxi). A draw at proportion zero, the HER agent's original-only replay control,
 selects nothing: it costs the scoring pair and 1 + t provenance calls for the original
 goal's flags.
 
@@ -2725,16 +2777,16 @@ yet received as desired goals. This explains positive full-pool Maze/HandEye/Bit
 entries without leaking the pool into the store. Taxi additionally achieves passenger
 location 4, in the taxi, which is never a desired delivery goal.
 
-The step-2a comparison used epsilon-greedy ACS2 trajectories and five seeds, whereas
+The earlier goal-conditioning comparison used epsilon-greedy ACS2 trajectories and five seeds, whereas
 this probe uses uniformly random actions and twenty seeds. For future, Maze4 full
 has 34.780 ± 0.085% already reached and 65.661 ± 0.050% done, versus 27–29% and
-about 62% in 2a; the restricted pool has 85.703 ± 0.103% outside candidates, versus
+about 62% in that comparison; the restricted pool has 85.703 ± 0.103% outside candidates, versus
 79–84% outside its fixed pool. Full HandEye4 has 86.393 ± 0.205% already reached
 and 88.076 ± 0.191% done, versus 92–94% and 93–95%. Different action mixtures
 and revisit/block-motion behavior alter achieved-goal multiplicities, and online
 candidate discovery adds an early membership difference. Lower HandEye triviality is
 consistent with more transport under random actions; this comparison does not identify
-a causal learning mechanism or predict HER performance. The known 2a storage-window
+a causal learning mechanism or predict HER performance. The earlier probe's known storage-window
 confound remains; it is not repaired retroactively by these composition numbers.
 
 ### Mutation and baseline acceptance evidence
@@ -2774,30 +2826,31 @@ reproduce `360f6e5` exactly: 97,200 draws with their transitions, goals, samples
 provenance flags and total costs, the random-word position after each of 6,000 calls,
 and 1,200 counter totals. 45,000 goal distributions and 26,280 episode compositions are
 identical as well; only 38 empty non-goal relabelings change their end from `Cut` to
-`NoAdmissibleTransition`. The re-run probe reproduces every phase-4 field bit for bit.
+`NoAdmissibleTransition`. The re-run probe reproduces every original composition field bit for bit.
 The baseline regression above, repeated at `cd950fc` against a fresh `360f6e5` build
-and against the archived phase-4 rows, gives **18 identical rows in 792 compared
+and against the archived pre-fix measurement rows, gives **18 identical rows in 792 compared
 fields**, schema 3 and the null replay diagnostics included.
 
-Acceptance gates after the fix round: **243 Rust tests** (237 at phase 4, 211 before
-it), including MPX reach regressions; tools Python **47**, baseline oracles **5**,
-unchanged phase-3b tests **20**, phase-4 analysis tests **13** (6 at phase 4). The
+Acceptance gates at `4f983bf` after the fix round: **243 Rust tests** (237 at the
+initial storage/relabeling acceptance, 211 before it), including MPX reach regressions;
+tools Python **47**, baseline oracles **5**, unchanged pilot tests **20**, composition
+analysis tests **13** (6 at the initial storage/relabeling acceptance). The
 benchmark builds and P9's first seven columns match all five
 archived rows byte for byte. A release clean includes acs2-trajectory before Clippy;
-there are **22 warnings in older files, zero in phase-4 code**. Build provenance also
+there are **22 warnings in older files, zero in the trajectory code**. Build provenance also
 watches the new trajectory source directory, so editing only that dependency cannot
 leave a previously clean build label cached. Protected source,
-configuration, checkpoint, multiplexer, archived reports and phase-3b files remain
+configuration, checkpoint, multiplexer, archived reports and pilot files remain
 unchanged.
 
 Reproduce the composition and its summary without writing results into a checkout:
 
 ```bash
 cargo run --release -p acs2-measure --example trajectory_composition -- --out <outside-checkout>/composition-raw.jsonl
-python3 -B experiments/phase4/summarize.py <outside-checkout>/composition-raw.jsonl --out <outside-checkout>
+python3 -B experiments/relabeling-composition/summarize.py <outside-checkout>/composition-raw.jsonl --out <outside-checkout>
 ```
 
-The summary script reads schema-2 rows only; the phase-4 schema-1 output stays archived
+The summary script reads schema-2 rows only; the original schema-1 output stays archived
 outside the checkout.
 
 ## Clippy — the determinism invariants, checked by machine
@@ -2829,16 +2882,16 @@ from a run that had only re-linted a freshly planted file; the rest was replayed
 built before the rules existed. A run from clean on 2026-09-26 finds 22 warnings, none in code
 added by the goal line:
 
-- **5 violations**, all in files that predate the rules. `ga.rs:65` squares quality with
-  `powi(3)` on the learning path, and `acs2-bench/src/main.rs:99` and `bin/mpx.rs:202` compute
+- **5 violations**, all in files that predate the rules. `acs2-core/src/learning/ga.rs:65` squares quality with
+  `powi(3)` on the learning path, and `acs2-bench/src/main.rs:99` and `acs2-bench/src/bin/mpx.rs:202` compute
   standard deviations with `powi(2)` — in P9 that is column 4, one of the columns compared
   byte for byte across machines. Bit-identity between the M1 and Bem2 has been measured on runs
   that use them, not guaranteed; LLVM lowers a small constant `powi` to multiplications, and
   writing them explicitly would be bit-identical under that lowering, but these files belong to
   the measured path of the multiplexer line. `acs2-envs/tests/performance_geometry.rs` uses a
   `HashSet` for membership only, never iterating it.
-- **17 style and complexity warnings** — `ga.rs`, the nine-argument `apply_alp`, `mark.rs`,
-  `population.rs`, `multiplexer.rs` and six test files. None concerns correctness.
+- **17 style and complexity warnings** — `acs2-core/src/learning/ga.rs`, the nine-argument `apply_alp`, `acs2-core/src/representation/mark.rs`,
+  `acs2-core/src/representation/population.rs`, `acs2-envs/src/multiplexer.rs` and six test files. None concerns correctness.
 
 All 22 stay on this branch because fixing them edits the measured path. Code added by the goal
 line is held to zero.

@@ -1,8 +1,8 @@
 use core::ops::Range;
 
-use crate::environment::{Environment, StepOutcome};
-use crate::perception::Perception;
-use crate::symbol::Symbol;
+use crate::ports::environment::{Environment, StepOutcome};
+use crate::representation::perception::Perception;
+use crate::representation::symbol::Symbol;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct Goal<const G: usize> {

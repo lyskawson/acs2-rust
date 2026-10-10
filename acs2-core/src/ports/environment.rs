@@ -1,4 +1,4 @@
-use crate::perception::Perception;
+use crate::representation::perception::Perception;
 
 pub type Info = ();
 

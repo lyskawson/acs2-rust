@@ -1,9 +1,9 @@
-use crate::condition::Condition;
-use crate::config::Configuration;
-use crate::effect::Effect;
-use crate::mark::Mark;
-use crate::perception::Perception;
-use crate::rng::RandomSource;
+use crate::representation::condition::Condition;
+use crate::support::config::Configuration;
+use crate::representation::effect::Effect;
+use crate::representation::mark::Mark;
+use crate::representation::perception::Perception;
+use crate::support::rng::RandomSource;
 
 #[derive(Clone, Debug)]
 pub struct Classifier<const N: usize> {

@@ -1,5 +1,5 @@
-use crate::perception::Perception;
-use crate::symbol::Symbol;
+use crate::representation::perception::Perception;
+use crate::representation::symbol::Symbol;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Effect<const N: usize> {

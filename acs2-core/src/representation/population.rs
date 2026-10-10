@@ -1,5 +1,5 @@
-use crate::classifier::Classifier;
-use crate::perception::Perception;
+use crate::representation::classifier::Classifier;
+use crate::representation::perception::Perception;
 
 pub type ClassifierRef = usize;
 
@@ -61,7 +61,7 @@ impl<const N: usize> Population<N> {
     }
 
     pub fn form_match_set(&self, state: &Perception<N>) -> Vec<ClassifierRef> {
-        crate::measurement::record_match_formation(self.classifiers.len());
+        crate::support::measurement::record_match_formation(self.classifiers.len());
         (0..self.classifiers.len())
             .filter(|&reference| self.classifiers[reference].does_match(state))
             .collect()

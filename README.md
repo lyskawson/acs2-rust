@@ -1,8 +1,24 @@
 # acs2-rust
 
 An independent Rust implementation of **ACS2** (Anticipatory Classifier System) and
-**ACS2ER** (ACS2 with experience replay), written for a master's thesis on prioritised
-sample selection from replay memory.
+**ACS2ER** (ACS2 with experience replay), supporting the master's thesis
+**Experience and Goal Selection Based on Trajectory Utility in the ACS2 Anticipatory
+Classifier System**.
+
+The thesis develops an ACS2HER extension that uses the utility of stored trajectories to
+choose goals from training tasks and regulates the share of those experiences against
+HER's, with an optional conservative value correction. The intended comparison is with
+ACS2, ACS2ER, ACS2HER and ACS2VCP on discrete multi-goal mazes with sparse rewards at
+equal numbers of environment interactions. The goal tasks, measurement layer and
+trajectory store are implemented; the HER, trajectory-utility and VCP agents are not
+implemented yet.
+
+Two lines of work share this repository:
+
+| Line | Branch | Purpose and implementation record |
+|---|---|---|
+| Trajectory utility | `feature/trajectory-utility` | The thesis; [goal-task architecture](docs/ARCHITECTURE.md#goal-port) and [experiment index](experiments/README.md). |
+| MPX scaling | `feature/mpx264` | Additional research; [live handoff](docs/AGENT_HANDOFF.md) and the multiplexer results below. |
 
 It solves the 70- and 135-bit Boolean multiplexer at full knowledge; published ACS/ACS2
 results stop at 20–37 bits. Numbers and method are in
@@ -16,18 +32,40 @@ Needs a stable Rust toolchain and nothing else.
 ```bash
 git clone https://github.com/lyskawson/acs2-rust && cd acs2-rust
 cargo build --release
-cargo test --workspace --release                      # 101 tests, including reach regressions
+cargo test --workspace --release                    # includes reach regressions
 ./target/release/mpx_reach --sizes 20 --n-exp 1       # solves in seconds
 ./target/release/acs2-bench                           # maze suite, ~2 s
 ```
 
-If those four commands work you have everything. The Python parts below are optional and
-only needed to regenerate figures or re-run the pyalcs comparison.
+These commands build and check the Rust workspace. Python is needed for the experiment
+analyses, archive/plotting tests and the pinned reference oracles; it is separate from
+the Rust implementation.
 
 Archive and plotting tests: `uv run --project tools python -B -m unittest discover -s tools -p 'test_*.py'`
-(45 tests).
+using the separate tools environment.
 
 ## Running experiments
+
+### Goal-task measurement — `acs2-measure`
+
+Use the authorized TU cluster clone for learning runs. This example measures both
+implemented agents on Maze4 with all coordinate goals, cap five, seed 42 and three
+environment-interaction checkpoints; choose an output path outside every Git checkout:
+
+```bash
+cargo run --release -p acs2-measure -- \
+    --task maze4 --cap 5 --pool full --encoding coordinates \
+    --agents acs2,acs2er --seeds 42 --targets 1000,3000,10000 \
+    --out /tmp/goal-measure.jsonl
+```
+
+Evaluation is read-only, uses separate random streams and runs after a complete episode
+meets each nominal point. Rows record actual interactions, success, the random-policy
+floor, reachability within the cap, value diagnostics, update/matching counts and
+component memory sizes. See [the measurement contract](docs/ARCHITECTURE.md#goal-measurement-layer)
+and [the experiment index](experiments/README.md) for the registered protocols, archived
+data provenance and analysis commands. The maze benchmark below is the P9
+validation/timing protocol.
 
 ### Multiplexer — `mpx_reach`
 
@@ -213,19 +251,46 @@ uv run --project baseline python baseline/compare_bench.py
 
 | Crate | Purpose |
 |---|---|
-| `acs2-core` | Classifier, population, ALP, RL, GA, action selection, injected RNG, both agents behind `trial::LearningAgent`, and the `environment::Environment` trait. No I/O or environment-specific knowledge. |
-| `acs2-envs` | Implementations of `acs2_core::environment::Environment`: 8-sensor maze (27 geometries in `mazes/`) and the multiplexer with both encodings. |
-| `acs2-bench` | The `acs2-bench` and `mpx_reach` binaries. |
+| [`acs2-core`](acs2-core/src/lib.rs) | Pure domain: representation, learning mechanisms, ACS2/ACS2ER, task ports and support code; module map below. |
+| [`acs2-envs`](acs2-envs/src/lib.rs) | [Single-goal maze](acs2-envs/src/maze/mod.rs), [geometry catalogue](acs2-envs/src/maze/geometries/mod.rs), [goal environments](acs2-envs/src/goal/mod.rs), [task/role registry](acs2-envs/src/roles.rs), and [multiplexer](acs2-envs/src/multiplexer.rs) with both encodings. |
+| [`acs2-bench`](acs2-bench/src/main.rs) | P9 maze benchmark and the [MPX reach runner](acs2-bench/src/bin/mpx_reach.rs). |
+| [`acs2-measure`](acs2-measure/src/lib.rs) | [Goal-agent and environment contracts, runner, evaluation and counters](acs2-measure/src/runner.rs), [task construction and preset](acs2-measure/src/task.rs), [floor/reachability references](acs2-measure/src/reference.rs), [CLI](acs2-measure/src/main.rs), [output guard](acs2-measure/src/output.rs), and [replay diagnostic adapter](acs2-measure/src/trajectory.rs). |
+| [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
+
+Core modules are grouped by role under [`acs2-core/src/`](acs2-core/src/). Each file
+below defines the module of the same name under its group:
+
+| Role | Modules and files |
+|---|---|
+| Rule representation and population | [`representation/symbol.rs`](acs2-core/src/representation/symbol.rs), [`perception.rs`](acs2-core/src/representation/perception.rs), [`condition.rs`](acs2-core/src/representation/condition.rs), [`effect.rs`](acs2-core/src/representation/effect.rs), [`mark.rs`](acs2-core/src/representation/mark.rs), [`classifier.rs`](acs2-core/src/representation/classifier.rs), [`population.rs`](acs2-core/src/representation/population.rs). |
+| Shared learning mechanisms | [`learning/alp.rs`](acs2-core/src/learning/alp.rs), [`ga.rs`](acs2-core/src/learning/ga.rs), [`rl.rs`](acs2-core/src/learning/rl.rs), [`subsumption.rs`](acs2-core/src/learning/subsumption.rs), [`action_selection.rs`](acs2-core/src/learning/action_selection.rs). |
+| Implemented agents and trial loop | ACS2: [`agents/acs2/mod.rs`](acs2-core/src/agents/acs2/mod.rs); ACS2ER: [`agents/acs2er/mod.rs`](acs2-core/src/agents/acs2er/mod.rs), with [`replay.rs`](acs2-core/src/agents/acs2er/replay.rs); shared [`agents/trial.rs`](acs2-core/src/agents/trial.rs) defines `LearningAgent` and the exploitation loop. |
+| Task ports | [`ports/environment.rs`](acs2-core/src/ports/environment.rs) and [`ports/goal.rs`](acs2-core/src/ports/goal.rs), including the goal-conditioned adapter. |
+| Support | [`support/config.rs`](acs2-core/src/support/config.rs), [`rng.rs`](acs2-core/src/support/rng.rs), [`knowledge.rs`](acs2-core/src/support/knowledge.rs), [`measurement.rs`](acs2-core/src/support/measurement.rs) (opt-in match counter); [`checkpoint.rs`](acs2-core/src/checkpoint.rs) stays at the source root for the running MPX chain. |
+
+New code uses grouped paths, for example `acs2_core::agents::acs2::Agent` and
+`acs2_core::ports::goal::GoalEnvironment`. Every former crate-root module path remains
+available through re-exports in `acs2-core/src/lib.rs`, so existing callers and
+`mpx_reach.rs` compile unchanged. Remove those compatibility re-exports only after the
+running MPX checkpoint chain has ended, with both lines' gates passing; its current
+queue horizon is April 2027.
+
+New learning agents belong in a separate crate outside `acs2-core` (planned package
+name: `acs2-agents`), with one module directory per agent family and variants within it.
+Shared mechanisms stay in the existing shared crates. That future crate does not exist
+yet; the two implemented agents remain in core while its public API supports the MPX chain.
 
 `baseline/` pinned Python reference · `tools/` parsing and plotting (a **separate** Python
 project, so plotting deps never perturb the pinned baseline) · `slurm/` cluster scripts ·
-`fixtures/` golden vectors · `reports/` results.
+`fixtures/` golden vectors · `reports/` results · [`experiments/`](experiments/README.md)
+registered protocols and analyses; raw TU data stays outside the repository.
 
 | Document | Read it for |
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Implementation decisions and the named hazards. |
 | [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) | The pinned protocol and the fidelity rules. |
 | [`docs/SPEC_PYALCS.md`](docs/SPEC_PYALCS.md) | The reference semantics the oracle enforces. |
+| [`experiments/README.md`](experiments/README.md) | Experiment questions, measured tasks/agents/seeds/budgets, provenance and reproduction commands. |
 | [`reports/MPX_final.md`](reports/MPX_final.md) | The multiplexer results as a narrative. |
 | [`tools/README.md`](tools/README.md) | The analysis pipeline and its traps. |
 
@@ -238,9 +303,11 @@ pyalcs and this core: **761 of 761 deterministic cases agree, zero divergence** 
 does not reproduce). ACS2ER is validated the same way. Details in
 [`reports/P8_differential.md`](reports/P8_differential.md).
 
-The shipped defaults deliberately match pyalcs — GA off, `u_max = 100000`, the pinned maze
-protocol — because differential validation and a fair timing comparison both need an
-identical configuration on both sides. All of them are flags. On that protocol this
+Configuration defaults retain the pyalcs parameter values — GA off, `u_max = 100000` —
+and the benchmark selects the pinned maze protocol for differential validation and a
+fair timing comparison. Default learning behavior includes the corrected truncation
+bootstrap; the P8/P11/P9 validation callers explicitly select `TruncationMode::Pyalcs`.
+On that pinned protocol this
 implementation runs **139× faster than pyalcs** in total time, at exploit steps-to-goal
 within 1.00–1.07×, i.e. the same algorithm rather than a faster different one.
 
@@ -252,9 +319,14 @@ wall-clock depends on the machine and instrumentation.
 
 ## Scope
 
-Actor-Critic is **not** implemented; the architecture leaves seams for it. Prioritised
-replay — the thesis contribution — is not implemented either: ACS2ER provides uniform
-replay and the measurements a prioritisation criterion has to beat.
+ACS2 and ACS2ER are implemented, as are the goal environments, read-only measurement
+layer, raw trajectory store, goal-selection primitives and objective-based relabeling.
+ACS2ER supplies uniform replay. ACS2HER, the trajectory-utility agent, ACS2VCP and the
+optional conservative value correction are not implemented yet. Trajectory utility
+selects training-task goals and regulates experience composition; it is not simply
+priority sampling from ACS2ER's replay buffer.
+
+Actor-Critic is **not** implemented; the architecture leaves seams for it.
 
 ## License
 

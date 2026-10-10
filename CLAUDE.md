@@ -73,7 +73,7 @@ definition of this implementation. Where pyalcs is wrong, the default here is ri
 pyalcs behaviour exists only as a mode that the validation tools select explicitly:
 P8, P11, the maze-parity tests and `acs2-bench` (P9). Those stay byte-identical without
 any change to how they are invoked. Truncated episodes bootstrap from the next state by
-default (`agent.rs`, `trial.rs`, `acs2er/mod.rs`); terminated episodes bootstrap 0.
+default (`agents/acs2/mod.rs`, `agents/trial.rs`, `agents/acs2er/mod.rs`); terminated episodes bootstrap 0.
 `TruncationMode::Pyalcs` explicitly preserves bootstrap 0 on truncation for validation.
 
 Parameters are not behaviours. `Configuration` defaults stay as they are, because the
@@ -100,10 +100,15 @@ the file. The commits and the docs they corrected are the durable record.
 - No comments in code.
 - Idiomatic Rust, SOLID, injected RNG, determinism from the seed.
 - Commit and push after each completed group, to your own line's branch.
+- Name new directories, files, modules and documentation sections by what they contain or
+  measure, never by a work plan's phase numbers; phase labels belong in commit messages and in
+  notes outside the checkout.
+- Each new learning agent lives in its own module directory, with its variants inside it;
+  mechanisms used by several agents stay in the shared crates.
 - **An agent's own parameters belong in its own type, never in `Configuration`.**
   `checkpoint_identity` embeds the whole `Configuration` and a resume asserts on it, so a
   new field there invalidates every existing checkpoint and would end the running k=264
-  chain. `ReplayConfiguration` in `acs2-core/src/acs2er/replay.rs` is the pattern to copy;
+  chain. `ReplayConfiguration` in `acs2-core/src/agents/acs2er/replay.rs` is the pattern to copy;
   §5 of the handoff has the live identity string to compare against.
 - **Only the MPX line submits to the cluster.** Do not submit, cancel or rebuild there on
   any other line — a rebuild reaches every pending segment that has not started yet.

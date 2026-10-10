@@ -1,6 +1,6 @@
-use crate::perception::Perception;
-use crate::rng::RandomSource;
-use crate::symbol::Symbol;
+use crate::representation::perception::Perception;
+use crate::support::rng::RandomSource;
+use crate::representation::symbol::Symbol;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Condition<const N: usize> {

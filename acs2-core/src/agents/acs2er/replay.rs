@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
-use crate::perception::Perception;
-use crate::rng::RandomSource;
+use crate::representation::perception::Perception;
+use crate::support::rng::RandomSource;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct ReplaySample<const N: usize> {

@@ -1,4 +1,4 @@
-# Phase 3b operations
+# Baseline pilot operations
 
 This directory belongs to trajectory utility. It does not submit or inspect MPX jobs.
 `pilot.json` is a pilot manifest, not an approved twenty-seed grid. The grid needs a
@@ -78,7 +78,7 @@ checked across the pilot; sharing a partition alone does not prove one CPU model
 
 ## Checks
 
-`python3 -B -m unittest discover -s experiments/phase3b -p 'test_*.py'`
+`python3 -B -m unittest discover -s experiments/baseline-pilot -p 'test_*.py'`
 
 Run the repository gates when changing this code. The scripts neither modify the core
 nor change what `acs2-measure` measures. A discovered runner defect stops the phase for
@@ -90,7 +90,7 @@ The immutable plan is identified by SHA-256
 `862f77785f1cf73fc58e81a88fabeac4b708ee908082f227a499d5cb2e4efb98`.
 The approval and preregistration evidence live with the results, outside the checkout.
 Keep the measurement clone and musl binary at the pilot commit. Deploy these operational
-scripts from their own pushed commit into `~/tu_ops/<commit>/experiments/phase3b/`;
+scripts from their own pushed commit into `~/tu_ops/<commit>/experiments/baseline-pilot/`;
 do not update or rebuild the measurement clone.
 
 `grid_control.py submit-chain --root GRID` records every submission intent, grant

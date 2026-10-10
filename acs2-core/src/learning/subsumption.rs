@@ -1,4 +1,4 @@
-use crate::classifier::Classifier;
+use crate::representation::classifier::Classifier;
 
 pub fn is_subsumer<const N: usize>(cl: &Classifier<N>, theta_exp: u32, theta_r: f64) -> bool {
     cl.exp > theta_exp && cl.is_reliable(theta_r) && !cl.is_marked()

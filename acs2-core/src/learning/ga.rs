@@ -1,9 +1,9 @@
-use crate::classifier::Classifier;
-use crate::config::Configuration;
-use crate::perception::Perception;
-use crate::population::{remap_after_removal, ClassifierRef, Population};
-use crate::rng::RandomSource;
-use crate::subsumption::does_subsume;
+use crate::representation::classifier::Classifier;
+use crate::support::config::Configuration;
+use crate::representation::perception::Perception;
+use crate::representation::population::{remap_after_removal, ClassifierRef, Population};
+use crate::support::rng::RandomSource;
+use crate::learning::subsumption::does_subsume;
 
 pub fn should_apply<const N: usize>(
     population: &Population<N>,

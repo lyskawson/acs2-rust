@@ -1,5 +1,5 @@
-use crate::population::{ClassifierRef, Population};
-use crate::rng::{shuffle, RandomSource};
+use crate::representation::population::{ClassifierRef, Population};
+use crate::support::rng::{shuffle, RandomSource};
 
 pub trait ActionSelector<const N: usize> {
     fn select(

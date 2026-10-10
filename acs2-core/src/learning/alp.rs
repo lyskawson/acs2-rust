@@ -1,10 +1,10 @@
-use crate::classifier::Classifier;
-use crate::condition::Condition;
-use crate::config::{AlpGenVariant, Configuration};
-use crate::perception::Perception;
-use crate::population::{remap_after_removal, ClassifierRef, Population};
-use crate::rng::RandomSource;
-use crate::subsumption::does_subsume;
+use crate::representation::classifier::Classifier;
+use crate::representation::condition::Condition;
+use crate::support::config::{AlpGenVariant, Configuration};
+use crate::representation::perception::Perception;
+use crate::representation::population::{remap_after_removal, ClassifierRef, Population};
+use crate::support::rng::RandomSource;
+use crate::learning::subsumption::does_subsume;
 
 pub fn cover<const N: usize>(
     p0: &Perception<N>,

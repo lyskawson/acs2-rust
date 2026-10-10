@@ -1,9 +1,9 @@
-use crate::action_selection::{ActionSelector, BestAction};
-use crate::config::Configuration;
-use crate::environment::Environment;
-use crate::population::{ClassifierRef, Population};
-use crate::rl::{apply_reinforcement_learning, BootstrapEstimator};
-use crate::rng::RandomSource;
+use crate::learning::action_selection::{ActionSelector, BestAction};
+use crate::support::config::Configuration;
+use crate::ports::environment::Environment;
+use crate::representation::population::{ClassifierRef, Population};
+use crate::learning::rl::{apply_reinforcement_learning, BootstrapEstimator};
+use crate::support::rng::RandomSource;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TruncationMode {

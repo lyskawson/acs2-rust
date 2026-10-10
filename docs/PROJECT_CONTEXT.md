@@ -3,16 +3,27 @@
 The standing context for the project: what it is for, which rules the implementation
 must not break, and the protocol every measurement runs under. Read it with
 `SPEC_PYALCS.md` (the reference semantics) and `ARCHITECTURE.md` (what was built and
-why). For where the research currently stands, read `AGENT_HANDOFF.md`.
+why). The two lines have separate records: `docs/AGENT_HANDOFF.md` for MPX scaling,
+and the goal-task sections of `docs/ARCHITECTURE.md` plus `experiments/README.md`
+for the thesis implementation and registered measurements.
 
 ---
 
 ## 0. Mission
 
-The thesis is about **sample selection in anticipatory classifier systems** —
-prioritising which stored experiences an ACS2 agent replays. That needs an ACS2
-implementation the author owns and can modify; none existed, so this project builds
-one in **Rust**, chosen because the experiments are compute-bound.
+The thesis is **Experience and Goal Selection Based on Trajectory Utility in the ACS2
+Anticipatory Classifier System**. It develops an extension of ACS2HER that uses the
+utility of stored trajectories to choose goals from the set of training tasks and
+regulates the share of those experiences against HER's, with an optional conservative
+value correction. The intended comparison is with ACS2, ACS2ER, ACS2HER and ACS2VCP
+on discrete multi-goal mazes with sparse rewards at equal numbers of environment
+interactions. Rust supports the compute-bound experiments and an implementation
+whose learning mechanisms can be extended and checked independently.
+
+`feature/trajectory-utility` is the thesis line. `feature/mpx264` is additional
+multiplexer-scaling research with a long checkpointed cluster chain. They share the
+core and environment crates; their runners, metrics and experiment policies stay
+separate. `CLAUDE.md` defines the per-line operational boundaries.
 
 **pyalcs is a reference, not a target.** It plays two roles and no others:
 
@@ -26,14 +37,15 @@ Neither role makes this a transcription. Where pyalcs and canonical ACS2 disagre
 the deviation is recorded and justified (§4 and the ARCHITECTURE fidelity ledger),
 and mechanisms dormant in pyalcs's defaults have been activated and studied here.
 
-**Why the defaults still match pyalcs.** Differential validation and a fair timing
-comparison both require an identical configuration on both sides, so the shipped
-defaults are pyalcs's: GA off, `u_max = 100000` (leaving the ALP generalization
-branch dormant), the pinned maze protocol of §5. Each is a flag rather than a
-constant, and the multiplexer work overrides them routinely — `u_max` swept 5 to 24,
+**Configuration parameters and validation behavior are separate.** `Configuration`
+retains the pyalcs parameter defaults: GA off and `u_max = 100000`, leaving ALP
+generalization dormant. The P9 benchmark selects the pinned protocol of §5 and
+`TruncationMode::Pyalcs`; the P8/P11 validation callers also select that mode
+explicitly. Default learning behavior uses the corrected bootstrap on truncation.
+The multiplexer work overrides parameters routinely — `u_max` swept 5 to 24,
 GA on, two ALP-generalization variants, an alternative problem encoding, a varied
-exploration epsilon, and a second agent (ACS2ER). Treat the defaults as the
-**measurement baseline**, not as a limit on what the implementation can do.
+exploration epsilon, and a second agent (ACS2ER). Goal measurements state every
+parameter explicitly rather than inheriting the validation protocol.
 
 Actor-Critic is **not** implemented. The architecture leaves seams for it (see §7):
 an `ActionSelector` trait and an injected RL bootstrap value.
@@ -75,19 +87,23 @@ an `ActionSelector` trait and an injected RL bootstrap value.
 
 ## 2. Source-of-truth hierarchy
 
-1. **`SPEC_PYALCS.md`** (the reverse-engineered specification) is the primary spec.
-2. **pyalcs source code** resolves any ambiguity the spec leaves open.
-3. **Canonical ACS2 (Butz & Stolzmann)** is consulted only to interpret intent; it
-   never overrides what the code/spec actually does.
-4. The ALCS `cpu_single` backend and `SPEC_ALCS_CPUSINGLE.md` are IGNORED for
-   implementation. They may be used later only as an OPTIONAL secondary timing
-   datapoint, reproduced with its quirks intact, never as the algorithm to build on.
+1. **`docs/SPEC_PYALCS.md`** is the reverse-engineered specification for reference
+   parity; `CLAUDE.md` and `docs/ARCHITECTURE.md` record corrected default behavior
+   and justified deviations.
+2. **pyalcs source code** resolves ambiguity in the reference behavior. It is the
+   validation oracle, not the definition of this implementation's defaults.
+3. **Canonical ACS2 (Butz & Stolzmann)** supplies algorithmic intent. A correction
+   must be documented and gated while explicit validation modes preserve parity.
+4. The ALCS `cpu_single` backend is not an implementation oracle. Its secondary timing
+   comparison is recorded in `docs/archive/CPU_SINGLE_FULL_COMPARISON.md`, reproduced
+   with its quirks intact, never as the algorithm to build on.
 
 ---
 
 ## 3. Scope
 
-**In scope (this phase):**
+**Implemented:**
+
 - Condition / Effect / Mark / Classifier, fitness = q·r.
 - Population with match-set and action-set formation, numerosity, subsumption.
 - ALP (expected / unexpected / covering / marking), reliability/inadequacy handling.
@@ -98,13 +114,27 @@ an `ActionSelector` trait and an injected RL bootstrap value.
 - Maze environment (8-sensor perception) + maze geometry data.
 - A benchmark runner producing per-maze metrics + timing, and a comparison against the
   pyalcs baseline run on the same mazes/protocol.
+- ACS2ER with uniform replay and agent-owned replay configuration.
+- Multiplexer dynamics, diagnostics and checkpointed reach experiments on the MPX line.
+- A goal port and adapter, multi-goal mazes, BitFlipping, HandEye and Taxi.
+- Read-only goal-task measurements at equal interaction checkpoints, exact random-policy
+  floors, reachability references, value diagnostics and component cost accounting.
+- Raw episode storage, observed desired-goal candidates, goal-selection/admissibility
+  primitives, objective-based relabeling, sampling and exact composition diagnostics.
 
-**Out of scope (this phase):**
+**Thesis agents not implemented yet:** ACS2HER, the trajectory-utility agent, ACS2VCP,
+and the optional conservative value correction. They will use the shared mechanisms
+and the measurement contract; the registered maze results so far are a pilot, not
+the final train/validation/test comparison. HandEye, Taxi and BitFlipping measurements
+describe limitations outside the main maze comparison.
+
+**Not implemented:**
+
 - Actor-Critic (leave seams only).
 - Probability-Enhanced Effects (PEE) — OFF by default in pyalcs; do not implement now.
 - Action planning — OFF by default; do not implement now.
 - GPU/tensor backends.
-- Multiplexer / parity / Gymnasium-wrapped non-maze environments (later, if needed).
+- Parity and Python/Gymnasium bindings (optional future integration).
 
 ---
 
@@ -230,45 +260,54 @@ SOLID throughout. No God types. RNG injected via a trait (Dependency Inversion).
 No code comments — semantics live in names. All identifiers in English.
 
 ```
-acs2/                      (Cargo workspace)
-├── acs2-core/   (lib)     pure ACS2 domain, no I/O
-│   ├── symbol              wildcard-aware attribute symbol
-│   ├── condition           matching template + specificity + subsumes
-│   ├── effect              anticipated change + does_anticipate_correctly
-│   ├── mark                per-attribute mark sets + get_differences
-│   ├── classifier          fields, q/r/ir/tav updates, fitness, copy
-│   ├── population          storage, form_match_set, form_action_set,
-│   │                       numerosity, subsumption, deletion
-│   ├── alp                 expected_case, unexpected_case, cover, marking
-│   ├── ga                  selection, crossover, generalizing mutation, deletion
-│   ├── rl                  reward-prediction update + bootstrap target
-│   ├── action_selection    trait ActionSelector  <-- ACTOR SEAM
-│   │                       impls: EpsilonGreedy, BestAction, RandomAction
-│   ├── config              Configuration (all parameters above)
-│   ├── environment         trait: reset, step -> StepOutcome
-│   ├── goal                goal port: Goal, GoalObjective, GoalEnvironment, adapter
-│   ├── rng                 trait abstraction over rand::Rng (injected)
-│   └── agent               single shared trial loop (explore / exploit)
-│                           bootstrap value is a parameter  <-- CRITIC SEAM
-├── acs2-envs/   (lib)     Maze + Multiplexer implement Environment; goal tasks GoalEnvironment
-│   ├── maze                8-sensor dynamics (maze/mod.rs), geometry lookup
-│   │   └── geometries      one file per maze, tagged by MazeSource
-│   │       ├── pyalcs      geometry from gym_maze
-│   │       └── alcs        22 ALCS comparison geometries
-│   ├── goal                goal tasks: goal maze, bit flipping, hand-eye, taxi
-│   ├── roles               validation, research and performance sets
-│   │                       VALIDATION_MAZES pins the five-maze P9 order;
-│   │                       PERFORMANCE_MAZES pins the 22-maze comparison
-│   └── multiplexer.rs      unchanged MPX environment and public path
-├── acs2-bench/  (bin)     runs the suite, computes metrics, emits CSV + timing
-└── acs2-py/     (lib, LATER, optional)   PyO3 bindings exposing a Gymnasium agent
+acs2-core/src/                 pure ACS2 domain, no I/O
+  representation/             symbol, perception, condition, effect, mark, classifier, population
+  learning/                   ALP, GA, RL, subsumption, action selection (actor seam)
+  agents/acs2/mod.rs           ACS2 exploration loop
+  agents/acs2er/               ACS2ER loop, replay memory and configuration
+  agents/trial.rs             LearningAgent, shared exploitation, truncation mode (critic seam)
+  ports/                      environment, goal objective/environment and adapter
+  support/                    configuration, injected RNG, knowledge, matching counter
+  checkpoint.rs               unchanged path for the running MPX chain
+acs2-envs/src/                 concrete dynamics, reference/research/performance roles
+  maze/                       single-goal dynamics, topology, knowledge and geometries
+  maze/geometries/pyalcs/      gym_maze provenance
+  maze/geometries/alcs/        22 ALCS comparison geometries
+  goal/                       multi-goal maze, bit flipping, hand-eye, taxi, knowledge
+  roles.rs                    pins P9 validation order separately from research/performance sets
+  multiplexer.rs              MPX dynamics and public path
+acs2-bench/src/                P9 benchmark, multiplexer runners, checkpoint codec
+acs2-measure/src/              goal-agent contract, interaction budget, evaluation, references, CLI
+  runner.rs                   GoalAgent, CoreAgent, TrainingEnvironment, read-only evaluation
+  task.rs                     task construction and explicit thesis preset
+  reference.rs                start-goal distribution, random-policy floor and reachability
+  trajectory.rs               relabeling and replay-diagnostics adapter
+acs2-trajectory/src/           raw episodes and goals, no learning or task policy
+  store.rs                    TrajectoryStore, FIFO episodes, persistent observed candidates
+  selection.rs                goal strategies, weighted distributions and admissibility
+  relabel.rs                  objective-derived samples and episode endings
+  sampler.rs                  draw volume, fallback, provenance and cumulative route counters
+  composition.rs              exact composition without RNG
+  cost.rs                     reward/reach evaluations split by purpose
+experiments/                   registered protocols and analyses; raw data outside the checkout
+  baseline-pilot/             ACS2/ACS2ER pilot grid and its original operations
+  relabeling-composition/     random-policy composition summary
 ```
 
+The workspace has these five crates; optional Python bindings are not a crate yet.
+Every former `acs2_core` crate-root module path remains available through re-exports
+in `acs2-core/src/lib.rs`. New code uses the grouped paths, and compatibility exports
+are removed only after the running MPX chain ends and both lines' gates pass.
+New learning agents go in a separate crate outside core (planned package name
+`acs2-agents`), one module directory per family with variants inside. That package
+is not implemented yet. Shared mechanisms remain in the shared crates.
+
 **The two Actor-Critic seams (built now as architecture, implemented later):**
-1. **Actor**: the `ActionSelector` trait. This phase ships `EpsilonGreedy`,
+
+1. **Actor**: the `ActionSelector` trait. The core provides `EpsilonGreedy`,
    `BestAction`, `RandomAction`. An actor is a future `ActionSelector` impl.
 2. **Critic**: the RL bootstrap target is passed into the agent loop as a value, not
-   hardcoded. This phase passes `max q·r over the next match set`. A critic later
+   hardcoded. The implemented agents pass `max q·r over the next match set`. A critic later
    supplies a learned `V(s')` at the same call site.
 
 **Representation note / future optimization.** Canonical ACS2 (pyalcs) does NOT

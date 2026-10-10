@@ -1,5 +1,5 @@
-use crate::classifier::Classifier;
-use crate::population::{ClassifierRef, Population};
+use crate::representation::classifier::Classifier;
+use crate::representation::population::{ClassifierRef, Population};
 
 pub trait BootstrapEstimator<const N: usize> {
     fn estimate(&self, population: &Population<N>, match_set: &[ClassifierRef]) -> f64;
