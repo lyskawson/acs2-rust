@@ -2,6 +2,7 @@ use acs2_core::acs2er::ReplaySample;
 use acs2_core::goal::{Goal, GoalLayout, GoalObjective, GoalOutcome, GoalStep};
 use acs2_core::trial::TruncationMode;
 
+use crate::cost::{CostByPurpose, ObjectiveCost};
 use crate::selection::{goal_facts, Admissibility};
 use crate::store::{EpisodeId, StoredEpisode};
 
@@ -23,22 +24,6 @@ impl<O: GoalObjective<G> + ?Sized, const S: usize, const G: usize> GoalEvaluator
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct ObjectiveCost {
-    pub reward_evaluations: u64,
-    pub reach_evaluations: u64,
-}
-
-impl ObjectiveCost {
-    pub fn total(self) -> u64 {
-        self.reward_evaluations + self.reach_evaluations
-    }
-    pub fn add(&mut self, other: Self) {
-        self.reward_evaluations += other.reward_evaluations;
-        self.reach_evaluations += other.reach_evaluations;
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SampleError {
     EmptyStore,
@@ -51,6 +36,13 @@ pub struct ScoredSample<const M: usize> {
     pub sample: ReplaySample<M>,
     pub outcome: GoalOutcome,
     pub cost: ObjectiveCost,
+}
+
+pub(crate) fn scoring_cost<const S: usize, const G: usize>(step: &GoalStep<S, G>) -> ObjectiveCost {
+    ObjectiveCost {
+        reward_evaluations: 1,
+        reach_evaluations: u64::from(!step.terminal_state),
+    }
 }
 
 pub fn build_sample<const S: usize, const G: usize, const M: usize>(
@@ -77,10 +69,7 @@ pub fn build_sample<const S: usize, const G: usize, const M: usize>(
             done: truncation.is_terminal(outcome.terminated, outcome.truncated),
         },
         outcome,
-        cost: ObjectiveCost {
-            reward_evaluations: 1,
-            reach_evaluations: u64::from(!raw.step.terminal_state),
-        },
+        cost: scoring_cost(&raw.step),
     })
 }
 
@@ -90,6 +79,7 @@ pub enum EpisodeEnd {
     Truncated,
     Cut,
     AlreadyReachedAtStart,
+    NoAdmissibleTransition,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -103,7 +93,7 @@ pub struct RelabeledEpisode<const M: usize> {
     pub id: EpisodeId,
     pub samples: Vec<IndexedSample<M>>,
     pub end: EpisodeEnd,
-    pub cost: ObjectiveCost,
+    pub cost: CostByPurpose,
 }
 
 pub fn relabel_episode<const S: usize, const G: usize, const M: usize>(
@@ -116,11 +106,12 @@ pub fn relabel_episode<const S: usize, const G: usize, const M: usize>(
     let mut result = RelabeledEpisode {
         id: episode.id(),
         samples: Vec::new(),
-        end: EpisodeEnd::Cut,
-        cost: ObjectiveCost::default(),
+        end: EpisodeEnd::NoAdmissibleTransition,
+        cost: CostByPurpose::default(),
     };
     for transition in 0..episode.len() {
-        let facts = goal_facts(episode, transition, goal, evaluator, &mut result.cost);
+        let (facts, queries) = goal_facts(episode, transition, goal, evaluator);
+        result.cost.add(rule.attribute(queries));
         if !rule.admits(facts) {
             if transition == 0 && rule == Admissibility::CounterfactualEpisode {
                 result.end = EpisodeEnd::AlreadyReachedAtStart;
@@ -128,7 +119,7 @@ pub fn relabel_episode<const S: usize, const G: usize, const M: usize>(
             continue;
         }
         let scored = build_sample(episode, transition, goal, evaluator, truncation)?;
-        result.cost.add(scored.cost);
+        result.cost.scoring.add(scored.cost);
         result.end = if scored.outcome.terminated {
             EpisodeEnd::Terminated
         } else if scored.outcome.truncated {

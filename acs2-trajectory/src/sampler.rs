@@ -2,7 +2,8 @@ use acs2_core::goal::Goal;
 use acs2_core::rng::RandomSource;
 use acs2_core::trial::TruncationMode;
 
-use crate::relabel::{build_sample, GoalEvaluator, ObjectiveCost, SampleError, ScoredSample};
+use crate::cost::CostByPurpose;
+use crate::relabel::{build_sample, scoring_cost, GoalEvaluator, SampleError, ScoredSample};
 use crate::selection::{goal_distribution, goal_facts, GoalStrategy, Selection};
 use crate::store::{EpisodeId, TrajectoryStore};
 
@@ -48,36 +49,82 @@ pub struct DrawnSample<const G: usize, const M: usize> {
     pub goal: Goal<G>,
     pub scored: ScoredSample<M>,
     pub provenance: Provenance,
-    pub cost: ObjectiveCost,
+    pub cost: CostByPurpose,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ReplayCounters {
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct RouteMeans {
+    pub already_reached: f64,
+    pub after_counterfactual_end: f64,
+    pub done: f64,
+    pub outside_candidates: f64,
+    pub reward: f64,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct RouteCounters {
     pub draws: u64,
-    pub failed_draws: u64,
-    pub original: u64,
-    pub relabeled: u64,
-    pub fallbacks: u64,
     pub already_reached: u64,
     pub after_counterfactual_end: u64,
     pub done: u64,
     pub outside_candidates: u64,
+    pub reward: f64,
+}
+
+impl RouteCounters {
+    fn record(&mut self, provenance: Provenance, reward: f64) {
+        self.draws += 1;
+        self.already_reached += u64::from(provenance.already_reached);
+        self.after_counterfactual_end += u64::from(provenance.after_counterfactual_end);
+        self.done += u64::from(provenance.done);
+        self.outside_candidates += u64::from(provenance.outside_candidates);
+        self.reward += reward;
+    }
+    pub fn add(&mut self, other: Self) {
+        self.draws += other.draws;
+        self.already_reached += other.already_reached;
+        self.after_counterfactual_end += other.after_counterfactual_end;
+        self.done += other.done;
+        self.outside_candidates += other.outside_candidates;
+        self.reward += other.reward;
+    }
+    pub fn given_route(&self) -> Option<RouteMeans> {
+        let draws = self.draws as f64;
+        (self.draws > 0).then(|| RouteMeans {
+            already_reached: self.already_reached as f64 / draws,
+            after_counterfactual_end: self.after_counterfactual_end as f64 / draws,
+            done: self.done as f64 / draws,
+            outside_candidates: self.outside_candidates as f64 / draws,
+            reward: self.reward / draws,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ReplayCounters {
+    pub failed_draws: u64,
+    pub fallbacks: u64,
+    pub original: RouteCounters,
+    pub relabeled: RouteCounters,
     pub strategies: [u64; 5],
-    pub cost: ObjectiveCost,
+    pub cost: CostByPurpose,
 }
 
 impl ReplayCounters {
+    pub fn pooled(&self) -> RouteCounters {
+        let mut pooled = self.original;
+        pooled.add(self.relabeled);
+        pooled
+    }
     fn record<const G: usize, const M: usize>(&mut self, drawn: &DrawnSample<G, M>) {
-        let p = drawn.provenance;
-        self.draws += 1;
-        self.original += u64::from(p.origin == SampleOrigin::Original);
-        self.relabeled += u64::from(p.origin == SampleOrigin::Relabeled);
-        self.fallbacks += u64::from(p.fallback);
-        self.already_reached += u64::from(p.already_reached);
-        self.after_counterfactual_end += u64::from(p.after_counterfactual_end);
-        self.done += u64::from(p.done);
-        self.outside_candidates += u64::from(p.outside_candidates);
-        self.strategies[p.strategy.index()] += 1;
+        let provenance = drawn.provenance;
+        let route = match provenance.origin {
+            SampleOrigin::Original => &mut self.original,
+            SampleOrigin::Relabeled => &mut self.relabeled,
+        };
+        route.record(provenance, drawn.scored.sample.reward);
+        self.fallbacks += u64::from(provenance.fallback);
+        self.strategies[provenance.strategy.index()] += 1;
         self.cost.add(drawn.cost);
     }
 }
@@ -117,75 +164,90 @@ impl<R: RandomSource> Sampler<R> {
             return Err(SampleError::EmptyStore);
         }
         let mut result = Vec::with_capacity(count);
+        let mut performed = CostByPurpose::default();
         for _ in 0..count {
-            let (episode, transition) = store.transition(self.rng.gen_range(store.len()));
-            let config = self.configuration;
-            let attempt = config.selection.strategy != GoalStrategy::Original
-                && (config.relabeled_proportion == 1.0
-                    || (config.relabeled_proportion > 0.0
-                        && self.rng.gen_bool(config.relabeled_proportion)));
-            let mut cost = ObjectiveCost::default();
-            let selected = if attempt {
-                let distribution = goal_distribution(
-                    episode,
-                    transition,
-                    config.selection,
-                    store.candidates(),
-                    evaluator,
-                );
-                cost.add(distribution.cost);
-                distribution.draw(&mut self.rng)
-            } else {
-                None
-            };
-            let (goal, facts, origin, strategy) = if let Some(choice) = selected {
-                (
-                    choice.goal,
-                    choice.facts,
-                    SampleOrigin::Relabeled,
-                    config.selection.strategy,
-                )
-            } else {
-                let goal = episode.start().desired;
-                let facts = goal_facts(episode, transition, &goal, evaluator, &mut cost);
-                (goal, facts, SampleOrigin::Original, GoalStrategy::Original)
-            };
-            let scored =
-                match build_sample(episode, transition, &goal, evaluator, config.truncation) {
-                    Ok(scored) => scored,
-                    Err(error) => {
-                        cost.add(ObjectiveCost {
-                            reward_evaluations: 1,
-                            reach_evaluations: u64::from(
-                                !episode.steps()[transition].step.terminal_state,
-                            ),
-                        });
-                        self.counters.cost.add(cost);
-                        self.counters.failed_draws += 1;
-                        return Err(error);
-                    }
-                };
-            cost.add(scored.cost);
-            let drawn = DrawnSample {
-                episode: episode.id(),
-                transition,
-                goal,
-                provenance: Provenance {
-                    origin,
-                    strategy,
-                    requested_strategy: config.selection.strategy,
-                    already_reached: facts.already_reached,
-                    after_counterfactual_end: facts.after_counterfactual_end,
-                    done: scored.sample.done,
-                    outside_candidates: !store.candidates().contains(&goal),
-                    fallback: attempt && selected.is_none(),
-                },
-                scored,
-                cost,
-            };
-            self.counters.record(&drawn);
-            result.push(drawn);
+            match self.draw_one(store, evaluator) {
+                Ok(drawn) => {
+                    performed.add(drawn.cost);
+                    result.push(drawn);
+                }
+                Err((error, cost)) => {
+                    performed.add(cost);
+                    self.counters.cost.add(performed);
+                    self.counters.failed_draws += 1;
+                    return Err(error);
+                }
+            }
+        }
+        for drawn in &result {
+            self.counters.record(drawn);
         }
         Ok(result)
+    }
+
+    fn draw_one<const S: usize, const G: usize, const M: usize>(
+        &mut self,
+        store: &TrajectoryStore<S, G>,
+        evaluator: &impl GoalEvaluator<S, G>,
+    ) -> Result<DrawnSample<G, M>, (SampleError, CostByPurpose)> {
+        let (episode, transition) = store.transition(self.rng.gen_range(store.len()));
+        let config = self.configuration;
+        let attempt = config.selection.strategy != GoalStrategy::Original
+            && (config.relabeled_proportion == 1.0
+                || (config.relabeled_proportion > 0.0
+                    && self.rng.gen_bool(config.relabeled_proportion)));
+        let mut cost = CostByPurpose::default();
+        let selected = if attempt {
+            let distribution = goal_distribution(
+                episode,
+                transition,
+                config.selection,
+                store.candidates(),
+                evaluator,
+            );
+            cost.add(distribution.cost);
+            distribution.draw(&mut self.rng)
+        } else {
+            None
+        };
+        let (goal, facts, origin, strategy) = if let Some(choice) = selected {
+            (
+                choice.goal,
+                choice.facts,
+                SampleOrigin::Relabeled,
+                config.selection.strategy,
+            )
+        } else {
+            let goal = episode.start().desired;
+            let (facts, queries) = goal_facts(episode, transition, &goal, evaluator);
+            cost.add(queries.as_provenance());
+            (goal, facts, SampleOrigin::Original, GoalStrategy::Original)
+        };
+        let scored = match build_sample(episode, transition, &goal, evaluator, config.truncation) {
+            Ok(scored) => scored,
+            Err(error) => {
+                cost.scoring
+                    .add(scoring_cost(&episode.steps()[transition].step));
+                return Err((error, cost));
+            }
+        };
+        cost.scoring.add(scored.cost);
+        Ok(DrawnSample {
+            episode: episode.id(),
+            transition,
+            goal,
+            provenance: Provenance {
+                origin,
+                strategy,
+                requested_strategy: config.selection.strategy,
+                already_reached: facts.already_reached,
+                after_counterfactual_end: facts.after_counterfactual_end,
+                done: scored.sample.done,
+                outside_candidates: !store.candidates().contains(&goal),
+                fallback: attempt && selected.is_none(),
+            },
+            scored,
+            cost,
+        })
     }
 }

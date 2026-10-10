@@ -81,35 +81,82 @@ fn episode(
     store.insert(raw).unwrap()
 }
 
+fn states<const S: usize, const G: usize>(e: &StoredEpisode<S, G>) -> Vec<Goal<G>> {
+    [e.start().achieved]
+        .into_iter()
+        .chain(e.steps().iter().map(|step| step.step.achieved))
+        .collect()
+}
+
+fn source_multiset<const S: usize, const G: usize>(
+    e: &StoredEpisode<S, G>,
+    t: usize,
+    strategy: GoalStrategy,
+    candidates: &[Goal<G>],
+) -> Vec<Goal<G>> {
+    let states = states(e);
+    match strategy {
+        GoalStrategy::Original => vec![e.start().desired],
+        GoalStrategy::Final => vec![states[e.steps().len()]],
+        GoalStrategy::Future => states[t + 1..].to_vec(),
+        GoalStrategy::Episode => states[1..].to_vec(),
+        GoalStrategy::UniformReal => candidates.to_vec(),
+    }
+}
+
+fn considered_goals<const S: usize, const G: usize>(
+    e: &StoredEpisode<S, G>,
+    t: usize,
+    selected: Selection,
+    candidates: &[Goal<G>],
+) -> Vec<Goal<G>> {
+    let mut goals = source_multiset(e, t, selected.strategy, candidates);
+    goals.sort();
+    goals.dedup();
+    goals.retain(|goal| !selected.candidate_filter || candidates.contains(goal));
+    goals
+}
+
+fn queries_of<const G: usize>(states: &[Goal<G>], t: usize, goal: &Goal<G>) -> (u64, u64) {
+    let earlier = if states[t] == *goal {
+        0
+    } else {
+        states[..t]
+            .iter()
+            .position(|state| state == goal)
+            .map_or(t, |index| index + 1)
+    };
+    (1, earlier as u64)
+}
+
+fn rule_reads<const G: usize>(
+    rule: Admissibility,
+    states: &[Goal<G>],
+    t: usize,
+    goal: &Goal<G>,
+) -> (u64, u64) {
+    let (current, earlier) = queries_of(states, t, goal);
+    match rule {
+        Admissibility::EveryTransition => (0, current + earlier),
+        Admissibility::FromNonGoalState => (current, earlier),
+        Admissibility::CounterfactualEpisode => (current + earlier, 0),
+    }
+}
+
 fn independent<const S: usize, const G: usize>(
     e: &StoredEpisode<S, G>,
     t: usize,
     selected: Selection,
     candidates: &[Goal<G>],
 ) -> (usize, BTreeMap<Goal<G>, (usize, bool, bool)>) {
-    let source = match selected.strategy {
-        GoalStrategy::Original => vec![e.start().desired],
-        GoalStrategy::Final => vec![e.steps().last().unwrap().step.achieved],
-        GoalStrategy::Future => e.steps()[t..]
-            .iter()
-            .map(|step| step.step.achieved)
-            .collect(),
-        GoalStrategy::Episode => e.steps().iter().map(|step| step.step.achieved).collect(),
-        GoalStrategy::UniformReal => candidates.to_vec(),
-    };
-    let current = if t == 0 {
-        e.start().achieved
-    } else {
-        e.steps()[t - 1].step.achieved
-    };
-    let prefix: Vec<Goal<G>> = [e.start().achieved]
-        .into_iter()
-        .chain(e.steps()[..t].iter().map(|step| step.step.achieved))
-        .collect();
+    let source = source_multiset(e, t, selected.strategy, candidates);
+    let states = states(e);
+    let current = states[t];
+    let prefix = &states[..t];
     let mut counts = BTreeMap::new();
     for candidate in &source {
         let reached = current == *candidate;
-        let after = prefix.contains(candidate);
+        let after = reached || prefix.contains(candidate);
         let admits = match selected.admissibility {
             Admissibility::EveryTransition => true,
             Admissibility::FromNonGoalState => !reached,
@@ -122,11 +169,78 @@ fn independent<const S: usize, const G: usize>(
     (source.len(), counts)
 }
 
+fn assert_relabeled_episodes<const S: usize, const G: usize, const M: usize>(
+    e: &StoredEpisode<S, G>,
+    goals: &[Goal<G>],
+) {
+    let evaluator = ObjectiveEvaluator(&OBJECTIVE);
+    let states = states(e);
+    for goal in goals {
+        for rule in RULES {
+            let relabeled =
+                relabel_episode::<S, G, M>(e, goal, rule, &evaluator, TruncationMode::Bootstrap)
+                    .unwrap();
+            let admitted: Vec<usize> = (0..e.len())
+                .filter(|&t| match rule {
+                    Admissibility::EveryTransition => true,
+                    Admissibility::FromNonGoalState => states[t] != *goal,
+                    Admissibility::CounterfactualEpisode => !states[..=t].contains(goal),
+                })
+                .collect();
+            assert_eq!(
+                relabeled
+                    .samples
+                    .iter()
+                    .map(|sample| sample.transition)
+                    .collect::<Vec<_>>(),
+                admitted
+            );
+            let expected_end = match relabeled.samples.last() {
+                None if rule == Admissibility::CounterfactualEpisode => {
+                    assert_eq!(states[0], *goal);
+                    EpisodeEnd::AlreadyReachedAtStart
+                }
+                None => EpisodeEnd::NoAdmissibleTransition,
+                Some(last) if last.scored.outcome.terminated => EpisodeEnd::Terminated,
+                Some(last) if last.scored.outcome.truncated => EpisodeEnd::Truncated,
+                Some(_) => EpisodeEnd::Cut,
+            };
+            assert_eq!(relabeled.end, expected_end, "{goal:?} {rule:?}");
+            let mut selection = 0;
+            let mut provenance = 0;
+            for t in 0..e.len() {
+                let (read, other) = rule_reads(rule, &states, t, goal);
+                selection += read;
+                provenance += other;
+                if rule == Admissibility::CounterfactualEpisode
+                    && admitted.contains(&t)
+                    && states[t + 1] == *goal
+                {
+                    break;
+                }
+            }
+            let scored = relabeled.samples.len() as u64;
+            assert_eq!(
+                relabeled.cost,
+                CostByPurpose {
+                    scoring: ObjectiveCost {
+                        reward_evaluations: scored,
+                        reach_evaluations: scored
+                    },
+                    selection: ObjectiveCost::reach(selection),
+                    provenance: ObjectiveCost::reach(provenance),
+                }
+            );
+        }
+    }
+}
+
 fn assert_enumeration<const S: usize, const G: usize>(
     e: &StoredEpisode<S, G>,
     candidates: &[Goal<G>],
 ) {
     let evaluator = ObjectiveEvaluator(&OBJECTIVE);
+    let states = states(e);
     for t in 0..e.len() {
         for strategy in STRATEGIES {
             for rule in RULES {
@@ -135,6 +249,20 @@ fn assert_enumeration<const S: usize, const G: usize>(
                     let (source, expected) = independent(e, t, selected, candidates);
                     let actual = goal_distribution(e, t, selected, candidates, &evaluator);
                     let total: usize = expected.values().map(|entry| entry.0).sum();
+                    let mut reads = (0, 0);
+                    for goal in considered_goals(e, t, selected, candidates) {
+                        let (read, other) = rule_reads(rule, &states, t, &goal);
+                        reads.0 += read;
+                        reads.1 += other;
+                    }
+                    assert_eq!(
+                        actual.cost,
+                        CostByPurpose {
+                            scoring: ObjectiveCost::default(),
+                            selection: ObjectiveCost::reach(reads.0),
+                            provenance: ObjectiveCost::reach(reads.1),
+                        }
+                    );
                     assert_eq!(actual.source_count, source);
                     assert_eq!(actual.admitted_count, total, "{t} {selected:?}");
                     assert_eq!(actual.choices.len(), expected.len());
@@ -197,6 +325,7 @@ fn every_four_bit_transition_and_goal_matches_independent_enumeration() {
             }
             let id = store.insert(raw).unwrap();
             assert_enumeration(store.episode(id).unwrap(), &goals);
+            assert_relabeled_episodes::<4, 4, 8>(store.episode(id).unwrap(), &goals);
         }
     }
 }
@@ -238,6 +367,18 @@ fn a_stationary_handeye_block_exposes_trivial_goals_and_fallbacks() {
         assert_eq!(every.done, 1.0);
         assert_eq!(every.outside_candidates, 1.0);
         assert_eq!(every.mean_reward, 1000.0);
+        assert_eq!(every.original, RouteComposition::default());
+        assert_eq!(
+            every.relabeled,
+            RouteComposition {
+                share: 1.0,
+                already_reached: 1.0,
+                after_counterfactual_end: 1.0,
+                done: 1.0,
+                outside_candidates: 1.0,
+                reward: 1000.0,
+            }
+        );
         for rule in [RULES[1], RULES[2]] {
             let filtered = episode_composition::<17, 2, 19>(
                 e,
@@ -250,8 +391,11 @@ fn a_stationary_handeye_block_exposes_trivial_goals_and_fallbacks() {
             assert_eq!(filtered.admissible_share, 0.0);
             assert_eq!(filtered.no_admissible_goal, 1.0);
             assert_eq!(filtered.fallback, 1.0);
-            assert_eq!(filtered.original, 1.0);
+            assert_eq!(filtered.original.share, 1.0);
             assert_eq!(filtered.mean_reward, 0.0);
+            assert_eq!(filtered.relabeled, RouteComposition::default());
+            assert_eq!(filtered.relabeled.given_route(), None);
+            assert_eq!(filtered.original.given_route(), Some(RouteMeans::default()));
         }
     }
 }
@@ -282,6 +426,7 @@ fn a_maze_return_distinguishes_non_goal_from_counterfactual_and_keeps_the_start(
     let e = store.episode(id).unwrap();
     let candidates = [desired, env.goal_at(other), env.goal_at(start_cell)];
     assert_enumeration(e, &candidates);
+    assert_relabeled_episodes::<8, 2, 10>(e, &candidates);
     let evaluator = ObjectiveEvaluator(env.objective());
     let non_goal = goal_distribution(
         e,
@@ -673,7 +818,7 @@ fn transition_draws_are_uniform_and_relabel_share_is_an_independent_coin() {
         .draw::<1, 1, 2>(&store, 40_000, &ObjectiveEvaluator(&OBJECTIVE))
         .unwrap();
     let mut frequencies = BTreeMap::new();
-    for sample in samples {
+    for sample in &samples {
         *frequencies
             .entry((sample.episode, sample.transition))
             .or_insert(0i64) += 1;
@@ -681,56 +826,192 @@ fn transition_draws_are_uniform_and_relabel_share_is_an_independent_coin() {
     for pair in [(first, 0), (second, 0), (second, 1), (second, 2)] {
         assert!((frequencies[&pair] - 10_000).abs() < 400);
     }
-    assert_eq!(sampler.counters().draws, 40_000);
-    assert!((sampler.counters().relabeled as i64 - 32_000).abs() < 500);
+    assert_eq!(sampler.counters().pooled().draws, 40_000);
+    assert!((sampler.counters().relabeled.draws as i64 - 32_000).abs() < 500);
     assert_eq!(
-        sampler.counters().original + sampler.counters().relabeled,
+        sampler.counters().original.draws + sampler.counters().relabeled.draws,
         40_000
     );
+    assert_eq!(sampler.counters(), &recount(&samples, 0));
+}
+
+fn recount<const G: usize, const M: usize>(
+    draws: &[DrawnSample<G, M>],
+    failed_draws: u64,
+) -> ReplayCounters {
+    let mut counters = ReplayCounters {
+        failed_draws,
+        ..ReplayCounters::default()
+    };
+    for draw in draws {
+        let p = draw.provenance;
+        let route = if p.origin == SampleOrigin::Original {
+            &mut counters.original
+        } else {
+            &mut counters.relabeled
+        };
+        route.draws += 1;
+        route.already_reached += u64::from(p.already_reached);
+        route.after_counterfactual_end += u64::from(p.after_counterfactual_end);
+        route.done += u64::from(p.done);
+        route.outside_candidates += u64::from(p.outside_candidates);
+        route.reward += draw.scored.sample.reward;
+        counters.fallbacks += u64::from(p.fallback);
+        counters.strategies[p.strategy.index()] += 1;
+        for (total, part) in [
+            (&mut counters.cost.scoring, draw.cost.scoring),
+            (&mut counters.cost.selection, draw.cost.selection),
+            (&mut counters.cost.provenance, draw.cost.provenance),
+        ] {
+            total.reward_evaluations += part.reward_evaluations;
+            total.reach_evaluations += part.reach_evaluations;
+        }
+    }
+    counters
 }
 
 #[test]
 fn every_strategy_rule_and_filter_draw_is_admissible_or_a_counted_original_fallback() {
-    let mut store = TrajectoryStore::new(5);
+    let mut store = TrajectoryStore::new(8);
     episode(&mut store, &[1, 2, 1, 3, 4, 3], 9, true);
+    episode(&mut store, &[3, 4], 4, false);
     let evaluator = ObjectiveEvaluator(&OBJECTIVE);
     for strategy in STRATEGIES {
         for rule in RULES {
             for filter in [false, true] {
-                let mut sampler = Sampler::new(
-                    config(strategy, rule, filter, 1.0),
-                    ChaChaRandomSource::from_seed_and_stream(42, SAMPLER_STREAM),
-                );
-                let draws = sampler.draw::<1, 1, 2>(&store, 1000, &evaluator).unwrap();
-                assert_eq!(draws.len(), 1000);
-                for draw in &draws {
-                    let e = store.episode(draw.episode).unwrap();
-                    let (_, admissible) = independent(
-                        e,
-                        draw.transition,
-                        selection(strategy, rule, filter),
-                        store.candidates(),
+                for share in [0.0, 0.6, 1.0] {
+                    let selected = selection(strategy, rule, filter);
+                    let mut sampler = Sampler::new(
+                        config(strategy, rule, filter, share),
+                        ChaChaRandomSource::from_seed_and_stream(42, SAMPLER_STREAM),
                     );
-                    if draw.provenance.origin == SampleOrigin::Relabeled {
-                        assert!(admissible.contains_key(&draw.goal));
+                    let draws = sampler.draw::<1, 1, 2>(&store, 1000, &evaluator).unwrap();
+                    assert_eq!(draws.len(), 1000);
+                    for draw in &draws {
+                        let e = store.episode(draw.episode).unwrap();
+                        let states = states(e);
+                        let t = draw.transition;
+                        let (_, admissible) = independent(e, t, selected, store.candidates());
+                        let p = draw.provenance;
+                        let attempted = p.origin == SampleOrigin::Relabeled || p.fallback;
+                        if strategy == GoalStrategy::Original || share == 0.0 {
+                            assert!(!attempted);
+                        } else if share == 1.0 {
+                            assert!(attempted);
+                        }
+                        assert_eq!(p.requested_strategy, strategy);
+                        if p.origin == SampleOrigin::Relabeled {
+                            assert!(admissible.contains_key(&draw.goal));
+                            assert_eq!(p.strategy, strategy);
+                        } else {
+                            assert_eq!(draw.goal, e.start().desired);
+                            assert_eq!(p.strategy, GoalStrategy::Original);
+                        }
+                        if p.fallback {
+                            assert!(admissible.is_empty());
+                        }
+                        assert_eq!(p.already_reached, states[t] == draw.goal);
+                        assert_eq!(
+                            p.after_counterfactual_end,
+                            states[..=t].contains(&draw.goal)
+                        );
+                        assert_eq!(p.done, states[t + 1] == draw.goal);
+                        assert_eq!(
+                            p.outside_candidates,
+                            !store.candidates().contains(&draw.goal)
+                        );
+                        assert_eq!(draw.scored.sample.reward, if p.done { 1000.0 } else { 0.0 });
+                        let mut reads = (0, 0);
+                        if attempted {
+                            for goal in considered_goals(e, t, selected, store.candidates()) {
+                                let (read, other) = rule_reads(rule, &states, t, &goal);
+                                reads.0 += read;
+                                reads.1 += other;
+                            }
+                        }
+                        if p.origin == SampleOrigin::Original {
+                            let (current, earlier) = queries_of(&states, t, &draw.goal);
+                            reads.1 += current + earlier;
+                        }
+                        assert_eq!(
+                            draw.cost,
+                            CostByPurpose {
+                                scoring: ObjectiveCost {
+                                    reward_evaluations: 1,
+                                    reach_evaluations: 1
+                                },
+                                selection: ObjectiveCost::reach(reads.0),
+                                provenance: ObjectiveCost::reach(reads.1),
+                            },
+                            "{selected:?} {share} {draw:?}"
+                        );
                     }
-                    if draw.provenance.fallback {
-                        assert!(admissible.is_empty());
-                        assert_eq!(draw.goal, e.start().desired);
+                    assert_eq!(sampler.counters(), &recount(&draws, 0));
+                    let pooled = sampler.counters().pooled();
+                    assert_eq!(pooled.draws, 1000);
+                    assert_eq!(
+                        pooled.already_reached,
+                        draws
+                            .iter()
+                            .filter(|d| d.provenance.already_reached)
+                            .count() as u64
+                    );
+                    assert_eq!(
+                        pooled.after_counterfactual_end,
+                        draws
+                            .iter()
+                            .filter(|d| d.provenance.after_counterfactual_end)
+                            .count() as u64
+                    );
+                    assert_eq!(
+                        pooled.done,
+                        draws.iter().filter(|d| d.provenance.done).count() as u64
+                    );
+                    assert_eq!(
+                        pooled.outside_candidates,
+                        draws
+                            .iter()
+                            .filter(|d| d.provenance.outside_candidates)
+                            .count() as u64
+                    );
+                    for (route, origin) in [
+                        (sampler.counters().original, SampleOrigin::Original),
+                        (sampler.counters().relabeled, SampleOrigin::Relabeled),
+                    ] {
+                        let members: Vec<_> = draws
+                            .iter()
+                            .filter(|d| d.provenance.origin == origin)
+                            .collect();
+                        let count = members.len() as f64;
+                        assert_eq!(
+                            route.given_route(),
+                            (!members.is_empty()).then(|| RouteMeans {
+                                already_reached: members
+                                    .iter()
+                                    .filter(|d| d.provenance.already_reached)
+                                    .count()
+                                    as f64
+                                    / count,
+                                after_counterfactual_end: members
+                                    .iter()
+                                    .filter(|d| d.provenance.after_counterfactual_end)
+                                    .count()
+                                    as f64
+                                    / count,
+                                done: members.iter().filter(|d| d.provenance.done).count() as f64
+                                    / count,
+                                outside_candidates: members
+                                    .iter()
+                                    .filter(|d| d.provenance.outside_candidates)
+                                    .count()
+                                    as f64
+                                    / count,
+                                reward: members.iter().map(|d| d.scored.sample.reward).sum::<f64>()
+                                    / count,
+                            })
+                        );
                     }
-                    assert_eq!(
-                        draw.provenance.already_reached,
-                        e.achieved(draw.transition) == &draw.goal
-                    );
-                    assert_eq!(
-                        draw.provenance.after_counterfactual_end,
-                        (0..=draw.transition).any(|s| e.achieved(s) == &draw.goal)
-                    );
                 }
-                assert_eq!(
-                    sampler.counters().fallbacks,
-                    draws.iter().filter(|draw| draw.provenance.fallback).count() as u64
-                );
             }
         }
     }
@@ -750,11 +1031,12 @@ fn relabeled_provenance_depends_on_the_route_even_when_the_goals_are_equal() {
     assert!(samples.iter().all(|s| s.goal == goal(1)
         && s.provenance.origin == SampleOrigin::Relabeled
         && s.provenance.done));
-    assert_eq!(sampler.counters().relabeled, 10);
+    assert_eq!(sampler.counters().relabeled.draws, 10);
     assert_eq!(
         sampler.counters().strategies[GoalStrategy::Final.index()],
         10
     );
+    assert_eq!(sampler.counters(), &recount(&samples, 0));
 }
 
 #[test]
@@ -779,7 +1061,14 @@ fn zero_relabel_share_and_empty_store_have_explicit_behavior() {
     assert!(samples
         .iter()
         .all(|s| s.provenance.origin == SampleOrigin::Original && !s.provenance.fallback));
-    assert_eq!(sampler.counters().original, 30);
+    assert_eq!(sampler.counters().original.draws, 30);
+    assert_eq!(sampler.counters().relabeled, RouteCounters::default());
+    assert_eq!(sampler.counters(), &recount(&samples, 0));
+    assert_eq!(sampler.counters().cost.selection, ObjectiveCost::default());
+    assert_eq!(
+        sampler.counters().cost.provenance,
+        ObjectiveCost::reach(samples.iter().map(|s| 1 + s.transition as u64).sum::<u64>())
+    );
 }
 
 struct CountedObjective {
@@ -822,12 +1111,14 @@ fn objective_cost_counts_actual_calls_and_determinism_includes_the_sampler_strea
         .draw::<1, 1, 2>(&store, 200, &ObjectiveEvaluator(&objective))
         .unwrap();
     assert_eq!(
-        first.counters().cost,
+        first.counters().cost.total(),
         ObjectiveCost {
             reward_evaluations: objective.rewards.get(),
             reach_evaluations: objective.reached.get()
         }
     );
+    assert_eq!(first.counters().cost.scoring.reward_evaluations, 200);
+    assert_eq!(first.counters().cost.scoring.reach_evaluations, 200);
     let b = second
         .draw::<1, 1, 2>(&store, 200, &ObjectiveEvaluator(&OBJECTIVE))
         .unwrap();
@@ -840,88 +1131,293 @@ fn objective_cost_counts_actual_calls_and_determinism_includes_the_sampler_strea
     assert_eq!(first.random_source().capture_state().unwrap().stream, 7);
 }
 
+fn modeled_composition<const S: usize, const G: usize>(
+    e: &StoredEpisode<S, G>,
+    candidates: &[Goal<G>],
+    configuration: SamplerConfiguration,
+) -> ExpectedComposition {
+    let selected = configuration.selection;
+    let states = states(e);
+    let desired = e.start().desired;
+    let attempt = if selected.strategy == GoalStrategy::Original {
+        0.0
+    } else {
+        configuration.relabeled_proportion
+    };
+    let weight = 1.0 / e.steps().len() as f64;
+    let mut model = ExpectedComposition::default();
+    for t in 0..e.steps().len() {
+        let source = source_multiset(e, t, selected.strategy, candidates);
+        let mut reads = (0, 0);
+        let mut admitted = Vec::new();
+        for goal in considered_goals(e, t, selected, candidates) {
+            let (read, other) = rule_reads(selected.admissibility, &states, t, &goal);
+            reads.0 += read;
+            reads.1 += other;
+            let admits = match selected.admissibility {
+                Admissibility::EveryTransition => true,
+                Admissibility::FromNonGoalState => states[t] != goal,
+                Admissibility::CounterfactualEpisode => !states[..=t].contains(&goal),
+            };
+            if admits {
+                admitted.push((goal, source.iter().filter(|&&g| g == goal).count()));
+            }
+        }
+        let admitted_count: usize = admitted.iter().map(|&(_, count)| count).sum();
+        let fallback = if admitted_count == 0 { attempt } else { 0.0 };
+        let original_share = 1.0 - attempt + fallback;
+        let (current, earlier) = queries_of(&states, t, &desired);
+        model.admissible_share += weight * admitted_count as f64 / source.len() as f64;
+        model.no_admissible_goal += weight * f64::from(admitted_count == 0);
+        model.fallback += weight * fallback;
+        model.original.share += weight * original_share;
+        model.relabeled.share += weight * (attempt - fallback);
+        model.mean_selection_evaluations += weight * attempt * reads.0 as f64;
+        model.mean_provenance_evaluations +=
+            weight * (attempt * reads.1 as f64 + original_share * (current + earlier) as f64);
+        model.mean_reach_evaluations += weight
+            * (attempt * (reads.0 + reads.1) as f64 + original_share * (current + earlier) as f64);
+        let mut draws: Vec<(Goal<G>, f64, bool)> = admitted
+            .iter()
+            .map(|&(goal, count)| (goal, attempt * count as f64 / admitted_count as f64, true))
+            .collect();
+        draws.push((desired, original_share, false));
+        for (goal, probability, relabeled) in draws {
+            let p = weight * probability;
+            let reached = states[t + 1] == goal;
+            let truncated = !reached && e.steps()[t].step.time_limit_reached;
+            let done = reached || (truncated && configuration.truncation == TruncationMode::Pyalcs);
+            let reward = if reached { 1000.0 } else { 0.0 };
+            let flags = [
+                f64::from(states[t] == goal),
+                f64::from(states[..=t].contains(&goal)),
+                f64::from(done),
+                f64::from(!candidates.contains(&goal)),
+            ];
+            model.already_reached += p * flags[0];
+            model.after_counterfactual_end += p * flags[1];
+            model.done += p * flags[2];
+            model.outside_candidates += p * flags[3];
+            model.mean_reward += p * reward;
+            model.mean_reward_evaluations += p;
+            model.mean_reach_evaluations += p;
+            model.mean_scoring_evaluations += 2.0 * p;
+            let route = if relabeled {
+                &mut model.relabeled
+            } else {
+                &mut model.original
+            };
+            route.already_reached += p * flags[0];
+            route.after_counterfactual_end += p * flags[1];
+            route.done += p * flags[2];
+            route.outside_candidates += p * flags[3];
+            route.reward += p * reward;
+        }
+    }
+    model
+}
+
+fn assert_close(actual: f64, expected: f64, what: &str) {
+    assert!(
+        (actual - expected).abs() <= 1e-12 * expected.abs().max(1.0),
+        "{what}: {actual} != {expected}"
+    );
+}
+
+fn assert_route_close(actual: RouteComposition, expected: RouteComposition, what: &str) {
+    let RouteComposition {
+        share,
+        already_reached,
+        after_counterfactual_end,
+        done,
+        outside_candidates,
+        reward,
+    } = actual;
+    assert_close(share, expected.share, &format!("{what} share"));
+    assert_close(
+        already_reached,
+        expected.already_reached,
+        &format!("{what} already reached"),
+    );
+    assert_close(
+        after_counterfactual_end,
+        expected.after_counterfactual_end,
+        &format!("{what} after end"),
+    );
+    assert_close(done, expected.done, &format!("{what} done"));
+    assert_close(
+        outside_candidates,
+        expected.outside_candidates,
+        &format!("{what} outside"),
+    );
+    assert_close(reward, expected.reward, &format!("{what} reward"));
+    match (actual.given_route(), expected.share > 0.0) {
+        (None, false) => {}
+        (Some(means), true) => {
+            assert_close(
+                means.already_reached,
+                expected.already_reached / expected.share,
+                what,
+            );
+            assert_close(
+                means.after_counterfactual_end,
+                expected.after_counterfactual_end / expected.share,
+                what,
+            );
+            assert_close(means.done, expected.done / expected.share, what);
+            assert_close(
+                means.outside_candidates,
+                expected.outside_candidates / expected.share,
+                what,
+            );
+            assert_close(means.reward, expected.reward / expected.share, what);
+        }
+        _ => panic!("{what}: a route is defined exactly when it has draws"),
+    }
+}
+
+fn assert_composition_close(
+    actual: ExpectedComposition,
+    expected: ExpectedComposition,
+    what: &str,
+) {
+    let ExpectedComposition {
+        admissible_share,
+        no_admissible_goal,
+        original,
+        relabeled,
+        fallback,
+        already_reached,
+        after_counterfactual_end,
+        done,
+        outside_candidates,
+        mean_reward,
+        mean_reward_evaluations,
+        mean_reach_evaluations,
+        mean_scoring_evaluations,
+        mean_selection_evaluations,
+        mean_provenance_evaluations,
+    } = actual;
+    assert_close(admissible_share, expected.admissible_share, what);
+    assert_close(no_admissible_goal, expected.no_admissible_goal, what);
+    assert_route_close(original, expected.original, &format!("{what} original"));
+    assert_route_close(relabeled, expected.relabeled, &format!("{what} relabeled"));
+    assert_close(fallback, expected.fallback, what);
+    assert_close(already_reached, expected.already_reached, what);
+    assert_close(
+        after_counterfactual_end,
+        expected.after_counterfactual_end,
+        what,
+    );
+    assert_close(done, expected.done, what);
+    assert_close(outside_candidates, expected.outside_candidates, what);
+    assert_close(mean_reward, expected.mean_reward, what);
+    assert_close(
+        mean_reward_evaluations,
+        expected.mean_reward_evaluations,
+        what,
+    );
+    assert_close(
+        mean_reach_evaluations,
+        expected.mean_reach_evaluations,
+        what,
+    );
+    assert_close(
+        mean_scoring_evaluations,
+        expected.mean_scoring_evaluations,
+        what,
+    );
+    assert_close(
+        mean_selection_evaluations,
+        expected.mean_selection_evaluations,
+        what,
+    );
+    assert_close(
+        mean_provenance_evaluations,
+        expected.mean_provenance_evaluations,
+        what,
+    );
+    assert_close(
+        mean_scoring_evaluations + mean_selection_evaluations + mean_provenance_evaluations,
+        actual.mean_objective_evaluations(),
+        what,
+    );
+    assert_close(original.share + relabeled.share, 1.0, what);
+    assert_close(
+        original.already_reached + relabeled.already_reached,
+        already_reached,
+        what,
+    );
+    assert_close(
+        original.after_counterfactual_end + relabeled.after_counterfactual_end,
+        after_counterfactual_end,
+        what,
+    );
+    assert_close(original.done + relabeled.done, done, what);
+    assert_close(
+        original.outside_candidates + relabeled.outside_candidates,
+        outside_candidates,
+        what,
+    );
+    assert_close(original.reward + relabeled.reward, mean_reward, what);
+}
+
 #[test]
-fn exact_episode_composition_matches_a_separate_enumeration_including_cost_and_fallback() {
-    let mut store = TrajectoryStore::new(4);
-    let id = episode(&mut store, &[1, 2, 1, 3, 4], 9, true);
-    let e = store.episode(id).unwrap();
+fn exact_episode_composition_matches_an_independent_enumeration_in_every_field() {
+    let mut store = TrajectoryStore::new(16);
+    let ids = [
+        episode(&mut store, &[1, 2, 1, 3, 1], 9, true),
+        episode(&mut store, &[2, 3, 7], 7, false),
+        episode(&mut store, &[4, 1, 3], 3, true),
+    ];
     let evaluator = ObjectiveEvaluator(&OBJECTIVE);
-    for strategy in STRATEGIES {
-        for rule in RULES {
-            for filter in [false, true] {
-                for share in [0.0, 0.3, 1.0] {
-                    let configuration = config(strategy, rule, filter, share);
-                    let actual = episode_composition::<1, 1, 2>(
-                        e,
-                        store.candidates(),
-                        configuration,
-                        &evaluator,
-                    )
-                    .unwrap()
-                    .expected;
-                    let mut done = 0.0;
-                    let mut reward = 0.0;
-                    let mut queries = 0.0;
-                    let mut fallback = 0.0;
-                    let attempt = if strategy == GoalStrategy::Original {
-                        0.0
-                    } else {
-                        share
-                    };
-                    for t in 0..e.len() {
-                        let distribution = goal_distribution(
-                            e,
-                            t,
-                            configuration.selection,
-                            store.candidates(),
-                            &evaluator,
-                        );
-                        queries += attempt * distribution.cost.reach_evaluations as f64;
-                        let mut original_weight = 1.0 - attempt;
-                        if distribution.choices.is_empty() {
-                            original_weight += attempt;
-                            fallback += attempt;
-                        }
-                        let mut weighted: Vec<(Goal<1>, f64)> = distribution
-                            .choices
-                            .iter()
-                            .map(|choice| (choice.goal, attempt * choice.probability))
-                            .collect();
-                        weighted.push((e.start().desired, original_weight));
-                        let mut original_cost = ObjectiveCost::default();
-                        acs2_trajectory::selection::goal_facts(
-                            e,
-                            t,
-                            &e.start().desired,
-                            &evaluator,
-                            &mut original_cost,
-                        );
-                        queries += original_weight * original_cost.reach_evaluations as f64;
-                        for (goal, probability) in weighted {
-                            let scored = build_sample::<1, 1, 2>(
+    let mut seen = [false; 6];
+    for id in ids {
+        let e = store.episode(id).unwrap();
+        for strategy in STRATEGIES {
+            for rule in RULES {
+                for filter in [false, true] {
+                    for share in [0.0, 0.3, 1.0] {
+                        for truncation in [TruncationMode::Bootstrap, TruncationMode::Pyalcs] {
+                            let configuration = SamplerConfiguration {
+                                truncation,
+                                ..config(strategy, rule, filter, share)
+                            };
+                            let actual = episode_composition::<1, 1, 2>(
                                 e,
-                                t,
-                                &goal,
+                                store.candidates(),
+                                configuration,
                                 &evaluator,
-                                TruncationMode::Bootstrap,
                             )
-                            .unwrap();
-                            done += probability * f64::from(scored.sample.done);
-                            reward += probability * scored.sample.reward;
-                            queries += probability * scored.cost.total() as f64;
+                            .unwrap()
+                            .expected;
+                            let expected =
+                                modeled_composition(e, store.candidates(), configuration);
+                            assert_composition_close(
+                                actual,
+                                expected,
+                                &format!("{id:?} {configuration:?}"),
+                            );
+                            seen[0] |= expected.fallback > 0.0 && expected.relabeled.share > 0.0;
+                            seen[1] |= expected.relabeled.after_counterfactual_end
+                                > expected.relabeled.already_reached;
+                            seen[2] |=
+                                expected.original.done > 0.0 && expected.relabeled.done > 0.0;
+                            seen[3] |= expected.relabeled.outside_candidates > 0.0
+                                && expected.relabeled.outside_candidates < expected.relabeled.share;
+                            seen[4] |= expected.mean_selection_evaluations > 0.0
+                                && expected.mean_provenance_evaluations
+                                    > expected.original.share * 2.0;
+                            seen[5] |= expected.original.reward > 0.0
+                                && expected.relabeled.reward > 0.0
+                                && expected.original.share > 0.0;
                         }
                     }
-                    assert!((actual.done - done / 4.0).abs() < 1e-12);
-                    assert!((actual.mean_reward - reward / 4.0).abs() < 1e-12);
-                    assert!((actual.fallback - fallback / 4.0).abs() < 1e-12);
-                    assert!(
-                        (actual.mean_objective_evaluations() - queries / 4.0).abs() < 1e-12,
-                        "{configuration:?}"
-                    );
                 }
             }
         }
     }
+    assert_eq!(seen, [true; 6]);
 }
 
 #[test]
@@ -977,8 +1473,219 @@ fn a_rejected_sample_counts_its_objective_cost_without_claiming_a_successful_dra
         ),
         Err(SampleError::NegativeReward)
     );
-    assert_eq!(sampler.counters().draws, 0);
+    assert_eq!(sampler.counters().pooled().draws, 0);
     assert_eq!(sampler.counters().failed_draws, 1);
-    assert_eq!(sampler.counters().cost.reward_evaluations, 1);
-    assert_eq!(sampler.counters().cost.reach_evaluations, 2);
+    assert_eq!(
+        sampler.counters().cost,
+        CostByPurpose {
+            scoring: ObjectiveCost {
+                reward_evaluations: 1,
+                reach_evaluations: 1
+            },
+            selection: ObjectiveCost::default(),
+            provenance: ObjectiveCost::reach(1),
+        }
+    );
+}
+
+struct NegativeAt {
+    value: u8,
+    rewards: Cell<u64>,
+    reached: Cell<u64>,
+}
+impl GoalObjective<1> for NegativeAt {
+    fn reward(&self, achieved: &Goal<1>, desired: &Goal<1>) -> f64 {
+        self.rewards.set(self.rewards.get() + 1);
+        if value(achieved) == self.value {
+            -1.0
+        } else if achieved == desired {
+            1000.0
+        } else {
+            0.0
+        }
+    }
+    fn is_reached(&self, achieved: &Goal<1>, desired: &Goal<1>) -> bool {
+        self.reached.set(self.reached.get() + 1);
+        achieved == desired
+    }
+}
+
+#[test]
+fn a_call_failing_on_a_later_sample_claims_none_of_its_draws_but_counts_their_work() {
+    let mut store = TrajectoryStore::new(6);
+    episode(&mut store, &[0, 1, 2, 3, 4, 5, 6], 9, true);
+    let configuration = config(GoalStrategy::Future, RULES[1], false, 0.5);
+    let mut reference = Sampler::new(
+        configuration,
+        ChaChaRandomSource::from_seed_and_stream(42, SAMPLER_STREAM),
+    );
+    let evaluator = ObjectiveEvaluator(&OBJECTIVE);
+    let first = reference.draw::<1, 1, 2>(&store, 3, &evaluator).unwrap();
+    let second = reference.draw::<1, 1, 2>(&store, 40, &evaluator).unwrap();
+    let early: Vec<usize> = first
+        .iter()
+        .chain(&second[..2])
+        .map(|draw| draw.transition)
+        .collect();
+    let failing = (0..6)
+        .find(|t| !early.contains(t) && second.iter().any(|draw| draw.transition == *t))
+        .expect("a transition first drawn late in the second call");
+    let fails_at = second
+        .iter()
+        .position(|draw| draw.transition == failing)
+        .unwrap();
+    assert!(fails_at >= 2);
+    let objective = NegativeAt {
+        value: failing as u8 + 1,
+        rewards: Cell::new(0),
+        reached: Cell::new(0),
+    };
+    let failing_evaluator = ObjectiveEvaluator(&objective);
+    let mut sampler = Sampler::new(
+        configuration,
+        ChaChaRandomSource::from_seed_and_stream(42, SAMPLER_STREAM),
+    );
+    assert_eq!(
+        sampler
+            .draw::<1, 1, 2>(&store, 3, &failing_evaluator)
+            .unwrap(),
+        first
+    );
+    let before = sampler.counters().clone();
+    assert_eq!(before, recount(&first, 0));
+    assert_eq!(
+        sampler.draw::<1, 1, 2>(&store, 40, &failing_evaluator),
+        Err(SampleError::NegativeReward)
+    );
+    let mut work = before.cost;
+    for draw in &second[..=fails_at] {
+        work.add(draw.cost);
+    }
+    let after = sampler.counters();
+    assert_eq!(after.original, before.original);
+    assert_eq!(after.relabeled, before.relabeled);
+    assert_eq!(after.fallbacks, before.fallbacks);
+    assert_eq!(after.strategies, before.strategies);
+    assert_eq!(after.failed_draws, 1);
+    assert_eq!(after.cost, work);
+    assert_eq!(
+        after.cost.total(),
+        ObjectiveCost {
+            reward_evaluations: objective.rewards.get(),
+            reach_evaluations: objective.reached.get()
+        }
+    );
+    assert_eq!(
+        after,
+        &ReplayCounters {
+            failed_draws: 1,
+            cost: work,
+            ..recount(&first, 0)
+        }
+    );
+}
+
+#[test]
+fn a_relabeled_episode_without_admissible_transitions_cannot_be_read_as_an_ending() {
+    let mut env = HandEye4::new(4, Box::new(ChaChaRandomSource::from_seed(42)));
+    let start = env.reset_at(
+        HandEyeState {
+            gripper: (0, 0),
+            block: (3, 3),
+            held: false,
+        },
+        position_goal((1, 1)),
+    );
+    let mut store = TrajectoryStore::new(4);
+    let mut raw = store.begin_episode(start);
+    for _ in 0..4 {
+        raw.push(5, env.step(5));
+    }
+    let id = store.insert(raw).unwrap();
+    let e = store.episode(id).unwrap();
+    let block = position_goal((3, 3));
+    assert!(states(e).iter().all(|state| *state == block));
+    let evaluator = ObjectiveEvaluator(env.objective());
+    for truncation in [TruncationMode::Bootstrap, TruncationMode::Pyalcs] {
+        let non_goal =
+            relabel_episode::<17, 2, 19>(e, &block, RULES[1], &evaluator, truncation).unwrap();
+        assert!(non_goal.samples.is_empty());
+        assert_eq!(non_goal.end, EpisodeEnd::NoAdmissibleTransition);
+        assert_eq!(
+            non_goal.cost,
+            CostByPurpose {
+                selection: ObjectiveCost::reach(4),
+                ..CostByPurpose::default()
+            }
+        );
+        let counterfactual =
+            relabel_episode::<17, 2, 19>(e, &block, RULES[2], &evaluator, truncation).unwrap();
+        assert!(counterfactual.samples.is_empty());
+        assert_eq!(counterfactual.end, EpisodeEnd::AlreadyReachedAtStart);
+        let every =
+            relabel_episode::<17, 2, 19>(e, &block, RULES[0], &evaluator, truncation).unwrap();
+        assert_eq!(every.samples.len(), 4);
+        assert_eq!(every.end, EpisodeEnd::Terminated);
+    }
+    assert_relabeled_episodes::<17, 2, 19>(e, &[block, position_goal((1, 1))]);
+}
+
+#[test]
+fn cost_purposes_follow_what_each_rule_reads() {
+    let mut store = TrajectoryStore::new(4);
+    let id = episode(&mut store, &[1, 2, 1, 3, 4], 9, true);
+    let e = store.episode(id).unwrap();
+    let objective = CountedObjective {
+        rewards: Cell::new(0),
+        reached: Cell::new(0),
+    };
+    let evaluator = ObjectiveEvaluator(&objective);
+    let expectations = [
+        (GoalStrategy::Future, RULES[0], 0, 4),
+        (GoalStrategy::Future, RULES[1], 1, 3),
+        (GoalStrategy::Future, RULES[2], 4, 0),
+        (GoalStrategy::Episode, RULES[0], 0, 10),
+        (GoalStrategy::Episode, RULES[1], 4, 6),
+        (GoalStrategy::Episode, RULES[2], 10, 0),
+    ];
+    for (strategy, rule, selection_calls, provenance_calls) in expectations {
+        let before = objective.reached.get();
+        let distribution = goal_distribution(
+            e,
+            3,
+            selection(strategy, rule, false),
+            store.candidates(),
+            &evaluator,
+        );
+        assert_eq!(
+            distribution.cost,
+            CostByPurpose {
+                scoring: ObjectiveCost::default(),
+                selection: ObjectiveCost::reach(selection_calls),
+                provenance: ObjectiveCost::reach(provenance_calls),
+            },
+            "{strategy:?} {rule:?}"
+        );
+        assert_eq!(
+            objective.reached.get() - before,
+            selection_calls + provenance_calls
+        );
+    }
+    let (facts, queries) = acs2_trajectory::selection::goal_facts(e, 3, &goal(9), &evaluator);
+    assert_eq!(facts, GoalFacts::default());
+    assert_eq!(
+        queries,
+        FactQueries {
+            current_state: 1,
+            earlier_states: 3
+        }
+    );
+    assert_eq!(
+        queries.as_provenance(),
+        CostByPurpose {
+            provenance: ObjectiveCost::reach(4),
+            ..CostByPurpose::default()
+        }
+    );
+    assert_eq!(objective.rewards.get(), 0);
 }

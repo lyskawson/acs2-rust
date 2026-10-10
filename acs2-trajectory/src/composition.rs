@@ -2,17 +2,62 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use acs2_core::goal::Goal;
 
-use crate::relabel::{build_sample, GoalEvaluator, ObjectiveCost, SampleError};
-use crate::sampler::SamplerConfiguration;
+use crate::cost::{FactQueries, ObjectiveCost};
+use crate::relabel::{build_sample, GoalEvaluator, SampleError};
+use crate::sampler::{RouteMeans, SampleOrigin, SamplerConfiguration};
 use crate::selection::{distribution_from_source, source_goals, GoalFacts, GoalStrategy};
 use crate::store::StoredEpisode;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct RouteComposition {
+    pub share: f64,
+    pub already_reached: f64,
+    pub after_counterfactual_end: f64,
+    pub done: f64,
+    pub outside_candidates: f64,
+    pub reward: f64,
+}
+
+impl RouteComposition {
+    fn add_draw(
+        &mut self,
+        probability: f64,
+        facts: GoalFacts,
+        done: bool,
+        outside_candidates: bool,
+        reward: f64,
+    ) {
+        self.already_reached += probability * f64::from(facts.already_reached);
+        self.after_counterfactual_end += probability * f64::from(facts.after_counterfactual_end);
+        self.done += probability * f64::from(done);
+        self.outside_candidates += probability * f64::from(outside_candidates);
+        self.reward += probability * reward;
+    }
+    pub fn add_weighted(&mut self, other: Self, weight: f64) {
+        self.share += other.share * weight;
+        self.already_reached += other.already_reached * weight;
+        self.after_counterfactual_end += other.after_counterfactual_end * weight;
+        self.done += other.done * weight;
+        self.outside_candidates += other.outside_candidates * weight;
+        self.reward += other.reward * weight;
+    }
+    pub fn given_route(self) -> Option<RouteMeans> {
+        (self.share > 0.0).then(|| RouteMeans {
+            already_reached: self.already_reached / self.share,
+            after_counterfactual_end: self.after_counterfactual_end / self.share,
+            done: self.done / self.share,
+            outside_candidates: self.outside_candidates / self.share,
+            reward: self.reward / self.share,
+        })
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ExpectedComposition {
     pub admissible_share: f64,
     pub no_admissible_goal: f64,
-    pub original: f64,
-    pub relabeled: f64,
+    pub original: RouteComposition,
+    pub relabeled: RouteComposition,
     pub fallback: f64,
     pub already_reached: f64,
     pub after_counterfactual_end: f64,
@@ -21,14 +66,17 @@ pub struct ExpectedComposition {
     pub mean_reward: f64,
     pub mean_reward_evaluations: f64,
     pub mean_reach_evaluations: f64,
+    pub mean_scoring_evaluations: f64,
+    pub mean_selection_evaluations: f64,
+    pub mean_provenance_evaluations: f64,
 }
 
 impl ExpectedComposition {
     pub fn add_weighted(&mut self, other: Self, weight: f64) {
         self.admissible_share += other.admissible_share * weight;
         self.no_admissible_goal += other.no_admissible_goal * weight;
-        self.original += other.original * weight;
-        self.relabeled += other.relabeled * weight;
+        self.original.add_weighted(other.original, weight);
+        self.relabeled.add_weighted(other.relabeled, weight);
         self.fallback += other.fallback * weight;
         self.already_reached += other.already_reached * weight;
         self.after_counterfactual_end += other.after_counterfactual_end * weight;
@@ -37,6 +85,9 @@ impl ExpectedComposition {
         self.mean_reward += other.mean_reward * weight;
         self.mean_reward_evaluations += other.mean_reward_evaluations * weight;
         self.mean_reach_evaluations += other.mean_reach_evaluations * weight;
+        self.mean_scoring_evaluations += other.mean_scoring_evaluations * weight;
+        self.mean_selection_evaluations += other.mean_selection_evaluations * weight;
+        self.mean_provenance_evaluations += other.mean_provenance_evaluations * weight;
     }
     pub fn mean_objective_evaluations(self) -> f64 {
         self.mean_reward_evaluations + self.mean_reach_evaluations
@@ -62,14 +113,16 @@ impl GoalHistory {
             after_counterfactual_end: self.first.is_some_and(|state| state <= transition),
         }
     }
-    fn draw_queries(&self, transition: usize) -> u64 {
-        if self.reached[transition] {
-            1
-        } else {
-            1 + self
-                .first
-                .filter(|&state| state < transition)
-                .map_or(transition, |state| state + 1) as u64
+    fn queries(&self, transition: usize) -> FactQueries {
+        FactQueries {
+            current_state: 1,
+            earlier_states: if self.reached[transition] {
+                0
+            } else {
+                self.first
+                    .filter(|&state| state < transition)
+                    .map_or(transition, |state| state + 1) as u64
+            },
         }
     }
 }
@@ -112,30 +165,35 @@ pub fn episode_composition<const S: usize, const G: usize, const M: usize>(
         configuration.relabeled_proportion
     };
     for transition in 0..episode.len() {
-        let distribution = distribution_from_source(
-            &source,
-            configuration.selection,
-            &candidates,
-            |goal, cost| {
+        let distribution =
+            distribution_from_source(&source, configuration.selection, &candidates, |goal| {
                 let history = &histories[goal];
-                cost.reach_evaluations += history.draw_queries(transition);
-                history.facts(transition)
-            },
-        );
+                (history.facts(transition), history.queries(transition))
+            });
         let empty = distribution.admitted_count == 0;
         let fallback = if empty { attempt } else { 0.0 };
+        let original_probability = 1.0 - attempt + fallback;
         let mut expected = ExpectedComposition {
             admissible_share: distribution.admissible_share(),
             no_admissible_goal: f64::from(empty),
-            original: 1.0 - attempt + fallback,
-            relabeled: attempt - fallback,
+            original: RouteComposition {
+                share: original_probability,
+                ..RouteComposition::default()
+            },
+            relabeled: RouteComposition {
+                share: attempt - fallback,
+                ..RouteComposition::default()
+            },
             fallback,
-            mean_reach_evaluations: attempt * distribution.cost.reach_evaluations as f64,
+            mean_reach_evaluations: attempt * distribution.cost.total().reach_evaluations as f64,
+            mean_selection_evaluations: attempt * distribution.cost.selection.total() as f64,
+            mean_provenance_evaluations: attempt * distribution.cost.provenance.total() as f64,
             ..ExpectedComposition::default()
         };
         let mut accumulate = |goal: &Goal<G>,
                               facts: GoalFacts,
-                              probability: f64|
+                              probability: f64,
+                              origin: SampleOrigin|
          -> Result<(), SampleError> {
             if probability == 0.0 {
                 return Ok(());
@@ -148,25 +206,48 @@ pub fn episode_composition<const S: usize, const G: usize, const M: usize>(
                 configuration.truncation,
             )?;
             result.analysis_cost.add(scored.cost);
+            let outside_candidates = !candidates.contains(goal);
             expected.already_reached += probability * f64::from(facts.already_reached);
             expected.after_counterfactual_end +=
                 probability * f64::from(facts.after_counterfactual_end);
             expected.done += probability * f64::from(scored.sample.done);
-            expected.outside_candidates += probability * f64::from(!candidates.contains(goal));
+            expected.outside_candidates += probability * f64::from(outside_candidates);
             expected.mean_reward += probability * scored.sample.reward;
             expected.mean_reward_evaluations += probability * scored.cost.reward_evaluations as f64;
             expected.mean_reach_evaluations += probability * scored.cost.reach_evaluations as f64;
+            expected.mean_scoring_evaluations += probability * scored.cost.total() as f64;
+            let route = match origin {
+                SampleOrigin::Original => &mut expected.original,
+                SampleOrigin::Relabeled => &mut expected.relabeled,
+            };
+            route.add_draw(
+                probability,
+                facts,
+                scored.sample.done,
+                outside_candidates,
+                scored.sample.reward,
+            );
             Ok(())
         };
         for choice in &distribution.choices {
-            accumulate(&choice.goal, choice.facts, attempt * choice.probability)?;
+            accumulate(
+                &choice.goal,
+                choice.facts,
+                attempt * choice.probability,
+                SampleOrigin::Relabeled,
+            )?;
         }
         let original = episode.start().desired;
         let history = &histories[&original];
-        let original_probability = 1.0 - attempt + fallback;
-        accumulate(&original, history.facts(transition), original_probability)?;
-        expected.mean_reach_evaluations +=
-            original_probability * history.draw_queries(transition) as f64;
+        accumulate(
+            &original,
+            history.facts(transition),
+            original_probability,
+            SampleOrigin::Original,
+        )?;
+        let original_queries = history.queries(transition).total() as f64;
+        expected.mean_reach_evaluations += original_probability * original_queries;
+        expected.mean_provenance_evaluations += original_probability * original_queries;
         result
             .expected
             .add_weighted(expected, 1.0 / episode.len() as f64);

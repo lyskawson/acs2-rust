@@ -20,7 +20,7 @@ use acs2_measure::task::{BitTask, HandEyeTask, MazeTask, Task, TaxiTask};
 use acs2_measure::trajectory::MeasuredGoalEvaluator;
 use acs2_trajectory::{
     episode_composition, Admissibility, ExpectedComposition, GoalStrategy, ObjectiveCost,
-    SamplerConfiguration, Selection, TrajectoryStore, SAMPLER_STREAM,
+    RouteComposition, SamplerConfiguration, Selection, TrajectoryStore, SAMPLER_STREAM,
 };
 use serde_json::{json, Value};
 
@@ -56,14 +56,26 @@ fn configurations() -> Vec<SamplerConfiguration> {
     result
 }
 
+fn route_json(route: RouteComposition) -> Value {
+    json!({
+        "share": route.share, "already_reached": route.already_reached,
+        "after_counterfactual_end": route.after_counterfactual_end, "done": route.done,
+        "outside_candidates": route.outside_candidates, "reward": route.reward
+    })
+}
+
 fn expected_json(expected: ExpectedComposition) -> Value {
     json!({
         "admissible_share": expected.admissible_share, "no_admissible_goal": expected.no_admissible_goal,
-        "original": expected.original, "relabeled": expected.relabeled, "fallback": expected.fallback,
+        "original": expected.original.share, "relabeled": expected.relabeled.share, "fallback": expected.fallback,
         "already_reached": expected.already_reached, "after_counterfactual_end": expected.after_counterfactual_end,
         "done": expected.done, "outside_candidates": expected.outside_candidates, "mean_reward": expected.mean_reward,
         "mean_objective_evaluations": expected.mean_objective_evaluations(),
-        "mean_reward_evaluations": expected.mean_reward_evaluations, "mean_reach_evaluations": expected.mean_reach_evaluations
+        "mean_reward_evaluations": expected.mean_reward_evaluations, "mean_reach_evaluations": expected.mean_reach_evaluations,
+        "mean_scoring_evaluations": expected.mean_scoring_evaluations,
+        "mean_selection_evaluations": expected.mean_selection_evaluations,
+        "mean_provenance_evaluations": expected.mean_provenance_evaluations,
+        "routes": {"original": route_json(expected.original), "relabeled": route_json(expected.relabeled)}
     })
 }
 
@@ -123,7 +135,7 @@ fn collect<T: Task<S, G, M>, const S: usize, const G: usize, const M: usize>(
         let mut expected = ExpectedComposition::default();
         expected.add_weighted(total, 1.0 / env.steps as f64);
         let row = json!({
-            "schema": 1, "configuration": id, "task": task.name(), "cap": task.cap(), "goal_pool": task.pool_label(),
+            "schema": 2, "configuration": id, "task": task.name(), "cap": task.cap(), "goal_pool": task.pool_label(),
             "goal_encoding": task.encoding(), "seed": seed, "target_steps": target, "actual_steps": env.steps,
             "episodes": env.episodes, "success_rate": successful_episodes as f64 / env.episodes as f64,
             "candidate_count_at_end": store.candidates().len(), "retained_steps": store.len(),
@@ -352,5 +364,81 @@ mod tests {
         average.add_weighted(total, 0.1);
         assert_eq!(average.done, 0.1);
         assert_eq!(average.mean_reward, 100.0);
+    }
+
+    #[test]
+    fn route_shares_aggregate_as_step_weighted_joint_quantities() {
+        let short = ExpectedComposition {
+            relabeled: RouteComposition {
+                share: 0.5,
+                done: 0.5,
+                reward: 500.0,
+                ..RouteComposition::default()
+            },
+            ..ExpectedComposition::default()
+        };
+        let long = ExpectedComposition {
+            relabeled: RouteComposition {
+                share: 1.0,
+                ..RouteComposition::default()
+            },
+            ..ExpectedComposition::default()
+        };
+        let mut total = ExpectedComposition::default();
+        total.add_weighted(short, 2.0);
+        total.add_weighted(long, 8.0);
+        let mut seed = ExpectedComposition::default();
+        seed.add_weighted(total, 0.1);
+        assert_eq!(seed.relabeled.share, 0.9);
+        assert_eq!(seed.relabeled.done, 0.1);
+        let given = seed.relabeled.given_route().unwrap();
+        assert_eq!(given.done, 0.1 / 0.9);
+        assert_eq!(given.reward, 100.0 / 0.9);
+        assert_ne!(given.done, (1.0 + 0.0) / 2.0);
+    }
+
+    #[test]
+    fn rows_report_every_composition_field_under_its_own_name() {
+        let route = |base: f64| RouteComposition {
+            share: base,
+            already_reached: base + 0.01,
+            after_counterfactual_end: base + 0.02,
+            done: base + 0.03,
+            outside_candidates: base + 0.04,
+            reward: base + 0.05,
+        };
+        let expected = ExpectedComposition {
+            admissible_share: 0.11,
+            no_admissible_goal: 0.12,
+            original: route(0.2),
+            relabeled: route(0.3),
+            fallback: 0.13,
+            already_reached: 0.14,
+            after_counterfactual_end: 0.15,
+            done: 0.16,
+            outside_candidates: 0.17,
+            mean_reward: 0.18,
+            mean_reward_evaluations: 1.0,
+            mean_reach_evaluations: 4.5,
+            mean_scoring_evaluations: 2.0,
+            mean_selection_evaluations: 1.25,
+            mean_provenance_evaluations: 2.25,
+        };
+        let route_json = |base: f64| {
+            json!({"share": base, "already_reached": base + 0.01, "after_counterfactual_end": base + 0.02,
+                "done": base + 0.03, "outside_candidates": base + 0.04, "reward": base + 0.05})
+        };
+        assert_eq!(
+            expected_json(expected),
+            json!({
+                "admissible_share": 0.11, "no_admissible_goal": 0.12, "original": 0.2, "relabeled": 0.3,
+                "fallback": 0.13, "already_reached": 0.14, "after_counterfactual_end": 0.15, "done": 0.16,
+                "outside_candidates": 0.17, "mean_reward": 0.18, "mean_objective_evaluations": 5.5,
+                "mean_reward_evaluations": 1.0, "mean_reach_evaluations": 4.5,
+                "mean_scoring_evaluations": 2.0, "mean_selection_evaluations": 1.25,
+                "mean_provenance_evaluations": 2.25,
+                "routes": {"original": route_json(0.2), "relabeled": route_json(0.3)}
+            })
+        );
     }
 }

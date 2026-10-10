@@ -3,7 +3,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use acs2_core::goal::Goal;
 use acs2_core::rng::RandomSource;
 
-use crate::relabel::{GoalEvaluator, ObjectiveCost};
+use crate::cost::{CostByPurpose, FactQueries, ObjectiveCost};
+use crate::relabel::GoalEvaluator;
 use crate::store::StoredEpisode;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,6 +52,18 @@ impl Admissibility {
             Self::CounterfactualEpisode => !facts.after_counterfactual_end,
         }
     }
+    pub fn attribute(self, queries: FactQueries) -> CostByPurpose {
+        let selection = match self {
+            Self::EveryTransition => 0,
+            Self::FromNonGoalState => queries.current_state,
+            Self::CounterfactualEpisode => queries.total(),
+        };
+        CostByPurpose {
+            scoring: ObjectiveCost::default(),
+            selection: ObjectiveCost::reach(selection),
+            provenance: ObjectiveCost::reach(queries.total() - selection),
+        }
+    }
     pub fn name(self) -> &'static str {
         match self {
             Self::EveryTransition => "every_transition",
@@ -78,20 +91,25 @@ pub fn goal_facts<const S: usize, const G: usize>(
     transition: usize,
     goal: &Goal<G>,
     evaluator: &impl GoalEvaluator<S, G>,
-    cost: &mut ObjectiveCost,
-) -> GoalFacts {
+) -> (GoalFacts, FactQueries) {
     assert!(transition < episode.len());
-    cost.reach_evaluations += 1;
+    let mut queries = FactQueries {
+        current_state: 1,
+        earlier_states: 0,
+    };
     let already_reached = evaluator.is_reached(episode.achieved(transition), goal);
     let after_counterfactual_end = already_reached
         || (0..transition).any(|state| {
-            cost.reach_evaluations += 1;
+            queries.earlier_states += 1;
             evaluator.is_reached(episode.achieved(state), goal)
         });
-    GoalFacts {
-        already_reached,
-        after_counterfactual_end,
-    }
+    (
+        GoalFacts {
+            already_reached,
+            after_counterfactual_end,
+        },
+        queries,
+    )
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -107,7 +125,7 @@ pub struct GoalDistribution<const G: usize> {
     pub choices: Vec<GoalProbability<G>>,
     pub source_count: usize,
     pub admitted_count: usize,
-    pub cost: ObjectiveCost,
+    pub cost: CostByPurpose,
 }
 
 impl<const G: usize> GoalDistribution<G> {
@@ -161,19 +179,20 @@ pub(crate) fn distribution_from_source<const G: usize>(
     source: &BTreeMap<Goal<G>, usize>,
     selection: Selection,
     candidates: &BTreeSet<Goal<G>>,
-    mut facts_for: impl FnMut(&Goal<G>, &mut ObjectiveCost) -> GoalFacts,
+    mut facts_for: impl FnMut(&Goal<G>) -> (GoalFacts, FactQueries),
 ) -> GoalDistribution<G> {
     let mut result = GoalDistribution {
         source_count: source.values().sum(),
         admitted_count: 0,
         choices: Vec::with_capacity(source.len()),
-        cost: ObjectiveCost::default(),
+        cost: CostByPurpose::default(),
     };
     for (&goal, &weight) in source {
         if selection.candidate_filter && !candidates.contains(&goal) {
             continue;
         }
-        let facts = facts_for(&goal, &mut result.cost);
+        let (facts, queries) = facts_for(&goal);
+        result.cost.add(selection.admissibility.attribute(queries));
         if selection.admissibility.admits(facts) {
             result.admitted_count += weight;
             result.choices.push(GoalProbability {
@@ -200,7 +219,7 @@ pub fn goal_distribution<const S: usize, const G: usize>(
     assert!(transition < episode.len());
     let source = source_goals(episode, transition, selection.strategy, candidates);
     let candidates = candidates.iter().copied().collect();
-    distribution_from_source(&source, selection, &candidates, |goal, cost| {
-        goal_facts(episode, transition, goal, evaluator, cost)
+    distribution_from_source(&source, selection, &candidates, |goal| {
+        goal_facts(episode, transition, goal, evaluator)
     })
 }

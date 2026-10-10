@@ -408,6 +408,71 @@ fn recorder_passes_read_only_evaluation_and_reports_optional_provenance_and_stor
         replay_diagnostics(agent.sampler.counters())
     );
     assert!(rows[1]["replay_diagnostics"]["draws"].as_u64().unwrap() > 0);
+    assert!(
+        rows[1]["replay_diagnostics"]["routes"]["relabeled"]["draws"]
+            .as_u64()
+            .unwrap()
+            > 0
+    );
     assert_eq!(rows[1]["online_updates"], 0);
     assert_eq!(rows[1]["replay_updates"], 0);
+}
+
+#[test]
+fn replay_diagnostics_report_every_counter_under_its_own_name() {
+    let counters = ReplayCounters {
+        failed_draws: 2,
+        fallbacks: 3,
+        original: RouteCounters {
+            draws: 10,
+            already_reached: 4,
+            after_counterfactual_end: 5,
+            done: 6,
+            outside_candidates: 7,
+            reward: 6000.0,
+        },
+        relabeled: RouteCounters {
+            draws: 20,
+            already_reached: 8,
+            after_counterfactual_end: 11,
+            done: 12,
+            outside_candidates: 13,
+            reward: 5000.0,
+        },
+        strategies: [21, 22, 23, 24, 25],
+        cost: CostByPurpose {
+            scoring: ObjectiveCost {
+                reward_evaluations: 30,
+                reach_evaluations: 29,
+            },
+            selection: ObjectiveCost::reach(17),
+            provenance: ObjectiveCost {
+                reward_evaluations: 1,
+                reach_evaluations: 41,
+            },
+        },
+    };
+    assert_eq!(
+        replay_diagnostics(&counters),
+        json!({
+            "draws": 30, "failed_draws": 2, "original": 10, "relabeled": 20, "fallbacks": 3,
+            "already_reached": 12, "after_counterfactual_end": 16, "done": 18, "outside_candidates": 20,
+            "strategies": {"original": 21, "final": 22, "future": 23, "episode": 24, "uniform_real": 25},
+            "objective_evaluations": 118, "reward_evaluations": 31, "reach_evaluations": 87,
+            "objective_evaluations_by_purpose": {
+                "scoring": {"objective_evaluations": 59, "reward_evaluations": 30, "reach_evaluations": 29},
+                "selection": {"objective_evaluations": 17, "reward_evaluations": 0, "reach_evaluations": 17},
+                "provenance": {"objective_evaluations": 42, "reward_evaluations": 1, "reach_evaluations": 41}
+            },
+            "routes": {
+                "original": {"draws": 10, "already_reached": 4, "after_counterfactual_end": 5, "done": 6,
+                    "outside_candidates": 7, "reward_sum": 6000.0, "mean_reward": 600.0},
+                "relabeled": {"draws": 20, "already_reached": 8, "after_counterfactual_end": 11, "done": 12,
+                    "outside_candidates": 13, "reward_sum": 5000.0, "mean_reward": 250.0}
+            }
+        })
+    );
+    let empty = replay_diagnostics(&ReplayCounters::default());
+    assert_eq!(empty["routes"]["relabeled"]["mean_reward"], Value::Null);
+    assert_eq!(empty["draws"], 0);
 }
