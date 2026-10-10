@@ -2472,10 +2472,14 @@ end has already occurred, including when s_0 reached the new goal.
 
 `relabel_episode` returns indexed samples under one goal and rule. The counterfactual
 rule returns exactly the prefix ending on first reach, or no samples for an already
-reached start. End status distinguishes `Terminated`, `Truncated`, `Cut` and
-`AlreadyReachedAtStart`. A cut supplies no invented continuation. The less restrictive
-rules deliberately retain their different semantics; the non-goal rule can leave gaps,
-so indices are kept instead of pretending they form a feasible contiguous episode.
+reached start. The end of a non-empty result is `Terminated`, `Truncated` or `Cut`,
+read from its last sample. A result without samples ends as `AlreadyReachedAtStart`
+under the counterfactual rule and as `NoAdmissibleTransition` under the non-goal rule —
+for example under the cell of a HandEye block that never moves — so it cannot be read
+as a cut, terminated or truncated episode; every-transition never returns an empty
+result. A cut supplies no invented continuation. The less restrictive rules
+deliberately retain their different semantics; the non-goal rule can leave gaps, so
+indices are kept instead of pretending they form a feasible contiguous episode.
 
 ### Drawing, provenance, composition and cost
 
@@ -2491,41 +2495,83 @@ zero draws return an empty vector. ACS2ER draws without replacement within its s
 batch; both have uniform transition marginals, but their batch covariances differ.
 
 Each `DrawnSample` carries episode identifier, transition index, goal, scored sample,
-raw derived outcome, objective cost and provenance. Provenance names original versus
-relabeled route, effective and requested strategy, current-state reach, occurrence
+raw derived outcome, objective cost by purpose and provenance. Provenance names original
+versus relabeled route, effective and requested strategy, current-state reach, occurrence
 after the counterfactual end, done, membership outside candidates, and fallback.
 A successful relabeling remains relabeled even if its goal equals the original goal.
 Fallbacks and non-relabeling coin outcomes are original. Phase 5 can use this route to
 restrict goal-independent ALP, quality and rule creation to original samples while
 updating values on relabeled samples. No learner implements that policy in phase 4.
-Cumulative `ReplayCounters` retain all flags, strategy counts and objective costs.
-Scoring errors count the attempted objective work and `failed_draws` before returning
-an error; callers must abort that invalid replay operation rather than retry silently.
 
-Objective cost counts direct public reward and reach evaluations made by this layer.
-Scoring costs one reward call and, unless the raw terminal-state shortcut applies,
-one reach call. Selection/provenance costs are deterministic reach calls. Internal
-work inside an arbitrary objective is not instrumented. The distribution computes
-facts once per unique proposed goal, sharing them across duplicate state indices;
-this also defines the reference sampler's cost. No rejection loop has an unbounded
-query cost. Randomness enters only through the supplied `RandomSource`; thesis callers
-reserve ChaCha stream **7** for this sampler, leaving streams 1–6 unchanged.
+Cumulative `ReplayCounters` keep one `RouteCounters` per route — draws, the four flags
+(reached at s_t, after the counterfactual end, done, outside candidates) and the sum of
+rewards — next to fallbacks, strategy counts, failed calls and the cost by purpose.
+`pooled()` adds the routes and reproduces the earlier pooled counts exactly;
+`given_route()` returns the shares and mean reward among one route's own draws, or none
+for a route without draws. At relabel proportion one the original route holds the
+fallbacks only. A `draw` call that fails on any of its samples returns the error and
+records none of that call's draws, flags, strategies or fallbacks; the objective work it
+performed, including its earlier samples and the failed scoring, is added to the cost,
+and `failed_draws` grows by one. Callers must abort that invalid replay operation rather
+than retry silently.
+
+### Objective cost by purpose
+
+Objective cost counts direct public reward and reach evaluations made by this layer;
+internal work inside an arbitrary objective is not instrumented. Every counted call has
+exactly one purpose. `CostByPurpose` carries the split in each drawn sample, goal
+distribution and relabeled episode and in the cumulative counters; the exact
+composition reports the expected calls of a draw for each purpose, and the diagnostics
+payload serializes the counters' split:
+
+- *Scoring* computes the drawn sample's reward and termination: one reward call and,
+  unless the raw terminal-state flag already ends the step, one reach call.
+- *Selection* is the reach calls whose results the admissibility rule reads to decide
+  which goals may be drawn. `goal_facts` evaluates a goal at s_t first and then scans
+  s_0, s_1, … until the first reach; `FactQueries` counts the two parts. The non-goal
+  rule reads the s_t call, the counterfactual rule reads both, every-transition reads
+  none (`Admissibility::attribute`). A fallback's empty attempt is attributed the same
+  way: its rule read those calls before finding nothing to draw.
+- *Provenance* is every other call, made only to fill diagnostic flags: the facts a rule
+  does not read, and the original goal's facts on every original-route draw. In a valid
+  task episode those cost 1 + t reach calls; they are never selection, so a draw at
+  proportion zero — the phase-5 replay control — costs scoring and provenance only. In `relabel_episode`, calls the
+  rule does not read count as provenance although that function returns no flags.
+
+For the same draws the three parts sum to the totals phase 4 reported. The distribution
+computes facts once per unique proposed goal, sharing them across duplicate state
+indices; this also defines the reference sampler's cost. No rejection loop has an
+unbounded query cost. Randomness enters only through the supplied `RandomSource`;
+thesis callers reserve ChaCha stream **7** for this sampler, leaving streams 1–6
+unchanged.
+
+### Exact composition by route
 
 `episode_composition` computes expected shares under uniform transition drawing,
 including a supplied relabel proportion, candidate filter and original fallback,
-without any RNG. It reports admissible source mass, empty-distribution transition
-share, original/relabeled and fallback shares, both problematic-goal flags, done,
-outside-candidate share, mean reward, and expected objective evaluations of a draw.
-Its separate `analysis_cost` counts actual diagnostic work: it precomputes per-goal
-reach histories, then scores each weighted choice. Expected replay cost and cost of
-computing this diagnostic are distinct. The independent enumeration test checks both.
+without any RNG. Its pooled values — admissible source mass, empty-distribution
+transition share, fallback share, both problematic-goal flags, done, outside-candidate
+share, mean reward and expected reward and reach evaluations of a draw — are accumulated
+exactly as in phase 4. `original` and `relabeled` are `RouteComposition`s of joint
+expectations per draw: the route's share and, for example, P(relabeled ∧ done) and
+E[reward · 1{relabeled}]. Joint values add across transitions and episodes, and the two
+routes reproduce the pooled values up to rounding. `given_route` divides by the route
+share, which gives the composition of that route's draws alone; an aggregate over
+episodes therefore adds joint values and divides once instead of averaging per-episode
+ratios. Expected evaluations per draw are reported for scoring, selection and provenance
+next to the reward/reach totals. The separate `analysis_cost` counts the actual work of
+computing this diagnostic — per-goal reach histories and the scoring of each weighted
+choice. It is the cost of the measurement rather than of replay and has no purpose split.
 
 `GoalAgent::replay_diagnostics` defaults to absent for ACS2 and ACS2ER. The runner emits
 this optional payload at every existing evaluation point, without agent-specific
 measurement branches. Rows advance to schema **3**; schema-2 archived baselines remain
-unchanged. `acs2-measure::trajectory::replay_diagnostics` serializes the common counters.
-A recording-only test agent passes `assert_evaluation_read_only`, including store,
-policy RNG, sampler RNG and diagnostics in its snapshot. There is no new CLI agent.
+unchanged. `acs2-measure::trajectory::replay_diagnostics` serializes the pooled counters
+under their phase-4 names, `objective_evaluations_by_purpose` (reward, reach and total
+calls for scoring, selection and provenance) and `routes` (per route: draws, the four
+flags, `reward_sum` and `mean_reward`, null without draws). A recording-only test agent
+passes `assert_evaluation_read_only`, including store, policy RNG, sampler RNG and
+diagnostics in its snapshot. There is no new CLI agent.
 
 ### Rejected designs and executable evidence
 
@@ -2542,16 +2588,30 @@ checkpoint format would exceed this phase's scope.
 
 `acs2-trajectory/tests/contracts.rs` checks independent admissible enumeration on every
 four-bit transition under all goals/strategies/rules/filters, a stationary HandEye
-block, and a maze that leaves and returns. It checks a non-equality objective with
-non-1000 reward, MazeF3 twins, cap and cut flags, non-negative reward enforcement,
-identical goal suffixes, raw achieved goals, FIFO/identifier/candidate invariants,
-weighted duplicates, fixed-seed goal and transition frequencies, independent relabel
-share, fallback volume, route provenance, exact composition, and direct objective costs.
-`acs2-measure/tests/trajectory.rs` compares samples bit for bit and in order to actual
-ACS2ER memory through `TrainingEnvironment`, in both truncation modes on Maze4,
-HandEye4 and Taxi, checks research-family rewards, and exercises schema-3 diagnostics
-with read-only evaluation. Baseline regression, mutation results and random-policy
-composition are recorded with the phase-4 measurement below.
+block, and a maze that leaves and returns, including the selection and provenance cost
+each distribution attributes. On the same episodes it compares every `relabel_episode`
+result — admitted transitions, end status and cost by purpose — with an independent
+model, and pins the empty non-goal relabeling under the stationary block's cell. It
+checks a non-equality objective with non-1000 reward, MazeF3 twins, cap and cut flags,
+non-negative reward enforcement, identical goal suffixes, raw achieved goals,
+FIFO/identifier/candidate invariants, weighted duplicates, fixed-seed goal and
+transition frequencies, independent relabel share, fallback volume and route
+provenance. For every strategy, rule and filter at proportions 0, 0.6 and 1, each drawn
+sample's flags, reward and cost by purpose are compared with an independent
+enumeration, and the cumulative counters — routes, their conditional means, fallbacks,
+strategies and costs — with a recount of the drawn samples. Every field of the exact
+composition — pooled values, both routes, their conditional means and the three
+purposes — is compared with an independent enumeration on three episodes, every
+strategy, rule and filter, proportions 0, 0.3 and 1 and both truncation modes. A draw
+call failing on a later sample is checked to leave its draws out of the counters while
+counting their objective work, and direct objective costs are compared with counted
+calls. `acs2-measure/tests/trajectory.rs` compares samples bit for bit and in order to
+actual ACS2ER memory through `TrainingEnvironment`, in both truncation modes on Maze4,
+HandEye4 and Taxi, checks research-family rewards, exercises schema-3 diagnostics with
+read-only evaluation and maps every counter to its own key in the diagnostics payload.
+The probe's own tests map every composition field to its row key and aggregate routes
+as step-weighted joint quantities. Baseline regression, mutation results and
+random-policy composition are recorded with the phase-4 measurement below.
 
 ### Random-policy composition before replay agents
 
@@ -2561,38 +2621,58 @@ completed: **4,003,305 steps, 372,187 episodes**, about **154 seconds** in total
 this laptop. Measurement source is clean `a86b7db2d80f04a9aac0693bd871b7ca8d8f6785`;
 the registered phase-3b plan hash and streams are repeated in every row. Actions are
 uniform from stream 1, environment resets use stream 2, and restricted-goal draws
-use stream 4. No learning or random diagnostic sampling occurs.
+use stream 4. No learning or random diagnostic sampling occurs. The fix round re-ran
+the probe from clean `cd950fc805e6f99f86fbfe5dceb1e735955ec4f7` in about **156
+seconds**. Its rows advance to schema **2**, which adds the purposes and the routes;
+every field the phase-4 rows carried is bit-identical in all 4,800 rows.
 
 Each completed episode is analyzed before the next reset against desired goals
 observed up to that completion. Aggregation weights episodes by their step counts,
 then averages the resulting per-seed shares equally over 20 seeds. This describes a
 uniform transition draw over the collected first 20k steps, rather than the final
 10k buffer alone. Relabel request proportion is one; an empty distribution falls
-back to the original goal, so final sample shares include fallback. Mean ± SE uses
-sample variance across seeds, without treating transitions as independent replicas.
+back to the original goal, so final sample shares include fallback; the route values
+separate them. A route-only share is, per seed, the ratio of the step-weighted joint
+quantity to the step-weighted route share, never an average of per-episode ratios;
+across seeds it is the mean and SE of those per-seed ratios, over the seeds in which
+the route has draws. Mean ± SE uses sample variance across seeds, without treating
+transitions as independent replicas.
 
 The complete output is 4,800 raw seed rows and 240 configuration/strategy/rule/filter
 summary cells. It includes final, future, episode and uniform real, all three rules,
 both filter settings, admissible source mass, both problematic-goal shares, done,
 outside-candidate share, empty-distribution share, mean reward and expected objective
-evaluations per draw. Raw output, summaries and the report stay outside the checkout.
+evaluations per draw, split into scoring, selection and provenance, and the same
+composition for each route. The summary script checks that the routes reproduce the
+pooled values, the purposes the totals, and that original goals are never already
+reached, past their end or outside the candidates. Raw output, summaries and the
+report stay outside the checkout.
 
 Key values below are **percentages**, except reward and objective evaluations. These
 are `Future`, `EveryTransition`, without the candidate filter; admissible mass is
 100% and empty-distribution share is zero for each.
 
-| Configuration | Already reached % ± SE | After counterfactual end % ± SE | Done % ± SE | Outside candidates % ± SE | Mean reward ± SE | Objective evaluations/draw ± SE |
-|---|---|---|---|---|---|---|
-| maze4_c5_full | 34.780 ± 0.085 | 44.224 ± 0.093 | 65.661 ± 0.050 | 0.630 ± 0.021 | 656.612 ± 0.500 | 5.769 ± 0.007 |
-| maze4_c5_p4 | 35.048 ± 0.062 | 44.414 ± 0.069 | 65.881 ± 0.045 | 85.703 ± 0.103 | 658.813 ± 0.450 | 5.748 ± 0.004 |
-| maze6_c10_full | 30.112 ± 0.076 | 45.610 ± 0.089 | 51.048 ± 0.055 | 1.752 ± 0.056 | 510.477 ± 0.551 | 10.882 ± 0.017 |
-| maze6_c10_p4 | 30.072 ± 0.093 | 45.739 ± 0.090 | 50.971 ± 0.073 | 89.439 ± 0.093 | 509.712 ± 0.733 | 10.881 ± 0.020 |
-| handeye4_c50_full | 86.393 ± 0.205 | 89.155 ± 0.151 | 88.076 ± 0.191 | 3.809 ± 0.221 | 880.757 ± 1.912 | 11.214 ± 0.185 |
-| handeye4_c50_p4 | 85.946 ± 0.232 | 88.903 ± 0.182 | 87.641 ± 0.210 | 78.601 ± 0.441 | 876.406 ± 2.103 | 11.520 ± 0.281 |
-| taxi_c200_full | 89.333 ± 0.379 | 92.641 ± 0.297 | 89.570 ± 0.372 | 19.360 ± 0.740 | 895.703 ± 3.723 | 23.417 ± 0.916 |
-| bitflip8_c8_full | 3.302 ± 0.018 | 10.543 ± 0.065 | 36.477 ± 0.015 | 9.927 ± 0.100 | 364.767 ± 0.147 | 15.427 ± 0.008 |
-| handeye5_c50_full | 88.094 ± 0.256 | 90.553 ± 0.200 | 89.552 ± 0.233 | 6.053 ± 0.319 | 895.520 ± 2.331 | 10.048 ± 0.255 |
-| maze7_c10_full | 31.047 ± 0.096 | 46.940 ± 0.101 | 51.692 ± 0.067 | 1.642 ± 0.065 | 516.915 ± 0.668 | 10.605 ± 0.021 |
+| Configuration | Already reached % ± SE | After counterfactual end % ± SE | Done % ± SE | Outside candidates % ± SE | Mean reward ± SE | Objective evaluations/draw ± SE | Scoring + selection/draw | Provenance/draw ± SE |
+|---|---|---|---|---|---|---|---|---|
+| maze4_c5_full | 34.780 ± 0.085 | 44.224 ± 0.093 | 65.661 ± 0.050 | 0.630 ± 0.021 | 656.612 ± 0.500 | 5.769 ± 0.007 | 2.000 | 3.769 ± 0.007 |
+| maze4_c5_p4 | 35.048 ± 0.062 | 44.414 ± 0.069 | 65.881 ± 0.045 | 85.703 ± 0.103 | 658.813 ± 0.450 | 5.748 ± 0.004 | 2.000 | 3.748 ± 0.004 |
+| maze6_c10_full | 30.112 ± 0.076 | 45.610 ± 0.089 | 51.048 ± 0.055 | 1.752 ± 0.056 | 510.477 ± 0.551 | 10.882 ± 0.017 | 2.000 | 8.882 ± 0.017 |
+| maze6_c10_p4 | 30.072 ± 0.093 | 45.739 ± 0.090 | 50.971 ± 0.073 | 89.439 ± 0.093 | 509.712 ± 0.733 | 10.881 ± 0.020 | 2.000 | 8.881 ± 0.020 |
+| handeye4_c50_full | 86.393 ± 0.205 | 89.155 ± 0.151 | 88.076 ± 0.191 | 3.809 ± 0.221 | 880.757 ± 1.912 | 11.214 ± 0.185 | 2.000 | 9.214 ± 0.185 |
+| handeye4_c50_p4 | 85.946 ± 0.232 | 88.903 ± 0.182 | 87.641 ± 0.210 | 78.601 ± 0.441 | 876.406 ± 2.103 | 11.520 ± 0.281 | 2.000 | 9.520 ± 0.281 |
+| taxi_c200_full | 89.333 ± 0.379 | 92.641 ± 0.297 | 89.570 ± 0.372 | 19.360 ± 0.740 | 895.703 ± 3.723 | 23.417 ± 0.916 | 2.000 | 21.417 ± 0.916 |
+| bitflip8_c8_full | 3.302 ± 0.018 | 10.543 ± 0.065 | 36.477 ± 0.015 | 9.927 ± 0.100 | 364.767 ± 0.147 | 15.427 ± 0.008 | 2.000 | 13.427 ± 0.008 |
+| handeye5_c50_full | 88.094 ± 0.256 | 90.553 ± 0.200 | 89.552 ± 0.233 | 6.053 ± 0.319 | 895.520 ± 2.331 | 10.048 ± 0.255 | 2.000 | 8.048 ± 0.255 |
+| maze7_c10_full | 31.047 ± 0.096 | 46.940 ± 0.101 | 51.692 ± 0.067 | 1.642 ± 0.065 | 516.915 ± 0.668 | 10.605 ± 0.021 | 2.000 | 8.605 ± 0.021 |
+
+Scoring takes exactly two calls per draw, because no research task sets the raw
+terminal-state flag, and the every-transition rule reads no fact. The remaining 65–91%
+of these calls only fill provenance flags: the reach checks of each proposed goal at
+s_t and in the earlier states, which this rule never reads. Read as the cost of
+choosing HER's goals, the total column overstates it by up to an order of magnitude
+(23.4 calls against 2 on Taxi). A draw at proportion zero, the phase-5 replay control,
+selects nothing: it costs the scoring pair and 1 + t provenance calls for the original
+goal's flags.
 
 The non-goal rule zeros already-reached shares, but does not remove all transitions
 after an earlier reach. For unfiltered future:
@@ -2603,6 +2683,32 @@ after an earlier reach. For unfiltered future:
 | maze4_c5_p4 | 11.293 ± 0.066 | 19.707 ± 0.076 | 27.916 ± 0.078 |
 | handeye4_c50_full | 4.070 ± 0.135 | 77.819 ± 0.291 | 80.032 ± 0.254 |
 | taxi_c200_full | 7.047 ± 0.401 | 70.678 ± 1.097 | 76.740 ± 0.883 |
+
+Where these rules fall back, the pooled shares mix original-goal fallbacks with
+relabeled draws. The composition of the relabeled draws alone, for unfiltered future,
+with the pooled mean reward repeated for comparison; the two cost columns are per draw
+over all draws, fallbacks included:
+
+| Configuration | Rule | Relabeled % ± SE | After end % ± SE | Done % ± SE | Outside candidates % ± SE | Mean reward ± SE | Pooled mean reward ± SE | Scoring + selection/draw ± SE | Provenance/draw ± SE |
+|---|---|---|---|---|---|---|---|---|---|
+| maze4_c5_full | non-goal | 80.537 ± 0.103 | 14.135 ± 0.082 | 46.120 ± 0.040 | 0.616 ± 0.028 | 461.199 ± 0.404 | 371.435 ± 0.459 | 3.958 ± 0.002 | 2.579 ± 0.002 |
+| maze4_c5_full | counterfactual | 72.290 ± 0.119 | 0 | 42.371 ± 0.037 | 0.602 ± 0.029 | 423.712 ± 0.374 | 306.294 ± 0.389 | 5.769 ± 0.007 | 1.099 ± 0.005 |
+| maze4_c5_p4 | non-goal | 80.293 ± 0.076 | 14.064 ± 0.079 | 46.151 ± 0.049 | 82.748 ± 0.121 | 461.514 ± 0.491 | 370.562 ± 0.430 | 3.951 ± 0.001 | 2.571 ± 0.002 |
+| maze4_c5_p4 | counterfactual | 72.084 ± 0.078 | 0 | 42.429 ± 0.038 | 82.102 ± 0.125 | 424.286 ± 0.381 | 305.837 ± 0.244 | 5.748 ± 0.004 | 1.103 ± 0.003 |
+| handeye4_c50_full | non-goal | 22.181 ± 0.291 | 18.306 ± 0.495 | 12.134 ± 0.132 | 3.304 ± 0.334 | 121.344 ± 1.315 | 26.887 ± 0.371 | 3.581 ± 0.011 | 28.968 ± 0.130 |
+| handeye4_c50_full | counterfactual | 19.968 ± 0.254 | 0 | 9.641 ± 0.101 | 3.153 ± 0.352 | 96.413 ± 1.013 | 19.225 ± 0.220 | 11.214 ± 0.185 | 21.859 ± 0.056 |
+| taxi_c200_full | non-goal | 29.322 ± 1.097 | 23.857 ± 1.065 | 2.665 ± 0.063 | 69.902 ± 1.235 | 26.652 ± 0.633 | 7.808 ± 0.319 | 3.350 ± 0.013 | 96.751 ± 0.395 |
+| taxi_c200_full | counterfactual | 23.260 ± 0.883 | 0 | 1.197 ± 0.023 | 72.784 ± 1.265 | 11.974 ± 0.231 | 2.767 ± 0.089 | 23.417 ± 0.916 | 83.383 ± 0.744 |
+
+Both rules leave no relabeled draw already reached at its start. No fallback draw is
+done in any of the 240 cells: the transition reaching the original goal always has
+that goal among its admissible choices, so it never falls back. Pooled done
+and mean reward are therefore close to the relabeled values times the relabeled share —
+about a fifth of them on full HandEye4 under the counterfactual rule. On Taxi 70–73% of
+the relabeled goals lie outside the candidates; the passenger in the taxi is the only
+achieved goal that is never a desired one. Where fallbacks dominate, provenance
+dominates the cost: 76.7% of Taxi's counterfactual draws scan the original goal's
+history for its flags, 83.4 of 106.8 calls per draw.
 
 The counterfactual rule zeros both problematic-goal shares for every configuration
 and strategy; the candidate filter zeros outside-candidate shares. Neither changes
@@ -2649,9 +2755,34 @@ top-level fields**, including complete nested value diagnostics and every popula
 replay, update, match and success field. Only schema, optional diagnostics, build/host
 metadata and wall times are excluded. No learning path changes.
 
-Acceptance gates: **237 Rust tests** (211 previously), including MPX reach regressions;
-tools Python **47**, baseline oracles **5**, unchanged phase-3b tests **20**, phase-4
-analysis tests **6**. The benchmark builds and P9's first seven columns match all five
+The fix round applied the review's three mutations one at a time — the already-reached
+and after-end shares swapped in `episode_composition`, the attempt probability reported
+as the relabeled share, and the two counters swapped where the sampler records a draw
+(now `RouteCounters::record`) — and sixteen of its own: the non-goal rule reading the
+earlier states, original-route facts charged to selection, fallbacks counted on the
+relabeled route, a route's done taken from the outside flag, composition selection
+taken from provenance, payload purposes and probe routes swapped, a failed call keeping
+its earlier draws or dropping their work, an empty relabeling ending as `Cut`, a route
+mean left undivided or off by one, scoring without its reach call, and three checks
+removed from the summary script. Each compiled and failed at least one named test; the
+sources were restored and checked byte for byte.
+
+Drawing is unchanged by the fix round. On stored random-policy history of five research
+configurations (capacity 1,000, with eviction), 240 sampler configurations each — every
+strategy, rule and filter, proportions 0, 0.3, 0.8 and 1, both truncation modes —
+reproduce `360f6e5` exactly: 97,200 draws with their transitions, goals, samples,
+provenance flags and total costs, the random-word position after each of 6,000 calls,
+and 1,200 counter totals. 45,000 goal distributions and 26,280 episode compositions are
+identical as well; only 38 empty non-goal relabelings change their end from `Cut` to
+`NoAdmissibleTransition`. The re-run probe reproduces every phase-4 field bit for bit.
+The baseline regression above, repeated at `cd950fc` against a fresh `360f6e5` build
+and against the archived phase-4 rows, gives **18 identical rows in 792 compared
+fields**, schema 3 and the null replay diagnostics included.
+
+Acceptance gates after the fix round: **243 Rust tests** (237 at phase 4, 211 before
+it), including MPX reach regressions; tools Python **47**, baseline oracles **5**,
+unchanged phase-3b tests **20**, phase-4 analysis tests **13** (6 at phase 4). The
+benchmark builds and P9's first seven columns match all five
 archived rows byte for byte. A release clean includes acs2-trajectory before Clippy;
 there are **22 warnings in older files, zero in phase-4 code**. Build provenance also
 watches the new trajectory source directory, so editing only that dependency cannot
@@ -2665,6 +2796,9 @@ Reproduce the composition and its summary without writing results into a checkou
 cargo run --release -p acs2-measure --example trajectory_composition -- --out <outside-checkout>/composition-raw.jsonl
 python3 -B experiments/phase4/summarize.py <outside-checkout>/composition-raw.jsonl --out <outside-checkout>
 ```
+
+The summary script reads schema-2 rows only; the phase-4 schema-1 output stays archived
+outside the checkout.
 
 ## Clippy — the determinism invariants, checked by machine
 
