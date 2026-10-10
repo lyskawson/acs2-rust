@@ -2855,6 +2855,28 @@ python3 -B experiments/relabeling-composition/summarize.py <outside-checkout>/co
 The summary script reads schema-2 rows only; the original schema-1 output stays archived
 outside the checkout.
 
+## Start-goal pair registration
+
+`maze-pairs-v1` replaces the goal split as the main baseline protocol. The
+geometry-only rule and all resulting pairs are in
+[`pair-protocol.json`](../experiments/maze-baselines/pair-protocol.json), reproduced by
+[`register_pairs.py`](../experiments/maze-baselines/register_pairs.py). For every
+goal, rank starts by shortest distance, row and column, then partition three
+balanced distance-rank strata. Segment endpoints enter validation/test and
+interiors training, alternating endpoint order by goal/stratum/segment parity.
+Every block has every goal, at least three starts per goal, all three strata,
+two distinct distances per goal and at least forty pairs. Proportions are
+approximately 60/20/20, with actual rational proportions registered per maze.
+The ordered distinct walkable pairs include the original `9` landmark.
+
+Training will draw a uniform goal followed by a uniform registered training
+start for that goal. Evaluation gives every pair equal weight separately in
+training, validation and test, using each block's exact integer random floor
+and reachability ceiling. The caps remain 5/8/10/10/18/9. The budget rule is
+registered before learning: `2M * ceil(graph diameter / 10)` interactions for
+both agents. `maze-goals-v1` is preserved unchanged as an auxiliary protocol;
+its twenty-seed proposal is superseded and must not be submitted.
+
 ## Maze baselines with held-out goals
 
 The final maze scope is Maze4, Maze5, Maze6, Maze7, Woods14 and MazeMA, with

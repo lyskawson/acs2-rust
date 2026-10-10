@@ -1,4 +1,15 @@
-# Maze baselines with held-out goals
+# Maze baselines with held-out start-goal pairs
+
+`maze-pairs-v1` is the main protocol. `pair-protocol.json` fixes its ordered
+start-goal pair sets; `register_pairs.py` reproduces them from geometry alone.
+Each goal appears in all three blocks, with starts from all three distance-rank
+strata. The adequacy criterion, actual proportions, caps, exact floors and
+beyond-cap pairs are in that registration. Its budget rule is fixed before
+learning: `2M * ceil(graph diameter / 10)`, equal for both agents.
+
+`maze-goals-v1` remains unchanged as a registered auxiliary protocol. Its
+proposed twenty-seed grid is superseded and must not be submitted. The short
+diagnostics and completed cost pilot remain archived outside the checkout.
 
 `protocol.json` fixes the six geometries, caps and disjoint goal pools before any
 learning under this protocol. `register_protocol.py` reconstructs it using only the
@@ -22,7 +33,7 @@ pool by row and column. No randomness or learning outcomes enter the selection.
 A goal split is adequate if every block has at least three goals, forty distinct
 start-goal evaluation pairs and all three difficulty strata. All six mazes pass,
 including Woods14 (three held-out goals, 54 pairs per block) and MazeMA (three,
-42 pairs). Consequently no pair split is used. These small sets support a
+42 pairs). This was the original adequacy test; the main protocol now uses a pair split following the transfer diagnostics. These small sets support a
 within-maze generalization check; they do not estimate variation across mazes.
 
 Training draws a goal uniformly from the training pool and a start uniformly from

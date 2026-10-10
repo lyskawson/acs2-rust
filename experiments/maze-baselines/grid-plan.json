@@ -1,5 +1,5 @@
 {
-  "stage": "grid_pending_approval",
+  "stage": "superseded_goal_grid",
   "experiment": "maze-baselines",
   "seeds": [
     42,
@@ -2880,5 +2880,6 @@
     "double_forecast_including_pilot_cpu_hours": 12.237629649222223,
     "reserved_grid_cpu_hours": 30.666666666666668,
     "worst_limits_including_pilot_cpu_hours": 31.90972222222222
-  }
+  },
+  "superseded_by": "maze-pairs-v1"
 }
