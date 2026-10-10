@@ -367,7 +367,7 @@ running one already exec'd and is safe.
 This matters now because a second line of work (trajectory utility, `feature/trajectory-utility`)
 is adding agents to this repository. The rule that keeps both alive is the one ACS2ER
 already follows: **an agent's own parameters live in its own type** — `ReplayConfiguration`
-sits in `acs2-core/src/acs2er/replay.rs`, not in `Configuration` — and reach the identity
+is its own type, not a field of `Configuration` — and reaches the identity
 through `AgentOptions::describe()` instead.
 
 ### Two of our own one-CPU jobs on one socket halve the big one (2026-09-25)
@@ -424,7 +424,7 @@ the blocker on 2026-09-11 but it does not stretch to three k=264 seeds.
 
 | Job | State, 2026-09-11 | Why it matters |
 |---|---|---|
-| `k264` (5872532 + 5872872-80) | segment 1 of 10, running since 2026-09-11 14:37. **14,250,000 trials at 2026-09-23 22:51**, knowledge 0.0000, reliable 0, pop 114,503, 12.7 trials/s, checkpoint 206 MB, 8 d 15 h of segment left | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. **The population has plateaued** — max 116,253 at 12.87 M trials, flat to within ±2,000 since about 9 M, and throughput steady at 12.7 trials/s. It has not yet collapsed. Read it by the population, not by knowledge — see below. |
+| `k264` (5872532 + 5872872-80) | **segment 2 of 10**, 29,825,000 trials at 2026-10-10, knowledge 0.0000, reliable 0, pop 122,470, 10.8 trials/s, checkpoint 218 MB, 12 d 16 h of segment left | **The 264-bit run.** `outcome`, `u_max=12`, `EVAL_INTERVAL=5000`, `ACCURACY_EVERY=20`, `RSS_CAP_GB=13`, `CHECKPOINT_EVERY=100000`. Segment 1 ended TIME-LIMITED at 21,886,000 and segment 2 resumed carrying `since_eval=1000`; **every step across the boundary is exactly 5,000 with no duplicates**, which is the invariant the first review round found broken. **The population is still setting new highs at 29.8 M trials** — see below, and do not read a date out of it. |
 
 It is not checkpointed — it predates the feature, and restarting it to gain resumability
 would throw away a month of trials. The first chained run is k=264.
@@ -454,6 +454,17 @@ That is the bloat phase behaving as it did at k=135, not a stalled run.
 
 What this does **not** establish: that k=264 collapses at all, or when. No k=264 run has yet
 reached a peak, and the k=135 shape is an analogy, not a measurement of this size.
+
+**An estimate was made from this analogy and withdrawn.** On 2026-09-27 the population's local
+maximum at 15.4 M trials was taken for the peak, and the k=135 peak-to-solve ratio of 11-22x gave
+170-340 M trials. By 2026-10-10 the population had reached 122,470 at 29.8 M trials, still climbing:
+**15.4 M was not a peak**. Anchoring instead on the k=70-to-k=135 peak-trial ratio of 15.3x would put
+the peak near 42 M and a solve at 460-930 M, beyond what the chain can reach at 10.8 trials/s.
+
+Both numbers rest on a peak nobody has observed, so **neither is a forecast**. What is known: the
+chain's hard end is **about 2027-04-07** and its reach at current throughput is **~198 M trials**. The
+thesis is due March 2027, so the thesis cannot depend on this run — which is why it is additional
+research. Report the measured boundary if that is what it turns out to be.
 
 ### `eps135_s42b` was killed by the node too, at 518.64 M trials
 
