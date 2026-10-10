@@ -2855,6 +2855,77 @@ python3 -B experiments/relabeling-composition/summarize.py <outside-checkout>/co
 The summary script reads schema-2 rows only; the original schema-1 output stays archived
 outside the checkout.
 
+## Maze baselines with held-out goals
+
+The final maze scope is Maze4, Maze5, Maze6, Maze7, Woods14 and MazeMA, with
+eight-neighbour perceptions and coordinate goals. Their geometry-only registration
+is [`experiments/maze-baselines/protocol.json`](../experiments/maze-baselines/protocol.json),
+committed before protocol learning in `15ed86132b27cde4658f2581d95ead27f481ad68`.
+The old same-goal grid remains a pilot. Final baseline results require a separately
+approved twenty-seed plan and are not inferred from the short diagnostics.
+
+Maze4=5, Maze6=10 and Maze7=10 preserve their pilot caps. Maze5=8, Woods14=18 and
+MazeMA=9 use the eight-action graph diameter, the smallest horizon covering all
+distinct start-goal pairs. The legacy Maze4 cap misses exactly `(1,1)->(6,6)` and
+the reverse, distance six; these remain explicit in the registration. Every other
+pair is within its maze's cap. Every block's exact random-policy floor is below
+0.20; rational values and their reachability ceilings are stored with the pools.
+
+| Maze | Cap | Training goals / pairs | Validation goals / pairs | Test goals / pairs | Random floor: training / validation / test |
+|---|---:|---:|---:|---:|---|
+| Maze4 | 5 | 15 / 390 | 6 / 156 | 6 / 156 | 0.087140 / 0.085437 / 0.085767 |
+| Maze5 | 8 | 23 / 828 | 7 / 252 | 7 / 252 | 0.080953 / 0.083255 / 0.088569 |
+| Maze6 | 10 | 23 / 828 | 7 / 252 | 7 / 252 | 0.102138 / 0.094984 / 0.111968 |
+| Maze7 | 10 | 24 / 840 | 6 / 210 | 6 / 210 | 0.105097 / 0.097330 / 0.093619 |
+| Woods14 | 18 | 13 / 234 | 3 / 54 | 3 / 54 | 0.130578 / 0.138296 / 0.115840 |
+| MazeMA | 9 | 9 / 126 | 3 / 42 | 3 / 42 | 0.130235 / 0.098438 / 0.148073 |
+
+All ceilings are one except Maze4 training `389/390` and validation `155/156`.
+Goal difficulty is the integer sum of shortest distances from every other start.
+Rank by that sum, row and column; form three balanced contiguous strata. Within
+each, balanced segments contribute alternating endpoint goals to validation and
+test, and interior goals to training. The exact segment rule is in
+[`maze-baselines/README.md`](../experiments/maze-baselines/README.md) and its executable
+registration. A goal split needs at least three goals, forty pairs and all three
+difficulty strata in every block. All mazes meet this criterion; no pair split is
+needed. Three held-out goals in each small maze do not estimate variation across
+mazes or across arbitrary goal partitions.
+
+`MazeGoalDistributions` constructs separate tasks. `TaskProtocol` keeps evaluation
+tasks at the measurement boundary. Only its training task enters
+`TrainingEnvironment`, whose goal-registration and environment-pool interfaces
+contain training goals. Starts remain uniform over every other walkable cell,
+including held-out cells and the original reward landmark. Evaluation enumerates
+every pair of each block with weight `1/(goals*(cells-1))`. Immutable action calls
+use independent evaluation streams; complete state checks include replay and RNG.
+Raw achieved cells may equal held-out cells, as future HER needs. The held-out
+desired-goal sets may not enter training, sample selection or utility.
+
+Measurement rows advance to schema **4**. Split rows put evaluation fields inside
+`evaluation_blocks.training`, `.validation` and `.test`, each with its own floor,
+ceiling, pair count, success and optional per-start diagnostics. No ambiguous
+top-level success remains. Training counters and costs remain top-level; metadata
+embeds the registration. The full-pool path preserves old learning fields and adds
+`goal_protocol.id = full_pool` with null blocks. Schemas 2 and 3 remain readable via
+[`grid/row_schema.py`](../experiments/grid/row_schema.py). The archived regression
+fixture pins eighteen rows: three full-pool configurations, both agents, seed 42
+and three points each. Neither learner nor core configuration changes.
+
+The composition example's registered path uses the complete training pool as its
+fixed candidate set; outside-candidate shares therefore mean outside training,
+not outside goals observed so far. Its rows use schema 3; the original schema-2
+composition path and archived summaries retain their meanings.
+
+[`experiments/grid/`](../experiments/grid/) is the single reusable copy of pilot
+execution tools. Experiment-specific manifests and analysis stay in
+[`maze-baselines/`](../experiments/maze-baselines/). Node guards verify clean pinned
+source, musl binary hash, exact allocation identity, CPU model, preset and rows;
+they retain the first-row watchdog, process timeout and STOP on failure. Submission
+checks the shared grant and test-only scheduling, and accounts pilot plus spent,
+reserved and new limits against forty CPU-hours. It uses one CPU per job and
+20–40 concurrency, without host pinning, leases or laptop supervision. Raw data,
+resolved plans, approvals and allocation accounting stay outside the checkout.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

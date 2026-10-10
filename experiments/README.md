@@ -11,6 +11,8 @@ remains in `acs2-bench`, `slurm/`, `tools/` and `reports/`; its live state is
 |---|---|---|---|
 | [`baseline-pilot/`](baseline-pilot/) | How do ACS2 and uniform-replay ACS2ER compare with the random-policy floor and with each other on ten sparse goal configurations at equal interactions? | Pilot seed 42, followed by seeds 42–61 for both agents: 400 selected grid runs and 3,800 rows. Five maze, three HandEye, one Taxi and one BitFlipping configuration; budgets and checkpoints below. | [Pilot grid: ACS2 and ACS2ER on ten goal configurations](../docs/ARCHITECTURE.md#pilot-grid-acs2-and-acs2er-on-ten-goal-configurations). Archived learning data came from clean measurement commit `af3ce49b2df0f5a764efb49be9c48da54ebe0040`; operations were versioned separately. |
 | [`relabeling-composition/`](relabeling-composition/) | What goals, endings, fallback routes and objective-call costs does relabeling produce on random-policy history before a replay agent learns? | The same ten configurations, seeds 42–61, uniform actions, no learning. Finish the first episode meeting 20,000 steps per run: 200 runs, 4,003,305 steps, 4,800 rows and 240 strategy/rule/filter summary cells. | [Random-policy composition before replay agents](../docs/ARCHITECTURE.md#random-policy-composition-before-replay-agents), within [Trajectory storage and relabeling](../docs/ARCHITECTURE.md#trajectory-storage-and-relabeling). Initial schema-1 data: `a86b7db2d80f04a9aac0693bd871b7ca8d8f6785`; current schema-2 fix-round archive: `cd950fc805e6f99f86fbfe5dceb1e735955ec4f7`. |
+| [`maze-baselines/`](maze-baselines/) | How do ACS2 and ACS2ER transfer to held-out coordinate goals in six mazes? | Geometry-only caps and goal partitions fixed by `protocol.json`; schema-4 training, validation and test blocks. A seed-42 cost pilot precedes a separately approved twenty-seed plan. | [Maze baselines with held-out goals](../docs/ARCHITECTURE.md#maze-baselines-with-held-out-goals). Registration commit `15ed86132b27cde4658f2581d95ead27f481ad68`; diagnostics, plans, accounting and results remain outside Git. |
+| [`grid/`](grid/) | How can later goal experiments reuse one execution path? | Manifest-driven submission, node guards, row adapters, attempt selection and allocation accounting. | One reusable copy of the original pilot tools; no lease, host pinning or laptop dependency. |
 
 ## Baseline pilot
 
@@ -64,9 +66,9 @@ pilot submission, approved grid execution, accounting and recovery. Re-running t
 learning grid is a new experiment scope and requires authorization; reproducing its
 analysis does not.
 
-The pilot tooling is preserved as the record of how this grid ran. The next experiment
-copies it once into a shared grid directory; this directory is not refactored into
-that future shared infrastructure.
+The pilot tooling is preserved as the record of how this grid ran. Its reusable copy
+now lives in `grid/`; later experiments add registrations and analyses without
+changing this archived directory.
 
 ## Relabeling composition
 

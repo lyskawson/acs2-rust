@@ -11,6 +11,10 @@ use acs2_envs::goal::maze::{Coordinates, NeighbourPerception};
 use acs2_envs::goal::taxi::Taxi;
 use acs2_envs::maze::topology::MazeTopology;
 use acs2_envs::roles::ResearchTask;
+use acs2_measure::goal_protocol::{
+    registered_configuration, MazeGoalDistributions, MAZE_PROTOCOL_ID,
+};
+use acs2_measure::runner::run_protocol_with_sink;
 use acs2_measure::runner::{run_with_sink, AgentKind, RunMetadata, RunSettings};
 use acs2_measure::task::{
     bit_goal, parse_cells, taxi_goal, BitTask, HandEyeTask, MazeTask, Task, TaxiTask,
@@ -30,6 +34,7 @@ struct Options {
     targets: Vec<u64>,
     out: PathBuf,
     record_starts: bool,
+    protocol: Option<String>,
 }
 
 impl Options {
@@ -43,6 +48,7 @@ impl Options {
         let mut targets = None;
         let mut out = None;
         let mut record_starts = false;
+        let mut protocol = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -82,6 +88,7 @@ impl Options {
                     )
                 }
                 "--out" => out = Some(PathBuf::from(value)),
+                "--protocol" => protocol = Some(value),
                 _ => panic!("unknown option {flag}"),
             }
         }
@@ -111,6 +118,7 @@ impl Options {
             targets,
             out: out.expect("--out is required"),
             record_starts,
+            protocol,
         }
     }
 }
@@ -151,6 +159,40 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
     metadata: &RunMetadata<'_>,
     encoding: &'static str,
 ) {
+    if let Some(protocol) = &options.protocol {
+        assert_eq!(protocol, MAZE_PROTOCOL_ID);
+        assert_eq!(options.pool, "full", "registered protocol owns its pools");
+        assert_eq!(
+            encoding, "coordinates",
+            "registered protocol uses coordinate goals"
+        );
+        let distributions = MazeGoalDistributions::<E, G>::registered(
+            &options.task,
+            geometry,
+            options.cap,
+            encoding,
+        );
+        for &seed in &options.seeds {
+            for &kind in &options.agents {
+                run_protocol_with_sink::<_, _, 8, G, M>(
+                    &distributions.protocol(),
+                    kind,
+                    seed,
+                    &options.targets,
+                    metadata,
+                    RunSettings {
+                        evaluate_points: true,
+                        capture_final_state: false,
+                    },
+                    &mut |row| {
+                        writeln!(writer, "{row}").expect("write result");
+                        writer.flush().expect("flush result");
+                    },
+                );
+            }
+        }
+        return;
+    }
     let topology = MazeTopology::new(geometry).expect("valid geometry");
     let pool = if options.pool == "full" {
         topology.walkable_cells().to_vec()
@@ -241,6 +283,26 @@ fn hardware() -> (String, String) {
 
 fn main() {
     let options = Options::parse();
+    if let Some(protocol) = &options.protocol {
+        assert_eq!(protocol, MAZE_PROTOCOL_ID);
+        assert_eq!(options.pool, "full", "registered protocol owns its pools");
+        assert_eq!(
+            options.encoding, "coordinates",
+            "registered protocol uses coordinate goals"
+        );
+        assert!(
+            matches!(
+                ResearchTask::named(&options.task),
+                Some(ResearchTask::GoalMaze(_))
+            ),
+            "goal partition protocol is for mazes"
+        );
+        assert_eq!(
+            registered_configuration(&options.task)["cap"],
+            options.cap,
+            "use the registered episode cap"
+        );
+    }
     let path = output_path(&options.out);
     let file = File::create(&path).expect("create results");
     let mut writer = BufWriter::new(file);

@@ -33,6 +33,9 @@ pub trait Task<const S: usize, const G: usize, const M: usize> {
     fn training_goal(&self, _rng: &mut ChaChaRandomSource) -> Option<Goal<G>> {
         None
     }
+    fn training_goals(&self) -> Option<&[Goal<G>]> {
+        None
+    }
     fn sampled_evaluation(&self) -> bool {
         false
     }
@@ -135,6 +138,9 @@ impl<E: MazeGoalEncoding<G>, const G: usize, const M: usize> Task<8, G, M> for M
     }
     fn reset_at(&self, env: &mut Self::Env, state: Cell, goal: Goal<G>) -> GoalStart<8, G> {
         env.reset_at(state, goal)
+    }
+    fn training_goals(&self) -> Option<&[Goal<G>]> {
+        Some(self.template.goal_pool())
     }
 }
 

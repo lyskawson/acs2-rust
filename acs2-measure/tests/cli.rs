@@ -55,7 +55,7 @@ fn one_row_contains_the_configuration_agent_seed_point_and_references() {
         .is_some_and(|commit| commit.len() == 40));
     assert!(row["preset"]["beta"].is_number());
     assert!(row["agent_parameters"].is_object());
-    assert_eq!(row["schema"], 3);
+    assert_eq!(row["schema"], 4);
     assert!(row["replay_diagnostics"].is_null());
     assert!(row["starts"].is_null());
     assert!(row["host"].as_str().is_some_and(|value| !value.is_empty()));
@@ -380,4 +380,86 @@ fn output_inside_the_checkout_is_rejected_before_file_creation() {
     let status = command(&out);
     assert!(!status.status.success());
     assert!(!out.exists());
+}
+
+#[test]
+fn registered_maze_cli_keeps_three_distributions_separate() {
+    let out = std::env::temp_dir().join(format!("acs2-protocol-{}.jsonl", std::process::id()));
+    let status = Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args([
+            "--task",
+            "woods14",
+            "--cap",
+            "18",
+            "--pool",
+            "full",
+            "--encoding",
+            "coordinates",
+            "--protocol",
+            "maze-goals-v1",
+            "--agents",
+            "acs2",
+            "--seeds",
+            "42",
+            "--targets",
+            "20",
+            "--out",
+        ])
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(
+        status.status.success(),
+        "{}",
+        String::from_utf8_lossy(&status.stderr)
+    );
+    let row: serde_json::Value =
+        serde_json::from_str(fs::read_to_string(&out).unwrap().trim()).unwrap();
+    assert_eq!(row["schema"], 4);
+    assert!(row.get("success").is_none());
+    assert_eq!(row["goal_protocol"]["id"], "maze-goals-v1");
+    for (block, pairs) in [("training", 234), ("validation", 54), ("test", 54)] {
+        assert_eq!(row["evaluation_blocks"][block]["evaluation_pairs"], pairs);
+        assert!(row["evaluation_blocks"][block]["starts"].is_null());
+    }
+    fs::remove_file(out).unwrap();
+}
+
+#[test]
+fn registered_maze_cli_rejects_unregistered_caps_pools_and_encodings() {
+    for (index, cap, pool, encoding) in [
+        (0, "17", "full", "coordinates"),
+        (1, "18", "1:1", "coordinates"),
+        (2, "18", "full", "perception"),
+    ] {
+        let out = std::env::temp_dir().join(format!(
+            "acs2-invalid-protocol-{}-{index}.jsonl",
+            std::process::id()
+        ));
+        let status = Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+            .args([
+                "--task",
+                "woods14",
+                "--cap",
+                cap,
+                "--pool",
+                pool,
+                "--encoding",
+                encoding,
+                "--protocol",
+                "maze-goals-v1",
+                "--agents",
+                "acs2",
+                "--seeds",
+                "42",
+                "--targets",
+                "1",
+                "--out",
+            ])
+            .arg(&out)
+            .output()
+            .unwrap();
+        assert!(!status.status.success());
+        assert!(!out.exists());
+    }
 }

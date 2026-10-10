@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use acs2_core::environment::Environment;
+use acs2_core::goal::Goal;
 use acs2_core::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::trial::TruncationMode;
 use acs2_envs::goal::bit_flipping::BitFlipping;
@@ -13,6 +14,7 @@ use acs2_envs::goal::taxi::passenger_goal;
 use acs2_envs::maze::geometries::pyalcs::{MAZE4, MAZE6, MAZE7};
 use acs2_envs::maze::geometries::MazeGeometry;
 use acs2_envs::maze::topology::MazeTopology;
+use acs2_measure::goal_protocol::{MazeGoalDistributions, MAZE_PROTOCOL_ID};
 use acs2_measure::runner::{
     MeasuredEnvironment, TrainingEnvironment, AGENT_STREAM, ENVIRONMENT_STREAM, POOL_STREAM,
 };
@@ -85,6 +87,7 @@ fn collect<T: Task<S, G, M>, const S: usize, const G: usize, const M: usize>(
     seed: u64,
     target: u64,
     writer: &mut impl Write,
+    membership: Option<(&[Goal<G>], &Value)>,
 ) {
     let started = Instant::now();
     let mut env = TrainingEnvironment::new(
@@ -121,7 +124,7 @@ fn collect<T: Task<S, G, M>, const S: usize, const G: usize, const M: usize>(
         for (index, &configuration) in configurations.iter().enumerate() {
             let composition = episode_composition::<S, G, M>(
                 episode,
-                store.candidates(),
+                membership.map_or_else(|| store.candidates(), |(goals, _)| goals),
                 configuration,
                 &evaluator,
             )
@@ -134,7 +137,7 @@ fn collect<T: Task<S, G, M>, const S: usize, const G: usize, const M: usize>(
     for (configuration, total) in configurations.into_iter().zip(totals) {
         let mut expected = ExpectedComposition::default();
         expected.add_weighted(total, 1.0 / env.steps as f64);
-        let row = json!({
+        let mut row = json!({
             "schema": 2, "configuration": id, "task": task.name(), "cap": task.cap(), "goal_pool": task.pool_label(),
             "goal_encoding": task.encoding(), "seed": seed, "target_steps": target, "actual_steps": env.steps,
             "episodes": env.episodes, "success_rate": successful_episodes as f64 / env.episodes as f64,
@@ -149,6 +152,14 @@ fn collect<T: Task<S, G, M>, const S: usize, const G: usize, const M: usize>(
             "run_analysis_cost": {"reward_evaluations": analysis_cost.reward_evaluations,
                 "reach_evaluations": analysis_cost.reach_evaluations}, "wall_seconds": started.elapsed().as_secs_f64()
         });
+        if let Some((goals, registration)) = membership {
+            row["schema"] = json!(3);
+            row["candidate_time"] = json!("fixed_training_set");
+            row["candidate_basis"] = json!("training_goals");
+            row["candidate_count"] = json!(goals.len());
+            row["goal_protocol"] = registration.clone();
+            row.as_object_mut().unwrap().remove("plan_sha256");
+        }
         writeln!(writer, "{row}").unwrap();
     }
     writer.flush().unwrap();
@@ -180,6 +191,7 @@ fn main() {
     let mut steps = 20_000;
     let mut seeds: Vec<u64> = (42..=61).collect();
     let mut only = None;
+    let mut protocol = None;
     let mut args = std::env::args().skip(1);
     while let Some(flag) = args.next() {
         let value = args.next().expect("option value");
@@ -193,6 +205,7 @@ fn main() {
                     .collect()
             }
             "--configuration" => only = Some(value),
+            "--protocol" => protocol = Some(value),
             _ => panic!("unknown option {flag}"),
         }
     }
@@ -200,6 +213,37 @@ fn main() {
     let mut writer = BufWriter::new(
         File::create(output::output_path(&out.expect("--out is required"))).unwrap(),
     );
+    if let Some(protocol) = protocol {
+        assert_eq!(protocol, MAZE_PROTOCOL_ID);
+        for name in ["maze4", "maze5", "maze6", "maze7", "woods14", "mazema"] {
+            let config = acs2_measure::goal_protocol::registered_configuration(name);
+            let id = config["id"].as_str().unwrap();
+            if only.as_ref().is_some_and(|selected| selected != id) {
+                continue;
+            }
+            let geometry =
+                acs2_envs::maze::geometries::geometry_by_id(config["geometry"].as_str().unwrap())
+                    .unwrap();
+            let distributions = MazeGoalDistributions::<Coordinates, 2>::registered(
+                name,
+                geometry,
+                config["cap"].as_u64().unwrap() as u32,
+                "coordinates",
+            );
+            let registration = json!({"id": MAZE_PROTOCOL_ID, "configuration": config});
+            for &seed in &seeds {
+                collect::<_, 8, 2, 10>(
+                    &distributions.training,
+                    id,
+                    seed,
+                    steps,
+                    &mut writer,
+                    Some((distributions.training.template.goal_pool(), &registration)),
+                );
+            }
+        }
+        return;
+    }
     let ids = [
         "maze4_c5_full",
         "maze4_c5_p4",
@@ -227,6 +271,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "maze4_c5_p4" => collect::<_, 8, 2, 10>(
                     &maze(
@@ -239,6 +284,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "maze6_c10_full" => collect::<_, 8, 2, 10>(
                     &maze("maze6", &MAZE6, 10, None),
@@ -246,6 +292,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "maze6_c10_p4" => collect::<_, 8, 2, 10>(
                     &maze(
@@ -258,6 +305,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "maze7_c10_full" => collect::<_, 8, 2, 10>(
                     &maze("maze7", &MAZE7, 10, None),
@@ -265,6 +313,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "handeye4_c50_full" => {
                     let template = HandEye4::new(50, Box::new(ChaChaRandomSource::from_seed(0)));
@@ -278,6 +327,7 @@ fn main() {
                         seed,
                         steps,
                         &mut writer,
+                        None,
                     );
                 }
                 "handeye4_c50_p4" => collect::<_, 17, 2, 19>(
@@ -293,6 +343,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "handeye5_c50_full" => {
                     let template = HandEye5::new(50, Box::new(ChaChaRandomSource::from_seed(0)));
@@ -306,6 +357,7 @@ fn main() {
                         seed,
                         steps,
                         &mut writer,
+                        None,
                     );
                 }
                 "taxi_c200_full" => collect::<_, 3, 1, 4>(
@@ -314,6 +366,7 @@ fn main() {
                     seed,
                     steps,
                     &mut writer,
+                    None,
                 ),
                 "bitflip8_c8_full" => {
                     let pool = BitFlipping::<8>::new(Box::new(ChaChaRandomSource::from_seed(0)))
@@ -325,6 +378,7 @@ fn main() {
                         seed,
                         steps,
                         &mut writer,
+                        None,
                     );
                 }
                 _ => unreachable!("configuration list"),
@@ -440,5 +494,44 @@ mod tests {
                 "routes": {"original": route_json(0.2), "relabeled": route_json(0.3)}
             })
         );
+    }
+
+    #[test]
+    fn registered_composition_measures_membership_outside_the_training_set() {
+        let distributions = MazeGoalDistributions::<Coordinates, 2>::registered(
+            "mazema",
+            &acs2_envs::maze::geometries::pyalcs::MAZEMA,
+            9,
+            "coordinates",
+        );
+        let mut output = Vec::new();
+        let registration =
+            json!({"id": MAZE_PROTOCOL_ID, "configuration": distributions.registration});
+        collect::<_, 8, 2, 10>(
+            &distributions.training,
+            "mazema_c9_split",
+            42,
+            100,
+            &mut output,
+            Some((distributions.training.template.goal_pool(), &registration)),
+        );
+        let rows: Vec<Value> = String::from_utf8(output)
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert_eq!(rows.len(), 24);
+        for row in &rows {
+            assert_eq!(row["schema"], 3);
+            assert_eq!(row["candidate_basis"], "training_goals");
+            assert_eq!(row["candidate_count"], 9);
+            assert_eq!(row["goal_protocol"], registration);
+            if row["candidate_filter"] == true || row["strategy"] == "uniform_real" {
+                assert_eq!(row["expected"]["outside_candidates"], 0.0);
+            }
+        }
+        assert!(rows.iter().any(|row| row["strategy"] == "future"
+            && row["candidate_filter"] == false
+            && row["expected"]["outside_candidates"].as_f64().unwrap() > 0.0));
     }
 }

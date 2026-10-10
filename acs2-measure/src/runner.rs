@@ -20,6 +20,7 @@ use acs2_core::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use serde_json::{json, Value};
 
+use crate::goal_protocol::TaskProtocol;
 use crate::reference::{reference, Reference};
 use crate::task::{Pair, Task};
 
@@ -104,6 +105,7 @@ impl Preset {
 
 pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn name(&self) -> &'static str;
+    fn register_training_goals(&mut self, _goals: &[Goal<G>]) {}
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64);
     fn declared_policy(&self) -> &'static str;
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64);
@@ -245,13 +247,16 @@ pub trait MeasuredEnvironment<const S: usize, const G: usize, const M: usize>:
     fn last_transition(&self) -> Option<GoalTransition<S, G>>;
     fn relabel(&self, step: &GoalStep<S, G>, desired: &Goal<G>) -> GoalOutcome;
     fn goal_reached(&self, achieved: &Goal<G>, desired: &Goal<G>) -> bool;
+    fn training_goals(&self) -> Option<&[Goal<G>]> {
+        None
+    }
 }
 
 pub struct TrainingEnvironment<'a, T, const S: usize, const G: usize, const M: usize>
 where
     T: Task<S, G, M>,
 {
-    pub task: &'a T,
+    task: &'a T,
     pub inner: T::Env,
     pub pool_rng: ChaChaRandomSource,
     pub steps: u64,
@@ -375,6 +380,9 @@ where
     }
     fn goal_reached(&self, achieved: &Goal<G>, desired: &Goal<G>) -> bool {
         self.inner.objective().is_reached(achieved, desired)
+    }
+    fn training_goals(&self) -> Option<&[Goal<G>]> {
+        self.task.training_goals()
     }
 }
 
@@ -548,6 +556,31 @@ where
     T: Task<S, G, M>,
     F: FnMut(Value),
 {
+    run_protocol_with_sink(
+        &TaskProtocol::full_pool(task),
+        kind,
+        seed,
+        targets,
+        metadata,
+        settings,
+        emit,
+    )
+}
+
+pub fn run_protocol_with_sink<T, F, const S: usize, const G: usize, const M: usize>(
+    protocol: &TaskProtocol<'_, T>,
+    kind: AgentKind,
+    seed: u64,
+    targets: &[u64],
+    metadata: &RunMetadata<'_>,
+    settings: RunSettings,
+    emit: &mut F,
+) -> Option<(String, String)>
+where
+    T: Task<S, G, M>,
+    F: FnMut(Value),
+{
+    let task = protocol.training;
     let preset = Preset::thesis();
     let config = preset.config(task.actions());
     let agent_rng = ChaChaRandomSource::from_seed_and_stream(seed, AGENT_STREAM);
@@ -561,8 +594,8 @@ where
                 steps: 0,
                 updates: 0,
             };
-            run_goal_agent_with_sink(
-                task,
+            run_goal_agent_protocol_with_sink(
+                protocol,
                 &mut agent,
                 seed,
                 targets,
@@ -592,8 +625,8 @@ where
                 steps: 0,
                 updates: 0,
             };
-            run_goal_agent_with_sink(
-                task,
+            run_goal_agent_protocol_with_sink(
+                protocol,
                 &mut agent,
                 seed,
                 targets,
@@ -650,6 +683,31 @@ pub fn run_goal_agent_with_sink<T, A, F, const S: usize, const G: usize, const M
     A: GoalAgent<S, G, M>,
     F: FnMut(Value),
 {
+    run_goal_agent_protocol_with_sink(
+        &TaskProtocol::full_pool(task),
+        agent,
+        seed,
+        targets,
+        metadata,
+        evaluate_points,
+        emit,
+    )
+}
+
+pub fn run_goal_agent_protocol_with_sink<T, A, F, const S: usize, const G: usize, const M: usize>(
+    protocol: &TaskProtocol<'_, T>,
+    agent: &mut A,
+    seed: u64,
+    targets: &[u64],
+    metadata: &RunMetadata<'_>,
+    evaluate_points: bool,
+    emit: &mut F,
+) where
+    T: Task<S, G, M>,
+    A: GoalAgent<S, G, M>,
+    F: FnMut(Value),
+{
+    let task = protocol.training;
     let environment = task.environment(ChaChaRandomSource::from_seed_and_stream(
         seed,
         ENVIRONMENT_STREAM,
@@ -659,11 +717,26 @@ pub fn run_goal_agent_with_sink<T, A, F, const S: usize, const G: usize, const M
         environment,
         ChaChaRandomSource::from_seed_and_stream(seed, POOL_STREAM),
     );
-    let pairs = task.pairs();
-    let refs = reference(task, &pairs);
+    if let Some(goals) = task.training_goals() {
+        agent.register_training_goals(goals);
+    }
+    let blocks: Vec<_> = protocol
+        .evaluations
+        .iter()
+        .map(|block| {
+            let pairs = block.task.pairs();
+            let refs = reference(block.task, &pairs);
+            EvaluationPlan {
+                name: block.name,
+                task: block.task,
+                pairs,
+                refs,
+            }
+        })
+        .collect();
     let plan = RunPlan {
-        pairs: &pairs,
-        refs,
+        blocks: &blocks,
+        registration: protocol.registration.as_ref(),
         seed,
         targets,
         metadata,
@@ -692,11 +765,40 @@ pub fn assert_evaluation_read_only<
     Make: Fn() -> A,
     Snapshot: Fn(&A) -> String,
 {
+    assert_protocol_evaluation_read_only(
+        &TaskProtocol::full_pool(task),
+        seed,
+        targets,
+        make_agent,
+        snapshot,
+    )
+}
+
+pub fn assert_protocol_evaluation_read_only<
+    T,
+    A,
+    Make,
+    Snapshot,
+    const S: usize,
+    const G: usize,
+    const M: usize,
+>(
+    protocol: &TaskProtocol<'_, T>,
+    seed: u64,
+    targets: &[u64],
+    make_agent: Make,
+    snapshot: Snapshot,
+) where
+    T: Task<S, G, M>,
+    A: GoalAgent<S, G, M>,
+    Make: Fn() -> A,
+    Snapshot: Fn(&A) -> String,
+{
     let mut evaluated = make_agent();
     let mut control = make_agent();
     let metadata = RunMetadata::test("test");
-    run_goal_agent_with_sink(
-        task,
+    run_goal_agent_protocol_with_sink(
+        protocol,
         &mut evaluated,
         seed,
         targets,
@@ -704,8 +806,8 @@ pub fn assert_evaluation_read_only<
         true,
         &mut |_| {},
     );
-    run_goal_agent_with_sink(
-        task,
+    run_goal_agent_protocol_with_sink(
+        protocol,
         &mut control,
         seed,
         targets,
@@ -716,9 +818,16 @@ pub fn assert_evaluation_read_only<
     assert_eq!(snapshot(&evaluated), snapshot(&control));
 }
 
-struct RunPlan<'a, State, const G: usize> {
-    pairs: &'a [Pair<State, G>],
+struct EvaluationPlan<'a, T: Task<S, G, M>, const S: usize, const G: usize, const M: usize> {
+    name: &'static str,
+    task: &'a T,
+    pairs: Vec<Pair<T::State, G>>,
     refs: Reference,
+}
+
+struct RunPlan<'a, T: Task<S, G, M>, const S: usize, const G: usize, const M: usize> {
+    blocks: &'a [EvaluationPlan<'a, T, S, G, M>],
+    registration: Option<&'a Value>,
     seed: u64,
     targets: &'a [u64],
     metadata: &'a RunMetadata<'a>,
@@ -744,7 +853,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
     task: &T,
     agent: &mut A,
     env: &mut TrainingEnvironment<'_, T, S, G, M>,
-    plan: RunPlan<'_, T::State, G>,
+    plan: RunPlan<'_, T, S, G, M>,
     emit: &mut F,
 ) where
     T: Task<S, G, M>,
@@ -768,21 +877,23 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
         cumulative.classifier_tests += interval.classifier_tests;
         stop_match_counting();
         let eval_started = Instant::now();
+        let block = &plan.blocks[0];
+        let pairs = &block.pairs;
+        let refs = block.refs;
         let eval = if plan.evaluate_points {
             evaluate(
-                task,
+                block.task,
                 agent,
-                plan.pairs,
+                pairs,
                 plan.seed,
-                Preset::thesis().config(task.actions()).gamma,
+                Preset::thesis().config(block.task.actions()).gamma,
                 plan.metadata.record_starts,
             )
         } else {
             EvalResult::default()
         };
-        eval_elapsed += eval_started.elapsed();
-        emit(json!({
-            "schema": 3, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
+        let mut row = json!({
+            "schema": 4, "commit": plan.metadata.commit, "source_state": plan.metadata.source_state,
             "host": plan.metadata.host, "cpu_model": plan.metadata.cpu_model,
             "task": task.name(), "cap": task.cap(), "goal_encoding": task.encoding(), "goal_pool": task.pool_label(),
             "agent": agent.name(), "evaluated_policy": agent.declared_policy(), "seed": plan.seed, "nominal_step": target,
@@ -790,8 +901,8 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             "evaluation_distribution": if task.sampled_evaluation() { "fixed_seed_sample" } else { "exhaustive_exact_weights" },
             "evaluation_sample_seed": if task.sampled_evaluation() { Some(0u64) } else { None },
             "evaluation_sample_stream": if task.sampled_evaluation() { Some(5u64) } else { None },
-            "evaluation_pairs": plan.pairs.len(),
-            "evaluation_standard_error": if task.sampled_evaluation() { (eval.success * (1.0 - eval.success) / plan.pairs.len() as f64).sqrt() } else { 0.0 },
+            "evaluation_pairs": pairs.len(),
+            "evaluation_standard_error": if task.sampled_evaluation() { (eval.success * (1.0 - eval.success) / pairs.len() as f64).sqrt() } else { 0.0 },
             "success": eval.success, "mean_success_steps": eval.successful_steps, "mean_success_steps_over_shortest": eval.successful_step_ratio,
             "value_diagnostics": {"all": {"mean_first_action_estimate": eval.estimated_first_action_value,
                 "mean_discounted_return": eval.discounted_return, "mean_estimate_minus_return": eval.value_gap},
@@ -799,8 +910,8 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
                     "mean_discounted_return": eval.successful_discounted_return,
                     "mean_estimate_minus_return": eval.successful_value_gap})) } else { None }},
             "starts": eval.starts, "reference_distribution": if task.sampled_evaluation() { "fixed_seed_sample" } else { "task_start_goal_distribution" },
-            "random_floor": plan.refs.random_success, "reachable_within_cap": plan.refs.reachable_within_cap,
-            "reachable_after_cap": plan.refs.reachable_after_cap, "unreachable_or_ambiguous": plan.refs.unreachable_or_ambiguous,
+            "random_floor": refs.random_success, "reachable_within_cap": refs.reachable_within_cap,
+            "reachable_after_cap": refs.reachable_after_cap, "unreachable_or_ambiguous": refs.unreachable_or_ambiguous,
             "online_updates": agent.online_updates(), "replay_updates": agent.replay_updates(),
             "match_formations_train": cumulative.formations, "classifier_perception_tests_train": cumulative.classifier_tests,
             "population_classifiers": agent.population_classifiers(), "population_numerosity": agent.population_numerosity(),
@@ -812,7 +923,81 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             "trajectory_logical_bytes": agent.trajectory_logical_bytes(), "replay_diagnostics": agent.replay_diagnostics(), "wall_seconds_train": train_elapsed.as_secs_f64(),
             "wall_seconds_eval": eval_elapsed.as_secs_f64(), "wall_seconds_total": (train_elapsed + eval_elapsed).as_secs_f64(),
             "preset": Preset::thesis().json(task.actions()), "agent_parameters": agent.agent_parameters()
-        }));
+        });
+        if let Some(registration) = plan.registration {
+            let mut blocks = serde_json::Map::new();
+            blocks.insert(block.name.to_owned(), evaluation_fields(&mut row));
+            for block in &plan.blocks[1..] {
+                let eval = if plan.evaluate_points {
+                    evaluate(
+                        block.task,
+                        agent,
+                        &block.pairs,
+                        plan.seed,
+                        Preset::thesis().config(block.task.actions()).gamma,
+                        plan.metadata.record_starts,
+                    )
+                } else {
+                    EvalResult::default()
+                };
+                blocks.insert(
+                    block.name.to_owned(),
+                    evaluation_json(&eval, block.pairs.len(), block.refs),
+                );
+            }
+            row["goal_protocol"] = registration.clone();
+            row["evaluation_blocks"] = Value::Object(blocks);
+        } else {
+            row["goal_protocol"] = json!({"id": "full_pool"});
+            row["evaluation_blocks"] = Value::Null;
+        }
+        eval_elapsed += eval_started.elapsed();
+        row["wall_seconds_eval"] = json!(eval_elapsed.as_secs_f64());
+        row["wall_seconds_total"] = json!((train_elapsed + eval_elapsed).as_secs_f64());
+        emit(row);
         start_match_counting();
     }
+}
+
+fn evaluation_fields(row: &mut Value) -> Value {
+    let mut block = serde_json::Map::new();
+    for key in [
+        "evaluation_distribution",
+        "evaluation_sample_seed",
+        "evaluation_sample_stream",
+        "evaluation_pairs",
+        "evaluation_standard_error",
+        "success",
+        "mean_success_steps",
+        "mean_success_steps_over_shortest",
+        "value_diagnostics",
+        "starts",
+        "reference_distribution",
+        "random_floor",
+        "reachable_within_cap",
+        "reachable_after_cap",
+        "unreachable_or_ambiguous",
+    ] {
+        block.insert(
+            key.to_owned(),
+            row.as_object_mut().unwrap().remove(key).unwrap(),
+        );
+    }
+    Value::Object(block)
+}
+
+fn evaluation_json(eval: &EvalResult, pairs: usize, refs: Reference) -> Value {
+    json!({
+        "evaluation_distribution": "exhaustive_exact_weights", "evaluation_sample_seed": null,
+        "evaluation_sample_stream": null, "evaluation_pairs": pairs, "evaluation_standard_error": 0.0,
+        "success": eval.success, "mean_success_steps": eval.successful_steps,
+        "mean_success_steps_over_shortest": eval.successful_step_ratio,
+        "value_diagnostics": {"all": {"mean_first_action_estimate": eval.estimated_first_action_value,
+            "mean_discounted_return": eval.discounted_return, "mean_estimate_minus_return": eval.value_gap},
+            "successful": if eval.success > 0.0 { Some(json!({"mean_first_action_estimate": eval.successful_estimated_first_action_value,
+                "mean_discounted_return": eval.successful_discounted_return, "mean_estimate_minus_return": eval.successful_value_gap})) } else { None }},
+        "starts": eval.starts, "reference_distribution": "task_start_goal_distribution",
+        "random_floor": refs.random_success, "reachable_within_cap": refs.reachable_within_cap,
+        "reachable_after_cap": refs.reachable_after_cap, "unreachable_or_ambiguous": refs.unreachable_or_ambiguous
+    })
 }
