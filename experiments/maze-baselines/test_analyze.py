@@ -1,7 +1,11 @@
+import json
+import math
+from pathlib import Path
 import statistics
 import unittest
 
 from analyze import analyze_values
+from grid_protocol import require_budget
 
 
 class MazeAnalysisTests(unittest.TestCase):
@@ -38,9 +42,36 @@ class MazeAnalysisTests(unittest.TestCase):
         del series['acs2', 43]
         with self.assertRaises(ValueError):
             analyze_values(series, [1000, 2000], 0.1, 1)
+        series = self.series([0.2])
+        with self.assertRaises(ValueError):
+            analyze_values(series, [1000, 2000], 0.1, 1)
         series = self.series([0.2, float('nan')])
         with self.assertRaises(ValueError):
             analyze_values(series, [1000, 2000], 0.1, 1)
+
+    def test_proposed_budgets_use_geometry_and_keep_registered_distributions(self):
+        root = Path(__file__).resolve().parent
+        plan = json.loads((root / 'grid-plan.json').read_text())
+        registration = json.loads((root / 'protocol.json').read_text())
+        self.assertEqual(plan['stage'], 'grid_pending_approval')
+        self.assertEqual(plan['seeds'], list(range(42, 62)))
+        self.assertEqual(plan['agents'], ['acs2', 'acs2er'])
+        self.assertEqual(len(plan['configurations']), 6)
+        for config, registered in zip(plan['configurations'], registration['configurations']):
+            self.assertEqual(config['registration'], registered)
+            self.assertEqual(config['budget_steps'], 2_000_000 * math.ceil(registered['diameter'] / 10))
+            self.assertEqual(config['targets'][-1], config['budget_steps'])
+            self.assertEqual(config['targets'][:8], [1000, 3000, 10000, 30000, 100000, 300000, 1000000, 2000000])
+
+    def test_mixed_array_limits_include_pilot_within_forty_cpu_hours(self):
+        plan = json.loads(Path(__file__).with_name('grid-plan.json').read_text())
+        reserved = sum(max(config['limits_minutes'].values()) * 60 * 40 for config in plan['configurations'])
+        bound = require_budget(plan['pilot_allocation_cpu_seconds'], {'spent_seconds': 0, 'reserved_seconds': 0}, reserved)
+        self.assertAlmostEqual(bound / 3600, plan['cost_rule']['worst_limits_including_pilot_cpu_hours'])
+        self.assertLess(bound, 40 * 3600)
+        for config in plan['configurations']:
+            for agent, calibration in config['cost_calibration'].items():
+                self.assertEqual(config['limits_minutes'][agent], math.ceil((2.5 * calibration['budget_body_wall_seconds'] + 90) / 60))
 
 
 if __name__ == '__main__':

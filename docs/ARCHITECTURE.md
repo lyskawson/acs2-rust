@@ -2926,6 +2926,16 @@ reserved and new limits against forty CPU-hours. It uses one CPU per job and
 20–40 concurrency, without host pinning, leases or laptop supervision. Raw data,
 resolved plans, approvals and allocation accounting stay outside the checkout.
 
+The pending [`maze-baselines/grid-plan.json`](../experiments/maze-baselines/grid-plan.json)
+uses `2M * ceil(graph diameter / 10)` interactions per agent/seed: 2M on five
+mazes and 4M on Woods14. Seeds 42–61 produce 240 runs and 1,960 rows. Its primary
+test score is each seed's equal mean over registered checkpoints; paired ER minus
+ACS2 differences use t(19) intervals. The threshold is half the test ceiling at
+the first registered point reaching it, without interpolation. The cost pilot
+completed twelve allocations and 144 rows, spending 4,475 allocated CPU-seconds.
+The proposed mixed-array hard limits plus that pilot total 31.91 CPU-hours.
+The plan remains pending; no final baseline verdict is attached to these diagnostics.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

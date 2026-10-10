@@ -7,7 +7,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parents[1] / 'grid'))
 from collect import complete_rows, outside_repository, validate_row
 from grid_attempts import select_attempts
-from grid_protocol import atomic_json, compare_pilot, load_plan, summarize, verdict
+from grid_protocol import accounting, allocation_rows, atomic_json, compare_pilot, load_plan, require_budget, summarize, verdict
 from row_schema import evaluation_blocks
 
 
@@ -42,6 +42,14 @@ def analyze(root, pilot):
     if not approval.get('approved') or approval['plan_sha256'] != digest:
         raise ValueError('no matching grid approval')
     ledger = json.loads((root / 'ledger.json').read_text())
+    records = allocation_rows((root / 'accounting.psv').read_text())
+    expected_jobs = {f"{entry['array_id']}_{index}" for entry in ledger for index, _ in enumerate(entry['runs'])}
+    if not expected_jobs <= {row['JobID'] for row in records}:
+        raise ValueError('every submitted allocation needs final accounting')
+    balance = accounting(ledger, records)
+    if balance['reserved_seconds']:
+        raise ValueError('analysis requires every submitted allocation to be terminal')
+    require_budget(plan['pilot_allocation_cpu_seconds'], balance, 0, plan['phase_cpu_hour_limit'])
     results = []
     for config in plan['configurations']:
         selected, inventory = select_attempts(root, ledger, config)
@@ -51,6 +59,12 @@ def analyze(root, pilot):
         costs, compared = [], 0
         for key, attempt in sorted(selected.items()):
             agent, seed = key
+            launch = json.loads((attempt['path'] / 'launch.json').read_text())
+            manifest = launch['manifest']
+            if (launch['binary_sha256'] != plan['binary_sha256'] or launch['commit'] != plan['measurement_commit']
+                    or launch['partition'] != plan['partition'] or manifest['plan_sha256'] != digest
+                    or manifest['configuration'] != config or manifest['agent'] != agent or manifest['seed'] != seed):
+                raise ValueError('attempt launch differs from its registered assignment')
             rows, tail = complete_rows(attempt['path'] / 'rows.jsonl')
             if tail:
                 raise ValueError('incomplete raw tail in selected attempt')
@@ -86,7 +100,8 @@ def analyze(root, pilot):
                         'costs': costs, 'attempts': inventory, 'seed42_learning_fields_compared': compared})
     destination = outside_repository(root / 'analysis')
     destination.mkdir(exist_ok=True)
-    atomic_json(destination / 'results.json', {'plan_sha256': digest, 'configurations': results})
+    atomic_json(destination / 'results.json', {'plan_sha256': digest, 'allocation_cpu_seconds': balance['spent_seconds'],
+                'pilot_allocation_cpu_seconds': plan['pilot_allocation_cpu_seconds'], 'configurations': results})
     return results
 
 

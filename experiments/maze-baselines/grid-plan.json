@@ -1,0 +1,2884 @@
+{
+  "stage": "grid_pending_approval",
+  "experiment": "maze-baselines",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ],
+  "agents": [
+    "acs2",
+    "acs2er"
+  ],
+  "partition": "lem-cpu-normal",
+  "cpu_model": "AMD EPYC 9554 64-Core Processor",
+  "memory_mib": 512,
+  "concurrency": 40,
+  "phase_cpu_hour_limit": 40,
+  "first_row_timeout_seconds": 60,
+  "pilot_allocation_cpu_seconds": 4475.0,
+  "registration_commit": "15ed86132b27cde4658f2581d95ead27f481ad68",
+  "configurations": [
+    {
+      "id": "maze4_c5_split",
+      "task": "maze4",
+      "cap": 5,
+      "pool": "full",
+      "row_pool": "[(1, 2), (1, 4), (1, 5), (2, 3), (3, 2), (4, 1), (4, 3), (4, 4), (4, 5), (4, 6), (5, 2), (5, 5), (6, 1), (6, 4), (6, 6)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "maze4_c5_split",
+        "task": "maze4",
+        "geometry": "Maze4-v0",
+        "cap": 5,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 27,
+        "diameter": 6,
+        "goal_difficulty": [
+          {
+            "goal": [
+              3,
+              4
+            ],
+            "distance_sum": 53,
+            "mean_distance": 2.0384615384615383,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              3
+            ],
+            "distance_sum": 55,
+            "mean_distance": 2.1153846153846154,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              4
+            ],
+            "distance_sum": 56,
+            "mean_distance": 2.1538461538461537,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              5
+            ],
+            "distance_sum": 60,
+            "mean_distance": 2.3076923076923075,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              5
+            ],
+            "distance_sum": 62,
+            "mean_distance": 2.3846153846153846,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              4
+            ],
+            "distance_sum": 62,
+            "mean_distance": 2.3846153846153846,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              3
+            ],
+            "distance_sum": 64,
+            "mean_distance": 2.4615384615384617,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              2
+            ],
+            "distance_sum": 66,
+            "mean_distance": 2.5384615384615383,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              5
+            ],
+            "distance_sum": 68,
+            "mean_distance": 2.6153846153846154,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              2
+            ],
+            "distance_sum": 68,
+            "mean_distance": 2.6153846153846154,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              5
+            ],
+            "distance_sum": 69,
+            "mean_distance": 2.6538461538461537,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              2
+            ],
+            "distance_sum": 70,
+            "mean_distance": 2.6923076923076925,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              6
+            ],
+            "distance_sum": 75,
+            "mean_distance": 2.8846153846153846,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              2
+            ],
+            "distance_sum": 76,
+            "mean_distance": 2.923076923076923,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              3
+            ],
+            "distance_sum": 77,
+            "mean_distance": 2.9615384615384617,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              4
+            ],
+            "distance_sum": 78,
+            "mean_distance": 3.0,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              4
+            ],
+            "distance_sum": 79,
+            "mean_distance": 3.0384615384615383,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              6
+            ],
+            "distance_sum": 80,
+            "mean_distance": 3.076923076923077,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              6
+            ],
+            "distance_sum": 81,
+            "mean_distance": 3.1153846153846154,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 81,
+            "mean_distance": 3.1153846153846154,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              5
+            ],
+            "distance_sum": 84,
+            "mean_distance": 3.230769230769231,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 86,
+            "mean_distance": 3.3076923076923075,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              2
+            ],
+            "distance_sum": 86,
+            "mean_distance": 3.3076923076923075,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              6
+            ],
+            "distance_sum": 91,
+            "mean_distance": 3.5,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              6
+            ],
+            "distance_sum": 93,
+            "mean_distance": 3.576923076923077,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              1
+            ],
+            "distance_sum": 94,
+            "mean_distance": 3.6153846153846154,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              1
+            ],
+            "distance_sum": 100,
+            "mean_distance": 3.8461538461538463,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                4
+              ],
+              [
+                1,
+                5
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                4,
+                4
+              ],
+              [
+                4,
+                5
+              ],
+              [
+                4,
+                6
+              ],
+              [
+                5,
+                2
+              ],
+              [
+                5,
+                5
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                6
+              ]
+            ],
+            "evaluation_pairs": 390,
+            "pair_weight": "1/390",
+            "random_floor_exact": "1113607/12779520",
+            "random_floor": 0.08713997082832532,
+            "reachable_within_cap_exact": "389/390",
+            "reachable_within_cap": 0.9974358974358974,
+            "beyond_cap_pairs": [
+              {
+                "start": [
+                  1,
+                  1
+                ],
+                "goal": [
+                  6,
+                  6
+                ],
+                "distance": 6
+              }
+            ]
+          },
+          "validation": {
+            "goals": [
+              [
+                1,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                5
+              ],
+              [
+                2,
+                6
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                6,
+                3
+              ]
+            ],
+            "evaluation_pairs": 156,
+            "pair_weight": "1/156",
+            "random_floor_exact": "853/9984",
+            "random_floor": 0.08543669871794872,
+            "reachable_within_cap_exact": "155/156",
+            "reachable_within_cap": 0.9935897435897436,
+            "beyond_cap_pairs": [
+              {
+                "start": [
+                  6,
+                  6
+                ],
+                "goal": [
+                  1,
+                  1
+                ],
+                "distance": 6
+              }
+            ]
+          },
+          "test": {
+            "goals": [
+              [
+                1,
+                6
+              ],
+              [
+                3,
+                5
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                5,
+                4
+              ],
+              [
+                5,
+                6
+              ],
+              [
+                6,
+                2
+              ]
+            ],
+            "evaluation_pairs": 156,
+            "pair_weight": "1/156",
+            "random_floor_exact": "146141/1703936",
+            "random_floor": 0.08576671893780048,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000
+      ],
+      "limits_minutes": {
+        "acs2": 3,
+        "acs2er": 7
+      },
+      "budget_steps": 2000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 28.307742311,
+          "allocation_overhead_seconds": 0.5929655550000064,
+          "forecast_allocation_seconds_at_budget": 28.900707866000005,
+          "job_limit_minutes": 3,
+          "rows_sha256": "23f9c646c37c8aa55668b172f6ac6e9748963f37325a582a27119f7706f5cdfe"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 115.442664164,
+          "allocation_overhead_seconds": 0.9578876110000465,
+          "forecast_allocation_seconds_at_budget": 116.40055177500005,
+          "job_limit_minutes": 7,
+          "rows_sha256": "56b2cb71314060ca7c1ec029708f4495e45b61c3053e26349f29591005eeddd5"
+        }
+      }
+    },
+    {
+      "id": "maze5_c8_split",
+      "task": "maze5",
+      "cap": 8,
+      "pool": "full",
+      "row_pool": "[(1, 1), (1, 2), (1, 3), (1, 4), (1, 7), (2, 1), (2, 4), (2, 7), (3, 1), (3, 3), (3, 6), (3, 7), (4, 1), (4, 3), (4, 6), (5, 1), (5, 3), (6, 3), (6, 7), (7, 1), (7, 2), (7, 3), (7, 4)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "maze5_c8_split",
+        "task": "maze5",
+        "geometry": "Maze5-v0",
+        "cap": 8,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 37,
+        "diameter": 8,
+        "goal_difficulty": [
+          {
+            "goal": [
+              3,
+              4
+            ],
+            "distance_sum": 104,
+            "mean_distance": 2.888888888888889,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              3
+            ],
+            "distance_sum": 105,
+            "mean_distance": 2.9166666666666665,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              3
+            ],
+            "distance_sum": 105,
+            "mean_distance": 2.9166666666666665,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              4
+            ],
+            "distance_sum": 106,
+            "mean_distance": 2.9444444444444446,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              2
+            ],
+            "distance_sum": 106,
+            "mean_distance": 2.9444444444444446,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              5
+            ],
+            "distance_sum": 107,
+            "mean_distance": 2.9722222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              3
+            ],
+            "distance_sum": 107,
+            "mean_distance": 2.9722222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              6
+            ],
+            "distance_sum": 108,
+            "mean_distance": 3.0,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              4
+            ],
+            "distance_sum": 108,
+            "mean_distance": 3.0,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              5
+            ],
+            "distance_sum": 109,
+            "mean_distance": 3.0277777777777777,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              6
+            ],
+            "distance_sum": 119,
+            "mean_distance": 3.3055555555555554,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              3
+            ],
+            "distance_sum": 119,
+            "mean_distance": 3.3055555555555554,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              6
+            ],
+            "distance_sum": 121,
+            "mean_distance": 3.361111111111111,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              2
+            ],
+            "distance_sum": 128,
+            "mean_distance": 3.5555555555555554,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              3
+            ],
+            "distance_sum": 129,
+            "mean_distance": 3.5833333333333335,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              3,
+              1
+            ],
+            "distance_sum": 129,
+            "mean_distance": 3.5833333333333335,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              4
+            ],
+            "distance_sum": 131,
+            "mean_distance": 3.638888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 131,
+            "mean_distance": 3.638888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              5
+            ],
+            "distance_sum": 133,
+            "mean_distance": 3.6944444444444446,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              7
+            ],
+            "distance_sum": 133,
+            "mean_distance": 3.6944444444444446,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              1
+            ],
+            "distance_sum": 133,
+            "mean_distance": 3.6944444444444446,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              3,
+              7
+            ],
+            "distance_sum": 134,
+            "mean_distance": 3.7222222222222223,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              3
+            ],
+            "distance_sum": 134,
+            "mean_distance": 3.7222222222222223,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              4
+            ],
+            "distance_sum": 134,
+            "mean_distance": 3.7222222222222223,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              5
+            ],
+            "distance_sum": 134,
+            "mean_distance": 3.7222222222222223,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              6
+            ],
+            "distance_sum": 135,
+            "mean_distance": 3.75,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 144,
+            "mean_distance": 4.0,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              1
+            ],
+            "distance_sum": 145,
+            "mean_distance": 4.027777777777778,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              7
+            ],
+            "distance_sum": 146,
+            "mean_distance": 4.055555555555555,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              2
+            ],
+            "distance_sum": 146,
+            "mean_distance": 4.055555555555555,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              6
+            ],
+            "distance_sum": 148,
+            "mean_distance": 4.111111111111111,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              1
+            ],
+            "distance_sum": 148,
+            "mean_distance": 4.111111111111111,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              7
+            ],
+            "distance_sum": 151,
+            "mean_distance": 4.194444444444445,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              1
+            ],
+            "distance_sum": 161,
+            "mean_distance": 4.472222222222222,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              7
+            ],
+            "distance_sum": 166,
+            "mean_distance": 4.611111111111111,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              1
+            ],
+            "distance_sum": 166,
+            "mean_distance": 4.611111111111111,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              7
+            ],
+            "distance_sum": 169,
+            "mean_distance": 4.694444444444445,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                1,
+                4
+              ],
+              [
+                1,
+                7
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                4
+              ],
+              [
+                2,
+                7
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                3,
+                6
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                4,
+                6
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                3
+              ],
+              [
+                6,
+                3
+              ],
+              [
+                6,
+                7
+              ],
+              [
+                7,
+                1
+              ],
+              [
+                7,
+                2
+              ],
+              [
+                7,
+                3
+              ],
+              [
+                7,
+                4
+              ]
+            ],
+            "evaluation_pairs": 828,
+            "pair_weight": "1/828",
+            "random_floor_exact": "281138639/3472883712",
+            "random_floor": 0.08095250584653034,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "validation": {
+            "goals": [
+              [
+                1,
+                5
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                4,
+                7
+              ],
+              [
+                5,
+                5
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                6
+              ],
+              [
+                7,
+                7
+              ]
+            ],
+            "evaluation_pairs": 252,
+            "pair_weight": "1/252",
+            "random_floor_exact": "175994503/2113929216",
+            "random_floor": 0.08325468122013031,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "test": {
+            "goals": [
+              [
+                1,
+                6
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                3,
+                5
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                5,
+                6
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                7,
+                5
+              ]
+            ],
+            "evaluation_pairs": 252,
+            "pair_weight": "1/252",
+            "random_floor_exact": "23403697/264241152",
+            "random_floor": 0.0885694632454524,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000
+      ],
+      "limits_minutes": {
+        "acs2": 4,
+        "acs2er": 10
+      },
+      "budget_steps": 2000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 40.113483091,
+          "allocation_overhead_seconds": 0.3827550219999978,
+          "forecast_allocation_seconds_at_budget": 40.496238113,
+          "job_limit_minutes": 4,
+          "rows_sha256": "9af22b40956c352730f31c1a38dec92273d303c8e6e6d116a7d32a5edb069571"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 199.225214868,
+          "allocation_overhead_seconds": 0.9943936380000196,
+          "forecast_allocation_seconds_at_budget": 200.21960850600001,
+          "job_limit_minutes": 10,
+          "rows_sha256": "d4f932b52a3d8079fbbefad10bb6d9ee1823c6bb2a04a968ec1ca7d45a61ab40"
+        }
+      }
+    },
+    {
+      "id": "maze6_c10_split",
+      "task": "maze6",
+      "cap": 10,
+      "pool": "full",
+      "row_pool": "[(1, 1), (1, 2), (1, 3), (1, 5), (2, 1), (2, 2), (2, 7), (3, 1), (3, 3), (3, 4), (3, 5), (4, 7), (5, 1), (5, 3), (6, 3), (6, 4), (6, 5), (6, 6), (7, 1), (7, 2), (7, 4), (7, 5), (7, 7)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "maze6_c10_split",
+        "task": "maze6",
+        "geometry": "Maze6-v0",
+        "cap": 10,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 37,
+        "diameter": 8,
+        "goal_difficulty": [
+          {
+            "goal": [
+              4,
+              3
+            ],
+            "distance_sum": 104,
+            "mean_distance": 2.888888888888889,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              3
+            ],
+            "distance_sum": 104,
+            "mean_distance": 2.888888888888889,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              4
+            ],
+            "distance_sum": 104,
+            "mean_distance": 2.888888888888889,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              4
+            ],
+            "distance_sum": 105,
+            "mean_distance": 2.9166666666666665,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              2
+            ],
+            "distance_sum": 106,
+            "mean_distance": 2.9444444444444446,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              5
+            ],
+            "distance_sum": 106,
+            "mean_distance": 2.9444444444444446,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              3
+            ],
+            "distance_sum": 107,
+            "mean_distance": 2.9722222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              5
+            ],
+            "distance_sum": 107,
+            "mean_distance": 2.9722222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              6
+            ],
+            "distance_sum": 107,
+            "mean_distance": 2.9722222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              4
+            ],
+            "distance_sum": 109,
+            "mean_distance": 3.0277777777777777,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              3
+            ],
+            "distance_sum": 115,
+            "mean_distance": 3.1944444444444446,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              5
+            ],
+            "distance_sum": 116,
+            "mean_distance": 3.2222222222222223,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              6
+            ],
+            "distance_sum": 117,
+            "mean_distance": 3.25,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              6
+            ],
+            "distance_sum": 120,
+            "mean_distance": 3.3333333333333335,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              4
+            ],
+            "distance_sum": 127,
+            "mean_distance": 3.5277777777777777,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              3,
+              1
+            ],
+            "distance_sum": 129,
+            "mean_distance": 3.5833333333333335,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              5
+            ],
+            "distance_sum": 129,
+            "mean_distance": 3.5833333333333335,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              2
+            ],
+            "distance_sum": 130,
+            "mean_distance": 3.611111111111111,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              3
+            ],
+            "distance_sum": 130,
+            "mean_distance": 3.611111111111111,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 131,
+            "mean_distance": 3.638888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              7
+            ],
+            "distance_sum": 131,
+            "mean_distance": 3.638888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              6
+            ],
+            "distance_sum": 131,
+            "mean_distance": 3.638888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              3
+            ],
+            "distance_sum": 132,
+            "mean_distance": 3.6666666666666665,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              1
+            ],
+            "distance_sum": 133,
+            "mean_distance": 3.6944444444444446,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              3,
+              7
+            ],
+            "distance_sum": 136,
+            "mean_distance": 3.7777777777777777,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              4
+            ],
+            "distance_sum": 137,
+            "mean_distance": 3.8055555555555554,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              2
+            ],
+            "distance_sum": 142,
+            "mean_distance": 3.9444444444444446,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              5
+            ],
+            "distance_sum": 143,
+            "mean_distance": 3.9722222222222223,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              1
+            ],
+            "distance_sum": 146,
+            "mean_distance": 4.055555555555555,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 147,
+            "mean_distance": 4.083333333333333,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              1
+            ],
+            "distance_sum": 147,
+            "mean_distance": 4.083333333333333,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              7
+            ],
+            "distance_sum": 148,
+            "mean_distance": 4.111111111111111,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              7
+            ],
+            "distance_sum": 152,
+            "mean_distance": 4.222222222222222,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              1
+            ],
+            "distance_sum": 163,
+            "mean_distance": 4.527777777777778,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              1
+            ],
+            "distance_sum": 163,
+            "mean_distance": 4.527777777777778,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              7
+            ],
+            "distance_sum": 165,
+            "mean_distance": 4.583333333333333,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              7
+            ],
+            "distance_sum": 187,
+            "mean_distance": 5.194444444444445,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                1,
+                5
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                7
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                3,
+                5
+              ],
+              [
+                4,
+                7
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                3
+              ],
+              [
+                6,
+                3
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                5
+              ],
+              [
+                6,
+                6
+              ],
+              [
+                7,
+                1
+              ],
+              [
+                7,
+                2
+              ],
+              [
+                7,
+                4
+              ],
+              [
+                7,
+                5
+              ],
+              [
+                7,
+                7
+              ]
+            ],
+            "evaluation_pairs": 828,
+            "pair_weight": "1/828",
+            "random_floor_exact": "45403431629/444529115136",
+            "random_floor": 0.10213826290120322,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "validation": {
+            "goals": [
+              [
+                1,
+                4
+              ],
+              [
+                1,
+                7
+              ],
+              [
+                2,
+                4
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                4,
+                6
+              ],
+              [
+                7,
+                3
+              ]
+            ],
+            "evaluation_pairs": 252,
+            "pair_weight": "1/252",
+            "random_floor_exact": "6425244155/67645734912",
+            "random_floor": 0.09498372903123262,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "test": {
+            "goals": [
+              [
+                3,
+                6
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                5,
+                5
+              ],
+              [
+                5,
+                6
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                6,
+                7
+              ]
+            ],
+            "evaluation_pairs": 252,
+            "pair_weight": "1/252",
+            "random_floor_exact": "5049441757/45097156608",
+            "random_floor": 0.11196807375000346,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000
+      ],
+      "limits_minutes": {
+        "acs2": 4,
+        "acs2er": 10
+      },
+      "budget_steps": 2000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 44.368462,
+          "allocation_overhead_seconds": 1.0343280010000058,
+          "forecast_allocation_seconds_at_budget": 45.40279000100001,
+          "job_limit_minutes": 4,
+          "rows_sha256": "ac9f647f54588c2aaa5a16ae1db5a256b40578d7ed7e8ec695bc333779347fc8"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 181.672828423,
+          "allocation_overhead_seconds": 0.5211811670000088,
+          "forecast_allocation_seconds_at_budget": 182.19400959,
+          "job_limit_minutes": 10,
+          "rows_sha256": "515bf0d189c386a1399e265bac1cb5d15fff6e0c61472213cf636680e98d66da"
+        }
+      }
+    },
+    {
+      "id": "maze7_c10_split",
+      "task": "maze7",
+      "cap": 10,
+      "pool": "full",
+      "row_pool": "[(1, 1), (1, 3), (1, 4), (1, 5), (2, 1), (2, 2), (2, 4), (2, 7), (3, 3), (3, 4), (3, 6), (3, 7), (4, 2), (4, 3), (4, 6), (5, 1), (5, 6), (6, 1), (6, 3), (6, 4), (6, 7), (7, 3), (7, 4), (7, 5)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "maze7_c10_split",
+        "task": "maze7",
+        "geometry": "Maze7-v0",
+        "cap": 10,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 36,
+        "diameter": 10,
+        "goal_difficulty": [
+          {
+            "goal": [
+              5,
+              3
+            ],
+            "distance_sum": 101,
+            "mean_distance": 2.8857142857142857,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              4
+            ],
+            "distance_sum": 101,
+            "mean_distance": 2.8857142857142857,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              2
+            ],
+            "distance_sum": 106,
+            "mean_distance": 3.0285714285714285,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              3
+            ],
+            "distance_sum": 111,
+            "mean_distance": 3.1714285714285713,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              3
+            ],
+            "distance_sum": 111,
+            "mean_distance": 3.1714285714285713,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              5
+            ],
+            "distance_sum": 114,
+            "mean_distance": 3.257142857142857,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              6,
+              5
+            ],
+            "distance_sum": 117,
+            "mean_distance": 3.342857142857143,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              3
+            ],
+            "distance_sum": 122,
+            "mean_distance": 3.4857142857142858,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              7,
+              4
+            ],
+            "distance_sum": 123,
+            "mean_distance": 3.5142857142857142,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              7,
+              5
+            ],
+            "distance_sum": 125,
+            "mean_distance": 3.5714285714285716,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              7,
+              3
+            ],
+            "distance_sum": 126,
+            "mean_distance": 3.6,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              1
+            ],
+            "distance_sum": 128,
+            "mean_distance": 3.657142857142857,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 130,
+            "mean_distance": 3.7142857142857144,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              3,
+              4
+            ],
+            "distance_sum": 132,
+            "mean_distance": 3.7714285714285714,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              1
+            ],
+            "distance_sum": 132,
+            "mean_distance": 3.7714285714285714,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              5,
+              6
+            ],
+            "distance_sum": 134,
+            "mean_distance": 3.8285714285714287,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              6
+            ],
+            "distance_sum": 136,
+            "mean_distance": 3.8857142857142857,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              2
+            ],
+            "distance_sum": 137,
+            "mean_distance": 3.914285714285714,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              6
+            ],
+            "distance_sum": 138,
+            "mean_distance": 3.942857142857143,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              6,
+              1
+            ],
+            "distance_sum": 142,
+            "mean_distance": 4.057142857142857,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              2
+            ],
+            "distance_sum": 144,
+            "mean_distance": 4.114285714285714,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              4
+            ],
+            "distance_sum": 148,
+            "mean_distance": 4.228571428571429,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              1
+            ],
+            "distance_sum": 151,
+            "mean_distance": 4.314285714285714,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              7,
+              1
+            ],
+            "distance_sum": 157,
+            "mean_distance": 4.485714285714286,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              7
+            ],
+            "distance_sum": 159,
+            "mean_distance": 4.542857142857143,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              3,
+              6
+            ],
+            "distance_sum": 164,
+            "mean_distance": 4.685714285714286,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              3,
+              7
+            ],
+            "distance_sum": 164,
+            "mean_distance": 4.685714285714286,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              6,
+              7
+            ],
+            "distance_sum": 164,
+            "mean_distance": 4.685714285714286,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              3
+            ],
+            "distance_sum": 170,
+            "mean_distance": 4.857142857142857,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              7,
+              7
+            ],
+            "distance_sum": 171,
+            "mean_distance": 4.885714285714286,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 172,
+            "mean_distance": 4.914285714285715,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              4
+            ],
+            "distance_sum": 175,
+            "mean_distance": 5.0,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              1
+            ],
+            "distance_sum": 176,
+            "mean_distance": 5.0285714285714285,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              5
+            ],
+            "distance_sum": 181,
+            "mean_distance": 5.171428571428572,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              7
+            ],
+            "distance_sum": 195,
+            "mean_distance": 5.571428571428571,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              7
+            ],
+            "distance_sum": 229,
+            "mean_distance": 6.542857142857143,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                1,
+                4
+              ],
+              [
+                1,
+                5
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                4
+              ],
+              [
+                2,
+                7
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                3,
+                4
+              ],
+              [
+                3,
+                6
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                4,
+                6
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                6
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                6,
+                3
+              ],
+              [
+                6,
+                4
+              ],
+              [
+                6,
+                7
+              ],
+              [
+                7,
+                3
+              ],
+              [
+                7,
+                4
+              ],
+              [
+                7,
+                5
+              ]
+            ],
+            "evaluation_pairs": 840,
+            "pair_weight": "1/840",
+            "random_floor_exact": "94791615553/901943132160",
+            "random_floor": 0.10509710886759595,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "validation": {
+            "goals": [
+              [
+                1,
+                7
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                4,
+                7
+              ],
+              [
+                5,
+                3
+              ],
+              [
+                6,
+                6
+              ],
+              [
+                7,
+                2
+              ]
+            ],
+            "evaluation_pairs": 210,
+            "pair_weight": "1/210",
+            "random_floor_exact": "365776615/3758096384",
+            "random_floor": 0.09733029109026704,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "test": {
+            "goals": [
+              [
+                1,
+                2
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                5,
+                5
+              ],
+              [
+                6,
+                5
+              ],
+              [
+                7,
+                1
+              ],
+              [
+                7,
+                7
+              ]
+            ],
+            "evaluation_pairs": 210,
+            "pair_weight": "1/210",
+            "random_floor_exact": "21109669669/225485783040",
+            "random_floor": 0.0936186281210255,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000
+      ],
+      "limits_minutes": {
+        "acs2": 4,
+        "acs2er": 11
+      },
+      "budget_steps": 2000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 54.243394106,
+          "allocation_overhead_seconds": 0.8192613390000076,
+          "forecast_allocation_seconds_at_budget": 55.062655445000004,
+          "job_limit_minutes": 4,
+          "rows_sha256": "720c662285f3ed7f51529e89301d6f9437a1b3f058cd3e51ac3611ede3b5256d"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 211.147530722,
+          "allocation_overhead_seconds": 0.8779800109999769,
+          "forecast_allocation_seconds_at_budget": 212.02551073299998,
+          "job_limit_minutes": 11,
+          "rows_sha256": "3eab88084583e75152a0ea644fdc31f6cdd9eb2c19e9081241a7964f964b7310"
+        }
+      }
+    },
+    {
+      "id": "woods14_c18_split",
+      "task": "woods14",
+      "cap": 18,
+      "pool": "full",
+      "row_pool": "[(1, 2), (1, 3), (1, 9), (1, 12), (2, 5), (2, 8), (2, 12), (3, 1), (3, 5), (3, 11), (4, 5), (4, 8), (5, 7)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "woods14_c18_split",
+        "task": "woods14",
+        "geometry": "Woods14-v0",
+        "cap": 18,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 19,
+        "diameter": 18,
+        "goal_difficulty": [
+          {
+            "goal": [
+              5,
+              6
+            ],
+            "distance_sum": 90,
+            "mean_distance": 5.0,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              5
+            ],
+            "distance_sum": 91,
+            "mean_distance": 5.055555555555555,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              7
+            ],
+            "distance_sum": 91,
+            "mean_distance": 5.055555555555555,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              5
+            ],
+            "distance_sum": 94,
+            "mean_distance": 5.222222222222222,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              8
+            ],
+            "distance_sum": 94,
+            "mean_distance": 5.222222222222222,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              2,
+              5
+            ],
+            "distance_sum": 99,
+            "mean_distance": 5.5,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              7
+            ],
+            "distance_sum": 99,
+            "mean_distance": 5.5,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              1,
+              4
+            ],
+            "distance_sum": 106,
+            "mean_distance": 5.888888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              8
+            ],
+            "distance_sum": 106,
+            "mean_distance": 5.888888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              3
+            ],
+            "distance_sum": 115,
+            "mean_distance": 6.388888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              9
+            ],
+            "distance_sum": 115,
+            "mean_distance": 6.388888888888889,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 126,
+            "mean_distance": 7.0,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              10
+            ],
+            "distance_sum": 126,
+            "mean_distance": 7.0,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              1
+            ],
+            "distance_sum": 139,
+            "mean_distance": 7.722222222222222,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              3,
+              11
+            ],
+            "distance_sum": 139,
+            "mean_distance": 7.722222222222222,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              12
+            ],
+            "distance_sum": 154,
+            "mean_distance": 8.555555555555555,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              3,
+              1
+            ],
+            "distance_sum": 154,
+            "mean_distance": 8.555555555555555,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              12
+            ],
+            "distance_sum": 171,
+            "mean_distance": 9.5,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 171,
+            "mean_distance": 9.5,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                1,
+                9
+              ],
+              [
+                1,
+                12
+              ],
+              [
+                2,
+                5
+              ],
+              [
+                2,
+                8
+              ],
+              [
+                2,
+                12
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                5
+              ],
+              [
+                3,
+                11
+              ],
+              [
+                4,
+                5
+              ],
+              [
+                4,
+                8
+              ],
+              [
+                5,
+                7
+              ]
+            ],
+            "evaluation_pairs": 234,
+            "pair_weight": "1/234",
+            "random_floor_exact": "550433727214261123/4215369251218784256",
+            "random_floor": 0.13057781997511012,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "validation": {
+            "goals": [
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                10
+              ],
+              [
+                5,
+                6
+              ]
+            ],
+            "evaluation_pairs": 54,
+            "pair_weight": "1/54",
+            "random_floor_exact": "44843591184672115/324259173170675712",
+            "random_floor": 0.13829552066694634,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "test": {
+            "goals": [
+              [
+                1,
+                4
+              ],
+              [
+                3,
+                7
+              ],
+              [
+                4,
+                1
+              ]
+            ],
+            "evaluation_pairs": 54,
+            "pair_weight": "1/54",
+            "random_floor_exact": "56343086995158377/486388759756013568",
+            "random_floor": 0.11583961566756122,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000,
+        4000000
+      ],
+      "limits_minutes": {
+        "acs2": 3,
+        "acs2er": 5
+      },
+      "budget_steps": 4000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 13.985952077,
+          "allocation_overhead_seconds": 0.9864057440000025,
+          "forecast_allocation_seconds_at_budget": 14.972357821000003,
+          "job_limit_minutes": 3,
+          "rows_sha256": "bcef7511bcc2b6361a388805a421d581171a1402fc8c2192f68384eb411f86d6"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 62.261404821,
+          "allocation_overhead_seconds": 1.282521029999998,
+          "forecast_allocation_seconds_at_budget": 63.543925851,
+          "job_limit_minutes": 5,
+          "rows_sha256": "c79d7e85b587c8b77f7596c3d057cfb998689aaf3cb9470b97a641bc3ce44175"
+        }
+      }
+    },
+    {
+      "id": "mazema_c9_split",
+      "task": "mazema",
+      "cap": 9,
+      "pool": "full",
+      "row_pool": "[(1, 2), (2, 1), (2, 3), (2, 4), (2, 7), (2, 8), (4, 4), (4, 5), (5, 4)]",
+      "encoding": "coordinates",
+      "row_schema": 4,
+      "protocol": "maze-goals-v1",
+      "registration": {
+        "id": "mazema_c9_split",
+        "task": "mazema",
+        "geometry": "MazeMA-v0",
+        "cap": 9,
+        "encoding": "coordinates",
+        "split_unit": "goal_cells",
+        "walkable_cells": 15,
+        "diameter": 9,
+        "goal_difficulty": [
+          {
+            "goal": [
+              4,
+              3
+            ],
+            "distance_sum": 39,
+            "mean_distance": 2.7857142857142856,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              4
+            ],
+            "distance_sum": 39,
+            "mean_distance": 2.7857142857142856,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              5,
+              4
+            ],
+            "distance_sum": 39,
+            "mean_distance": 2.7857142857142856,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              4,
+              5
+            ],
+            "distance_sum": 41,
+            "mean_distance": 2.9285714285714284,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              2
+            ],
+            "distance_sum": 42,
+            "mean_distance": 3.0,
+            "stratum": 0
+          },
+          {
+            "goal": [
+              3,
+              6
+            ],
+            "distance_sum": 46,
+            "mean_distance": 3.2857142857142856,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              3
+            ],
+            "distance_sum": 51,
+            "mean_distance": 3.642857142857143,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              1
+            ],
+            "distance_sum": 53,
+            "mean_distance": 3.7857142857142856,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              2,
+              7
+            ],
+            "distance_sum": 55,
+            "mean_distance": 3.9285714285714284,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              1
+            ],
+            "distance_sum": 55,
+            "mean_distance": 3.9285714285714284,
+            "stratum": 1
+          },
+          {
+            "goal": [
+              4,
+              7
+            ],
+            "distance_sum": 59,
+            "mean_distance": 4.214285714285714,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              2
+            ],
+            "distance_sum": 62,
+            "mean_distance": 4.428571428571429,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              4
+            ],
+            "distance_sum": 64,
+            "mean_distance": 4.571428571428571,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              2,
+              8
+            ],
+            "distance_sum": 66,
+            "mean_distance": 4.714285714285714,
+            "stratum": 2
+          },
+          {
+            "goal": [
+              1,
+              9
+            ],
+            "distance_sum": 79,
+            "mean_distance": 5.642857142857143,
+            "stratum": 2
+          }
+        ],
+        "blocks": {
+          "training": {
+            "goals": [
+              [
+                1,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                2,
+                4
+              ],
+              [
+                2,
+                7
+              ],
+              [
+                2,
+                8
+              ],
+              [
+                4,
+                4
+              ],
+              [
+                4,
+                5
+              ],
+              [
+                5,
+                4
+              ]
+            ],
+            "evaluation_pairs": 126,
+            "pair_weight": "1/126",
+            "random_floor_exact": "2202462257/16911433728",
+            "random_floor": 0.13023509966239097,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "validation": {
+            "goals": [
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                4,
+                7
+              ]
+            ],
+            "evaluation_pairs": 42,
+            "pair_weight": "1/42",
+            "random_floor_exact": "277454249/2818572288",
+            "random_floor": 0.09843786876826059,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          },
+          "test": {
+            "goals": [
+              [
+                1,
+                9
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                6
+              ]
+            ],
+            "evaluation_pairs": 42,
+            "pair_weight": "1/42",
+            "random_floor_exact": "278235735/1879048192",
+            "random_floor": 0.14807269775441714,
+            "reachable_within_cap_exact": "1",
+            "reachable_within_cap": 1.0,
+            "beyond_cap_pairs": []
+          }
+        }
+      },
+      "targets": [
+        1000,
+        3000,
+        10000,
+        30000,
+        100000,
+        300000,
+        1000000,
+        2000000
+      ],
+      "limits_minutes": {
+        "acs2": 2,
+        "acs2er": 3
+      },
+      "budget_steps": 2000000,
+      "cost_calibration": {
+        "acs2": {
+          "budget_body_wall_seconds": 5.561215881,
+          "allocation_overhead_seconds": 0.0737663700000013,
+          "forecast_allocation_seconds_at_budget": 5.634982251000001,
+          "job_limit_minutes": 2,
+          "rows_sha256": "5d9aca92653a785392327612a8fcf055fda78c29c2be19dd42877c8b93c15c28"
+        },
+        "acs2er": {
+          "budget_body_wall_seconds": 24.658330478,
+          "allocation_overhead_seconds": 0,
+          "forecast_allocation_seconds_at_budget": 24.658330478,
+          "job_limit_minutes": 3,
+          "rows_sha256": "370a4a032e9617ed9c734993f71eb086fe7effd81e349dadf361e7205d111b48"
+        }
+      }
+    }
+  ],
+  "measurement_commit": "4eecd194869680e44797228623dd9983849a4551",
+  "binary_sha256": "0598459bcdcab54a88a55358efb2d4ad335bd9acd42d9f6efaffce97b7f114ea",
+  "preset": {
+    "alp_gen_variant": "Pyalcs",
+    "beta": 0.05,
+    "bootstrap": "MaxFitnessBootstrap",
+    "chi": 0.8,
+    "do_action_planning": false,
+    "do_ga": false,
+    "do_pee": false,
+    "do_subsumption": true,
+    "epsilon": 0.8,
+    "exploration": "EpsilonGreedy",
+    "gamma": 0.95,
+    "initial_ir": 0.0,
+    "initial_q": 0.5,
+    "initial_r": 0.5,
+    "mu": 0.3,
+    "number_of_possible_actions": 8,
+    "random_streams": {
+      "agent": 1,
+      "environment": 2,
+      "evaluation": 3,
+      "evaluation_environment": 6,
+      "evaluation_sample": 5,
+      "restricted_pool": 4
+    },
+    "replay_capacity": 10000,
+    "replay_updates_per_step": 3,
+    "replay_warmup": 1,
+    "theta_as": 20,
+    "theta_exp": 20,
+    "theta_ga": 100,
+    "theta_i": 0.1,
+    "theta_r": 0.9,
+    "truncation": "Bootstrap",
+    "u_max": 100000
+  },
+  "pilot_plan_sha256": "bc244d9267ceab83bddd52b7c9937fa70720e2a9d65b87a630c8703fd5fbb388",
+  "threshold_fraction_of_ceiling": 0.5,
+  "budget_rule": "Two million interactions times ceil(eight-action graph diameter / 10). This uses the earlier twenty-seed maze pilot and geometry, not new test success: 2M for Maze4, Maze5, Maze6, Maze7 and MazeMA; 4M for Woods14. Equal budget for both agents. No convergence claim.",
+  "primary_metric": {
+    "block": "test",
+    "within_seed": "Equally weighted mean success over every registered nominal evaluation point.",
+    "across_seeds": "Mean and standard error across seeds 42-61; 95% Student t(19) interval, critical value 2.093024054408263.",
+    "paired_difference": "ACS2ER minus ACS2 within each seed; mean and t(19) 95% interval across twenty differences.",
+    "side_blocks": [
+      "training",
+      "validation"
+    ],
+    "threshold": "First registered nominal point where across-seed mean test success reaches 0.5 times the test ceiling. No interpolation; null if never reached."
+  },
+  "rejection_criterion": {
+    "floor": "If neither final test lower 95% confidence bound exceeds its random floor: floor_baselines_retain_for_successors.",
+    "ceiling": "Otherwise, if ACS2 mean test success at the first point is at least 0.9 times its ceiling: too_easy_no_speed_ranking.",
+    "otherwise": "compare",
+    "retention": "Keep every configuration and all three blocks regardless of verdict."
+  },
+  "cost_rule": {
+    "job_limit": "ceil((2.5 * seed42 body wall seconds at the registered budget + 90) / 60) minutes per agent, with mixed arrays taking the larger limit for every element.",
+    "forecast": "Twenty times the sum over both agents and six mazes of seed42 body wall at budget plus measured nonnegative allocation overhead. Report a doubled forecast separately. Pilot allocation seconds come from final allocation-only sacct records.",
+    "layout": "Six arrays of forty single-CPU jobs, one configuration per array, concurrency forty, chained by afterok. Check pilot plus spent plus reserved plus all new limits against forty CPU-hours before every submission.",
+    "nominal_grid_cpu_hours": 5.497287046833334,
+    "double_forecast_grid_cpu_hours": 10.994574093666667,
+    "double_forecast_including_pilot_cpu_hours": 12.237629649222223,
+    "reserved_grid_cpu_hours": 30.666666666666668,
+    "worst_limits_including_pilot_cpu_hours": 31.90972222222222
+  }
+}

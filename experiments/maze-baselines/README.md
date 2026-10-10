@@ -42,6 +42,32 @@ ten million interactions. `grid/submit.py` resolves source, binary and preset
 identity in an external result root. Full-grid manifests require a matching
 explicit approval; merely committing a proposal does not authorize submission.
 
+`grid-plan.json` is the pending proposal for seeds 42–61. It uses two million
+interactions times `ceil(graph diameter / 10)`: 2M on five mazes and 4M on Woods14,
+equal for both agents. This rule uses geometry and the earlier twenty-seed pilot,
+whose means changed by at most about 0.03 from 2M to 10M; it is not a convergence
+claim. Points are 1k, 3k, 10k, 30k, 100k, 300k, 1M, 2M, plus 4M for Woods14.
+The plan pins measurement commit `4eecd194869680e44797228623dd9983849a4551`
+and its retained musl binary, so seed-42 learning rows can be compared directly
+with the cost pilot. It remains pending until the user approves its exact bytes
+after advisor registration.
+
+The twelve pilot allocations completed with 144 verified rows and cost 4,475
+allocated CPU-seconds. One-seed cost extrapolation gives 5.50 CPU-hours for the
+240-run grid; doubling it and including the pilot gives 12.24 hours. Six arrays
+of forty jobs reserve 30.67 hours at their hard limits, or 31.91 with the pilot,
+below forty. Limits use 2.5 times the observed body wall time at the chosen
+budget plus ninety seconds, rounded up to minutes; mixed arrays count the
+larger agent limit for all forty jobs. These are cost estimates and allocation
+bounds, not baseline conclusions. The resolved external pilot plan has SHA-256
+`bc244d9267ceab83bddd52b7c9937fa70720e2a9d65b87a630c8703fd5fbb388`.
+
+After an approved grid finishes, retain final allocation and step accounting in
+`accounting.psv`, using the fields in `grid/submit.py`. The analysis requires every
+submitted allocation to have a terminal record, checks the total against the
+phase limit, verifies raw artifact hashes and assignment identity, and refuses
+to report an incomplete selected configuration.
+
 `analyze.py` reads approved schema-4 runs. Its primary block is test: each seed's
 equally weighted mean success over the registered checkpoints, paired ER minus
 ACS2 differences and Student t(19) intervals across twenty seeds. Training and
