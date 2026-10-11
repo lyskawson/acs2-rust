@@ -35,7 +35,7 @@ def summarize(rows):
                     train_wall_seconds=estimate([row['wall_seconds_train'] for row in group]),
                     full_updates=estimate([row['learning_update_counts']['full'] for row in group]),
                     values_only_updates=estimate([row['learning_update_counts']['values_only'] for row in group]))
-                if agent != 'acs2er_u1':
+                if group[0]['replay_diagnostics'] is not None:
                     cell['realized_relabeled_share']=estimate([row['replay_diagnostics']['realized_relabeled_share'] for row in group])
                     cell['objective_cost_per_draw']={purpose:estimate([row['replay_diagnostics']['objective_evaluations_by_purpose'][purpose]['objective_evaluations']/row['replay_diagnostics']['draws'] for row in group]) for purpose in ['scoring','selection','provenance']}
                     cell['fallback_share']=estimate([row['replay_diagnostics']['fallbacks']/row['replay_diagnostics']['draws'] for row in group])

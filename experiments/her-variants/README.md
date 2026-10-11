@@ -23,7 +23,7 @@ the values variants use separately selected proportions for each maze.
 
 `protocol.py` reconstructs immutable pair configurations, the authorized seed-42
 cost pilot, the cost forecast, and the final three-part registration. `plan.json`
-is the resulting plan awaiting approval. The final grid has 600 runs with seeds
+is the resulting plan awaiting approval. The costed plan SHA-256 is `2823664a04c698f771117787ad92225d86772700ac2990e42d539fec6436ff17`. Tuning uses 1/3 and 2/3; 0.9 was removed for cost before tuning. The expected doubled cost with pilots is 57.2329 CPU-hours, and hard array reservations plus pilots are 55.1792 of sixty, with 512 MiB per job. The final grid has 600 runs with seeds
 42--61; tuning evaluates only validation with seeds 42--46. The tie rule and
 comparisons are registered in the plan. Nothing may tune on test. Stage one
 stops after the costed registration. A study plan is not an execution manifest.

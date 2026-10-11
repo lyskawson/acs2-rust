@@ -3132,7 +3132,11 @@ Bootstrap comes from the next state joined with the identical goal. Rewards
 and endings always come from the task objective; termination zeroes bootstrap,
 while thesis truncation bootstraps. Sampler and learner modes must agree.
 `acs2er_u1` runs unchanged core ACS2ER at one update per step and has no raw
-trajectory sampler. Its actual update volume belongs to agent parameters,
+trajectory sampler. An injected observer forwards every RNG draw unchanged,
+records the actual selected reward/done using a FIFO outcome sidecar, and reports
+phase-4 route counters without objective queries. Snapshot and direct core-state
+comparisons cover the sidecar and prove learning/RNG/replay equivalence. Its
+sidecar logical bytes are included in replay memory; no checkpoint API is added. Its actual update volume belongs to agent parameters,
 not the shared `Configuration` or the common thesis preset identity.
 
 Rows keep schema 5 and add `learning_update_counts` for these five arms only.
@@ -3161,6 +3165,49 @@ Research behavior deliberately corrects those defects instead of reproducing the
 selection rule, row/accounting verification and short-check summary. It uses
 shared `experiments/grid/` execution and the immutable `maze-pairs-v1` protocol.
 The stage-one plan stops before tuning and the final grid until approval.
+
+Stage-one evidence uses clean measurement commit
+`2ff0c077918f9731e538efb8eed89d168a3f616d`. The validation-only local check
+completed 150 runs (all five arms, six mazes, seeds 42--46), 450 rows at
+1k/10k/20k; it is a mechanics check, not a ranking. Every row passed the shared
+validator. At 20k the every-transition arms realized about 0.667 relabeled share,
+while shortened copies realized 0.415--0.523 at requested p=2/3. Snapshot tests
+include histories, counters and streams. Eight individual compiled mutations
+were caught and restored. Acceptance has 278 Rust tests, existing Python gates
+47/7/20/13/16/13, fourteen experiment tests, byte-identical P9 learning columns,
+and only the 22 older Clippy warnings after cleaning all six workspace packages.
+
+Lem pilot array 6074394 completed 30 runs and 245 rows at the registered 2M/4M
+budgets; all HER pilot proportions were 2/3. Allocation CPUTimeRAW was 4003 s.
+Separate baseline-regression array 6074406 completed 12 seed-42 runs and 98 rows,
+using another 995 s: all 3234 top-level learning/evaluation/knowledge fields with
+nested contents match the archived phase-4b grid. This regression is not a new
+baseline grid. The U1 observer recalibration, array 6074551, completed another six runs and 49 rows for 447 s; all 49 learning/evaluation rows match the unobserved core at full budgets. Ninety local rows agree too. Total stage-one allocation cost is 5445 s (1.5125 CPU-hours). The final implementation source is `a592a5bad8bbc13d62553cc09a72748182809879`; the four episodic learning paths are unchanged from the initial pilot.
+Both cluster and pulled copies passed terminal-accounting and artifact-hash
+verification. Raw data and the Polish report remain outside Git.
+
+The three-part registration is `experiments/her-variants/plan.json`, SHA-256
+`2823664a04c698f771117787ad92225d86772700ac2990e42d539fec6436ff17`; status is `grid_pending_approval`.
+Tuning shrank from 1/3, 2/3, 0.9 to 1/3 and 2/3 because the doubled forecast
+with three proportions was 62.1006 CPU-hours. Each values variant and maze is
+selected separately on five validation seeds and the unchanged grid points;
+scores within 1e-12 tie in favor of smaller p. The final grid remains 600 runs,
+all five arms, six mazes and seeds 42--61. The registered comparisons are marginal
+paired t(19) intervals; thresholds use the archived ACS2 mean final test success,
+not half the ceiling. No tuning or final-grid run has started.
+
+The expected grid/tuning costs are 22.7607/5.0995 CPU-hours. Doubling both and
+adding pilots gives 57.2329 hours. Job limits are
+`max(2, ceil((1.5 * seed42 body wall + 30) / 60))` minutes; a 30-second process
+watchdog margin remains. Limits use observed phase-4b and short-check variability,
+but new-seed full-budget growth is unknown. The actual array reservation is
+44.0 hours for grid and 9.6667 for tuning, plus all three completed pilot/regression arrays: 55.1792 within sixty,
+leaving 4.8208 for accounted retries. Tuning groups both values arms for one maze
+(20 jobs), reserving the larger arm limit for every element; final arrays hold
+one agent/maze and twenty seeds. Memory is 512 MiB, far above observed process
+RSS (maximum 8940 KiB); peak population over pilot points was 3526. Allocation
+step RSS additionally includes the collector. These are sizing observations,
+not a convergence or growth guarantee.
 
 ## Clippy — the determinism invariants, checked by machine
 
