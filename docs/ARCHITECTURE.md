@@ -3005,12 +3005,45 @@ successor methods; otherwise flag a maze as too easy for speed ranking if ACS2
 already reaches 90% of its ceiling at the first point. Retain all configurations
 and all three blocks regardless of this diagnostic verdict.
 
-The completed goal cost pilot spent 4,475 allocated CPU-seconds in twelve
-allocations and 144 rows. The new twenty-seed pair grid requires its own
-registered costed plan and explicit approval of its exact bytes. The changed
-training distribution and knowledge evaluation are assessed before reusing
-that cost calibration. The composition example retains its explicit
-`maze-goals-v1` diagnostic path and the archived schema-2 full-pool path.
+The pair-protocol local check used clean measurement commit
+`38fcc300eee6210686a297ba3ad93b0a52e25d3d`, both agents and seeds 42–46 at
+1k/10k/100k/200k interactions. At 200k all twelve test means exceeded their
+own floors. The respective ACS2/ACS2ER test means were 0.2469/0.2235,
+0.1775/0.1486, 0.1928/0.1739, 0.2306/0.1991, 0.2246/0.2281 and
+0.2533/0.2000. Knowledge means ranged from 0.9885 to 1.0000. These sixty
+short runs check measurement usefulness; they do not establish an agent
+ranking. High anticipation coverage does not imply high goal-reaching success.
+
+Before these results, `pair-pilot.json` fixed a 25% training/body cost-change
+threshold for recalibration and the geometry-based 2M/4M horizons. Five-seed
+local ACS2 cost per step increased 35.6% on Maze4 and 32.5% on Maze5 versus
+the archived goal diagnostics. These laptop timing comparisons are coarse,
+so a new seed-42 Lem pilot recalibrated the actual cluster costs rather than
+reusing the old distribution's times. It used the grid checkpoints and the
+same pinned measurement source; all twelve allocations completed and all
+98 rows, identities and hashes passed checks. Its resolved plan SHA-256 is
+`3ed1d2908d027ba1efa235d9dee3e99ff616be0c0274b0bb1dc440bfdd098d05`.
+The retained musl binary SHA-256 is
+`a9e5b6671100e56ec31e3b5502410f97f027e72acc8d7253c5e2cdab0601e0d7`.
+
+The historical goal pilot spent 4,475 allocated CPU-seconds; the new pair
+pilot spent 1,013, so both consume 5,488 seconds (1.5244 CPU-hours). Count
+allocation `CPUTimeRAW` once, excluding duplicated batch/extern/step rows.
+The new [`grid-plan.json`](../experiments/maze-baselines/grid-plan.json)
+proposes 240 runs and 1,960 rows, in six arrays of forty single-CPU jobs,
+concurrency forty, chained by `afterok`. Each array reserves its larger
+agent limit: 7/8/10/10/5/3 minutes in the six-maze order. Limits use
+`ceil((2.5 * seed42 body wall at budget + 90) / 60)`; the single-seed
+forecast includes measured nonnegative allocation overhead.
+
+The nominal grid forecast is 5.6294 CPU-hours; doubling it and adding both
+pilots gives 12.7833 hours. The grid hard limits reserve 28.6667 hours,
+or 30.1911 including both completed pilots, leaving 9.8089 hours below
+forty. This is a forecast and allocation bound, not a performance conclusion.
+The plan remains `grid_pending_approval`; no twenty-seed pair grid has run.
+`goal-grid-plan.json` records the superseded goal proposal. The composition
+example retains its explicit `maze-goals-v1` diagnostic path and the archived
+schema-2 full-pool path.
 
 ## Clippy — the determinism invariants, checked by machine
 

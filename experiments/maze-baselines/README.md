@@ -10,7 +10,7 @@ in response to success, knowledge or cost diagnostics.
 For each goal rank starts by shortest distance, row and column. Split into three
 balanced rank strata, then `max(1, floor((size+2)/5))` balanced segments per
 stratum. Put endpoints in validation/test, alternating their order by
- goal-index+stratum-index+segment-index parity, and interiors in training.
+goal-index+stratum-index+segment-index parity, and interiors in training.
 Every goal has at least three starts in every block, all three strata and two
 distinct distances; every block has at least forty pairs. Actual proportions,
 counts, exact floors, ceilings and beyond-cap pairs are explicit in the JSON.
@@ -55,7 +55,8 @@ whole-body cost, compared with archived five-seed 200k diagnostics on the same
 laptop. The optional pilot reserves twelve single-CPU allocations of fifteen
 minutes (3 CPU-hours); the completed goal pilot already spent 4,475 CPU-seconds.
 
-`grid-plan.json` must be a new pair proposal before a grid can be approved.
+`grid-plan.json` is the new pair proposal, pending explicit approval of its exact bytes.
+The old proposal is preserved as `goal-grid-plan.json` with a rejected superseded stage.
 Its test primary score is the equally weighted checkpoint mean within each
 seed; across seeds 42–61 report mean, SE, t(19) intervals and paired ER-minus-ACS2
 intervals. Side blocks and knowledge are secondary. The threshold is the first
@@ -87,3 +88,13 @@ acs2-measure --task woods14 --cap 18 --pool full --encoding coordinates \
 python3 -B -m unittest discover -s experiments/maze-baselines -p 'test_*.py'
 python3 -B -m unittest discover -s experiments/grid -p 'test_*.py'
 ```
+
+The recalibration completed twelve allocations and 98 rows on Lem with seed 42.
+Both pilots cost 5,488 allocated CPU-seconds (4,475 goal + 1,013 pair). The new
+grid forecast is 5.6294 CPU-hours; a doubled forecast including both pilots is
+12.7833. Mixed-array hard limits are 7/8/10/10/5/3 minutes, reserving 28.6667
+CPU-hours, or 30.1911 with both pilots. No full grid has been submitted.
+The plan pins measurement commit `38fcc300eee6210686a297ba3ad93b0a52e25d3d`
+and its retained musl binary; the grid's seed-42 rows must reproduce this new
+protocol pilot. Approve and pass the exact resolved external proposal bytes;
+keep the measurement clone at its pinned commit when using `grid/submit.py`.
