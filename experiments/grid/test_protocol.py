@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from collect import validate_row
 from grid_launch import allocation_fields
-from grid_attempts import verify_artifacts
+from grid_attempts import inspect_attempt, verify_artifacts
 from grid_protocol import accounting, load_plan, require_budget
 from row_schema import evaluation_blocks, validate_blocks
 from submit import prepare, require_authorization, shared_reservation, submission_command
@@ -148,6 +148,35 @@ class SharedGridTests(unittest.TestCase):
             (path / 'rows.jsonl').write_bytes(b'changed\n')
             with self.assertRaises(ValueError):
                 verify_artifacts(path, completion)
+
+    def test_complete_split_attempt_checks_every_artifact_in_both_row_schemas(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            contents = {
+                'rows.jsonl': b'{"nominal_step": 1000}\n',
+                'resources.jsonl': b'{"nominal_step": 1000}\n',
+                'cpu_samples.csv': b'elapsed_seconds,cpu_seconds,peak_rss_kib\n1,1,12\n',
+                'launch.json': b'{"commit": "original"}\n',
+            }
+            for name, content in contents.items():
+                (path / name).write_bytes(content)
+            completion = dict(exit_code=0, failure=None, incomplete_final_line=False, rows_seen=1,
+                              sha256={name: hashlib.sha256(content).hexdigest()
+                                      for name, content in contents.items()})
+            (path / 'completion.json').write_text(json.dumps(completion))
+            attempt = dict(path=path, attempt_id='attempt', agent='acs2', seed=42, array_id=1, task_id=0)
+            for schema in (4, 5):
+                config = dict(row_schema=schema, targets=[1000])
+                with self.subTest(schema=schema):
+                    self.assertEqual(inspect_attempt(attempt, config)[0]['status'], 'complete')
+                for name, content in contents.items():
+                    with self.subTest(schema=schema, artifact=name):
+                        (path / name).write_bytes(b' ' + content)
+                        try:
+                            with self.assertRaisesRegex(ValueError, 'raw artifact checksum mismatch'):
+                                inspect_attempt(attempt, config)
+                        finally:
+                            (path / name).write_bytes(content)
 
 
 if __name__ == '__main__':

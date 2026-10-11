@@ -28,11 +28,13 @@ later starts to refuse measurement; dependencies block later configurations.
 No app heartbeat or external monitor is needed. Failed attempts are retained.
 
 `row_schema.py` reads schemas 2 and 3 as full-pool evaluation and schema 4 as either
-that legacy path or three distinct blocks. It checks each block's registered
-reference and refuses ambiguous top-level success fields in split rows.
+that legacy path or three distinct blocks. Schema 5 adds registered start-goal
+blocks and goal-joined knowledge. It checks each block's registered reference
+and refuses ambiguous top-level success fields in split rows.
 `grid_attempts.py` selects a complete attempt per key and requires duplicate
-complete attempts to agree on all learning fields. Pull every file without
-deletion after completion, retain allocation-only `sacct` accounting, and verify
+complete attempts to agree on all learning fields. Successful schema 4 and 5
+attempts must match the completion hashes of all four raw artifacts. Pull every
+file without deletion after completion, retain allocation-only `sacct` accounting, and verify
 raw rows before analysis. Training/evaluation CPU attribution is an estimate;
 allocation CPU and process CPU are reported separately.
 

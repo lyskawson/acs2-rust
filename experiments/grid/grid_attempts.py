@@ -52,7 +52,7 @@ def inspect_attempt(attempt, config):
     if not (path / 'completion.json').exists():
         return result, rows
     completion = json.loads((path / 'completion.json').read_text())
-    if config.get('row_schema') == 4 and completion['exit_code'] == 0 and not completion['failure']:
+    if config.get('row_schema') in (4, 5) and completion['exit_code'] == 0 and not completion['failure']:
         verify_artifacts(path, completion)
     result['completion'] = completion
     resources, resource_tail = complete_rows(path / 'resources.jsonl') if (path / 'resources.jsonl').exists() else ([], False)
