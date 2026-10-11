@@ -1,0 +1,11 @@
+[package]
+name = "acs2-agents"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+acs2-core = { path = "../acs2-core" }
+acs2-trajectory = { path = "../acs2-trajectory" }
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }

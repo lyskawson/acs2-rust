@@ -10,7 +10,7 @@ import subprocess
 import time
 
 from grid_protocol import stop_phase
-from row_schema import validate_blocks
+from row_schema import validate_blocks, validate_replay
 
 
 def outside_repository(path):
@@ -52,12 +52,17 @@ def validate_row(row, config, agent, seed, commit, target):
         raise ValueError("unexpected BitFlipping width")
     if agent == "acs2":
         expected_updates = (steps, 0)
+    elif agent == "acs2er_u1":
+        expected_updates = (0, steps)
+    elif agent in ('er_episodic', 'her_full', 'her_values', 'her_values_shortened'):
+        expected_updates = (0, 3 * steps)
     else:
         expected_updates = (0, sum(min(i, 3) for i in range(1, min(steps, 2) + 1)) + max(steps - 2, 0) * 3)
     if (row["online_updates"], row["replay_updates"]) != expected_updates:
         raise ValueError("unexpected learning update counts")
     if 'protocol' in config:
         validate_blocks(row, config)
+    validate_replay(row, config, agent)
 
 
 def process_sample(pid):
@@ -111,6 +116,11 @@ def run(args):
                "--seeds", str(seed), "--targets", ",".join(map(str, config["targets"])), "--out", str(raw)]
     if 'protocol' in config:
         command.extend(['--protocol', config['protocol']])
+    if config.get('evaluation_blocks') == ['validation']:
+        command.extend(['--evaluation-blocks', 'validation'])
+    agent_settings = config.get('agent_settings', {}).get(agent, {})
+    if 'relabeled_proportion' in agent_settings:
+        command.extend(['--relabel-proportion', str(agent_settings['relabeled_proportion'])])
     metadata = {"command": command, "commit": args.commit, "manifest": manifest,
                 "manifest_sha256": hashlib.sha256(Path(args.manifest).read_bytes()).hexdigest(),
                 "binary_sha256": hashlib.sha256(Path(args.binary).read_bytes()).hexdigest(),

@@ -36,6 +36,7 @@ struct Options {
     out: PathBuf,
     record_starts: bool,
     protocol: Option<String>,
+    evaluation_blocks: Option<String>,
 }
 
 impl Options {
@@ -50,6 +51,8 @@ impl Options {
         let mut out = None;
         let mut record_starts = false;
         let mut protocol = None;
+        let mut evaluation_blocks = None;
+        let mut relabel_proportion: Option<f64> = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -70,6 +73,15 @@ impl Options {
                         .map(|part| match part {
                             "acs2" => AgentKind::Acs2,
                             "acs2er" => AgentKind::Acs2Er,
+                            "acs2er_u1" => AgentKind::Acs2ErU1,
+                            "er_episodic" => AgentKind::ErEpisodic,
+                            "her_full" => AgentKind::HerFull,
+                            "her_values" => AgentKind::HerValues {
+                                proportion: 2.0 / 3.0,
+                            },
+                            "her_values_shortened" => AgentKind::HerValuesShortened {
+                                proportion: 2.0 / 3.0,
+                            },
                             _ => panic!("unknown agent {part}"),
                         })
                         .collect()
@@ -90,6 +102,10 @@ impl Options {
                 }
                 "--out" => out = Some(PathBuf::from(value)),
                 "--protocol" => protocol = Some(value),
+                "--evaluation-blocks" => evaluation_blocks = Some(value),
+                "--relabel-proportion" => {
+                    relabel_proportion = Some(value.parse().expect("relabel proportion"))
+                }
                 _ => panic!("unknown option {flag}"),
             }
         }
@@ -109,6 +125,35 @@ impl Options {
                 && targets.windows(2).all(|pair| pair[0] < pair[1])
         );
         assert!(!seeds.is_empty() && !agents.is_empty());
+        if let Some(proportion) = relabel_proportion {
+            assert!(proportion.is_finite() && (0.0..=1.0).contains(&proportion));
+            assert!(
+                agents.iter().all(|agent| matches!(
+                    agent,
+                    AgentKind::HerValues { .. } | AgentKind::HerValuesShortened { .. }
+                )),
+                "only values variants accept a tuned relabel proportion"
+            );
+            for agent in &mut agents {
+                *agent = match agent {
+                    AgentKind::HerValues { .. } => AgentKind::HerValues { proportion },
+                    AgentKind::HerValuesShortened { .. } => {
+                        AgentKind::HerValuesShortened { proportion }
+                    }
+                    _ => unreachable!(),
+                };
+            }
+        }
+        if let Some(blocks) = &evaluation_blocks {
+            assert!(
+                protocol.is_some(),
+                "evaluation blocks require a registered protocol"
+            );
+            assert_eq!(
+                blocks, "validation",
+                "restricted evaluation is validation only"
+            );
+        }
         Self {
             task,
             cap,
@@ -120,6 +165,7 @@ impl Options {
             out: out.expect("--out is required"),
             record_starts,
             protocol,
+            evaluation_blocks,
         }
     }
 }
@@ -204,6 +250,26 @@ fn execute_protocol<T, const S: usize, const G: usize, const M: usize>(
 ) where
     T: Task<S, G, M>,
 {
+    let selected_protocol;
+    let protocol = if options.evaluation_blocks.is_some() {
+        selected_protocol = TaskProtocol {
+            training: protocol.training,
+            evaluations: protocol
+                .evaluations
+                .iter()
+                .filter(|block| block.name == "validation")
+                .map(|block| acs2_measure::goal_protocol::EvaluationBlock {
+                    name: block.name,
+                    task: block.task,
+                })
+                .collect(),
+            registration: protocol.registration.clone(),
+        };
+        assert_eq!(selected_protocol.evaluations.len(), 1);
+        &selected_protocol
+    } else {
+        protocol
+    };
     for &seed in &options.seeds {
         for &kind in &options.agents {
             run_protocol_with_sink::<_, _, S, G, M>(

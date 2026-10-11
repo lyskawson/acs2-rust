@@ -18,10 +18,15 @@ def execute(command):
 def require_authorization(root, plan, digest, approval_path=None):
     if plan['stage'] == 'authorized_cost_pilot' and plan['seeds'] == [42]:
         return
-    if plan['stage'] not in ('grid_pending_approval', 'approved_grid'):
+    if plan['stage'] not in ('grid_pending_approval', 'approved_grid', 'tuning_pending_approval'):
         raise ValueError('superseded or unsupported experiment stage')
     approval = json.loads(Path(approval_path or root / 'approval.json').read_text())
-    if approval.get('plan_sha256') != digest or approval.get('approved') is not True:
+    authorized_digest = digest
+    if 'authorization_plan' in plan:
+        registered = Path(plan['authorization_plan'])
+        authorized_digest = plan['authorization_sha256']
+        load_plan(registered, authorized_digest)
+    if approval.get('plan_sha256') != authorized_digest or approval.get('approved') is not True:
         raise ValueError('grid requires explicit approval of these plan bytes')
 
 
@@ -57,7 +62,8 @@ def prepare(root, manifest, repo, approval=None):
     plan.update(identities)
     digest = hashlib.sha256((json.dumps(plan, indent=2) + '\n').encode()).hexdigest()
     require_authorization(root, plan, digest, approval)
-    if plan['partition'] != 'lem-cpu-normal' or not 20 <= plan['concurrency'] <= 40 or plan['phase_cpu_hour_limit'] > 40:
+    maximum = 60 if plan.get('experiment') == 'her-variants' else 40
+    if plan['partition'] != 'lem-cpu-normal' or not 20 <= plan['concurrency'] <= 40 or not 0 < plan['phase_cpu_hour_limit'] <= maximum:
         raise ValueError('wrong partition, concurrency or CPU-hour limit')
     root.mkdir(parents=True, exist_ok=False)
     (root / 'logs').mkdir()
@@ -73,6 +79,12 @@ def run_batches(plan):
     if plan['stage'] == 'authorized_cost_pilot':
         return [[(config, agent, seed) for config in plan['configurations']
                  for agent in plan['agents'] for seed in plan['seeds']]]
+    if 'batch_size' in plan:
+        size = plan['batch_size']
+        if not 20 <= size <= 40:
+            raise ValueError('batch size must be within 20--40 jobs')
+        runs = [(config, agent, seed) for config in plan['configurations'] for agent in plan['agents'] for seed in plan['seeds']]
+        return [runs[index:index + size] for index in range(0, len(runs), size)]
     return [[(config, agent, seed) for agent in plan['agents'] for seed in plan['seeds']]
             for config in plan['configurations']]
 

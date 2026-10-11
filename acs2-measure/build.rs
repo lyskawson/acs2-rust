@@ -64,6 +64,7 @@ fn main() {
     println!("cargo:rerun-if-changed=../acs2-core/src");
     println!("cargo:rerun-if-changed=../acs2-envs/src");
     println!("cargo:rerun-if-changed=../acs2-trajectory/src");
+    println!("cargo:rerun-if-changed=../acs2-agents/src");
     println!("cargo:rerun-if-changed=../Cargo.lock");
     println!("cargo:rerun-if-changed=../experiments/maze-baselines/protocol.json");
     println!("cargo:rerun-if-changed=../experiments/maze-baselines/pair-protocol.json");

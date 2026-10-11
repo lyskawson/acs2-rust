@@ -1677,7 +1677,7 @@ This reorganization changes only locations, declarations, re-exports and interna
 Remove compatibility re-exports only after the running MPX checkpoint chain has ended
 and both lines' gates pass; the current queue horizon is April 2027. New learning agents
 belong in a separate crate outside core (planned package name `acs2-agents`), one module
-directory per family with variants inside. That crate is not implemented yet. Shared
+directory per family with variants inside. That crate now implements the episodic control and HER variants described below. Shared
 mechanisms stay in the shared crates; ACS2 and ACS2ER remain in core for this compatibility
 period. `checkpoint.rs` also retains its bytes and its compatibility imports.
 
@@ -1981,7 +1981,7 @@ the final population is exactly `2*N`. Exhaustive N=4 tests check every start/go
 non-negative objective rewards, termination versus truncation at cap one, flip index,
 and Hamming distance. Seeded adapter tests pin the goal suffix and `reset_with_goal`.
 The task remains useful for exact relabeling oracles even though unchanged ACS2 cannot
-learn goal-dependent values here. No policy-quality comparison or HER agent is added.
+learn goal-dependent values here. This task remains outside the maze HER comparison.
 
 ### HandEye — simulator parity and block-position goals
 
@@ -2081,8 +2081,7 @@ both ends. Maze's named generators keep their own convenience wrapper.
 
 The pool belongs to the runner, not the agent. TU still collects desired goals from the
 agent's episodes. These environment implementations provide task dynamics; the goal-agent
-contract, budget accounting and evaluation live in the measurement layer below. A HER
-agent is not implemented yet. Randomness enters only via
+contract, budget accounting and evaluation live in the measurement layer below. HER agents are constructed by the measurement layer, as described below. Randomness enters only via
 the injected `RandomSource`; callers use separate seeded ChaCha streams for environment,
 agent and evaluation. Tests pin same-seed resets and complete trajectories for every task.
 
@@ -2555,7 +2554,7 @@ after the counterfactual end, done, membership outside candidates, and fallback.
 A successful relabeling remains relabeled even if its goal equals the original goal.
 Fallbacks and non-relabeling coin outcomes are original. The future HER agent can use this route to
 restrict goal-independent ALP, quality and rule creation to original samples while
-updating values on relabeled samples. No learner implements that policy yet.
+updating values on relabeled samples. The HER values variants apply this route-dependent policy through `acs2-agents`.
 
 Cumulative `ReplayCounters` keep one `RouteCounters` per route — draws, the four flags
 (reached at s_t, after the counterfactual end, done, outside candidates) and the sum of
@@ -2625,7 +2624,7 @@ under their original schema field names, `objective_evaluations_by_purpose` (rew
 calls for scoring, selection and provenance) and `routes` (per route: draws, the four
 flags, `reward_sum` and `mean_reward`, null without draws). A recording-only test agent
 passes `assert_evaluation_read_only`, including store, policy RNG, sampler RNG and
-diagnostics in its snapshot. There is no new CLI agent.
+diagnostics in its snapshot. The later HER adapter consumes the same diagnostics contract.
 
 ### Rejected designs and executable evidence
 
@@ -3103,6 +3102,65 @@ block curves, primary intervals, knowledge, costs and the Polish report remain o
 the checkout under the resolved `pair-grid/` result root; `maze-baselines/analyze.py`
 reconstructs them with terminal accounting and approval checks. This finite 2M/4M
 horizon makes no convergence claim.
+
+## Episodic replay and hindsight update rules
+
+`acs2-agents` depends only on `acs2-core` and `acs2-trajectory`. `er_episodic/`
+contains the original-only control; `her/` contains full, values-only and
+counterfactual-shortened variants; `acs2er_u1/` owns the diagnostic replay
+configuration. Shared episodic collection and update dispatch live in
+`replay.rs`. Measurement implements the raw-episode environment port and
+constructs learners; agents never depend on measurement.
+
+All episodic arms act on the episode's real joined goal without learning, store
+one complete raw episode, then draw exactly three times its step count through
+the phase-4 sampler. Capacity is 10,000 steps, whole-episode FIFO. Warmup is
+retained steps >= one after insertion, without repayment of skipped episodes.
+Sampling is uniform over retained transitions with replacement, so a one-step
+store still supplies three updates. ALP/GA use the end-of-episode environment
+clock; replay does not advance that physical clock.
+
+The control requests p=0 and follows the identical full-update path. `her_full`
+fixes p=2/3, future and every-transition admissibility: both routes use core
+ACS2ER replay learning (ALP, RL, optional GA). `her_values` uses the same sampler
+but sends relabeled copies only through action-set RL, changing `r` and `ir`;
+original and fallback samples retain the full step. `her_values_shortened`
+changes only admissibility to counterfactual-episode. Copies equal to the
+original goal still take the relabeled route. Neither values variant creates
+rules or changes quality, marks, numerosity, experience or timestamps on copies.
+Bootstrap comes from the next state joined with the identical goal. Rewards
+and endings always come from the task objective; termination zeroes bootstrap,
+while thesis truncation bootstraps. Sampler and learner modes must agree.
+`acs2er_u1` runs unchanged core ACS2ER at one update per step and has no raw
+trajectory sampler. Its actual update volume belongs to agent parameters,
+not the shared `Configuration` or the common thesis preset identity.
+
+Rows keep schema 5 and add `learning_update_counts` for these five arms only.
+Episodic diagnostics include realized relabeled share, stored steps/episodes,
+route composition and cost by purpose at every point. Raw trajectory logical
+bytes are separate from replay payload bytes; episodic replay stores no derived
+copy payload. Existing baseline rows retain every learning and evaluation field.
+The read-only contract includes populations, raw history, both learner/sampler
+streams and counters. Restricted `--evaluation-blocks validation` is available
+only with a registered protocol; default baseline evaluation is unchanged.
+
+The test-only `her/validation.rs` reproduces predecessor relabeling (including
+0/1 copy rewards and `done=False`) and invokes the full replay step. It cannot
+be enabled in a research run. `baseline/dump_her_differential.py` instruments
+unmodified pyalcs and records goal and ALP random draws. Its 1000 independent
+cases include 250 original and 750 relabeled learning steps, 331 reached and
+419 unreached copies, future/final/episode sampling, 364 expected-case,
+398 unexpected-case and 636 covering cases, and 123 ALP random choices.
+Complete populations agree with P11's 1e-9 floating tolerance. GA/PEE and
+overspecification are disabled; theta_i=0 removes pyalcs's deletion skip hazard.
+The differential does not cover goal-blind reference exploration, exploitation
+learning, its insertion/learning schedule, buffer distribution or long-run growth.
+Research behavior deliberately corrects those defects instead of reproducing them.
+
+`experiments/her-variants/` owns this study's registration, pilot manifests,
+selection rule, row/accounting verification and short-check summary. It uses
+shared `experiments/grid/` execution and the immutable `maze-pairs-v1` protocol.
+The stage-one plan stops before tuning and the final grid until approval.
 
 ## Clippy — the determinism invariants, checked by machine
 

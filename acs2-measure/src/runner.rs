@@ -31,10 +31,15 @@ pub const EVALUATION_STREAM: u64 = 3;
 pub const POOL_STREAM: u64 = 4;
 pub const EVALUATION_ENVIRONMENT_STREAM: u64 = 6;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AgentKind {
     Acs2,
     Acs2Er,
+    Acs2ErU1,
+    ErEpisodic,
+    HerFull,
+    HerValues { proportion: f64 },
+    HerValuesShortened { proportion: f64 },
 }
 
 impl AgentKind {
@@ -42,6 +47,11 @@ impl AgentKind {
         match self {
             Self::Acs2 => "acs2",
             Self::Acs2Er => "acs2er",
+            Self::Acs2ErU1 => "acs2er_u1",
+            Self::ErEpisodic => "er_episodic",
+            Self::HerFull => "her_full",
+            Self::HerValues { .. } => "her_values",
+            Self::HerValuesShortened { .. } => "her_values_shortened",
         }
     }
 }
@@ -112,6 +122,9 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64);
     fn online_updates(&self) -> u64;
     fn replay_updates(&self) -> u64;
+    fn learning_update_counts(&self) -> Option<Value> {
+        None
+    }
     fn replay_samples(&self) -> usize;
     fn population_classifiers(&self) -> usize;
     fn population_numerosity(&self) -> u32;
@@ -654,6 +667,106 @@ where
                 )
             })
         }
+        AgentKind::Acs2ErU1 => {
+            let replay = acs2_agents::acs2er_u1::DiagnosticConfiguration {
+                capacity: preset.replay_capacity,
+                warmup: preset.replay_warmup,
+            }
+            .replay();
+            let mut adapter = crate::agents::DiagnosticAdapter(CoreAgent {
+                agent: Acs2ErAgent::<M, _>::new(config, replay, agent_rng)
+                    .with_truncation_mode(preset.truncation),
+                preset: Preset {
+                    replay_updates_per_step: replay.samples_number,
+                    ..preset
+                },
+                replay: true,
+                steps: 0,
+                updates: 0,
+            });
+            run_goal_agent_protocol_with_sink(
+                protocol,
+                &mut adapter,
+                seed,
+                targets,
+                metadata,
+                settings.evaluate_points,
+                emit,
+            );
+            settings.capture_final_state.then(|| {
+                let state = acs2_core::checkpoint::Checkpointed::capture(&adapter.0.agent);
+                (
+                    format!("{:?}", state.population),
+                    format!("{:?}", state.rng),
+                )
+            })
+        }
+        AgentKind::ErEpisodic => {
+            use acs2_agents::replay::EpisodicAgent;
+            let mut agent = crate::agents::EpisodicGoalAgent(acs2_agents::er_episodic::Agent::<
+                S,
+                G,
+                M,
+                _,
+                _,
+            >::new(
+                config,
+                crate::agents::episodic_configuration(preset),
+                agent_rng,
+                ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
+            ));
+            run_goal_agent_protocol_with_sink(
+                protocol,
+                &mut agent,
+                seed,
+                targets,
+                metadata,
+                settings.evaluate_points,
+                emit,
+            );
+            settings.capture_final_state.then(|| {
+                (
+                    format!("{:?}", agent.0.learner().population().classifiers()),
+                    agent.0.learner().snapshot(),
+                )
+            })
+        }
+        AgentKind::HerFull | AgentKind::HerValues { .. } | AgentKind::HerValuesShortened { .. } => {
+            use acs2_agents::replay::EpisodicAgent;
+            let variant = match kind {
+                AgentKind::HerFull => acs2_agents::her::Variant::Full,
+                AgentKind::HerValues { proportion } => {
+                    acs2_agents::her::Variant::Values { proportion }
+                }
+                AgentKind::HerValuesShortened { proportion } => {
+                    acs2_agents::her::Variant::ValuesShortened { proportion }
+                }
+                _ => unreachable!(),
+            };
+            let mut agent =
+                crate::agents::EpisodicGoalAgent(acs2_agents::her::Agent::<S, G, M, _, _>::new(
+                    config,
+                    crate::agents::episodic_configuration(preset),
+                    variant,
+                    agent_rng,
+                    ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
+                ));
+            run_goal_agent_protocol_with_sink(
+                protocol,
+                &mut agent,
+                seed,
+                targets,
+                metadata,
+                settings.evaluate_points,
+                emit,
+            );
+            settings.capture_final_state.then(|| {
+                (
+                    format!("{:?}", agent.0.learner().population().classifiers()),
+                    agent.0.learner().snapshot(),
+                )
+            })
+        }
     }
 }
 
@@ -845,6 +958,8 @@ pub fn assert_protocol_evaluation_read_only<
             "replay_samples",
             "replay_logical_bytes",
             "replay_diagnostics",
+            "learning_update_counts",
+            "trajectory_logical_bytes",
         ] {
             assert_eq!(evaluated[key], control[key], "evaluation changed {key}");
         }
@@ -958,6 +1073,9 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             "wall_seconds_eval": eval_elapsed.as_secs_f64(), "wall_seconds_total": (train_elapsed + eval_elapsed).as_secs_f64(),
             "preset": Preset::thesis().json(task.actions()), "agent_parameters": agent.agent_parameters()
         });
+        if let Some(counts) = agent.learning_update_counts() {
+            row["learning_update_counts"] = counts;
+        }
         if let Some(registration) = plan.registration {
             let mut blocks = serde_json::Map::new();
             blocks.insert(block.name.to_owned(), evaluation_fields(&mut row));

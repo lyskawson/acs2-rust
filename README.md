@@ -10,8 +10,8 @@ choose goals from training tasks and regulates the share of those experiences ag
 HER's, with an optional conservative value correction. The intended comparison is with
 ACS2, ACS2ER, ACS2HER and ACS2VCP on discrete multi-goal mazes with sparse rewards at
 equal numbers of environment interactions. The goal tasks, measurement layer and
-trajectory store are implemented; the HER, trajectory-utility and VCP agents are not
-implemented yet.
+trajectory store, episodic replay and HER variants are implemented; trajectory utility
+and VCP remain planned.
 
 Two lines of work share this repository:
 
@@ -255,6 +255,7 @@ uv run --project baseline python baseline/compare_bench.py
 | [`acs2-envs`](acs2-envs/src/lib.rs) | [Single-goal maze](acs2-envs/src/maze/mod.rs), [geometry catalogue](acs2-envs/src/maze/geometries/mod.rs), [goal environments](acs2-envs/src/goal/mod.rs), [task/role registry](acs2-envs/src/roles.rs), and [multiplexer](acs2-envs/src/multiplexer.rs) with both encodings. |
 | [`acs2-bench`](acs2-bench/src/main.rs) | P9 maze benchmark and the [MPX reach runner](acs2-bench/src/bin/mpx_reach.rs). |
 | [`acs2-measure`](acs2-measure/src/lib.rs) | [Goal-agent and environment contracts, runner, evaluation and counters](acs2-measure/src/runner.rs), [task construction and preset](acs2-measure/src/task.rs), [floor/reachability references](acs2-measure/src/reference.rs), [CLI](acs2-measure/src/main.rs), [output guard](acs2-measure/src/output.rs), and [replay diagnostic adapter](acs2-measure/src/trajectory.rs). |
+| [`acs2-agents`](acs2-agents/src/lib.rs) | Episodic replay control in `er_episodic/`, hindsight full/values/shortened variants in `her/`, shared replay learning in `replay.rs`, and the `acs2er_u1/` diagnostic parameters. Agents depend on core and trajectory storage, never on measurement. |
 | [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
 
 Core modules are grouped by role under [`acs2-core/src/`](acs2-core/src/). Each file
@@ -275,10 +276,11 @@ available through re-exports in `acs2-core/src/lib.rs`, so existing callers and
 running MPX checkpoint chain has ended, with both lines' gates passing; its current
 queue horizon is April 2027.
 
-New learning agents belong in a separate crate outside `acs2-core` (planned package
-name: `acs2-agents`), with one module directory per agent family and variants within it.
-Shared mechanisms stay in the existing shared crates. That future crate does not exist
-yet; the two implemented agents remain in core while its public API supports the MPX chain.
+New learning agents live in `acs2-agents`, outside `acs2-core`, with one module directory
+per family and variants within it. Shared mechanisms stay in shared crates. The original
+ACS2 and ACS2ER remain in core while its public API supports the MPX chain. The HER
+experiment is registered in `experiments/her-variants/`; its stage-one costed plan requires
+approval before tuning or the final grid.
 
 `baseline/` pinned Python reference · `tools/` parsing and plotting (a **separate** Python
 project, so plotting deps never perturb the pinned baseline) · `slurm/` cluster scripts ·
