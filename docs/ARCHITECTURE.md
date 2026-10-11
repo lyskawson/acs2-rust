@@ -3040,10 +3040,69 @@ The nominal grid forecast is 5.6294 CPU-hours; doubling it and adding both
 pilots gives 12.7833 hours. The grid hard limits reserve 28.6667 hours,
 or 30.1911 including both completed pilots, leaving 9.8089 hours below
 forty. This is a forecast and allocation bound, not a performance conclusion.
-The plan remains `grid_pending_approval`; no twenty-seed pair grid has run.
+The immutable plan bytes retain `grid_pending_approval`; the external approval
+matching their SHA-256 authorized the completed twenty-seed pair grid.
 `goal-grid-plan.json` records the superseded goal proposal. The composition
 example retains its explicit `maze-goals-v1` diagnostic path and the archived
 schema-2 full-pool path.
+
+## Start-goal baseline results
+
+The externally approved plan SHA-256 is
+`913ce814484b742265ba88db09d72d4feaf8f981b200811454f9fce11b6b5a78`. All 240 runs and
+1,960 schema-5 rows completed on Lem, with seeds 42–61 for both agents. Measurement
+source `38fcc300eee6210686a297ba3ad93b0a52e25d3d` and musl binary
+`a9e5b6671100e56ec31e3b5502410f97f027e72acc8d7253c5e2cdab0601e0d7` stayed pinned. Every
+seed-42 learning field matches the new pair pilot (98 rows, 3,430 fields); all 960 raw
+artifact hashes passed verification. No failures or retries occurred.
+
+T/V/Test below denote the registered training, validation and test reset pairs; every
+goal occurs in every block. Floors are exact random-policy references, rounded here;
+ceilings are geometric reachability within the cap. The pair registration above
+specifies the start law and beyond-cap pairs.
+
+| Maze | Cap | Pairs T/V/Test | Floor T/V/Test | Ceiling T/V/Test | Budget |
+| --- | --- | --- | --- | --- | --- |
+| Maze4 | 5 | 378/162/162 | 0.09543/0.07237/0.07961 | 1.00000/0.98765/1.00000 | 2M |
+| Maze5 | 8 | 888/222/222 | 0.08582/0.07695/0.07676 | 1.00000/1.00000/1.00000 | 2M |
+| Maze6 | 10 | 888/222/222 | 0.10334/0.10225/0.10023 | 1.00000/1.00000/1.00000 | 2M |
+| Maze7 | 10 | 828/216/216 | 0.10522/0.09140/0.09960 | 1.00000/1.00000/1.00000 | 2M |
+| Woods14 | 18 | 228/57/57 | 0.12477/0.14139/0.13635 | 1.00000/1.00000/1.00000 | 4M |
+| MazeMA | 9 | 120/45/45 | 0.13098/0.12651/0.11893 | 1.00000/1.00000/1.00000 | 2M |
+
+Final test success is mean ± standard error across twenty seeds. The last column is mean
+estimated training interactions per CPU-second, ACS2/ACS2ER, obtained separately within
+each run from sampled CPU attribution.
+
+| Maze | Final ACS2 test ± SE | Final ACS2ER test ± SE | Registered verdict | Training interactions/CPU-s A/ER |
+| --- | --- | --- | --- | --- |
+| Maze4 | 0.3253 ± 0.0094 | 0.2272 ± 0.0119 | compare | 81 315/21 670 |
+| Maze5 | 0.2356 ± 0.0084 | 0.1604 ± 0.0096 | compare | 46 436/11 987 |
+| Maze6 | 0.2849 ± 0.0105 | 0.1664 ± 0.0100 | compare | 44 998/10 985 |
+| Maze7 | 0.2664 ± 0.0119 | 0.1799 ± 0.0103 | compare | 42 657/9 897 |
+| Woods14 | 0.1974 ± 0.0143 | 0.1833 ± 0.0165 | compare | 311 886/71 098 |
+| MazeMA | 0.2722 ± 0.0177 | 0.2144 ± 0.0181 | compare | 309 347/73 058 |
+
+Allocation-only `sacct` CPUTimeRAW totals 19247 seconds (5.3464 CPU-hours) for the grid
+and 24735 seconds (6.8708 hours) including both pilots; remaining reservations are zero.
+The approved pre-submission bound was 30.1911 hours within forty. Process CPU (18521.01
+seconds) and attributed training CPU (18357.43 seconds, estimated) are reported
+separately, without adding them to allocation cost.
+
+All final lower 95% test bounds exceed their own random floors; no configuration meets
+the registered too-easy condition. No mean test curve reaches half its ceiling at a
+registered point, so every threshold count is null. Individual primary paired intervals favor
+ACS2 on Maze4–7 and contain zero on Woods14 and MazeMA. ACS2ER has higher
+checkpoint-mean knowledge on every maze; final knowledge means are at least 0.9998 for
+both agents. This separates anticipation coverage from goal-reaching policy success.
+
+The registered primary comparison remains the equal-checkpoint mean within each seed on
+Test, with paired ACS2ER-minus-ACS2 t(19) intervals. Final success is a separate
+diagnostic for the registered verdict. Knowledge remains secondary. Full seed scores,
+block curves, primary intervals, knowledge, costs and the Polish report remain outside
+the checkout under the resolved `pair-grid/` result root; `maze-baselines/analyze.py`
+reconstructs them with terminal accounting and approval checks. This finite 2M/4M
+horizon makes no convergence claim.
 
 ## Clippy — the determinism invariants, checked by machine
 

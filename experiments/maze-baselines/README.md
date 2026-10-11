@@ -55,9 +55,12 @@ whole-body cost, compared with archived five-seed 200k diagnostics on the same
 laptop. The optional pilot reserves twelve single-CPU allocations of fifteen
 minutes (3 CPU-hours); the completed goal pilot already spent 4,475 CPU-seconds.
 
-`grid-plan.json` is the new pair proposal, pending explicit approval of its exact bytes.
+`grid-plan.json` records the externally approved pair grid. Its SHA-256 is
+`913ce814484b742265ba88db09d72d4feaf8f981b200811454f9fce11b6b5a78`.
+The historical `grid_pending_approval` field remains part of those immutable
+bytes; the resolved external approval authorizes execution separately.
 The old proposal is preserved as `goal-grid-plan.json` with a rejected superseded stage.
-Its test primary score is the equally weighted checkpoint mean within each
+The registered test primary score is the equally weighted checkpoint mean within each
 seed; across seeds 42–61 report mean, SE, t(19) intervals and paired ER-minus-ACS2
 intervals. Side blocks and knowledge are secondary. The threshold is the first
 registered nominal point whose across-seed mean test success reaches half its
@@ -93,8 +96,20 @@ The recalibration completed twelve allocations and 98 rows on Lem with seed 42.
 Both pilots cost 5,488 allocated CPU-seconds (4,475 goal + 1,013 pair). The new
 grid forecast is 5.6294 CPU-hours; a doubled forecast including both pilots is
 12.7833. Mixed-array hard limits are 7/8/10/10/5/3 minutes, reserving 28.6667
-CPU-hours, or 30.1911 with both pilots. No full grid has been submitted.
+CPU-hours, or 30.1911 with both pilots.
 The plan pins measurement commit `38fcc300eee6210686a297ba3ad93b0a52e25d3d`
 and its retained musl binary; the grid's seed-42 rows must reproduce this new
-protocol pilot. Approve and pass the exact resolved external proposal bytes;
+protocol pilot. Pass the exact resolved external plan and matching approval;
 keep the measurement clone at its pinned commit when using `grid/submit.py`.
+
+The approved grid completed 240 allocations and 1,960 rows without failures or
+retries. Allocation-only `sacct` cost was 19,247 CPU-seconds for the grid and
+24,735 including both pilots (6.8708 CPU-hours within forty); no reservations
+remain. All raw files and 960 completion hashes passed verification; the
+seed-42 rows reproduce all 3,430 non-time pilot fields. Every maze receives
+`compare`; no across-seed test mean reaches the registered half-ceiling
+threshold. Primary paired intervals favor ACS2 on Maze4–7 and contain zero on
+Woods14 and MazeMA. Knowledge remains secondary. The compact baseline tables
+are in [the architecture](../../docs/ARCHITECTURE.md#start-goal-baseline-results);
+resolved data, accounting, analysis, figures and the Polish report remain in
+the external `pair-grid/` result root.
