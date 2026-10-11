@@ -72,16 +72,19 @@ fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation()
     let replay = acs2_agents::acs2er_u1::DiagnosticConfiguration {
         capacity: preset.replay_capacity,
         warmup: preset.replay_warmup,
-    }
-    .replay();
+    };
     assert_protocol_evaluation_read_only(
         &distributions.protocol(),
         42,
         &[10, 40, 100],
         || {
             DiagnosticAdapter(CoreAgent {
-                agent: Acs2ErAgent::<10, _>::new(preset.config(8), replay, random(1))
-                    .with_truncation_mode(preset.truncation),
+                agent: acs2_agents::acs2er_u1::Agent::<10, _>::new(
+                    preset.config(8),
+                    replay,
+                    preset.truncation,
+                    random(1),
+                ),
                 preset: Preset {
                     replay_updates_per_step: 1,
                     ..preset
@@ -94,7 +97,7 @@ fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation()
         |agent| {
             format!(
                 "{:?}|{}|{}",
-                agent.0.agent.capture(),
+                agent.0.agent.snapshot(),
                 agent.0.steps,
                 agent.0.updates
             )
@@ -151,7 +154,9 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
             assert!(row["evaluation_blocks"]["test"]["success"].is_number());
             if kind == AgentKind::Acs2ErU1 {
                 assert_eq!(row["agent_parameters"]["replay_updates_per_step"], 1);
-                assert!(row["replay_diagnostics"].is_null());
+                assert_eq!(row["replay_diagnostics"]["original"], updates);
+                assert_eq!(row["replay_diagnostics"]["relabeled"], 0);
+                assert_eq!(row["replay_diagnostics"]["objective_evaluations"], 0);
                 continue;
             }
             let diagnostics = &row["replay_diagnostics"];
@@ -271,16 +276,137 @@ fn pair_baselines_reproduce_archived_seed42_learning_fields() {
 #[test]
 fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
     let path = std::env::temp_dir().join(format!("her-cli-{}.jsonl", std::process::id()));
-    let args = ["--task", "maze4", "--cap", "5", "--protocol", "maze-pairs-v1", "--agents", "her_values", "--seeds", "42", "--targets", "20", "--evaluation-blocks", "validation", "--relabel-proportion", "0.9", "--out"];
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure")).args(args).arg(&path).output().unwrap();
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let args = [
+        "--task",
+        "maze4",
+        "--cap",
+        "5",
+        "--protocol",
+        "maze-pairs-v1",
+        "--agents",
+        "her_values",
+        "--seeds",
+        "42",
+        "--targets",
+        "20",
+        "--evaluation-blocks",
+        "validation",
+        "--relabel-proportion",
+        "0.9",
+        "--out",
+    ];
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args(args)
+        .arg(&path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let row: Value = serde_json::from_str(std::fs::read_to_string(&path).unwrap().trim()).unwrap();
-    assert_eq!(row["evaluation_blocks"].as_object().unwrap().keys().collect::<Vec<_>>(), ["validation"]);
+    assert_eq!(
+        row["evaluation_blocks"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect::<Vec<_>>(),
+        ["validation"]
+    );
     assert_eq!(row["agent_parameters"]["relabeled_proportion"], 0.9);
     let mut invalid = args;
     invalid[7] = "her_full";
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure")).args(invalid).arg(&path).output().unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args(invalid)
+        .arg(&path)
+        .output()
+        .unwrap();
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("only values variants"));
     std::fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings() {
+    use acs2_measure::runner::run_goal_agent_protocol_with_sink;
+    let distributions =
+        MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
+    let preset = Preset {
+        replay_updates_per_step: 1,
+        ..Preset::thesis()
+    };
+    let parameters = acs2_agents::acs2er_u1::DiagnosticConfiguration {
+        capacity: preset.replay_capacity,
+        warmup: preset.replay_warmup,
+    };
+    let mut plain = CoreAgent {
+        agent: Acs2ErAgent::<10, _>::new(preset.config(8), parameters.replay(), random(1))
+            .with_truncation_mode(preset.truncation),
+        preset,
+        replay: true,
+        steps: 0,
+        updates: 0,
+    };
+    let mut observed = DiagnosticAdapter(CoreAgent {
+        agent: acs2_agents::acs2er_u1::Agent::<10, _>::new(
+            preset.config(8),
+            parameters,
+            preset.truncation,
+            random(1),
+        ),
+        preset,
+        replay: true,
+        steps: 0,
+        updates: 0,
+    });
+    let mut plain_rows = Vec::new();
+    let mut observed_rows = Vec::new();
+    let targets = [100, 1000, 10000];
+    run_goal_agent_protocol_with_sink(
+        &distributions.protocol(),
+        &mut plain,
+        42,
+        &targets,
+        &RunMetadata::test("test"),
+        true,
+        &mut |row| plain_rows.push(row),
+    );
+    run_goal_agent_protocol_with_sink(
+        &distributions.protocol(),
+        &mut observed,
+        42,
+        &targets,
+        &RunMetadata::test("test"),
+        true,
+        &mut |row| observed_rows.push(row),
+    );
+    assert_eq!(
+        format!("{:?}", plain.agent.capture()),
+        format!("{:?}", observed.0.agent.captured_state())
+    );
+    for (mut plain, mut observed) in plain_rows.into_iter().zip(observed_rows) {
+        for key in [
+            "agent",
+            "replay_diagnostics",
+            "learning_update_counts",
+            "replay_logical_bytes",
+            "wall_seconds_train",
+            "wall_seconds_eval",
+            "wall_seconds_total",
+        ] {
+            plain.as_object_mut().unwrap().remove(key);
+            observed.as_object_mut().unwrap().remove(key);
+        }
+        assert_eq!(plain, observed);
+    }
+    let counters = observed.0.agent.counters();
+    assert_eq!(counters.original.draws, observed.0.updates);
+    assert!(counters.original.done > 0);
+    assert_eq!(
+        counters.original.reward,
+        1000.0 * counters.original.done as f64
+    );
+    assert_eq!(counters.relabeled.draws, 0);
+    assert_eq!(counters.cost.total().total(), 0);
 }

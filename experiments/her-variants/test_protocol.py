@@ -76,17 +76,17 @@ class ProtocolTests(unittest.TestCase):
 
     def test_budget_counts_pilots_tuning_grid_and_allocation_overhead(self):
         result = forecast(costs(),1000)
-        self.assertEqual(result['grid_reservation_cpu_seconds'], 600 * 3 * 60)
-        self.assertEqual(result['tuning_reservation_cpu_seconds'], 180 * 3 * 60)
+        self.assertEqual(result['grid_reservation_cpu_seconds'], 600 * 2 * 60)
+        self.assertEqual(result['tuning_reservation_cpu_seconds'], 180 * 2 * 60)
         self.assertAlmostEqual(result['grid_expected_cpu_hours'], 600 * 43 / 3600)
-        self.assertAlmostEqual(result['hard_bound_with_pilots_cpu_hours'], (1000 + 780 * 180) / 3600)
+        self.assertAlmostEqual(result['hard_bound_with_pilots_cpu_hours'], (1000 + 780 * 120) / 3600)
         self.assertGreaterEqual(result['memory_mib'], 512)
 
     def test_forecast_reduces_tuning_first_and_refuses_an_unaffordable_fixed_grid(self):
-        choices, result = fit_forecast(costs(60),36000)
+        choices, result = fit_forecast(costs(100),64800)
         self.assertEqual(choices, PROPORTIONS[:2])
         self.assertLessEqual(result['hard_bound_with_pilots_cpu_hours'],60)
-        with self.assertRaises(ValueError): fit_forecast(costs(100),1000)
+        with self.assertRaises(ValueError): fit_forecast(costs(200),1000)
 
     def test_batch_size_keeps_twenty_to_forty_jobs_without_host_pinning(self):
         plan = dict(stage='grid_pending_approval',configurations=configurations(),agents=AGENTS,seeds=list(range(42,62)),batch_size=20)
@@ -94,6 +94,19 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(len(batches),30)
         self.assertTrue(all(len(batch)==20 for batch in batches))
         self.assertEqual(sum(map(len,batches)),600)
+
+    def test_tuning_reserves_the_larger_agent_limit_for_every_element_in_a_maze_group(self):
+        cells=costs()
+        for key in cells:
+            if key[1]=='her_values': cells[key]['body_wall_seconds']=100
+        result=forecast(cells,1000)
+        self.assertEqual(result['tuning_reservation_cpu_seconds'],6*30*3*60)
+        configs=[]
+        for config in configurations():
+            for p in PROPORTIONS:
+                configs.append(dict(config,batch_group=config['id'],proportion=p))
+        batches=run_batches(dict(stage='tuning_pending_approval',configurations=configs,agents=VALUES,seeds=list(range(42,47)),batch_by='group'))
+        self.assertEqual([len(batch) for batch in batches],[30]*6)
 
     def test_every_new_arm_passes_the_shared_row_validator(self):
         for agent in AGENTS:
@@ -124,6 +137,25 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ValueError): validate_row(row,config,'her_values_shortened',42,'a'*40,1000)
         row['agent_parameters']['relabeled_proportion']=0.9
         validate_row(row,config,'her_values_shortened',42,'a'*40,1000)
+
+    def test_u1_observed_composition_is_required_when_registered_and_has_no_objective_work(self):
+        row,config=row_and_configuration('acs2er_u1')
+        config['u1_draw_observer']=True
+        with self.assertRaises(ValueError): validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
+        proxy,_=row_and_configuration('er_episodic')
+        diagnostics=proxy['replay_diagnostics']
+        updates=row['replay_updates']
+        diagnostics.update(draws=updates,original=updates,realized_relabeled_share=0,done=10,
+            objective_evaluations=0,reward_evaluations=0,reach_evaluations=0,
+            strategies=dict(original=updates,final=0,future=0,episode=0,uniform_real=0),
+            draw_observer='core_u1_outcomes_no_extra_random_or_objective_calls')
+        diagnostics['routes']['original'].update(draws=updates,done=10,reward_sum=10000,mean_reward=10000/updates)
+        for purpose in diagnostics['objective_evaluations_by_purpose'].values():
+            purpose.update(objective_evaluations=0,reward_evaluations=0,reach_evaluations=0)
+        row['replay_diagnostics']=diagnostics
+        validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
+        diagnostics['routes']['original']['done']=9
+        with self.assertRaises(ValueError): validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
 
 
 if __name__ == '__main__': unittest.main()

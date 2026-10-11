@@ -1,7 +1,6 @@
 use std::mem::size_of;
 
 use acs2_agents::replay::{EpisodicAgent, EpisodicConfiguration, ReplayEnvironment};
-use acs2_core::agents::trial::LearningAgent;
 use acs2_core::ports::environment::{Environment, StepOutcome};
 use acs2_core::ports::goal::{Goal, GoalOutcome, GoalStart, GoalStep};
 use acs2_core::representation::classifier::Classifier;
@@ -163,10 +162,12 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
     }
 }
 
-pub struct DiagnosticAdapter<A, const M: usize>(pub CoreAgent<A, M>);
+pub struct DiagnosticAdapter<R: RandomSource, const M: usize>(
+    pub CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M>,
+);
 
-impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M>
-    for DiagnosticAdapter<A, M>
+impl<R: RandomSource, const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M>
+    for DiagnosticAdapter<R, M>
 {
     fn name(&self) -> &'static str {
         "acs2er_u1"
@@ -175,10 +176,14 @@ impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAg
         self.0.train_episode(env, time)
     }
     fn declared_policy(&self) -> &'static str {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::declared_policy(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::declared_policy(
+            &self.0,
+        )
     }
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64) {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::eval_action(&self.0, state, rng)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::eval_action(
+            &self.0, state, rng,
+        )
     }
     fn online_updates(&self) -> u64 {
         0
@@ -192,27 +197,41 @@ impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAg
         )
     }
     fn replay_samples(&self) -> usize {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::replay_samples(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::replay_samples(
+            &self.0,
+        )
     }
     fn population_classifiers(&self) -> usize {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::population_classifiers(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::population_classifiers(&self.0)
     }
     fn population_numerosity(&self) -> u32 {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::population_numerosity(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::population_numerosity(&self.0)
     }
     fn population_logical_bytes(&self) -> usize {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::population_logical_bytes(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::population_logical_bytes(&self.0)
     }
     fn population_mark_entries(&self) -> usize {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::population_mark_entries(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::population_mark_entries(&self.0)
     }
     fn knowledge(&self, transitions: &[Transition<M>]) -> Option<f64> {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::knowledge(&self.0, transitions)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::knowledge(
+            &self.0,
+            transitions,
+        )
     }
     fn replay_logical_bytes(&self) -> usize {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::replay_logical_bytes(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::replay_logical_bytes(&self.0) + self.0.agent.observer_logical_bytes()
+    }
+    fn replay_diagnostics(&self) -> Option<Value> {
+        let counters = self.0.agent.counters();
+        let mut diagnostics = crate::trajectory::replay_diagnostics(&counters);
+        diagnostics["realized_relabeled_share"] = json!(0.0);
+        diagnostics["draw_observer"] = json!("core_u1_outcomes_no_extra_random_or_objective_calls");
+        Some(diagnostics)
     }
     fn agent_parameters(&self) -> Value {
-        <CoreAgent<A, M> as GoalAgent<S, G, M>>::agent_parameters(&self.0)
+        <CoreAgent<acs2_agents::acs2er_u1::Agent<M, R>, M> as GoalAgent<S, G, M>>::agent_parameters(
+            &self.0,
+        )
     }
 }

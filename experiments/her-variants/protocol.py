@@ -50,7 +50,7 @@ def forecast(cells, spent_seconds, proportions=PROPORTIONS):
         allocated = cell['allocation_cpu_seconds']
         if body <= 0 or allocated < 0 or cell['peak_rss_kib'] <= 0:
             raise ValueError('invalid pilot cost or memory')
-        limit = max(2, math.ceil((2.5 * body + 60) / 60))
+        limit = max(2, math.ceil((1.5 * body + 30) / 60))
         limits[key] = limit
         memory = max(memory, math.ceil(3 * cell['peak_rss_kib'] / 1024 / 128) * 128)
         estimate = body + max(0, allocated - cell['process_cpu_seconds'])
@@ -58,7 +58,8 @@ def forecast(cells, spent_seconds, proportions=PROPORTIONS):
         grid_hard += 20 * limit * 60
         if key[1] in VALUES:
             tuning_expected += 5 * len(proportions) * estimate
-            tuning_hard += 5 * len(proportions) * limit * 60
+    for config in configurations():
+        tuning_hard += 2 * 5 * len(proportions) * max(limits[config['id'], agent] for agent in VALUES) * 60
     return dict(grid_expected_cpu_hours=grid_expected / 3600, tuning_expected_cpu_hours=tuning_expected / 3600,
                 doubled_forecast_with_pilots_cpu_hours=(spent_seconds + 2 * (grid_expected + tuning_expected)) / 3600,
                 hard_bound_with_pilots_cpu_hours=(spent_seconds + grid_hard + tuning_hard) / 3600,
@@ -101,6 +102,8 @@ def study(thresholds, cells, spent_seconds):
                               secondary=['knowledge','realized_relabeled_share','composition_by_route','objective_cost_by_purpose',
                                          'population','memory','updates_by_kind','process_time','allocation_cpu_hours']),
                 execution=dict(partition='lem-cpu-normal', cpu_model='AMD EPYC 9554 64-Core Processor', concurrency=20, batch_size=20,
+                               tuning_batches='one group per maze, both values variants and all proportions; 20 or 30 jobs, each reserves the larger values-agent limit',
+                               limit_rule='max(2, ceil((1.5 * seed42 body wall at registered budget + 30) / 60)) minutes; node process watchdog retains 30 seconds; this is a sizing margin, not a guarantee about new-seed growth',
                                guards='shared experiments/grid tools; clean pinned musl source and binary, node-side guards, STOP on failure; no lease, pinning or laptop dependency',
                                accounting='allocation CPUTimeRAW once per attempt, including failed attempts and regression pilots; spent plus reserved plus new limits at most 60 CPU-hours',
                                copies='cluster and local raw artifacts independently checksum-verified'),

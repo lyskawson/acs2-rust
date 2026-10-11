@@ -70,8 +70,32 @@ def validate_replay(row, config, agent):
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('agent replay parameters differ from the registered preset')
     if agent == 'acs2er_u1':
-        if kinds['values_only'] or row['replay_diagnostics'] is not None or row['trajectory_logical_bytes'] != 0:
+        if kinds['values_only'] or row['trajectory_logical_bytes'] != 0:
             raise ValueError('diagnostic arm must use unchanged core ACS2ER')
+        diagnostics = row['replay_diagnostics']
+        if diagnostics is None:
+            if config.get('u1_draw_observer'):
+                raise ValueError('missing required U1 draw observation')
+            return
+        if (diagnostics['draws'] != updates or diagnostics['original'] != updates or diagnostics['relabeled'] != 0
+                or diagnostics['realized_relabeled_share'] != 0 or diagnostics['objective_evaluations'] != 0
+                or diagnostics['routes']['original']['done'] > updates
+                or diagnostics['routes']['original']['reward_sum'] != 1000 * diagnostics['routes']['original']['done']
+                or diagnostics['draw_observer'] != 'core_u1_outcomes_no_extra_random_or_objective_calls'):
+            raise ValueError('invalid observed U1 replay composition')
+        if diagnostics['failed_draws'] or diagnostics['fallbacks'] or diagnostics['strategies'] != dict(original=updates, final=0, future=0, episode=0, uniform_real=0):
+            raise ValueError('invalid observed U1 replay routes')
+        for key in ('already_reached', 'after_counterfactual_end', 'outside_candidates'):
+            if diagnostics[key] or any(route[key] for route in diagnostics['routes'].values()):
+                raise ValueError('original U1 samples must come from active real-goal episodes')
+        original = diagnostics['routes']['original']
+        relabeled = diagnostics['routes']['relabeled']
+        if original['draws'] != updates or diagnostics['done'] != original['done'] or not 0 <= original['done'] <= updates or original['mean_reward'] != original['reward_sum'] / updates:
+            raise ValueError('invalid U1 original-route composition')
+        if relabeled['draws'] or relabeled['done'] or relabeled['reward_sum'] or relabeled['mean_reward'] is not None:
+            raise ValueError('U1 cannot have relabeled route observations')
+        if diagnostics['reward_evaluations'] or diagnostics['reach_evaluations'] or any(any(value.values()) for value in diagnostics['objective_evaluations_by_purpose'].values()):
+            raise ValueError('U1 stored replay performs no objective evaluations')
         return
     expected.update(schedule='after_complete_episode', strategy='future', candidate_filter=False,
                     draws='uniform_transitions_with_replacement', truncation='Bootstrap', sampler_truncation='Bootstrap',

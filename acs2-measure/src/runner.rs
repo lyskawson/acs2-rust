@@ -671,13 +671,16 @@ where
             let replay = acs2_agents::acs2er_u1::DiagnosticConfiguration {
                 capacity: preset.replay_capacity,
                 warmup: preset.replay_warmup,
-            }
-            .replay();
+            };
             let mut adapter = crate::agents::DiagnosticAdapter(CoreAgent {
-                agent: Acs2ErAgent::<M, _>::new(config, replay, agent_rng)
-                    .with_truncation_mode(preset.truncation),
+                agent: acs2_agents::acs2er_u1::Agent::<M, _>::new(
+                    config,
+                    replay,
+                    preset.truncation,
+                    agent_rng,
+                ),
                 preset: Preset {
-                    replay_updates_per_step: replay.samples_number,
+                    replay_updates_per_step: 1,
                     ..preset
                 },
                 replay: true,
@@ -694,7 +697,7 @@ where
                 emit,
             );
             settings.capture_final_state.then(|| {
-                let state = acs2_core::checkpoint::Checkpointed::capture(&adapter.0.agent);
+                let state = adapter.0.agent.captured_state();
                 (
                     format!("{:?}", state.population),
                     format!("{:?}", state.rng),

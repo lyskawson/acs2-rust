@@ -79,6 +79,13 @@ def run_batches(plan):
     if plan['stage'] == 'authorized_cost_pilot':
         return [[(config, agent, seed) for config in plan['configurations']
                  for agent in plan['agents'] for seed in plan['seeds']]]
+    if plan.get('batch_by') == 'group':
+        groups = {}
+        for config in plan['configurations']:
+            groups.setdefault(config['batch_group'], []).extend((config, agent, seed) for agent in plan['agents'] for seed in plan['seeds'])
+        if any(not 20 <= len(group) <= 40 for group in groups.values()):
+            raise ValueError('each batch group must contain 20--40 jobs')
+        return list(groups.values())
     if 'batch_size' in plan:
         size = plan['batch_size']
         if not 20 <= size <= 40:
