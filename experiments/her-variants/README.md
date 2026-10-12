@@ -23,17 +23,19 @@ the values variants use separately selected proportions for each maze.
 
 `protocol.py` reconstructs immutable pair configurations, the authorized seed-42
 cost pilot, the cost forecast, and the final three-part registration. `plan.json`
-is the resulting plan awaiting approval. Its SHA-256 is
+is the registration approved on 2026-10-12. Its SHA-256 is
 `e18aca0f513ac3f6b6c0b9a52063acc78d9dc1becf369bcd5e755f5050ac6444`.
 Tuning uses 1/3 and 2/3; 0.9 was removed for cost before tuning. The main grid
 has 600 runs with seeds 42--61; tuning evaluates only validation with seeds
 42--46. The tie rule and comparisons are registered in the plan. Nothing may
 tune on test. Approval must identify these exact bytes before any tuning or
-grid submission. A study plan is not an execution manifest.
+grid submission. Approval is recorded beside the result roots; the registration
+bytes remain unchanged. A study plan is not an execution manifest.
 
 The update-rule ablation uses `her_values_p2of3` minus `her_full` on every maze.
-Where tuning selects 2/3, reuse the tuned values rows. Otherwise add twenty
-values runs at 2/3 with identical budgets, points, pairs and caps. This fixed
+Where tuning selects 2/3, reuse that maze's twenty-seed, three-block final-grid
+values rows. Otherwise add twenty values runs at 2/3 with identical budgets,
+points, pairs and caps. This fixed
 control enters no other comparison; the tuned values minus full comparison
 remains separate. `matched_control.py` derives the required configurations and
 checks admission against aggregate spent and outstanding reservations across
@@ -69,6 +71,26 @@ Experiment manifests, launches and raw artifacts live outside Git under
 `verify.py` independently checks terminal accounting, rows and artifact hashes
 after pulling. Both copies must verify before analysis.
 
+`execution.py` mechanically derives validation tuning, the selected final grid
+and any fixed-proportion controls. `grid_scope.py` accounts for every registered
+batch root, and all batches share one STOP. Operations run from an immutable
+snapshot outside the measurement clone; its hashes are checked on each node.
+The clone stays at `a592a5bad8bbc13d62553cc09a72748182809879`, with the approved
+musl binary SHA-256 `83ebf9a69d3d42cd8f275bab9f77f306fd25e5bcb7a665cf4771d169ab2ac3f2`.
+No rebuild is part of execution. Scheduler test-only refusals allocate no CPU;
+`grid_resume.py` resumes only the unsubmitted registered suffix, checking the
+grant and global budget again before each submission.
+
+`analysis.py` computes seed summaries, paired intervals, route composition,
+objective cost, observed model update volume and exact threshold crossings.
+`analyze.py` independently verifies all node identity records, replays the tuning
+selection rule and checks manifest derivation before collecting the final data.
+Where tuning selected 2/3, the fixed-proportion comparison reuses twenty-seed,
+three-block final-grid rows. Five-seed validation-only rows cannot enter it.
+`plots.py` writes scientific SVG/PNG curves and places knowledge and full updates
+beside every values comparison. Matplotlib 3.10.7 is sufficient; computation and
+analysis tests otherwise use only the Python standard library.
+
 The differential instruments the unmodified reference with explicit RNG draws.
 It covers 1000 random populations/steps, original and copied rewards/endings,
 future/final/episode relabeling, expected/unexpected ALP, covering, marks,
@@ -84,4 +106,6 @@ cargo test --release -p acs2-agents
 cargo test --release -p acs2-measure --test her
 python3 -B -m unittest discover -s experiments/her-variants -p 'test_*.py'
 python3 -B experiments/her-variants/verify.py <outside-checkout batch root>
+python3 -B experiments/her-variants/analyze.py --study <pulled study root> --baseline <archived pair grid> --pilots <verified pilot roots> --out <new analysis directory>
+python3 -B experiments/her-variants/plots.py <results.json> <figure directory>
 ```

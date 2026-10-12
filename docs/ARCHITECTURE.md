@@ -1694,6 +1694,7 @@ the sections below are named by their implementation or measurement:
 | phase 3a | [Goal measurement layer](#goal-measurement-layer). |
 | phase 3b | [Pilot grid: ACS2 and ACS2ER on ten goal configurations](#pilot-grid-acs2-and-acs2er-on-ten-goal-configurations). |
 | phase 4 | [Trajectory storage and relabeling](#trajectory-storage-and-relabeling). |
+| phase 5 | [Hindsight copy updates and held-pair replay results](#hindsight-copy-updates-and-held-pair-replay-results). |
 
 ### Checkpoint and multiplexer compatibility
 
@@ -3103,111 +3104,457 @@ the checkout under the resolved `pair-grid/` result root; `maze-baselines/analyz
 reconstructs them with terminal accounting and approval checks. This finite 2M/4M
 horizon makes no convergence claim.
 
-## Episodic replay and hindsight update rules
+## Hindsight copy updates and held-pair replay results
 
-`acs2-agents` depends only on `acs2-core` and `acs2-trajectory`. `er_episodic/`
-contains the original-only control; `her/` contains full, values-only and
-counterfactual-shortened variants; `acs2er_u1/` owns the diagnostic replay
-configuration. Shared episodic collection and update dispatch live in
-`replay.rs`. Measurement implements the raw-episode environment port and
-constructs learners; agents never depend on measurement.
+The approved registration is [`experiments/her-variants/plan.json`](../experiments/her-variants/plan.json), SHA-256
+`e18aca0f513ac3f6b6c0b9a52063acc78d9dc1becf369bcd5e755f5050ac6444`.
+The measurement clone stays at `a592a5bad8bbc13d62553cc09a72748182809879`;
+the unchanged musl binary has SHA-256
+`83ebf9a69d3d42cd8f275bab9f77f306fd25e5bcb7a665cf4771d169ab2ac3f2`.
+Execution and analysis tools may evolve without rebuilding this measurement.
 
-All episodic arms act on the episode's real joined goal without learning, store
-one complete raw episode, then draw exactly three times its step count through
-the phase-4 sampler. Capacity is 10,000 steps, whole-episode FIFO. Warmup is
-retained steps >= one after insertion, without repayment of skipped episodes.
-Sampling is uniform over retained transitions with replacement, so a one-step
-store still supplies three updates. ALP/GA use the end-of-episode environment
-clock; replay does not advance that physical clock.
+`acs2-agents` depends on `acs2-core` and `acs2-trajectory`; measurement constructs
+its learners and implements their raw-episode environment port. Agents never
+depend on measurement. `er_episodic/` contains the original-only episodic
+control, `her/` contains the full, values and shortened values variants, and
+`acs2er_u1/` owns the diagnostic replay parameters. Shared collection and update
+dispatch live in `replay.rs`. Core, checkpoint identity and codec, `Configuration`,
+`ReplaySample`, and the multiplexer interfaces remain unchanged.
 
-The control requests p=0 and follows the identical full-update path. `her_full`
-fixes p=2/3, future and every-transition admissibility: both routes use core
-ACS2ER replay learning (ALP, RL, optional GA). `her_values` uses the same sampler
-but sends relabeled copies only through action-set RL, changing `r` and `ir`;
-original and fallback samples retain the full step. `her_values_shortened`
-changes only admissibility to counterfactual-episode. Copies equal to the
-original goal still take the relabeled route. Neither values variant creates
-rules or changes quality, marks, numerosity, experience or timestamps on copies.
-Bootstrap comes from the next state joined with the identical goal. Rewards
-and endings always come from the task objective; termination zeroes bootstrap,
-while thesis truncation bootstraps. Sampler and learner modes must agree.
-`acs2er_u1` runs unchanged core ACS2ER at one update per step and has no raw
-trajectory sampler. An injected observer forwards every RNG draw unchanged,
-records the actual selected reward/done using a FIFO outcome sidecar, and reports
-phase-4 route counters without objective queries. Snapshot and direct core-state
-comparisons cover the sidecar and prove learning/RNG/replay equivalence. Its
-sidecar logical bytes are included in replay memory; no checkpoint API is added. Its actual update volume belongs to agent parameters,
-not the shared `Configuration` or the common thesis preset identity.
+All episodic arms act epsilon-greedily with epsilon 0.8 on the episode's real
+state joined with its real goal. They collect without learning, insert one
+complete episode into a 10,000-step FIFO store, and then draw three times that
+episode's length. Warmup requires at least one retained step after insertion;
+skipped episodes are never repaid. Draws are uniform over retained transitions,
+with replacement, so a one-step store supplies three updates. ALP/GA receive the
+end-of-episode environment clock; replay never advances this physical clock.
+Evaluation uses BestAction with its separate RNG and changes no learning state,
+store, sampler stream, sidecar or counters.
 
-Rows keep schema 5 and add `learning_update_counts` for these five arms only.
-Episodic diagnostics include realized relabeled share, stored steps/episodes,
-route composition and cost by purpose at every point. Raw trajectory logical
-bytes are separate from replay payload bytes; episodic replay stores no derived
-copy payload. Existing baseline rows retain every learning and evaluation field.
-The read-only contract includes populations, raw history, both learner/sampler
-streams and counters. Restricted `--evaluation-blocks validation` is available
-only with a registered protocol; default baseline evaluation is unchanged.
+The exact update rules are:
 
-The test-only `her/validation.rs` reproduces predecessor relabeling (including
-0/1 copy rewards and `done=False`) and invokes the full replay step. It cannot
-be enabled in a research run. `baseline/dump_her_differential.py` instruments
-unmodified pyalcs and records goal and ALP random draws. Its 1000 independent
-cases include 250 original and 750 relabeled learning steps, 331 reached and
-419 unreached copies, future/final/episode sampling, 364 expected-case,
-398 unexpected-case and 636 covering cases, and 123 ALP random choices.
-Complete populations agree with P11's 1e-9 floating tolerance. GA/PEE and
-overspecification are disabled; theta_i=0 removes pyalcs's deletion skip hazard.
-The differential does not cover goal-blind reference exploration, exploitation
-learning, its insertion/learning schedule, buffer distribution or long-run growth.
-Research behavior deliberately corrects those defects instead of reproducing them.
+| Arm | Relabeling | Update of an original or fallback | Update of a relabeled copy |
+|---|---|---|---|
+| `er_episodic` | p=0, same episodic path | Core ACS2ER replay step: ALP, RL, optional GA | None |
+| `her_full` | Future, every transition, fixed p=2/3 | Full step | Full step |
+| `her_values` | Future, every transition, selected p | Full step | Action-set RL only, changing r and ir |
+| `her_values_shortened` | Future, counterfactual episode admissibility, selected p | Full step | Action-set RL only |
+| `her_values_p2of3` | Future, every transition, fixed p=2/3 | Full step | Action-set RL only |
+| `acs2er_u1` | Unchanged core FIFO replay, one application per environment step | Full step | None |
 
-`experiments/her-variants/` owns this study's registration, pilot manifests,
-selection rule, row/accounting verification and short-check summary. It uses
-shared `experiments/grid/` execution and the immutable `maze-pairs-v1` protocol.
-The stage-one plan stops before tuning and the final grid until approval.
+Values copies bootstrap from the next state joined with the same copied goal.
+They change no conditions, effects, marks, quality, numerosity, experience,
+timestamps or population size. Copies equal to the original goal still belong
+to the relabeled route. All research rewards and endings come from the task
+objective: 1000/0 here, terminal goal reaches bootstrap zero, and time-limit
+truncations bootstrap under the thesis preset. Sampler and learner truncation
+modes must agree. The diagnostic U1 observer forwards every random draw
+unchanged and records selected original reward/done using a FIFO outcome
+sidecar. It makes no additional random or objective calls, and its sidecar
+logical bytes belong to replay memory. It has no new checkpoint interface.
 
-Stage-one evidence uses clean measurement commit
-`2ff0c077918f9731e538efb8eed89d168a3f616d`. The validation-only local check
-completed 150 runs (all five arms, six mazes, seeds 42--46), 450 rows at
-1k/10k/20k; it is a mechanics check, not a ranking. Every row passed the shared
-validator. At 20k the every-transition arms realized about 0.667 relabeled share,
-while shortened copies realized 0.415--0.523 at requested p=2/3. Snapshot tests
-include histories, counters and streams. Eight individual compiled mutations
-were caught and restored. Acceptance has 278 Rust tests, existing Python gates
-47/7/20/13/16/13, fourteen experiment tests, byte-identical P9 learning columns,
-and only the 22 older Clippy warnings after cleaning all six workspace packages.
+Rows retain schema 5. The new arms add full and values-only application counts,
+realized relabeled share, original/relabeled route composition, fallbacks,
+objective cost by scoring/selection/provenance purpose, raw trajectory logical
+bytes and replay memory. Counts are learning-step applications, including an
+RL application whose action set may be empty. Full steps divided by actual
+environment steps give observed model update volume. Every-transition values
+copies have expected volume 3*(1-p); shortening fallbacks increase it. Actual
+route counts, rather than requested p, determine the reported volume.
 
-Lem pilot array 6074394 completed 30 runs and 245 rows at the registered 2M/4M
-budgets; all HER pilot proportions were 2/3. Allocation CPUTimeRAW was 4003 s.
-Separate baseline-regression array 6074406 completed 12 seed-42 runs and 98 rows,
-using another 995 s: all 3234 top-level learning/evaluation/knowledge fields with
-nested contents match the archived phase-4b grid. This regression is not a new
-baseline grid. The U1 observer recalibration, array 6074551, completed another six runs and 49 rows for 447 s; all 49 learning/evaluation rows match the unobserved core at full budgets. Ninety local rows agree too. Total stage-one allocation cost is 5445 s (1.5125 CPU-hours). The final implementation source is `a592a5bad8bbc13d62553cc09a72748182809879`; the four episodic learning paths are unchanged from the initial pilot.
-Both cluster and pulled copies passed terminal-accounting and artifact-hash
-verification. Raw data and the Polish report remain outside Git.
+The private test-compiled HER oracle reproduces pyalcs copy rewards 0/1 and
+`done=False` and invokes the full replay step. It has no research CLI mode.
+Its 1000 single-step cases cover original and copied rewards/endings,
+future/final/episode selection, expected/unexpected ALP, covering, marks,
+subsumption, reinforcement and bootstrap, comparing complete populations with
+P11's 1e-9 tolerance. GA/PEE and overspecification are disabled; theta_i=0 excludes
+the reference deletion-skip hazard. It cannot validate the reference's
+exploration that ignored goals, exploitation learning, replay timing, retention
+distribution or long-run growth. Defect contracts, actual RNG-stream checks,
+independent match-formation counts, and the 60-row bit regression on all five
+new arms and six mazes supplement it. The 98-row seed-42 baseline regression
+preserves every learning, evaluation and knowledge field of the archived pair
+grid. Those twenty-seed baselines are reused, never rerun for this study.
 
-The three-part registration is `experiments/her-variants/plan.json`, SHA-256
-`2823664a04c698f771117787ad92225d86772700ac2990e42d539fec6436ff17`; status is `grid_pending_approval`.
-Tuning shrank from 1/3, 2/3, 0.9 to 1/3 and 2/3 because the doubled forecast
-with three proportions was 62.1006 CPU-hours. Each values variant and maze is
-selected separately on five validation seeds and the unchanged grid points;
-scores within 1e-12 tie in favor of smaller p. The final grid remains 600 runs,
-all five arms, six mazes and seeds 42--61. The registered comparisons are marginal
-paired t(19) intervals; thresholds use the archived ACS2 mean final test success,
-not half the ceiling. No tuning or final-grid run has started.
+Tuning uses validation only, seeds 42--46 and the registered 2M/4M budgets and
+points. For each values variant and maze separately, maximize checkpoint-mean
+validation success within a seed, then the mean over five seeds. Scores within
+1e-12 tie in favor of smaller p. The candidates are 1/3 and 2/3; 0.9 was removed
+before tuning by the registered cost rule. The full variant is fixed at 2/3.
+The main grid contains five arms, six mazes and seeds 42--61. If the selected
+values p differs from 2/3, twenty additional fixed-p values runs provide the
+update-rule ablation. Otherwise that ablation reuses twenty-seed, three-block
+final-grid values rows. Validation-only tuning rows never enter test analysis.
 
-The expected grid/tuning costs are 22.7607/5.0995 CPU-hours. Doubling both and
-adding pilots gives 57.2329 hours. Job limits are
-`max(2, ceil((1.5 * seed42 body wall + 30) / 60))` minutes; a 30-second process
-watchdog margin remains. Limits use observed phase-4b and short-check variability,
-but new-seed full-budget growth is unknown. The actual array reservation is
-44.0 hours for grid and 9.6667 for tuning, plus all three completed pilot/regression arrays: 55.1792 within sixty,
-leaving 4.8208 for accounted retries. Tuning groups both values arms for one maze
-(20 jobs), reserving the larger arm limit for every element; final arrays hold
-one agent/maze and twenty seeds. Memory is 512 MiB, far above observed process
-RSS (maximum 8940 KiB); peak population over pilot points was 3526. Allocation
-step RSS additionally includes the collector. These are sizing observations,
-not a convergence or growth guarantee.
+Primary success is the test-block mean over all registered points within each
+seed, then mean and SE over twenty seeds. Every registered difference pairs
+those seed scores and uses a marginal 95% t(19) interval, critical value
+2.093024054408263, without multiplicity correction. The tuned values-minus-full
+comparison and the fixed-p values-minus-full update ablation have separate
+interpretations. Knowledge curves and full applications per environment step
+appear beside every values comparison in JSON and scientific SVG/PNG figures.
+
+Both interaction thresholds use exact rational arithmetic: archived ACS2 final
+mean test success and archived ACS2ER final mean test success. Success is an
+integer count over each block's fixed pair count; means and >= comparisons use
+Fraction. A crossing is the first registered nominal point, without
+interpolation, or null. All 24 archived baseline crossings are independently
+reproduced before analysis. This finite 2M/4M horizon makes no convergence claim.
+
+Shared grid execution uses immutable operation snapshots outside the frozen
+measurement clone, a shared STOP, node guards and one accounting scope over
+all tuning, main-grid and control roots. Every submission checks the grant and
+sbatch test-only result. Pilots, allocated CPUTimeRAW once per attempt, outstanding
+hard reservations and every new limit must total at most sixty CPU-hours.
+No lease, host pinning, laptop automation or new monitor is used. Fixed arms
+reproduce seed-42 pilot rows; selected values reproduce five tuning seeds on
+shared points, and p=2/3 additionally reproduces its pilot. Node identity
+records are recalculated independently after pulling, before analysis. Raw
+artifacts and the Polish report live outside Git under the approved study roots
+in `~/tu_runs/5/` and `~/Desktop/tu-runs/5/`.
+
+### Validation selections and control admission
+
+The two candidates were evaluated on five validation seeds at full registered budgets.
+All shortened cells selected 1/3. Every-transition values selected 1/3 except Woods14,
+which selected 2/3. The following scores are means over points within each seed,
+then over five seeds. No test rows participated in selection.
+
+| Maze | Values scores: 1/3, 2/3 | Selected p | Shortened scores: 1/3, 2/3 | Selected p |
+|---|---|---|---|---|
+| maze4 | 0.148148, 0.119136 | 1/3 | 0.141821, 0.130864 | 1/3 |
+| maze5 | 0.111824, 0.094820 | 1/3 | 0.126239, 0.110360 | 1/3 |
+| maze6 | 0.115878, 0.088401 | 1/3 | 0.143694, 0.120946 | 1/3 |
+| maze7 | 0.109375, 0.091551 | 1/3 | 0.123495, 0.113542 | 1/3 |
+| woods14 | 0.128655, 0.138012 | 2/3 | 0.201170, 0.191033 | 1/3 |
+| mazema | 0.199444, 0.166667 | 1/3 | 0.237222, 0.197222 | 1/3 |
+
+Five fixed-p control cells were admitted immediately after selection, under the shared
+budget. Woods14 reused its twenty final-grid values seeds and all three blocks; it
+allocated no extra runs. Admission decisions are durable in `control-admission.jsonl`.
+
+| Control cell | New hard limit, CPU-s | Spent before admission | Reserved before admission | Bound including pilots and new limit, CPU-h |
+|---|---:|---:|---:|---:|
+| maze4 | 4800 | 18359 | 0 | 7.9456 |
+| maze5 | 7200 | 18359 | 4800 | 9.9456 |
+| maze6 | 8400 | 18359 | 12000 | 12.2789 |
+| maze7 | 8400 | 18359 | 20400 | 14.6122 |
+| mazema | 2400 | 18359 | 28800 | 15.2789 |
+
+### Test success and paired differences
+
+Each cell below is primary mean ± SE over twenty seeds, 42--61. The mean uses all
+eight registered points, or nine on Woods14; it is not final-point success. Budgets
+remain 2M interactions, 4M on Woods14. Caps are 5, 8, 10, 10, 18 and 9 respectively.
+Training, validation and test pair blocks retain the archived protocol and hashes.
+
+| Maze | ACS2 | ACS2ER | Episodic ER | HER full | Values tuned | Values shortened | ACS2ER U1 | Values p=2/3 |
+|---|---|---|---|---|---|---|---|---|
+| maze4 | 0.1934 ± 0.0038 | 0.1665 ± 0.0050 | 0.1726 ± 0.0045 | 0.1847 ± 0.0041 | 0.1576 ± 0.0036 | 0.1672 ± 0.0049 | 0.1694 ± 0.0045 | 0.1390 ± 0.0043 |
+| maze5 | 0.1313 ± 0.0028 | 0.1161 ± 0.0033 | 0.1110 ± 0.0035 | 0.1405 ± 0.0029 | 0.1111 ± 0.0020 | 0.1325 ± 0.0026 | 0.1145 ± 0.0031 | 0.0981 ± 0.0021 |
+| maze6 | 0.1570 ± 0.0035 | 0.1288 ± 0.0037 | 0.1336 ± 0.0037 | 0.1565 ± 0.0024 | 0.1213 ± 0.0024 | 0.1365 ± 0.0027 | 0.1346 ± 0.0028 | 0.1018 ± 0.0029 |
+| maze7 | 0.1477 ± 0.0036 | 0.1371 ± 0.0033 | 0.1380 ± 0.0035 | 0.1575 ± 0.0031 | 0.1244 ± 0.0030 | 0.1450 ± 0.0023 | 0.1294 ± 0.0036 | 0.0974 ± 0.0024 |
+| woods14 | 0.1848 ± 0.0063 | 0.1729 ± 0.0081 | 0.1669 ± 0.0053 | 0.1649 ± 0.0053 | 0.1360 ± 0.0036 | 0.1871 ± 0.0054 | 0.1735 ± 0.0055 | 0.1360 ± 0.0036 |
+| mazema | 0.1874 ± 0.0065 | 0.1910 ± 0.0071 | 0.1974 ± 0.0071 | 0.1990 ± 0.0083 | 0.1757 ± 0.0076 | 0.1958 ± 0.0090 | 0.1835 ± 0.0061 | 0.1611 ± 0.0029 |
+
+All ten registered paired contrasts follow, including the separate fixed-p ablation.
+Intervals are marginal and carry no multiplicity correction. Each values contrast in
+`analysis/results.json` also contains both arms' full-update and knowledge summaries
+and their complete point curves. The six `*-values-comparisons.svg` figures put its
+primary interval, knowledge curve and observed update-volume curve in the same row.
+
+**maze4**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | +0.0121 | 0.0059 | [-0.0002, +0.0245] |
+| Values tuned − Episodic ER | -0.0150 | 0.0049 | [-0.0253, -0.0047] |
+| Values shortened − Episodic ER | -0.0054 | 0.0064 | [-0.0189, +0.0081] |
+| Values tuned − HER full | -0.0271 | 0.0059 | [-0.0393, -0.0148] |
+| Values shortened − Values tuned | +0.0095 | 0.0042 | [+0.0008, +0.0183] |
+| Episodic ER − ACS2ER | +0.0061 | 0.0059 | [-0.0063, +0.0185] |
+| Episodic ER − ACS2 | -0.0208 | 0.0049 | [-0.0311, -0.0105] |
+| ACS2ER U1 − ACS2ER | +0.0029 | 0.0068 | [-0.0114, +0.0172] |
+| ACS2ER U1 − ACS2 | -0.0240 | 0.0068 | [-0.0382, -0.0098] |
+| Values p=2/3 − HER full | -0.0458 | 0.0067 | [-0.0598, -0.0317] |
+
+**maze5**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | +0.0295 | 0.0047 | [+0.0197, +0.0394] |
+| Values tuned − Episodic ER | +0.0001 | 0.0049 | [-0.0101, +0.0103] |
+| Values shortened − Episodic ER | +0.0215 | 0.0041 | [+0.0130, +0.0300] |
+| Values tuned − HER full | -0.0294 | 0.0036 | [-0.0369, -0.0220] |
+| Values shortened − Values tuned | +0.0214 | 0.0036 | [+0.0138, +0.0290] |
+| Episodic ER − ACS2ER | -0.0051 | 0.0052 | [-0.0160, +0.0058] |
+| Episodic ER − ACS2 | -0.0203 | 0.0049 | [-0.0306, -0.0100] |
+| ACS2ER U1 − ACS2ER | -0.0016 | 0.0051 | [-0.0122, +0.0090] |
+| ACS2ER U1 − ACS2 | -0.0168 | 0.0039 | [-0.0250, -0.0085] |
+| Values p=2/3 − HER full | -0.0425 | 0.0036 | [-0.0501, -0.0349] |
+
+**maze6**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | +0.0229 | 0.0048 | [+0.0127, +0.0330] |
+| Values tuned − Episodic ER | -0.0124 | 0.0042 | [-0.0211, -0.0036] |
+| Values shortened − Episodic ER | +0.0029 | 0.0044 | [-0.0062, +0.0121] |
+| Values tuned − HER full | -0.0352 | 0.0033 | [-0.0423, -0.0282] |
+| Values shortened − Values tuned | +0.0153 | 0.0040 | [+0.0070, +0.0236] |
+| Episodic ER − ACS2ER | +0.0048 | 0.0060 | [-0.0077, +0.0174] |
+| Episodic ER − ACS2 | -0.0233 | 0.0047 | [-0.0331, -0.0136] |
+| ACS2ER U1 − ACS2ER | +0.0058 | 0.0047 | [-0.0040, +0.0155] |
+| ACS2ER U1 − ACS2 | -0.0224 | 0.0044 | [-0.0316, -0.0132] |
+| Values p=2/3 − HER full | -0.0547 | 0.0042 | [-0.0635, -0.0459] |
+
+**maze7**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | +0.0195 | 0.0051 | [+0.0088, +0.0302] |
+| Values tuned − Episodic ER | -0.0137 | 0.0049 | [-0.0240, -0.0034] |
+| Values shortened − Episodic ER | +0.0070 | 0.0048 | [-0.0030, +0.0169] |
+| Values tuned − HER full | -0.0332 | 0.0037 | [-0.0409, -0.0254] |
+| Values shortened − Values tuned | +0.0206 | 0.0039 | [+0.0126, +0.0287] |
+| Episodic ER − ACS2ER | +0.0009 | 0.0035 | [-0.0064, +0.0082] |
+| Episodic ER − ACS2 | -0.0096 | 0.0043 | [-0.0186, -0.0007] |
+| ACS2ER U1 − ACS2ER | -0.0077 | 0.0040 | [-0.0161, +0.0007] |
+| ACS2ER U1 − ACS2 | -0.0183 | 0.0043 | [-0.0273, -0.0092] |
+| Values p=2/3 − HER full | -0.0601 | 0.0030 | [-0.0663, -0.0539] |
+
+**woods14**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | -0.0019 | 0.0064 | [-0.0154, +0.0115] |
+| Values tuned − Episodic ER | -0.0309 | 0.0065 | [-0.0444, -0.0174] |
+| Values shortened − Episodic ER | +0.0203 | 0.0070 | [+0.0056, +0.0350] |
+| Values tuned − HER full | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
+| Values shortened − Values tuned | +0.0512 | 0.0064 | [+0.0378, +0.0646] |
+| Episodic ER − ACS2ER | -0.0060 | 0.0089 | [-0.0247, +0.0126] |
+| Episodic ER − ACS2 | -0.0179 | 0.0080 | [-0.0346, -0.0013] |
+| ACS2ER U1 − ACS2ER | +0.0006 | 0.0093 | [-0.0189, +0.0201] |
+| ACS2ER U1 − ACS2 | -0.0113 | 0.0091 | [-0.0304, +0.0078] |
+| Values p=2/3 − HER full | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
+
+**mazema**, twenty paired seeds:
+
+| Left − right | Difference | SE | Marginal 95% t(19) interval |
+|---|---:|---:|---|
+| HER full − Episodic ER | +0.0017 | 0.0117 | [-0.0228, +0.0261] |
+| Values tuned − Episodic ER | -0.0217 | 0.0106 | [-0.0438, +0.0005] |
+| Values shortened − Episodic ER | -0.0015 | 0.0120 | [-0.0267, +0.0236] |
+| Values tuned − HER full | -0.0233 | 0.0120 | [-0.0485, +0.0019] |
+| Values shortened − Values tuned | +0.0201 | 0.0132 | [-0.0075, +0.0478] |
+| Episodic ER − ACS2ER | +0.0064 | 0.0111 | [-0.0169, +0.0297] |
+| Episodic ER − ACS2 | +0.0100 | 0.0096 | [-0.0100, +0.0300] |
+| ACS2ER U1 − ACS2ER | -0.0075 | 0.0069 | [-0.0219, +0.0069] |
+| ACS2ER U1 − ACS2 | -0.0039 | 0.0092 | [-0.0231, +0.0153] |
+| Values p=2/3 − HER full | -0.0379 | 0.0088 | [-0.0564, -0.0195] |
+
+Full HER improves primary success over episodic ER on Maze5--7 with intervals above
+zero; Maze4, Woods14 and MazeMA remain uncertain. Fixed-p values is below full on all
+six mazes. The comparison changes model update volume from three to approximately
+one full application per interaction, with slower early knowledge acquisition; it
+does not identify the value estimator's quality separately from model learning dose.
+Shortening improves the tuned values result on Maze4--7 and Woods14; MazeMA is
+uncertain. The Woods14 shortening contrast also changes selected p from 2/3 to 1/3.
+Shortened values improves over episodic ER on Maze5 and Woods14. Neither episodic
+ER nor U1 has a positive interval excluding zero against archived ACS2ER on any maze.
+
+### Exact interaction thresholds
+
+Registered thresholds are fractions reconstructed from archived final test counts.
+Both archived baselines and all six measured arms are evaluated against both thresholds.
+
+| Maze | ACS2 final mean threshold | ACS2ER final mean threshold |
+|---|---|---|
+| maze4 | 527/1620 | 92/405 |
+| maze5 | 523/2220 | 89/555 |
+| maze6 | 253/888 | 739/4440 |
+| maze7 | 1151/4320 | 259/1440 |
+| woods14 | 15/76 | 11/60 |
+| mazema | 49/180 | 193/900 |
+
+Each cell below gives the first nominal point for **ACS2 threshold / ACS2ER threshold**,
+as exact integer interactions. `null` is no crossing at a registered point; it is not
+a claim that a threshold is unreachable. The 24 archived-baseline crossings match the
+registration exactly. No interpolation or rounded-float comparison is used.
+
+| Maze | ACS2 | ACS2ER | Episodic ER | HER full | Values tuned | Values shortened | ACS2ER U1 | Values p=2/3 |
+|---|---|---|---|---|---|---|---|---|
+| maze4 | 2000000 / 300000 | null / 2000000 | null / 300000 | null / 30000 | null / null | null / null | null / 300000 | null / null |
+| maze5 | 1000000 / 300000 | null / 1000000 | null / null | null / 30000 | null / null | null / 300000 | null / 1000000 | null / null |
+| maze6 | 1000000 / 300000 | null / 100000 | null / 300000 | null / 30000 | null / null | null / 300000 | null / 300000 | null / null |
+| maze7 | 2000000 / 300000 | null / 100000 | null / 300000 | null / 30000 | null / 1000000 | null / 100000 | null / 1000000 | null / null |
+| woods14 | 100000 / 100000 | 30000 / 30000 | 4000000 / 100000 | null / 300000 | null / null | 10000 / 10000 | 30000 / 30000 | null / null |
+| mazema | 2000000 / 100000 | null / 30000 | null / 30000 | null / 10000 | null / 300000 | null / 30000 | null / 100000 | null / null |
+
+### Realized copies, model updates and knowledge
+
+The following means ± SE use the same checkpoint averaging and twenty seeds. Full
+applications divide cumulative full-step counts by actual physical interactions,
+including episode overshoot. Values applications fill the remaining replay budget.
+Original and fallback routes receive the full step. Total replay volume is three for
+episodic arms, one for U1; archived online ACS2 has one full application per step.
+
+| Maze | Arm | Realized copy share | Full applications / interaction | Knowledge |
+|---|---|---|---|---|
+| maze4 | ACS2 | — | 1.0000 ± 0.0000 | 0.7619 ± 0.0013 |
+| maze4 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8878 ± 0.0022 |
+| maze4 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8892 ± 0.0013 |
+| maze4 | HER full | 0.6672 ± 0.0003 | 3.0000 ± 0.0000 | 0.8818 ± 0.0013 |
+| maze4 | Values tuned | 0.3333 ± 0.0003 | 2.0001 ± 0.0010 | 0.8465 ± 0.0018 |
+| maze4 | Values shortened | 0.2587 ± 0.0007 | 2.2240 ± 0.0021 | 0.8537 ± 0.0023 |
+| maze4 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7674 ± 0.0017 |
+| maze4 | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0011 | 0.7674 ± 0.0017 |
+| maze5 | ACS2 | — | 1.0000 ± 0.0000 | 0.7225 ± 0.0013 |
+| maze5 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8486 ± 0.0019 |
+| maze5 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8458 ± 0.0013 |
+| maze5 | HER full | 0.6665 ± 0.0004 | 3.0000 ± 0.0000 | 0.8441 ± 0.0012 |
+| maze5 | Values tuned | 0.3343 ± 0.0003 | 1.9970 ± 0.0010 | 0.7997 ± 0.0018 |
+| maze5 | Values shortened | 0.2602 ± 0.0009 | 2.2195 ± 0.0026 | 0.8115 ± 0.0022 |
+| maze5 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7303 ± 0.0018 |
+| maze5 | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0012 | 0.7208 ± 0.0020 |
+| maze6 | ACS2 | — | 1.0000 ± 0.0000 | 0.7194 ± 0.0019 |
+| maze6 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8453 ± 0.0017 |
+| maze6 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8439 ± 0.0019 |
+| maze6 | HER full | 0.6674 ± 0.0004 | 3.0000 ± 0.0000 | 0.8455 ± 0.0021 |
+| maze6 | Values tuned | 0.3333 ± 0.0004 | 2.0000 ± 0.0013 | 0.7998 ± 0.0022 |
+| maze6 | Values shortened | 0.2648 ± 0.0010 | 2.2055 ± 0.0031 | 0.8093 ± 0.0021 |
+| maze6 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7235 ± 0.0022 |
+| maze6 | Values p=2/3 | 0.6668 ± 0.0003 | 0.9995 ± 0.0010 | 0.7181 ± 0.0023 |
+| maze7 | ACS2 | — | 1.0000 ± 0.0000 | 0.7160 ± 0.0015 |
+| maze7 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8445 ± 0.0018 |
+| maze7 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8449 ± 0.0018 |
+| maze7 | HER full | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.8426 ± 0.0021 |
+| maze7 | Values tuned | 0.3340 ± 0.0005 | 1.9979 ± 0.0016 | 0.7937 ± 0.0021 |
+| maze7 | Values shortened | 0.2625 ± 0.0008 | 2.2124 ± 0.0025 | 0.8055 ± 0.0017 |
+| maze7 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7254 ± 0.0020 |
+| maze7 | Values p=2/3 | 0.6669 ± 0.0005 | 0.9994 ± 0.0014 | 0.7162 ± 0.0019 |
+| woods14 | ACS2 | — | 1.0000 ± 0.0000 | 0.8577 ± 0.0018 |
+| woods14 | ACS2ER | — | 2.9995 ± 0.0000 | 0.9548 ± 0.0018 |
+| woods14 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9574 ± 0.0021 |
+| woods14 | HER full | 0.6679 ± 0.0004 | 3.0000 ± 0.0000 | 0.9497 ± 0.0022 |
+| woods14 | Values tuned | 0.6666 ± 0.0004 | 1.0001 ± 0.0011 | 0.8543 ± 0.0019 |
+| woods14 | Values shortened | 0.2076 ± 0.0011 | 2.3772 ± 0.0032 | 0.9327 ± 0.0027 |
+| woods14 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8636 ± 0.0017 |
+| woods14 | Values p=2/3 | 0.6666 ± 0.0004 | 1.0001 ± 0.0011 | 0.8543 ± 0.0019 |
+| mazema | ACS2 | — | 1.0000 ± 0.0000 | 0.8707 ± 0.0028 |
+| mazema | ACS2ER | — | 2.9994 ± 0.0000 | 0.9704 ± 0.0023 |
+| mazema | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9681 ± 0.0021 |
+| mazema | HER full | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.9637 ± 0.0020 |
+| mazema | Values tuned | 0.3339 ± 0.0004 | 1.9984 ± 0.0011 | 0.9361 ± 0.0027 |
+| mazema | Values shortened | 0.2194 ± 0.0012 | 2.3419 ± 0.0037 | 0.9497 ± 0.0016 |
+| mazema | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8741 ± 0.0026 |
+| mazema | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0013 | 0.8705 ± 0.0024 |
+
+Counterfactual admissibility removes copies whose goals were already reached at the
+transition start or whose transitions follow an earlier goal reach. Consequently its
+realized share is 0.208--0.265 despite requested p=1/3, and fallback originals raise
+full-step volume. Every-transition copies have nonzero already-reached and
+after-counterfactual-end composition; the sampler reports them rather than silently
+changing semantics. Route counters, done and reward composition and their original
+counterparts are retained at every point in the raw rows and analysis JSON.
+
+### Objective cost, population, memory and time
+
+Purpose costs below are objective-query counts per replay draw, averaged over points
+and twenty seeds. Scoring includes one reward and one reach query. Selection and
+provenance are reach queries; U1 forwards recorded outcomes and makes none. Logical
+memory is a lower bound independent of process peak RSS. Population is the final
+point mean ± SE; CPU is mean process CPU seconds over the twenty seeds. Woods14 fixed-p
+cost displays reused main-grid work, not an additional allocation.
+
+| Maze | Arm | Scoring / selection / provenance per draw | Final population | Final logical MiB | Mean process CPU-s | Mean peak RSS MiB |
+|---|---|---|---|---:|---:|---:|
+| maze4 | Episodic ER | 2.000 / 0.000 / 2.950 | 925.6 ± 15.5 | 0.743 | 107.2 | 8.750 |
+| maze4 | HER full | 2.000 / 0.000 / 3.752 | 924.3 ± 19.6 | 0.744 | 109.6 | 8.758 |
+| maze4 | Values tuned | 2.000 / 0.000 / 3.359 | 1013.5 ± 17.8 | 0.775 | 115.1 | 8.706 |
+| maze4 | Values shortened | 2.000 / 1.399 / 2.275 | 1030.2 ± 22.6 | 0.781 | 116.2 | 8.736 |
+| maze4 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1126.5 ± 22.8 | 1.159 | 55.5 | 8.750 |
+| maze4 | Values p=2/3 | 2.000 / 0.000 / 3.745 | 1116.8 ± 22.9 | 0.811 | 121.3 | 8.727 |
+| maze5 | Episodic ER | 2.000 / 0.000 / 4.427 | 1376.3 ± 24.1 | 0.859 | 183.3 | 8.805 |
+| maze5 | HER full | 2.000 / 0.000 / 6.083 | 1478.0 ± 27.9 | 0.896 | 218.1 | 8.832 |
+| maze5 | Values tuned | 2.000 / 0.000 / 5.299 | 1538.2 ± 27.2 | 0.916 | 200.0 | 8.799 |
+| maze5 | Values shortened | 2.000 / 2.365 / 3.428 | 1495.8 ± 24.7 | 0.901 | 196.8 | 8.820 |
+| maze5 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1769.3 ± 34.4 | 1.384 | 106.0 | 8.816 |
+| maze5 | Values p=2/3 | 2.000 / 0.000 / 6.102 | 1759.7 ± 32.9 | 0.994 | 224.7 | 8.810 |
+| maze6 | Episodic ER | 2.000 / 0.000 / 5.390 | 1512.0 ± 30.1 | 0.893 | 204.1 | 8.812 |
+| maze6 | HER full | 2.000 / 0.000 / 8.235 | 1625.1 ± 31.1 | 0.934 | 240.6 | 8.828 |
+| maze6 | Values tuned | 2.000 / 0.000 / 6.853 | 1669.2 ± 26.0 | 0.949 | 220.9 | 8.819 |
+| maze6 | Values shortened | 2.000 / 3.279 / 4.155 | 1653.8 ± 33.1 | 0.943 | 226.5 | 8.809 |
+| maze6 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1845.2 ± 31.0 | 1.411 | 112.3 | 8.810 |
+| maze6 | Values p=2/3 | 2.000 / 0.000 / 8.144 | 1843.0 ± 35.0 | 1.010 | 232.2 | 8.803 |
+| maze7 | Episodic ER | 2.000 / 0.000 / 5.392 | 1607.5 ± 34.8 | 0.927 | 224.1 | 8.815 |
+| maze7 | HER full | 2.000 / 0.000 / 8.040 | 1790.3 ± 35.2 | 0.992 | 272.3 | 8.788 |
+| maze7 | Values tuned | 2.000 / 0.000 / 6.723 | 1905.2 ± 26.4 | 1.032 | 259.8 | 8.802 |
+| maze7 | Values shortened | 2.000 / 3.213 / 4.165 | 1721.8 ± 27.0 | 0.968 | 232.8 | 8.774 |
+| maze7 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 2014.8 ± 35.0 | 1.470 | 123.4 | 8.800 |
+| maze7 | Values p=2/3 | 2.000 / 0.000 / 7.946 | 1949.8 ± 31.2 | 1.048 | 246.3 | 8.800 |
+| woods14 | Episodic ER | 2.000 / 0.000 / 9.211 | 255.4 ± 8.3 | 0.428 | 62.5 | 8.694 |
+| woods14 | HER full | 2.000 / 0.000 / 9.869 | 276.8 ± 5.7 | 0.436 | 73.0 | 8.690 |
+| woods14 | Values tuned | 2.000 / 0.000 / 9.730 | 327.9 ± 12.4 | 0.453 | 70.0 | 8.701 |
+| woods14 | Values shortened | 2.000 / 3.632 / 7.769 | 271.4 ± 10.5 | 0.434 | 65.7 | 8.688 |
+| woods14 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 305.4 ± 8.9 | 0.870 | 29.2 | 8.681 |
+| woods14 | Values p=2/3 | 2.000 / 0.000 / 9.730 | 327.9 ± 12.4 | 0.453 | 70.0 | 8.701 |
+| mazema | Episodic ER | 2.000 / 0.000 / 4.843 | 243.1 ± 10.3 | 0.457 | 33.4 | 8.650 |
+| mazema | HER full | 2.000 / 0.000 / 5.258 | 255.6 ± 9.6 | 0.461 | 37.4 | 8.654 |
+| mazema | Values tuned | 2.000 / 0.000 / 5.087 | 271.4 ± 6.3 | 0.467 | 34.9 | 8.671 |
+| mazema | Values shortened | 2.000 / 1.883 / 3.996 | 266.2 ± 6.3 | 0.465 | 35.6 | 8.667 |
+| mazema | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 286.6 ± 6.2 | 0.864 | 14.3 | 8.687 |
+| mazema | Values p=2/3 | 2.000 / 0.000 / 5.280 | 279.4 ± 7.3 | 0.470 | 33.7 | 8.671 |
+
+The largest population observed at registered points was 4164 (U1, Maze7), and full
+HER reached 4163. Maximum process peak RSS was 9048 KiB, below the 512 MiB node limit.
+These are observations at finite budgets, not limits on future population growth.
+Every point also reports train/evaluation wall time. Process CPU and training CPU
+estimates are separate from allocated CPUTimeRAW used for the budget.
+
+### Completed execution and artifact verification
+
+| Batch | Runs | Rows | Allocated CPU-s | CPU-h |
+|---|---:|---:|---:|---:|
+| tuning | 120 | 980 | 18359 | 5.0997 |
+| main-grid | 600 | 4900 | 82720 | 22.9778 |
+| control-maze4_c5_pairs | 20 | 160 | 2887 | 0.8019 |
+| control-maze5_c8_pairs | 20 | 160 | 4627 | 1.2853 |
+| control-maze6_c10_pairs | 20 | 160 | 4772 | 1.3256 |
+| control-maze7_c10_pairs | 20 | 160 | 5066 | 1.4072 |
+| control-mazema_c9_pairs | 20 | 160 | 729 | 0.2025 |
+| Earlier pilots and baseline identity regression | 48 | 392 | 5445 | 1.5125 |
+
+All 820 new attempts across 41 arrays completed with exit code zero: 120 tuning,
+600 main-grid and 100 matched controls, with 6680 physical rows. There were no
+computational failures, retries, identity mismatches or STOP. Two test-only refusals
+allocated no CPU and paused submission of the remaining suffix. The first refusal
+did not preserve stderr; the later event recorded `AssocMaxSubmitJobLimit`. Durable
+resume checks submitted only previously unsubmitted entries after queue space returned.
+The initial combined main-grid admission bound was 59.2789 CPU-hours, including all
+pilots, tuning spent, matched-control reservations and new main-grid hard limits.
+Final allocation cost including earlier pilots is **124605 s = 34.6125 CPU-hours**,
+with zero outstanding reservations. Accounting counts each allocation once, not its
+batch/extern steps again. The inherited baselines are neither reallocated nor charged.
+
+The two raw copies passed all 10040 SHA-256 checks, and terminal accounting plus every
+required identity record was independently checked on the cluster and after pulling.
+The analysis entry point reproduced selections, derived manifests, matched-control
+reuse and exact archived crossings before accepting results. Final study roots are
+`~/tu_runs/5/approved-her-study/` and `~/Desktop/tu-runs/5/approved-her-study/`; numerical
+results, primary/paired CSV tables and scientific figures live in `analysis/`. The
+Polish execution report stays there outside Git. `raw-files.sha256.json` records the
+verified raw set; the final copy manifest also covers analysis and gate evidence.
+
+Execution and analysis are tested in `experiments/grid/` and `experiments/her-variants/`.
+Acceptance has 282 Rust tests; Python gate counts are 47/7/20/13/23/13/33 for tools,
+random policy, baseline pilot, relabeling composition, grid, maze baselines and HER
+variants. P9 columns 1--7 match all five committed benchmark rows. All six workspace
+packages were cleaned before Clippy: the same 22 older warnings, none in new code.
+All workspace `src` trees, Cargo manifests and the lockfile remain byte-identical
+to the frozen measurement commit; later changes add validation tests and tooling.
+The fixed research horizon and marginal intervals support the stated comparisons;
+they do not establish convergence, a learning ceiling or performance on other tasks.
 
 ## Clippy — the determinism invariants, checked by machine
 

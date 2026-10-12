@@ -1,8 +1,11 @@
 import copy
 import math
+import json
+from pathlib import Path
 import unittest
 
-from analysis import analyze_arm, indexed, metrics, paired, update_counts
+from analysis import analyze_arm, analyze_maze, indexed, metrics, paired, update_counts
+from execution import approved
 from test_protocol import row_and_configuration
 
 
@@ -61,6 +64,34 @@ class AnalysisTests(unittest.TestCase):
         baseline=dict(row,agent='acs2',online_updates=1000,replay_updates=0)
         baseline.pop('learning_update_counts')
         self.assertEqual(update_counts(baseline),(1000,0))
+
+    def test_maze_analysis_reproduces_baseline_crossings_and_attaches_curves_to_every_values_comparison(self):
+        plan=approved(Path(__file__).with_name('plan.json'))
+        config=plan['configurations'][0]
+        fixture=json.loads((Path(__file__).resolve().parents[2]/'fixtures/pair_baseline_success_counts.json').read_text())['configurations'][0]
+        dataset={}
+        names=plan['agents']+['her_values_p2of3','acs2','acs2er']
+        template,_=row_and_configuration('her_values')
+        template.update(wall_seconds_train=1,wall_seconds_eval=1,wall_seconds_total=2)
+        for name in names:
+            data=[]
+            counts=fixture['agents']['acs2' if name=='acs2' else 'acs2er']
+            for count in counts:
+                row=copy.deepcopy(template)
+                row.update(seed=count['seed'],nominal_step=count['nominal_step'],actual_steps=count['nominal_step'])
+                row['evaluation_blocks']['test'].update(success=count['successes']/count['evaluation_pairs'],evaluation_pairs=count['evaluation_pairs'])
+                data.append(row)
+            dataset[name]=data
+        result=analyze_maze(dataset,config,plan)
+        self.assertEqual(len(result['comparisons']),10)
+        values=[pair for pair in result['comparisons'] if 'model_updates_and_knowledge' in pair]
+        self.assertEqual(len(values),5)
+        for pair in values:
+            for side in pair['model_updates_and_knowledge'].values():
+                self.assertEqual(len(side['points']),8)
+                self.assertIn('full_steps_per_environment_step',side)
+                self.assertIn('knowledge',side)
+        self.assertEqual(result['arms']['acs2']['threshold_crossings'],{'acs2_final':2000000,'acs2er_final':300000})
 
 
 if __name__ == '__main__': unittest.main()
