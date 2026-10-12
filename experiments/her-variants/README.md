@@ -73,8 +73,11 @@ after pulling. Both copies must verify before analysis.
 
 `execution.py` mechanically derives validation tuning, the selected final grid
 and any fixed-proportion controls. `grid_scope.py` accounts for every registered
-batch root, and all batches share one STOP. Operations run from an immutable
-snapshot outside the measurement clone; its hashes are checked on each node.
+batch root, and all batches share one STOP. Submission and resumption compare
+the entire manifest with this derivation, including the registered cost pilot.
+Final-grid and control derivation recomputes the saved validation selection.
+Operations run from an immutable snapshot outside the measurement clone;
+its hashes are checked on each node.
 The clone stays at `a592a5bad8bbc13d62553cc09a72748182809879`, with the approved
 musl binary SHA-256 `83ebf9a69d3d42cd8f275bab9f77f306fd25e5bcb7a665cf4771d169ab2ac3f2`.
 No rebuild is part of execution. Scheduler test-only refusals allocate no CPU;
@@ -85,6 +88,8 @@ grant and global budget again before each submission.
 objective cost, observed model update volume and exact threshold crossings.
 `analyze.py` independently verifies all node identity records, replays the tuning
 selection rule and checks manifest derivation before collecting the final data.
+Its allocation report reads every shared scope root, explicitly lists empty
+roots with zero cost and reads pilot seconds from the registration and scope.
 Where tuning selected 2/3, the fixed-proportion comparison reuses twenty-seed,
 three-block final-grid rows. Five-seed validation-only rows cannot enter it.
 `plots.py` writes scientific SVG/PNG curves and places knowledge and full updates
@@ -94,8 +99,10 @@ analysis tests otherwise use only the Python standard library.
 The differential instruments the unmodified reference with explicit RNG draws.
 It covers 1000 random populations/steps, original and copied rewards/endings,
 future/final/episode relabeling, expected/unexpected ALP, covering, marks,
-subsumption, rewards and bootstrap. It compares all classifier fields, with
-floating tolerance 1e-9 like P11. GA/PEE and overspecification are disabled;
+rewards and bootstrap. No case increments numerosity or removes a classifier;
+all 3,406 post-step classifiers have num=1. Core subsumption is covered by the
+P3/P11 tests. It compares all classifier fields, with floating tolerance 1e-9
+like P11. GA/PEE and overspecification are disabled;
 theta_i=0 excludes pyalcs's known mid-iteration deletion skip. It does not
 validate reference exploration, its exploitation learning, replay timing,
 retention distribution or population growth under a training protocol.

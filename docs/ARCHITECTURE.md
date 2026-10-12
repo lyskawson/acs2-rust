@@ -3159,15 +3159,18 @@ objective cost by scoring/selection/provenance purpose, raw trajectory logical
 bytes and replay memory. Counts are learning-step applications, including an
 RL application whose action set may be empty. Full steps divided by actual
 environment steps give observed model update volume. Every-transition values
-copies have expected volume 3*(1-p); shortening fallbacks increase it. Actual
+copies have expected volume 3p per environment step, and full steps 3(1 - p);
+shortening fallbacks increase the full-step volume. Actual
 route counts, rather than requested p, determine the reported volume.
 
 The private test-compiled HER oracle reproduces pyalcs copy rewards 0/1 and
 `done=False` and invokes the full replay step. It has no research CLI mode.
 Its 1000 single-step cases cover original and copied rewards/endings,
 future/final/episode selection, expected/unexpected ALP, covering, marks,
-subsumption, reinforcement and bootstrap, comparing complete populations with
-P11's 1e-9 tolerance. GA/PEE and overspecification are disabled; theta_i=0 excludes
+reinforcement and bootstrap, comparing complete populations with P11's 1e-9
+tolerance. No case increments numerosity or removes a classifier; all 3,406
+post-step classifiers have num=1. Core subsumption is covered by the P3/P11 tests.
+GA/PEE and overspecification are disabled; theta_i=0 excludes
 the reference deletion-skip hazard. It cannot validate the reference's
 exploration that ignored goals, exploitation learning, replay timing, retention
 distribution or long-run growth. Defect contracts, actual RNG-stream checks,

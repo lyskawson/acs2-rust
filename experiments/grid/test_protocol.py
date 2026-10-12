@@ -105,7 +105,7 @@ class SharedGridTests(unittest.TestCase):
     def test_plan_bytes_and_explicit_grid_approval_are_required(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            plan = {'stage': 'grid_pending_approval', 'seeds': list(range(42, 62))}
+            plan = json.loads((ROOT / 'experiments/maze-baselines/grid-plan.json').read_text())
             path = root / 'plan.json'
             path.write_text(json.dumps(plan))
             digest = hashlib.sha256(path.read_bytes()).hexdigest()

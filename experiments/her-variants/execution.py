@@ -6,10 +6,12 @@ import sys
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / 'grid'))
 from grid_protocol import atomic_json, load_plan
+from grid_authorization import require_derivation
 from grid_attempts import select_attempts
 from grid_identity import compare
+from identity import field_bits
 from matched_control import configurations as controls
-from protocol import AGENTS, VALUES
+from protocol import AGENTS, VALUES, pilot
 from tuning import select
 from verify import verify
 
@@ -162,3 +164,40 @@ def create_scope(plan, root):
                  accounting_since='2026-10-12', batch_roots=list(map(str, roots)))
     atomic_json(root / 'scope.json', scope)
     return scope
+
+
+def authorization_manifest(manifest, registration_path=None):
+    if manifest['stage'] == 'authorized_cost_pilot':
+        return pilot()
+    if registration_path is None:
+        raise ValueError('HER execution requires an approved registration')
+    plan = approved(registration_path)
+    root = Path(registration_path).parent
+    if manifest['stage'] == 'tuning_pending_approval':
+        result = tuning_manifest(plan)
+    else:
+        tuning, _ = catalog(root / 'tuning')
+        tuning_plan = load_plan(root / 'tuning/plan.json', (root / 'tuning/plan.sha256').read_text().strip())
+        require_derivation(tuning_plan, authorization_manifest(dict(stage='tuning_pending_approval'), registration_path))
+        selection = json.loads((root / 'selections.json').read_text())
+        if field_bits(selection) != field_bits(choose(plan, tuning)):
+            raise ValueError('saved selection differs from registered validation tuning')
+        if manifest.get('arm') == 'her_values_p2of3':
+            if len(manifest['configurations']) != 1:
+                raise ValueError('a matched control contains exactly one registered maze')
+            result = control_manifest(plan, selection, manifest['configurations'][0]['id'])
+        else:
+            result = grid_manifest(plan, selection)
+    return dict(result, experiment='her-variants', partition=plan['execution']['partition'],
+                cpu_model=plan['execution']['cpu_model'], concurrency=plan['execution']['concurrency'],
+                memory_mib=plan['forecast']['memory_mib'], phase_cpu_hour_limit=plan['phase_cpu_hour_limit'],
+                pilot_allocation_cpu_seconds=plan['forecast']['pilot_allocation_cpu_seconds'],
+                accounting_since='2026-10-12',
+                measurement_commit=plan['measurement_commit'], binary_sha256=plan['binary_sha256'], preset=plan['preset'])
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] != ['--derive-manifest']:
+        raise SystemExit('expected --derive-manifest')
+    payload = json.load(sys.stdin)
+    print(json.dumps(authorization_manifest(**payload)))

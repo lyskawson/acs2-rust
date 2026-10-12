@@ -9,27 +9,25 @@ from grid_protocol import atomic_json
 from grid_resume import resume
 from grid_scope import SACCT_FIELDS
 from submit import submission_command
+from test_authorization import changed_manifests, tuning_fixture
 
 
 class ResumeTests(unittest.TestCase):
     def fixture(self,base):
-        root=base/'grid'
+        root=base/'tuning'
         root.mkdir()
-        approval=dict(approved=True,plan_sha256='approved')
-        atomic_json(base/'approval.json',approval)
-        atomic_json(root/'approval.json',approval)
-        scope=base/'scope.json'
-        atomic_json(scope,dict(batch_roots=[str(root)],pilot_allocation_cpu_seconds=5445,
-                              authorization_sha256='approved',accounting_since='2026-10-12'))
-        plan=dict(stage='approved_grid',configurations=[dict(id=name,limits_minutes={'her_values':2}) for name in ['first','next']],
-            agents=['her_values'],seeds=list(range(42,62)),batch_size=20,memory_mib=512,
-            measurement_commit='frozen',authorization_plan=str(base/'registered.json'),authorization_sha256='approved',
-            budget_scope=str(scope),budget_scope_sha256=hashlib.sha256(scope.read_bytes()).hexdigest(),
-            pilot_allocation_cpu_seconds=5445,stop_path=str(base/'STOP.json'))
+        plan=tuning_fixture(base)
+        (root/'approval.json').write_bytes((base/'approval.json').read_bytes())
         atomic_json(root/'plan.json',plan)
         (root/'plan.sha256').write_text(hashlib.sha256((root/'plan.json').read_bytes()).hexdigest())
-        runs=[dict(configuration_id='first',agent='her_values',seed=seed,limit_seconds=120) for seed in range(42,62)]
-        atomic_json(root/'ledger.json',[dict(array_id=10,runs=runs)])
+        from submit import run_batches
+        ledger=[]
+        for index,batch in enumerate(run_batches(plan)[:-1]):
+            limit=60*max(config['limits_minutes'][agent] for config,agent,_ in batch)
+            runs=[dict(configuration_id=config['id'],agent=agent,seed=seed,limit_seconds=limit) for config,agent,seed in batch]
+            ledger.append(dict(array_id=10+index,runs=runs))
+        atomic_json(root/'ledger.json',ledger)
+        runs=ledger[0]['runs']
         atomic_json(root/'assignment-00.json',dict(measurement_repository='/clone',binary='/frozen',operations_commit='original',plan_sha256=(root/'plan.sha256').read_text(),runs=runs))
         return root
 
@@ -37,10 +35,10 @@ class ResumeTests(unittest.TestCase):
         commands=[]
         def run(command):
             commands.append(command)
-            if command[0]=='git': return 'frozen\n' if command[-1]=='HEAD' else ''
+            if command[0]=='git': return 'a592a5bad8bbc13d62553cc09a72748182809879\n' if command[-1]=='HEAD' else ''
             if command[0]=='sacct':
                 header=SACCT_FIELDS.replace(',','|')+'|\n'
-                return header+''.join(f'10_{i}|10_{i}|1|00:00:01|1|1|0|COMPLETED|0:0|node|lem-cpu-normal|a|b|\n' for i in range(20))
+                return header+''.join(f'{array}_{i}|{array}_{i}|1|00:00:01|1|1|0|COMPLETED|0:0|node|lem-cpu-normal|a|b|\n' for array in range(10,15) for i in range(20))
             if command[0]=='sshare': return '0\n'
             if command[0]=='squeue': return ''
             if '--test-only' in command:
@@ -55,11 +53,11 @@ class ResumeTests(unittest.TestCase):
             root=self.fixture(Path(temporary))
             execute,commands=self.execute()
             result=resume(root,execute,submission_command)
-            self.assertEqual(result,dict(complete=True,submitted_arrays=2,runs=40))
+            self.assertEqual(result,dict(complete=True,submitted_arrays=6,runs=120))
             self.assertEqual(sum(command[0]=='sbatch' and '--test-only' not in command for command in commands),1)
             ledger=json.loads((root/'ledger.json').read_text())
-            self.assertEqual([entry['array_id'] for entry in ledger],[10,20])
-            self.assertEqual(ledger[1]['runs'][0]['configuration_id'],'next')
+            self.assertEqual([entry['array_id'] for entry in ledger],[10,11,12,13,14,20])
+            self.assertEqual(ledger[-1]['runs'][0]['configuration_id'],'mazema_c9_pairs_p1of3')
 
     def test_test_only_rejection_records_zero_cost_and_leaves_no_submission_intent(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -68,7 +66,7 @@ class ResumeTests(unittest.TestCase):
             execute,commands=self.execute(True)
             result=resume(root,execute,submission_command)
             self.assertFalse(result['complete'])
-            self.assertEqual(len(json.loads((root/'ledger.json').read_text())),1)
+            self.assertEqual(len(json.loads((root/'ledger.json').read_text())),5)
             self.assertFalse((base/'STOP.json').exists())
             event=json.loads((base/'submission-events.jsonl').read_text())
             self.assertEqual(event['allocated_cpu_seconds'],0)
@@ -78,9 +76,31 @@ class ResumeTests(unittest.TestCase):
     def test_existing_measurement_artifacts_prevent_duplicate_runs(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=self.fixture(Path(temporary))
-            (root/'attempts/next_her_values_s42_a01/measurement/next_her_values_s42').mkdir(parents=True)
+            (root/'attempts/mazema_c9_pairs_p1of3_her_values_s42_a01/measurement/mazema_c9_pairs_p1of3_her_values_s42').mkdir(parents=True)
             execute,_=self.execute()
             with self.assertRaises(ValueError): resume(root,execute,submission_command)
+
+    def test_resumption_rederives_runs_even_when_the_child_digest_and_ledger_prefix_match(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=self.fixture(Path(temporary))
+            original=json.loads((root/'plan.json').read_text())
+            for path,changed in changed_manifests(original):
+                with self.subTest(field=path):
+                    atomic_json(root/'plan.json',changed)
+                    (root/'plan.sha256').write_text(hashlib.sha256((root/'plan.json').read_bytes()).hexdigest())
+                    execute,commands=self.execute()
+                    with self.assertRaises(ValueError): resume(root,execute,submission_command)
+                    self.assertFalse(any(command[0]=='sbatch' for command in commands))
+
+    def test_resumption_rejects_changed_allocation_limits_in_an_existing_prefix(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=self.fixture(Path(temporary))
+            ledger=json.loads((root/'ledger.json').read_text())
+            ledger[0]['runs'][0]['limit_seconds']+=60
+            atomic_json(root/'ledger.json',ledger)
+            execute,commands=self.execute()
+            with self.assertRaises(ValueError): resume(root,execute,submission_command)
+            self.assertFalse(any(command[0]=='sbatch' for command in commands))
 
 
 if __name__ == '__main__': unittest.main()

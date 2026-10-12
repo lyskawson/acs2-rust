@@ -1,8 +1,13 @@
 import copy
+import hashlib
+import json
 from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
-from execution import approved, choose, control_manifest, grid_manifest, label, references, tuning_manifest
+from execution import approved, authorization_manifest, choose, control_manifest, grid_manifest, label, references, tuning_manifest
+from grid_authorization import require_derivation
 from protocol import AGENTS, VALUES
 from submit import run_batches
 
@@ -14,6 +19,51 @@ class ExecutionTests(unittest.TestCase):
     def selection(self,plan):
         return dict(selections={config['id']:{agent:dict(proportion=2/3) for agent in VALUES}
                                 for config in plan['configurations']})
+
+    def test_authorization_recomputes_validation_selection_for_the_grid_and_matched_control(self):
+        plan=self.plan()
+        entries={}
+        for config in plan['configurations']:
+            for proportion in plan['tuning']['proportions']:
+                for agent in VALUES:
+                    for seed in plan['tuning']['seeds']:
+                        entries[config['id']+'_'+label(proportion),agent,seed]=dict(
+                            rows=[dict(agent_parameters=dict(relabeled_proportion=proportion),seed=seed,nominal_step=point,
+                                evaluation_blocks={'validation':{'success':0.3 if proportion==1/3 else 0.1}})
+                                for point in config['targets']])
+        selected=choose(plan,entries)
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            path=root/'approved-plan.json'
+            path.write_bytes(Path(__file__).with_name('plan.json').read_bytes())
+            (root/'tuning').mkdir()
+            tuning=authorization_manifest(dict(stage='tuning_pending_approval'),path)
+            (root/'tuning/plan.json').write_text(json.dumps(tuning))
+            (root/'tuning/plan.sha256').write_text(hashlib.sha256((root/'tuning/plan.json').read_bytes()).hexdigest())
+            (root/'selections.json').write_text(json.dumps(selected))
+            for manifest in [grid_manifest(plan,selected),control_manifest(plan,selected,plan['configurations'][0]['id'])]:
+                with patch('execution.catalog',return_value=(entries,{})) as catalog:
+                    expected=authorization_manifest(manifest,path)
+                    catalog.assert_called_once_with(root/'tuning')
+                require_derivation(expected,expected)
+                for field,value in [('seeds',[42]),('agents',['her_full'])]:
+                    with self.assertRaises(ValueError): require_derivation(dict(expected,**{field:value}),expected)
+                changed=copy.deepcopy(expected)
+                changed['configurations'][0]['agent_settings']['her_values']['relabeled_proportion']=0.9
+                with self.assertRaises(ValueError): require_derivation(changed,expected)
+            altered=copy.deepcopy(selected)
+            altered['selections'][plan['configurations'][0]['id']]['her_values']['proportion']=2/3
+            (root/'selections.json').write_text(json.dumps(altered))
+            with patch('execution.catalog',return_value=(entries,{})):
+                with self.assertRaisesRegex(ValueError,'saved selection'):
+                    authorization_manifest(grid_manifest(plan,altered),path)
+            (root/'selections.json').write_text(json.dumps(selected))
+            tuning['configurations'][0]['budget_steps']=1
+            (root/'tuning/plan.json').write_text(json.dumps(tuning))
+            (root/'tuning/plan.sha256').write_text(hashlib.sha256((root/'tuning/plan.json').read_bytes()).hexdigest())
+            with patch('execution.catalog',return_value=(entries,{})):
+                with self.assertRaisesRegex(ValueError,'mechanical registration'):
+                    authorization_manifest(grid_manifest(plan,selected),path)
 
     def test_tuning_derives_exactly_the_registered_validation_scope_and_batch_limits(self):
         plan=self.plan()

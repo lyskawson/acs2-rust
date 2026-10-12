@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / 'grid'))
 from analysis import analyze_maze
 from execution import APPROVED_SHA256, approved, catalog, choose, control_manifest, grid_manifest, selected_proportions
 from grid_protocol import atomic_json, load_plan
+from grid_scope import archived_snapshot
 from identity import field_bits
 from protocol import BASELINE_SHA256
 from verify import verify
@@ -29,7 +30,7 @@ def reference_resolver(study, pilots):
     return resolve
 
 
-def entries(root, resolver, save=True):
+def entries(root, resolver, save=False):
     checked = verify(root, resolver)
     values, _ = catalog(root, validate=False)
     if save:
@@ -67,6 +68,25 @@ def cost(entry, root):
                 source_directory=str(path.relative_to(Path(root))), root=str(root))
 
 
+def allocation_report(study, plan, child, checked):
+    balance = archived_snapshot(study, child)
+    expected_roots = {'tuning', 'main-grid'} | {'control-' + config['id'] for config in plan['configurations']}
+    if set(balance['batch_states']) != expected_roots:
+        raise ValueError('accounting scope differs from the registered study roots')
+    pilot_seconds = balance['pilot_allocation_cpu_seconds']
+    if pilot_seconds != plan['forecast']['pilot_allocation_cpu_seconds']:
+        raise ValueError('pilot allocation differs from the approved registration')
+    allocations = {name: int(state['spent_seconds']) for name, state in balance['batch_states'].items()}
+    for name, result in checked.items():
+        if result['allocation_cpu_seconds'] != allocations[name]:
+            raise ValueError('row verification and scope allocation accounting differ')
+    total = pilot_seconds + sum(allocations.values())
+    if total > plan['phase_cpu_hour_limit'] * 3600:
+        raise ValueError('allocated CPU-hours exceed the approved study limit')
+    return dict(allocated_cpu_seconds=total, pilot_allocated_cpu_seconds=pilot_seconds,
+                allocation_by_root=allocations)
+
+
 def collect(study, baseline, pilots):
     study, baseline, pilots = Path(study), Path(baseline), Path(pilots)
     if (study / 'STOP.json').exists():
@@ -97,9 +117,8 @@ def collect(study, baseline, pilots):
     if (baseline / 'plan.sha256').read_text().strip() != BASELINE_SHA256:
         raise ValueError('baseline archive is not the registered pair grid')
     baseline_entries, baseline_checked = entries(baseline, None, save=False)
-    phase_seconds = 5445 + sum(result['allocation_cpu_seconds'] for result in checked.values())
-    if phase_seconds > 60 * 3600:
-        raise ValueError('allocated CPU-hours exceed the approved study limit')
+    child = load_plan(study / 'tuning/plan.json', (study / 'tuning/plan.sha256').read_text().strip())
+    allocation = allocation_report(study, plan, child, checked)
     datasets, costs, reuse = {}, {}, {}
     for config in plan['configurations']:
         identifier = config['id']
@@ -122,7 +141,7 @@ def collect(study, baseline, pilots):
             datasets[identifier]['her_values_p2of3'] = [row for entry in group for row in entry['rows']]
             costs[identifier]['her_values_p2of3'] = [dict(seed=seed, **cost(entry, study / ('control-' + identifier))) for seed, entry in zip(plan['seeds'], group)]
             reuse[identifier] = dict(source='additional fixed-proportion control', seeds=plan['seeds'], evaluation_blocks=['training', 'validation', 'test'], additional_runs=20)
-    return plan, datasets, costs, selected, checked, reuse, phase_seconds
+    return plan, datasets, costs, selected, checked, reuse, allocation
 
 
 def write_tables(destination, results):
@@ -143,10 +162,10 @@ def write_tables(destination, results):
 
 
 def analyze(study, baseline, pilots, destination):
-    plan, datasets, costs, selections, verification, reuse, seconds = collect(study, baseline, pilots)
+    plan, datasets, costs, selections, verification, reuse, allocation = collect(study, baseline, pilots)
     configs = [analyze_maze(datasets[config['id']], config, plan) for config in plan['configurations']]
-    results = dict(approved_plan_sha256=APPROVED_SHA256, allocated_cpu_seconds=seconds,
-                   pilot_allocated_cpu_seconds=5445, selected_parameters=selections,
+    results = dict(approved_plan_sha256=APPROVED_SHA256, **allocation,
+                   selected_parameters=selections,
                    control_sources=reuse, configurations=configs, costs=costs,
                    verification={name: {key: checked[key] for key in ['runs','rows','allocation_cpu_seconds']} for name,checked in verification.items()},
                    horizon='registered finite 2M/4M interactions; no convergence claim',

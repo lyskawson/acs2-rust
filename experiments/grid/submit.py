@@ -6,27 +6,13 @@ import subprocess
 import time
 
 from collect import outside_repository
-from grid_protocol import accounting, allocation_rows, atomic_json, load_plan, require_budget, seconds
+from grid_authorization import require_authorization
+from grid_protocol import accounting, allocation_rows, atomic_json, require_budget, seconds
 from grid_scope import SACCT_FIELDS, snapshot, stop_path, verify_operations
 
 
 def execute(command):
     return subprocess.check_output(command, text=True, stderr=subprocess.STDOUT)
-
-
-def require_authorization(root, plan, digest, approval_path=None):
-    if plan['stage'] == 'authorized_cost_pilot' and plan['seeds'] == [42]:
-        return
-    if plan['stage'] not in ('grid_pending_approval', 'approved_grid', 'tuning_pending_approval'):
-        raise ValueError('superseded or unsupported experiment stage')
-    approval = json.loads(Path(approval_path or root / 'approval.json').read_text())
-    authorized_digest = digest
-    if 'authorization_plan' in plan:
-        registered = Path(plan['authorization_plan'])
-        authorized_digest = plan['authorization_sha256']
-        load_plan(registered, authorized_digest)
-    if approval.get('plan_sha256') != authorized_digest or approval.get('approved') is not True:
-        raise ValueError('grid requires explicit approval of these plan bytes')
 
 
 def shared_reservation(queue):
@@ -75,10 +61,10 @@ def prepare(root, manifest, repo, approval=None):
     return plan, digest, binary
 
 
-def balance(plan, ledger):
+def balance(plan, ledger, executor=execute):
     if 'budget_scope' in plan:
-        return snapshot(plan, execute)
-    raw = execute(['sacct', '--array', '-S', plan.get('accounting_since', '2026-10-10'), '-j',
+        return snapshot(plan, executor)
+    raw = executor(['sacct', '--array', '-S', plan.get('accounting_since', '2026-10-10'), '-j',
                    ','.join(str(entry['array_id']) for entry in ledger), '-P', '--format=' + SACCT_FIELDS]) if ledger else SACCT_FIELDS.replace(',', '|') + '|\n'
     return accounting(ledger, allocation_rows(raw))
 
@@ -109,16 +95,17 @@ def submit(root, manifest, repo, approval=None):
     if root.exists():
         raise ValueError('batch already exists; reconcile instead of resubmitting')
     preview = json.loads(Path(manifest).read_text())
+    require_authorization(root, preview, hashlib.sha256(Path(manifest).read_bytes()).hexdigest(), approval)
     preview_batches = run_batches(preview)
     preview_limits = sum(max(config['limits_minutes'][agent] for config, agent, _ in batch) * 60 * len(batch)
                          for batch in preview_batches)
-    require_budget(preview['pilot_allocation_cpu_seconds'], balance(preview, []), preview_limits,
+    require_budget(preview['pilot_allocation_cpu_seconds'], balance(preview, [], execute), preview_limits,
                    preview['phase_cpu_hour_limit'])
     plan, digest, binary = prepare(root, Path(manifest), repo, approval)
     batches = run_batches(plan)
     remaining = sum(max(config['limits_minutes'][agent] for config, agent, _ in batch) * 60 * len(batch)
                     for batch in batches)
-    require_budget(plan['pilot_allocation_cpu_seconds'], balance(plan, []), remaining,
+    require_budget(plan['pilot_allocation_cpu_seconds'], balance(plan, [], execute), remaining,
                    plan['phase_cpu_hour_limit'])
     ledger, dependencies = [], list(plan.get('initial_dependencies', []))
     for number, batch in enumerate(batches):
@@ -135,10 +122,10 @@ def submit(root, manifest, repo, approval=None):
         assignment = root / f'assignment-{number:02d}.json'
         atomic_json(assignment, dict(measurement_repository=str(repo), binary=str(binary), operations_commit=plan.get('operations_commit', plan['measurement_commit']),
                                     plan_sha256=digest, runs=runs))
-        state = balance(plan, ledger)
+        state = balance(plan, ledger, execute)
         bound = require_budget(plan['pilot_allocation_cpu_seconds'], state, remaining, plan['phase_cpu_hour_limit'])
         grant_text = execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n'])
-        queue = execute(['squeue', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
+        queue = execute(['squeue', '--array', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
         if float(grant_text.strip()) + shared_reservation(queue) + remaining > 15_000 * 3600:
             raise ValueError('shared grant cannot cover queue plus new limits')
         command = submission_command(root, assignment, limit, len(runs), plan['concurrency'], plan['memory_mib'], dependencies,

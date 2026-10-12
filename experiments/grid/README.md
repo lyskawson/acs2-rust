@@ -10,8 +10,17 @@ plan bytes and hash, binary/source identity, one submission intent per array,
 grant usage, shared queue commitment, `sbatch --test-only` and submission reply.
 It checks pilot + used + reserved + new allocation limits against the manifest's
 CPU-hour limit. An existing root or unresolved intent needs investigation, never
-blind resubmission. Cost pilots use seed 42. A grid requires an explicit approval
-file matching the resolved plan hash. No grid is authorized by its manifest alone.
+blind resubmission. A cost pilot must equal its experiment's registered pilot
+definition and needs no separate approval. A grid requires an explicit approval
+file matching the registration hash. Submission and resumption invoke the
+experiment's own derivation and compare complete configurations, agents, seeds,
+proportions, budgets, points and limits before calling the scheduler. HER grid
+and control derivation also recomputes saved choices from verified validation
+tuning. Unknown experiments or additional run fields are refused. Shared grant
+reservation expands every queued array element with `squeue --array`.
+Operations snapshots preserve the repository-relative `experiments/` and
+`fixtures/` layout, including each experiment's derivation modules and immutable
+registration files, so authorization uses the same definitions outside a checkout.
 
 A pilot is one array; a grid has one array per configuration, chained with
 `afterok`. Each array uses 20–40 concurrent single-CPU jobs, no host pinning,
@@ -37,6 +46,8 @@ attempts must match the completion hashes of all four raw artifacts. Pull every
 file without deletion after completion, retain allocation-only `sacct` accounting, and verify
 raw rows before analysis. Training/evaluation CPU attribution is an estimate;
 allocation CPU and process CPU are reported separately.
+Archived scope accounting includes every root once, explicitly records zero
+for empty roots and takes pilot cost from the registered scope.
 
 ```bash
 python3 -B -m unittest discover -s experiments/grid -p 'test_*.py'

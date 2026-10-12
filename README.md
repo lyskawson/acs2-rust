@@ -279,8 +279,10 @@ queue horizon is April 2027.
 New learning agents live in `acs2-agents`, outside `acs2-core`, with one module directory
 per family and variants within it. Shared mechanisms stay in shared crates. The original
 ACS2 and ACS2ER remain in core while its public API supports the MPX chain. The HER
-experiment is registered in `experiments/her-variants/`; its stage-one costed plan requires
-approval before tuning or the final grid.
+experiment is complete: validation tuning, the twenty-seed grid and matched-proportion
+controls used 34.6125 of sixty CPU-hours. Its registration and analysis tools are in
+`experiments/her-variants/`; [hindsight copy updates and held-pair replay results](docs/ARCHITECTURE.md#hindsight-copy-updates-and-held-pair-replay-results)
+document the update rules, comparisons and finite measurement horizon.
 
 `baseline/` pinned Python reference · `tools/` parsing and plotting (a **separate** Python
 project, so plotting deps never perturb the pinned baseline) · `slurm/` cluster scripts ·

@@ -4,8 +4,8 @@ import subprocess
 import time
 
 from grid_protocol import atomic_json, load_plan, require_budget
-from grid_scope import snapshot, stop_path, verify_operations
-from submit import run_batches, shared_reservation
+from grid_scope import stop_path, verify_operations
+from submit import balance, require_authorization, run_batches, shared_reservation
 
 
 def resume(root, execute, command_builder):
@@ -15,11 +15,11 @@ def resume(root, execute, command_builder):
     if stop_path(root, plan).exists():
         raise ValueError('shared STOP prevents resumption')
     verify_operations(plan)
-    approval = json.loads((root / 'approval.json').read_text())
-    if approval != json.loads((Path(plan['authorization_plan']).parent / 'approval.json').read_text()) or not approval['approved']:
-        raise ValueError('resumption requires the same explicit approval')
-    if approval['plan_sha256'] != plan['authorization_sha256']:
-        raise ValueError('resumption approval has a different plan digest')
+    require_authorization(root, plan, digest)
+    if 'authorization_plan' in plan and plan['stage'] != 'authorized_cost_pilot':
+        approval = json.loads((root / 'approval.json').read_text())
+        if approval != json.loads((Path(plan['authorization_plan']).parent / 'approval.json').read_text()):
+            raise ValueError('resumption requires the same explicit approval')
     ledger = json.loads((root / 'ledger.json').read_text())
     batches = run_batches(plan)
     if len(ledger) > len(batches):
@@ -27,7 +27,8 @@ def resume(root, execute, command_builder):
     for entry, batch in zip(ledger, batches):
         actual = [(run['configuration_id'], run['agent'], run['seed']) for run in entry['runs']]
         expected = [(config['id'], agent, seed) for config, agent, seed in batch]
-        if actual != expected:
+        limit = 60 * max(config['limits_minutes'][agent] for config, agent, _ in batch)
+        if actual != expected or any(run['limit_seconds'] != limit for run in entry['runs']):
             raise ValueError('submitted batches differ from the registered prefix')
     origin = json.loads((root / 'assignment-00.json').read_text())
     repo = origin['measurement_repository']
@@ -35,7 +36,7 @@ def resume(root, execute, command_builder):
         raise ValueError('frozen measurement clone differs')
     remaining = sum(len(batch) * 60 * max(config['limits_minutes'][agent] for config, agent, _ in batch)
                     for batch in batches[len(ledger):])
-    require_budget(5445, snapshot(plan, execute), remaining, 60)
+    require_budget(plan['pilot_allocation_cpu_seconds'], balance(plan, ledger, execute), remaining, plan['phase_cpu_hour_limit'])
     for number in range(len(ledger), len(batches)):
         if stop_path(root, plan).exists():
             raise ValueError('shared STOP prevents another submission')
@@ -56,13 +57,13 @@ def resume(root, execute, command_builder):
         if assignment.exists() and json.loads(assignment.read_text()) != payload:
             raise ValueError('prepared assignment differs from the registered remaining scope')
         atomic_json(assignment, payload)
-        state = snapshot(plan, execute)
-        bound = require_budget(5445, state, remaining, 60)
+        state = balance(plan, ledger, execute)
+        bound = require_budget(plan['pilot_allocation_cpu_seconds'], state, remaining, plan['phase_cpu_hour_limit'])
         grant = execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n'])
         queue = execute(['squeue', '--array', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
         if float(grant.strip()) + shared_reservation(queue) + remaining > 15000 * 3600:
             raise ValueError('shared grant cannot cover remaining reservations')
-        command = command_builder(root, assignment, limit, len(runs), 20, plan['memory_mib'],
+        command = command_builder(root, assignment, limit, len(runs), plan['concurrency'], plan['memory_mib'],
                                   [ledger[-1]['array_id']], plan.get('job_name', 'tu-her-variants'))
         event = dict(event='resumption_preflight', assignment=number, command=command, balance=state,
                      bound_seconds=bound, new_limit_seconds=len(runs) * limit * 60,

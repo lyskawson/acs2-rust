@@ -5,10 +5,37 @@ import tempfile
 import unittest
 
 from grid_identity import verify_references
-from grid_scope import SACCT_FIELDS, snapshot, stop_path, verify_operations
+from grid_scope import SACCT_FIELDS, archived_snapshot, snapshot, stop_path, verify_operations
 
 
 class ScopeTests(unittest.TestCase):
+    def test_archived_accounting_includes_unread_roots_and_explicit_zero_roots_with_registered_pilots(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base=Path(temporary)
+            names=['tuning','main-grid','control-needed','control-reused','empty','not-created']
+            scope=dict(batch_roots=['/registered/study/'+name for name in names],
+                       authorization_sha256='approved',pilot_allocation_cpu_seconds=137)
+            path=base/'scope.json'
+            path.write_text(json.dumps(scope))
+            plan=dict(budget_scope='/registered/study/scope.json',
+                      budget_scope_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                      authorization_sha256='approved',pilot_allocation_cpu_seconds=137)
+            for index,name in enumerate(names[:4]):
+                root=base/name
+                root.mkdir()
+                (root/'ledger.json').write_text(json.dumps([dict(array_id=index+10,runs=[dict(limit_seconds=100)])]))
+                (root/'accounting.psv').write_text(SACCT_FIELDS.replace(',','|')+'|\n'+
+                    f'{index+10}_0|{index+10}_0|{index+1}|00:00:01|1|1|0|COMPLETED|0:0|node|lem-cpu-normal|a|b|\n')
+            (base/'empty').mkdir()
+            (base/'empty/ledger.json').write_text('[]')
+            result=archived_snapshot(base,plan)
+            self.assertEqual(result['spent_seconds'],10)
+            self.assertEqual(result['pilot_allocation_cpu_seconds'],137)
+            self.assertEqual(result['reserved_seconds'],0)
+            self.assertEqual(set(result['batch_states']),set(names))
+            for name in names[4:]:
+                self.assertEqual(result['batch_states'][name],dict(spent_seconds=0,reserved_seconds=0))
+
     def test_accounting_counts_all_roots_once_and_missing_future_roots_reserve_nothing(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary)
