@@ -219,7 +219,14 @@ fn full_reference_has_fixed_proportion_and_shortened_variant_uses_counterfactual
         let agent = her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), variant, rng(1), rng(7));
         let learner = agent.learner();
         let sampler = learner.sampler().configuration();
-        assert_eq!(sampler.relabeled_proportion, variant.proportion());
+        assert_eq!(
+            sampler.relabeled_proportion.to_bits(),
+            match variant {
+                her::Variant::Full => (2.0_f64 / 3.0).to_bits(),
+                her::Variant::Values { proportion }
+                | her::Variant::ValuesShortened { proportion } => proportion.to_bits(),
+            }
+        );
         assert_eq!(
             sampler.truncation,
             learner.replay_configuration().truncation
@@ -368,8 +375,22 @@ fn values_step_preserves_all_model_fields_and_randomness_but_full_step_can_creat
 
 #[test]
 fn values_bootstrap_uses_the_same_next_goal_and_done_zeroes_it() {
-    let mut population = conditioned_population();
-    let before = population.get(3).clone();
+    let mut rules = vec![];
+    for (state, desired, action, reward, quality) in [
+        (0, 9, 1, 100.0, 0.5),
+        (1, 9, 0, 600.0, 0.8),
+        (1, 7, 0, 4000.0, 1.0),
+    ] {
+        let mut classifier = Classifier::general(Some(action), &config());
+        classifier.condition.symbols = [Symbol::Token(state), Symbol::Token(desired)];
+        classifier.effect.symbols[0] = Symbol::Token(state + 1);
+        classifier.r = reward;
+        classifier.q = quality;
+        rules.push(classifier);
+    }
+    let mut population = Population::from_classifiers(rules);
+    let before = population.get(0).clone();
+    let untouched = format!("{:?}", &population.classifiers()[1..]);
     let sample = ReplaySample {
         state: p([0, 9]),
         next_state: p([1, 9]),
@@ -378,13 +399,16 @@ fn values_bootstrap_uses_the_same_next_goal_and_done_zeroes_it() {
         done: false,
     };
     let cfg = config();
-    let bootstrap = before.fitness();
+    assert_eq!(population.form_match_set(&sample.state), [0]);
+    assert_eq!(population.form_match_set(&sample.next_state), [1]);
+    let bootstrap: f64 = 480.0;
+    assert_eq!(population.get(1).fitness().to_bits(), bootstrap.to_bits());
     values_learning_step(&mut population, &cfg, &sample);
     assert_eq!(
-        population.get(3).r.to_bits(),
+        population.get(0).r.to_bits(),
         (before.r + cfg.beta * (cfg.gamma * bootstrap - before.r)).to_bits()
     );
-    let previous = population.get(3).r;
+    let previous = population.get(0).r;
     values_learning_step(
         &mut population,
         &cfg,
@@ -394,9 +418,10 @@ fn values_bootstrap_uses_the_same_next_goal_and_done_zeroes_it() {
         },
     );
     assert_eq!(
-        population.get(3).r.to_bits(),
+        population.get(0).r.to_bits(),
         (previous + cfg.beta * -previous).to_bits()
     );
+    assert_eq!(format!("{:?}", &population.classifiers()[1..]), untouched);
     let random = rng(1);
     assert_eq!(random.capture_state().unwrap().stream, 1);
 }

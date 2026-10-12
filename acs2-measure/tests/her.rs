@@ -1,20 +1,181 @@
-use acs2_agents::replay::EpisodicAgent;
+use acs2_agents::replay::{EpisodicAgent, EpisodicReplay};
 use acs2_agents::{er_episodic, her};
 use acs2_core::agents::acs2er::Acs2ErAgent;
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::representation::{
+    classifier::Classifier, perception::Perception, population::Population, symbol::Symbol,
+};
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::maze::geometries::pyalcs::MAZE4;
 use acs2_measure::agents::{episodic_configuration, DiagnosticAdapter, EpisodicGoalAgent};
 use acs2_measure::pair_protocol::MazePairDistributions;
 use acs2_measure::runner::{
-    assert_protocol_evaluation_read_only, run_protocol_with_sink, AgentKind, CoreAgent, Preset,
-    RunMetadata, RunSettings,
+    assert_protocol_evaluation_read_only, run_protocol_with_sink, AgentKind, CoreAgent, GoalAgent,
+    Preset, RunMetadata, RunSettings,
 };
 use serde_json::Value;
 
 fn random(stream: u64) -> ChaChaRandomSource {
     ChaChaRandomSource::from_seed_and_stream(42, stream)
+}
+
+struct EvaluationRandom;
+
+impl RandomSource for EvaluationRandom {
+    fn gen_bool(&mut self, _: f64) -> bool {
+        panic!("greedy evaluation must not draw an epsilon coin")
+    }
+    fn gen_unit(&mut self) -> f64 {
+        panic!("greedy evaluation needs no unit draw")
+    }
+    fn gen_range(&mut self, bound: usize) -> usize {
+        assert!(bound > 0);
+        0
+    }
+}
+
+fn check_greedy_evaluation<A>(mut agent: A)
+where
+    A: EpisodicAgent<
+        1,
+        1,
+        2,
+        PolicyRandom = ChaChaRandomSource,
+        SamplerRandom = ChaChaRandomSource,
+    >,
+{
+    let config = Preset::thesis().config(2);
+    assert_eq!(config.epsilon.to_bits(), 0.8_f64.to_bits());
+    let mut rules = vec![];
+    for desired in [7, 9] {
+        for action in [0, 1] {
+            let mut classifier = Classifier::general(Some(action), &config);
+            classifier.condition.symbols[1] = Symbol::Token(desired);
+            classifier.effect.symbols[0] = Symbol::Token(1);
+            classifier.r = if (desired == 7 && action == 0) || (desired == 9 && action == 1) {
+                100.0
+            } else {
+                1.0
+            };
+            rules.push(classifier);
+        }
+    }
+    *agent.learner_mut() = EpisodicReplay::new(
+        config,
+        agent.learner().replay_configuration(),
+        agent.learner().sampler().configuration(),
+        agent.learner().copy_update(),
+        random(1),
+        random(7),
+    )
+    .with_population(Population::from_classifiers(rules));
+    let measured = EpisodicGoalAgent(agent);
+    let before = measured.0.learner().snapshot();
+    for (desired, action) in [(7, 0), (9, 1)] {
+        let state = Perception {
+            symbols: [Symbol::Token(0), Symbol::Token(desired)],
+        };
+        assert_eq!(
+            measured.eval_action(&state, &mut EvaluationRandom).0,
+            action
+        );
+    }
+    assert_eq!(measured.0.learner().snapshot(), before);
+}
+
+#[test]
+fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
+    let preset = Preset::thesis();
+    check_greedy_evaluation(er_episodic::Agent::<1, 1, 2, _, _>::new(
+        preset.config(2),
+        episodic_configuration(preset),
+        random(1),
+        random(7),
+    ));
+    for variant in [
+        her::Variant::Full,
+        her::Variant::Values {
+            proportion: 2.0 / 3.0,
+        },
+        her::Variant::ValuesShortened {
+            proportion: 2.0 / 3.0,
+        },
+    ] {
+        check_greedy_evaluation(her::Agent::<1, 1, 2, _, _>::new(
+            preset.config(2),
+            episodic_configuration(preset),
+            variant,
+            random(1),
+            random(7),
+        ));
+    }
+}
+
+#[test]
+fn diagnostic_u1_performs_exactly_one_replay_per_environment_step() {
+    let preset = Preset::thesis();
+    assert_eq!(
+        acs2_agents::acs2er_u1::DiagnosticConfiguration {
+            capacity: preset.replay_capacity,
+            warmup: preset.replay_warmup,
+        }
+        .replay()
+        .samples_number,
+        1
+    );
+    let distributions =
+        MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
+    run_protocol_with_sink::<_, _, 8, 2, 10>(
+        &distributions.protocol(),
+        AgentKind::Acs2ErU1,
+        42,
+        &[20, 60, 100],
+        &RunMetadata::test("test"),
+        RunSettings {
+            evaluate_points: false,
+            capture_final_state: false,
+        },
+        &mut |row| {
+            let steps = row["actual_steps"].as_u64().unwrap();
+            assert_eq!(row["match_formations_train"], 4 * steps);
+            assert_eq!(row["replay_updates"], steps);
+        },
+    );
+}
+
+#[test]
+fn her_factory_uses_sampler_stream_seven_independently_of_agent_stream() {
+    let distributions =
+        MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
+    for kind in [
+        AgentKind::ErEpisodic,
+        AgentKind::HerFull,
+        AgentKind::HerValues {
+            proportion: 2.0 / 3.0,
+        },
+        AgentKind::HerValuesShortened {
+            proportion: 2.0 / 3.0,
+        },
+    ] {
+        let (_, snapshot) = run_protocol_with_sink::<_, _, 8, 2, 10>(
+            &distributions.protocol(),
+            kind,
+            42,
+            &[20],
+            &RunMetadata::test("test"),
+            RunSettings {
+                evaluate_points: false,
+                capture_final_state: true,
+            },
+            &mut |_| {},
+        )
+        .unwrap();
+        let sampler_random = snapshot.rsplit('|').nth(2).unwrap();
+        let agent_random = snapshot.rsplit('|').nth(4).unwrap();
+        assert!(sampler_random.contains("stream: 7,"), "{sampler_random}");
+        assert!(agent_random.contains("stream: 1,"), "{agent_random}");
+    }
 }
 
 #[test]
@@ -268,6 +429,86 @@ fn pair_baselines_reproduce_archived_seed42_learning_fields() {
                 &row, expected,
                 "{} {}",
                 configuration["task"], configuration["agent"]
+            );
+        }
+    }
+}
+
+fn floating_field_bits(value: &Value) -> Value {
+    match value {
+        Value::Number(number) if number.is_f64() => {
+            Value::String(format!("f64:{:016x}", number.as_f64().unwrap().to_bits()))
+        }
+        Value::Array(values) => Value::Array(values.iter().map(floating_field_bits).collect()),
+        Value::Object(values) => Value::Object(
+            values
+                .iter()
+                .map(|(key, value)| (key.clone(), floating_field_bits(value)))
+                .collect(),
+        ),
+        _ => value.clone(),
+    }
+}
+
+#[test]
+fn new_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
+    let oracle: Value =
+        serde_json::from_str(include_str!("../../fixtures/her_pair_regression.json")).unwrap();
+    assert_eq!(oracle["configurations"].as_array().unwrap().len(), 30);
+    for configuration in oracle["configurations"].as_array().unwrap() {
+        let task = configuration["task"].as_str().unwrap();
+        let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
+            acs2_envs::roles::ResearchTask::named(task).unwrap()
+        else {
+            unreachable!()
+        };
+        let distributions = MazePairDistributions::<Coordinates, 2>::registered(
+            task,
+            geometry,
+            configuration["cap"].as_u64().unwrap() as u32,
+            "coordinates",
+        );
+        let kind = match configuration["agent"].as_str().unwrap() {
+            "er_episodic" => AgentKind::ErEpisodic,
+            "her_full" => AgentKind::HerFull,
+            "her_values" => AgentKind::HerValues {
+                proportion: 2.0 / 3.0,
+            },
+            "her_values_shortened" => AgentKind::HerValuesShortened {
+                proportion: 2.0 / 3.0,
+            },
+            "acs2er_u1" => AgentKind::Acs2ErU1,
+            _ => unreachable!(),
+        };
+        let expected = configuration["rows"].as_array().unwrap();
+        let mut actual = Vec::new();
+        run_protocol_with_sink::<_, _, 8, 2, 10>(
+            &distributions.protocol(),
+            kind,
+            42,
+            &[1000, 3000],
+            &RunMetadata {
+                record_starts: false,
+                ..RunMetadata::test("test")
+            },
+            RunSettings {
+                evaluate_points: true,
+                capture_final_state: false,
+            },
+            &mut |row| actual.push(row),
+        );
+        assert_eq!(actual.len(), expected.len());
+        for (mut row, pinned) in actual.into_iter().zip(expected) {
+            for key in oracle["excluded"].as_array().unwrap() {
+                row.as_object_mut().unwrap().remove(key.as_str().unwrap());
+            }
+            assert_eq!(
+                &floating_field_bits(&row),
+                pinned,
+                "{} {} at {}",
+                task,
+                configuration["agent"],
+                row["nominal_step"]
             );
         }
     }
