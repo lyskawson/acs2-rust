@@ -6,6 +6,8 @@ import sys
 
 from grid_protocol import atomic_json, load_plan, seconds, stop_phase
 from grid_attempts import select_attempts
+from grid_scope import stop_path, verify_operations
+from grid_identity import verify_references
 
 
 def allocation_fields(details, job_id, array_id, task_id):
@@ -21,11 +23,16 @@ def allocation_fields(details, job_id, array_id, task_id):
 
 def main():
     root, assignment, index = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3])
-    if (root / 'STOP.json').exists():
+    active_stop = root / 'STOP.json'
+    if active_stop.exists():
         raise SystemExit('phase stopped; no measurement started')
     try:
         assignments = json.loads(assignment.read_text())
         plan = load_plan(root / 'plan.json', assignments['plan_sha256'])
+        active_stop = stop_path(root, plan)
+        if active_stop.exists():
+            raise SystemExit('study stopped; no measurement started')
+        verify_operations(plan)
         entry = assignments['runs'][index]
         repo = Path(assignments['measurement_repository'])
         commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
@@ -54,7 +61,7 @@ def main():
                         measurement_commit=commit, operations_commit=assignments['operations_commit'],
                         plan_sha256=assignments['plan_sha256'], first_row_timeout_seconds=60,
                         process_timeout_seconds=timeout, allocation_limit_seconds=limit,
-                        stop_path=str(root / 'STOP.json'))
+                        stop_path=str(active_stop))
         manifests = output.parent / 'resolved-manifests'
         manifests.mkdir(exist_ok=True)
         path = manifests / f"{config['id']}_{entry['agent']}_s{entry['seed']}.json"
@@ -65,10 +72,14 @@ def main():
         result = subprocess.run(command)
         if result.returncode:
             raise ValueError(f'collector exited {result.returncode}')
+        rows = [json.loads(line) for line in (root / entry['relative_directory'] / 'rows.jsonl').read_text().splitlines()]
+        identities = verify_references(plan, entry, rows)
+        atomic_json(root / entry['relative_directory'] / 'identity-checks.json', identities)
         ledger = json.loads((root / 'ledger.json').read_text())
         select_attempts(root, ledger, config)
     except BaseException as error:
-        stop_phase(root / 'STOP.json', {'error': str(error), 'job': os.environ.get('SLURM_JOB_ID'), 'assignment': str(assignment), 'index': index})
+        if not active_stop.exists():
+            stop_phase(active_stop, {'error': str(error), 'job': os.environ.get('SLURM_JOB_ID'), 'assignment': str(assignment), 'index': index})
         raise
 
 

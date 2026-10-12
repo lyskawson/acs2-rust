@@ -3,7 +3,7 @@ import math
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'grid'))
+sys.path.append(str(Path(__file__).resolve().parents[1] / 'grid'))
 from grid_protocol import require_budget
 from protocol import MATCHED_CONTROL, VALUES
 

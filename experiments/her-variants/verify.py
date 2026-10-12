@@ -4,13 +4,14 @@ import json
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'grid'))
+sys.path.append(str(Path(__file__).resolve().parents[1] / 'grid'))
 from collect import validate_row
 from grid_attempts import select_attempts
 from grid_protocol import allocation_rows, load_plan, TERMINAL
+from grid_identity import verify_references
 
 
-def verify(root):
+def verify(root, reference_resolver=None):
     root = Path(root)
     plan = load_plan(root / 'plan.json', (root / 'plan.sha256').read_text().strip())
     ledger = json.loads((root / 'ledger.json').read_text())
@@ -39,6 +40,11 @@ def verify(root):
                 validate_row(row, config, agent, seed, plan['measurement_commit'], target)
                 if row['preset'] != plan['preset'] or row['cpu_model'] != plan['cpu_model']:
                     raise ValueError('row preset or hardware differs')
+            if 'identity_references' in plan:
+                entry = dict(configuration_id=config['id'], agent=agent, seed=seed)
+                checks = verify_references(plan, entry, rows, reference_resolver)
+                if json.loads((path / 'identity-checks.json').read_text()) != checks:
+                    raise ValueError('node identity-check record differs from independent verification')
             rows_count += len(rows)
             completion = json.loads((path / 'completion.json').read_text())
             record = known[f"{attempt['array_id']}_{attempt['task_id']}"]
@@ -49,6 +55,8 @@ def verify(root):
             names = ['rows.jsonl','resources.jsonl','cpu_samples.csv','launch.json','completion.json']
             if config.get('row_arm'):
                 names.append('binary-rows.jsonl')
+            if 'identity_references' in plan:
+                names.append('identity-checks.json')
             for name in names:
                 file = path / name
                 hashes[str(file.relative_to(root))] = hashlib.sha256(file.read_bytes()).hexdigest()

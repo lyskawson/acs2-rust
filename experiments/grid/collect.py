@@ -172,6 +172,8 @@ def run(args):
         trace.write("elapsed_seconds,cpu_seconds,peak_rss_kib\n")
         try:
             while True:
+                if grid and Path(manifest['stop_path']).exists():
+                    raise RuntimeError('shared study STOP prevents further measurement')
                 now = time.monotonic() - started
                 exited = process.poll() is not None
                 sample = process_sample(process.pid)
