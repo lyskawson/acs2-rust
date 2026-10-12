@@ -8,7 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'grid'))
 from collect import validate_row
 from row_schema import evaluation_blocks
 from submit import run_batches
-from protocol import AGENTS, PROPORTIONS, VALUES, configurations, fit_forecast, forecast, pilot, select_proportion, study
+from matched_control import admit, configurations as control_configurations, reservation_seconds
+from protocol import AGENTS, MATCHED_CONTROL, PROPORTIONS, VALUES, configurations, fit_forecast, forecast, pilot, select_proportion, study
+from thresholds import THRESHOLDS
 
 
 def costs(seconds=40):
@@ -66,13 +68,14 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ValueError): select_proportion(dict(zip(PROPORTIONS,[float('nan'),0.3,0.2])))
 
     def test_final_grid_cannot_shrink_agents_mazes_or_seeds(self):
-        thresholds = {c['id']:0.2 for c in configurations()}
+        thresholds = copy.deepcopy(THRESHOLDS)
         plan = study(thresholds,costs(),1000)
         self.assertEqual(plan['final_grid']['runs'], 600)
         self.assertEqual(plan['seeds'], list(range(42,62)))
         self.assertEqual(plan['tuning']['evaluation_blocks'], ['validation'])
         self.assertEqual(plan['analysis']['thresholds'], thresholds)
-        self.assertEqual(len(plan['analysis']['comparisons']), 9)
+        self.assertEqual(len(plan['analysis']['comparisons']), 10)
+        with self.assertRaises(ValueError): study({c['id']:0.2 for c in configurations()},costs(),1000)
 
     def test_budget_counts_pilots_tuning_grid_and_allocation_overhead(self):
         result = forecast(costs(),1000)
@@ -142,6 +145,7 @@ class ProtocolTests(unittest.TestCase):
         row,config=row_and_configuration('acs2er_u1')
         config['u1_draw_observer']=True
         with self.assertRaises(ValueError): validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
+
         proxy,_=row_and_configuration('er_episodic')
         diagnostics=proxy['replay_diagnostics']
         updates=row['replay_updates']
@@ -156,6 +160,51 @@ class ProtocolTests(unittest.TestCase):
         validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
         diagnostics['routes']['original']['done']=9
         with self.assertRaises(ValueError): validate_row(row,config,'acs2er_u1',42,'a'*40,1000)
+
+    def test_matched_control_adds_only_mazes_with_a_different_selected_values_proportion(self):
+        plan=study(copy.deepcopy(THRESHOLDS),costs(),1000)
+        selections={config['id']:{agent:2/3 for agent in VALUES} for config in plan['configurations']}
+        self.assertEqual(control_configurations(plan,selections),[])
+        for config in plan['configurations'][:2]: selections[config['id']]['her_values']=1/3
+        for config in plan['configurations'][2:]: selections[config['id']]['her_values_shortened']=1/3
+        controls=control_configurations(plan,selections)
+        self.assertEqual([config['id'] for config in controls],[config['id'] for config in plan['configurations'][:2]])
+        self.assertEqual(reservation_seconds(controls),40*2*60)
+        for config,original in zip(controls,plan['configurations']):
+            self.assertEqual(config['row_arm'],MATCHED_CONTROL)
+            self.assertEqual(config['agent_settings'],{'her_values':{'relabeled_proportion':2/3}})
+            self.assertEqual({key:value for key,value in config.items() if key not in ('row_arm','agent_settings')},original)
+        row,config=row_and_configuration('her_values')
+        config['row_arm']=MATCHED_CONTROL
+        row['arm']=MATCHED_CONTROL
+        validate_row(row,config,'her_values',42,'a'*40,1000)
+        row['arm']='her_values_tuned'
+        with self.assertRaises(ValueError): validate_row(row,config,'her_values',42,'a'*40,1000)
+        comparisons=plan['analysis']['comparisons']
+        self.assertEqual([pair for pair in comparisons if MATCHED_CONTROL in pair],[[MATCHED_CONTROL,'her_full']])
+        self.assertIn(['her_values','her_full'],comparisons)
+        with self.assertRaises(ValueError): control_configurations(plan,{})
+        selections[plan['configurations'][0]['id']]['her_values']=0.6
+        with self.assertRaises(ValueError): control_configurations(plan,selections)
+
+    def test_control_admission_counts_all_batches_and_waits_for_released_reservations(self):
+        registered=json.loads((Path(__file__).with_name('plan.json')).read_text())
+        selections={config['id']:{agent:1/3 for agent in VALUES} for config in registered['configurations']}
+        controls=control_configurations(registered,selections)
+        self.assertEqual(reservation_seconds(controls),34800)
+        self.assertEqual([reservation_seconds([config]) for config in controls],[4800,7200,8400,8400,3600,2400])
+        forecasted=registered['forecast']
+        states=[dict(spent_seconds=0,reserved_seconds=forecasted['grid_reservation_cpu_seconds']),
+                dict(spent_seconds=0,reserved_seconds=forecasted['tuning_reservation_cpu_seconds'])]
+        with self.assertRaises(ValueError): admit(5445,states,controls)
+        states[0]=dict(spent_seconds=82000,reserved_seconds=0)
+        states[1]=dict(spent_seconds=18500,reserved_seconds=0)
+        admitted=admit(5445,states,controls)
+        self.assertEqual(admitted['additional_runs'],120)
+        self.assertEqual(admitted['bound_seconds'],5445+82000+18500+34800)
+        with self.assertRaises(ValueError): admit(5445,states+[dict(spent_seconds=80000,reserved_seconds=0)],controls)
+        with self.assertRaises(ValueError): admit(5445,[dict(spent_seconds=-1,reserved_seconds=0)],controls)
+
 
 
 if __name__ == '__main__': unittest.main()

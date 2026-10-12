@@ -46,7 +46,10 @@ def verify(root):
                 allocation_cpu_seconds=int(record['CPUTimeRAW']), process_cpu_seconds=completion['user_cpu_seconds'] + completion['system_cpu_seconds'],
                 peak_rss_kib=completion['peak_rss_kib'], final_population=rows[-1]['population_classifiers'],
                 maximum_population=max(row['population_classifiers'] for row in rows))
-            for name in ['rows.jsonl','resources.jsonl','cpu_samples.csv','launch.json','completion.json']:
+            names = ['rows.jsonl','resources.jsonl','cpu_samples.csv','launch.json','completion.json']
+            if config.get('row_arm'):
+                names.append('binary-rows.jsonl')
+            for name in names:
                 file = path / name
                 hashes[str(file.relative_to(root))] = hashlib.sha256(file.read_bytes()).hexdigest()
     return dict(runs=len(cells), rows=rows_count, allocation_cpu_seconds=allocation_seconds,

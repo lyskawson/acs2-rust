@@ -40,6 +40,8 @@ def validate_row(row, config, agent, seed, commit, target):
     for key, value in expected.items():
         if row.get(key) != value:
             raise ValueError(f"{key}: expected {value!r}, got {row.get(key)!r}")
+    if row.get('arm') != config.get('row_arm'):
+        raise ValueError('row arm differs from its manifest label')
     for key in ("host", "cpu_model"):
         if not row.get(key) or row[key] in ("test", "unknown") or "unavailable" in row[key]:
             raise ValueError(f"missing {key}")
@@ -63,6 +65,16 @@ def validate_row(row, config, agent, seed, commit, target):
     if 'protocol' in config:
         validate_blocks(row, config)
     validate_replay(row, config, agent)
+
+
+def named_row(row, config):
+    if 'arm' in row:
+        raise ValueError('measurement binary must not supply an arm label')
+    if 'row_arm' not in config:
+        return row
+    if not isinstance(config['row_arm'], str) or not config['row_arm']:
+        raise ValueError('invalid arm label')
+    return dict(row, arm=config['row_arm'])
 
 
 def process_sample(pid):
@@ -110,7 +122,9 @@ def run(args):
         seed = manifest["pilot_seed"]
     directory = outside_repository(Path(args.output) / f"{config['id']}_{agent}_s{seed}")
     directory.mkdir(parents=True, exist_ok=False)
-    raw = directory / "rows.jsonl"
+    labeled = 'row_arm' in config
+    raw = directory / ('binary-rows.jsonl' if labeled else 'rows.jsonl')
+    annotated = (directory / 'rows.jsonl').open('w', buffering=1) if labeled else None
     command = [str(Path(args.binary).resolve()), "--task", config["task"], "--cap", str(config["cap"]),
                "--pool", config["pool"], "--encoding", config["encoding"], "--agents", agent,
                "--seeds", str(seed), "--targets", ",".join(map(str, config["targets"])), "--out", str(raw)]
@@ -177,8 +191,10 @@ def run(args):
                     pending += chunk
                     while b"\n" in pending:
                         line, pending = pending.split(b"\n", 1)
-                        row = json.loads(line)
+                        row = named_row(json.loads(line), config)
                         validate_row(row, config, agent, seed, args.commit, config["targets"][rows_seen])
+                        if annotated is not None:
+                            annotated.write(json.dumps(row) + '\n')
                         if grid and (row['cpu_model'] != manifest['expected_cpu_model'] or (manifest.get('expected_host') and row['host'].split('.')[0] != manifest['expected_host']) or row['preset'] != manifest['expected_preset']):
                             raise ValueError('row hardware or preset mismatch')
                         if first_row is None and now > manifest['first_row_timeout_seconds']:
@@ -214,6 +230,8 @@ def run(args):
                     process.kill()
                     process.wait()
         usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+        if annotated is not None:
+            annotated.close()
         result = {"exit_code": process.returncode, "failure": failure,
                   "rows_seen": rows_seen, "rows_expected": len(config["targets"]),
                   "incomplete_final_line": bool(pending), "first_row_seconds": first_row,
@@ -221,7 +239,7 @@ def run(args):
                   "user_cpu_seconds": usage.ru_utime, "system_cpu_seconds": usage.ru_stime,
                   "peak_rss_kib": max(peak, usage.ru_maxrss), "finished_unix": time.time()}
         result['sha256'] = {name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
-                            for name in ('rows.jsonl', 'resources.jsonl', 'cpu_samples.csv', 'launch.json')
+                            for name in ('rows.jsonl', 'resources.jsonl', 'cpu_samples.csv', 'launch.json', 'binary-rows.jsonl')
                             if (directory / name).exists()}
         (directory / "completion.json").write_text(json.dumps(result, indent=2) + "\n")
     if failure or process.returncode or rows_seen != len(config["targets"]) or pending:

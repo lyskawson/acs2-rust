@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from collect import complete_rows, interval_cost, outside_repository, run, validate_row
+from collect import complete_rows, interval_cost, named_row, outside_repository, run, validate_row
 
 
 class CollectionTests(unittest.TestCase):
@@ -45,6 +45,41 @@ class CollectionTests(unittest.TestCase):
         cost = interval_cost(samples, 6, 4, 2)
         self.assertEqual(cost["train_cpu_seconds_estimate"], 2)
         self.assertEqual(cost["eval_cpu_seconds_estimate"], 2)
+
+    def test_named_control_keeps_binary_rows_and_checksums_the_annotated_copy(self):
+        from grid_attempts import verify_artifacts
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            config=dict(id='maze4_control',task='maze4',cap=5,pool='full',row_pool='full',
+                        encoding='coordinates',targets=[1],row_arm='her_values_p2of3')
+            manifest=dict(configurations=[config],agents=['her_values','acs2er'],pilot_seed=42,
+                          first_row_timeout_seconds=3,process_timeout_seconds=5)
+            path=root/'manifest.json'
+            path.write_text(json.dumps(manifest))
+            row=dict(agent='her_values',wall_seconds_train=0.001,wall_seconds_eval=0.001,nominal_step=1,knowledge=0.5)
+            binary=root/'writer'
+            binary.write_text('#!/usr/bin/env python3\nimport sys,json\nfrom pathlib import Path\n'
+                              'Path(sys.argv[sys.argv.index("--out")+1]).write_text('+repr(json.dumps(row)+'\n')+')\n')
+            binary.chmod(0o755)
+            args=argparse.Namespace(manifest=path,binary=binary,index=0,commit='a'*40,output=root/'done',sample_interval=0.001)
+            with patch.dict('os.environ',{'SLURM_JOB_PARTITION':'lem-cpu-normal'}), \
+                    patch('collect.process_sample',return_value=(0.0,0)), patch('collect.validate_row'), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                run(args)
+            directory=next(args.output.iterdir())
+            raw=(directory/'binary-rows.jsonl').read_bytes()
+            named=json.loads((directory/'rows.jsonl').read_text())
+            self.assertEqual(named,dict(row,arm='her_values_p2of3'))
+            self.assertEqual(json.loads(raw),row)
+            completion=json.loads((directory/'completion.json').read_text())
+            self.assertEqual(set(completion['sha256']),{'rows.jsonl','binary-rows.jsonl','resources.jsonl','cpu_samples.csv','launch.json'})
+            verify_artifacts(directory,completion)
+            self.assertEqual((directory/'binary-rows.jsonl').read_bytes(),raw)
+            (directory/'binary-rows.jsonl').write_bytes(raw+b' ')
+            with self.assertRaises(ValueError): verify_artifacts(directory,completion)
+        self.assertEqual(named_row(row,{}),row)
+        with self.assertRaises(ValueError): named_row(dict(row,arm='unexpected'),{})
+        with self.assertRaises(ValueError): named_row(row,dict(row_arm=''))
 
     def test_provenance_pool_seed_and_budget_are_enforced(self):
         config = {"task": "maze4", "cap": 5, "row_pool": "full", "encoding": "coordinates"}

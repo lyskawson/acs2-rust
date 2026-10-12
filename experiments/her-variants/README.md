@@ -2,8 +2,8 @@
 
 This experiment compares `her_full`, `her_values` and `her_values_shortened` with
 the identical original-only episodic path `er_episodic`. `acs2er_u1` is unchanged
-core ACS2ER with one replay application per step. The registered phase-4b ACS2
-and ACS2ER grid is reused. No TU, VCP or correction agent is part of this scope.
+core ACS2ER with one replay application per step. The registered ACS2 and ACS2ER
+pair grid is reused. No TU, VCP or correction agent is part of this scope.
 
 `acs2-agents` depends on core and trajectory storage; measurement constructs
 agents and implements their raw-episode environment port. Research copies use
@@ -23,10 +23,44 @@ the values variants use separately selected proportions for each maze.
 
 `protocol.py` reconstructs immutable pair configurations, the authorized seed-42
 cost pilot, the cost forecast, and the final three-part registration. `plan.json`
-is the resulting plan awaiting approval. The costed plan SHA-256 is `2823664a04c698f771117787ad92225d86772700ac2990e42d539fec6436ff17`. Tuning uses 1/3 and 2/3; 0.9 was removed for cost before tuning. The expected doubled cost with pilots is 57.2329 CPU-hours, and hard array reservations plus pilots are 55.1792 of sixty, with 512 MiB per job. The final grid has 600 runs with seeds
-42--61; tuning evaluates only validation with seeds 42--46. The tie rule and
-comparisons are registered in the plan. Nothing may tune on test. Stage one
-stops after the costed registration. A study plan is not an execution manifest.
+is the resulting plan awaiting approval. Its SHA-256 is
+`e18aca0f513ac3f6b6c0b9a52063acc78d9dc1becf369bcd5e755f5050ac6444`.
+Tuning uses 1/3 and 2/3; 0.9 was removed for cost before tuning. The main grid
+has 600 runs with seeds 42--61; tuning evaluates only validation with seeds
+42--46. The tie rule and comparisons are registered in the plan. Nothing may
+tune on test. Approval must identify these exact bytes before any tuning or
+grid submission. A study plan is not an execution manifest.
+
+The update-rule ablation uses `her_values_p2of3` minus `her_full` on every maze.
+Where tuning selects 2/3, reuse the tuned values rows. Otherwise add twenty
+values runs at 2/3 with identical budgets, points, pairs and caps. This fixed
+control enters no other comparison; the tuned values minus full comparison
+remains separate. `matched_control.py` derives the required configurations and
+checks admission against aggregate spent and outstanding reservations across
+all batches. Manifests carry `row_arm=her_values_p2of3`. Collection preserves
+the pinned binary's `binary-rows.jsonl` and writes `rows.jsonl` with the same
+measurement fields and an `arm` label; both artifacts have verified checksums.
+The measurement agent stays `her_values`, and no binary change is needed.
+
+Pilots used 1.5125 CPU-hours. Main grid and tuning hard reservations plus pilots
+are 55.1792 hours; their doubled forecast is 57.2329. At most 120 extra control
+runs reserve another 9.6667 hours, with expected cost 5.0684. Expected total with
+every extra control is 34.4411 hours; simultaneous hard reservations would be
+64.8458, and the doubled total forecast 67.3697. Submit required controls as soon
+as accounting releases enough reservations, and recheck at main-grid completion.
+Admission always enforces sixty hours including every attempt; if controls never
+fit, STOP and report incomplete scope. Do not shrink any other arm, maze or seed.
+Each job has 512 MiB. These forecasts do not guarantee new-seed population growth.
+
+`thresholds.py` stores both baseline final-success thresholds as exact fractions
+and computes crossings with rational arithmetic from integer success counts.
+It reports the first registered nominal point, without interpolation, or null.
+The count fixture reproduces both thresholds and all 24 baseline crossings.
+`identity.py` compares all shared learning, evaluation and knowledge fields,
+including IEEE 754 bits. The plan requires seed-42 pilot identity for the fixed
+arms, five-seed tuning identity for selected values settings and the fixed
+control, and pilot identity wherever the setting is 2/3. The Rust regression
+pins all five measured arms on all six mazes at 1k and 3k from verified pilots.
 
 Execution uses `../grid/submit.py`, `grid_job.sh`, node guards and accounting.
 Experiment manifests, launches and raw artifacts live outside Git under

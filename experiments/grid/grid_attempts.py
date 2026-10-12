@@ -8,11 +8,24 @@ from grid_protocol import learning_fields
 
 def verify_artifacts(path, completion):
     expected = {'rows.jsonl', 'resources.jsonl', 'cpu_samples.csv', 'launch.json'}
+    if (path / 'binary-rows.jsonl').exists():
+        expected.add('binary-rows.jsonl')
     if set(completion.get('sha256', {})) != expected:
         raise ValueError('complete attempt needs all raw artifact checksums')
     for name, digest in completion['sha256'].items():
         if hashlib.sha256((path / name).read_bytes()).hexdigest() != digest:
             raise ValueError(f'raw artifact checksum mismatch: {name}')
+    if 'binary-rows.jsonl' in expected:
+        original, original_tail = complete_rows(path / 'binary-rows.jsonl')
+        named, named_tail = complete_rows(path / 'rows.jsonl')
+        if original_tail or named_tail or len(original) != len(named):
+            raise ValueError('incomplete named measurement rows')
+        for raw, row in zip(original, named):
+            if 'arm' in raw or not isinstance(row.get('arm'), str) or not row['arm']:
+                raise ValueError('invalid named arm identity')
+            measured = {key: value for key, value in row.items() if key != 'arm'}
+            if json.dumps(raw, sort_keys=True) != json.dumps(measured, sort_keys=True):
+                raise ValueError('arm naming changed measurement fields')
 
 
 def attempts(root, ledger, configuration_id=None):

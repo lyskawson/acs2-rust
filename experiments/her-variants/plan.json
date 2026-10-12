@@ -25473,6 +25473,45 @@
     ],
     "tuned_parameters": "apply the registered per-maze per-variant selection mechanically"
   },
+  "matched_proportion_control": {
+    "arm": "her_values_p2of3",
+    "measurement_agent": "her_values",
+    "relabeled_proportion": 0.6666666666666666,
+    "relabeled_proportion_exact": "2/3",
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61
+    ],
+    "condition": "For each maze whose selected her_values proportion differs from 2/3, run twenty additional seeds at 2/3. Otherwise reuse the tuned her_values rows as this arm.",
+    "protocol": "same registered pairs, cap, budget and nominal points as the main grid on that maze",
+    "tuning": "none; this arm enters only the matched update-rule comparison",
+    "maximum_additional_runs": 120,
+    "row_identity": {
+      "agent": "her_values",
+      "arm": "her_values_p2of3"
+    },
+    "row_storage": "Keep unchanged binary-rows.jsonl and an annotated rows.jsonl with arm=her_values_p2of3; checksum both. The measurement binary and its agent identifiers stay pinned.",
+    "admission": "Before every submission, pilots plus sacct spent plus all outstanding hard reservations plus every new hard limit must be at most 60 CPU-hours; include tuning, main grid, controls and every retry across batch roots.",
+    "timing": "Submit each required maze arm as soon as admission passes after selection; recheck when accounting changes and at main-grid completion, when spent replaces reservations. If required controls never fit, STOP and report the missing arms without shrinking any other scope."
+  },
   "analysis": {
     "primary": "test success averaged equally over points within each seed, then mean and SE over twenty seeds",
     "paired_interval": "marginal Student t(19) 95%; critical value 2.093024054408263; no multiplicity correction",
@@ -25512,18 +25551,108 @@
       [
         "acs2er_u1",
         "acs2"
+      ],
+      [
+        "her_values_p2of3",
+        "her_full"
       ]
     ],
-    "threshold": "first nominal point at which across-seed mean test success reaches archived phase-4b ACS2 mean final test success; no interpolation; null if never reached",
-    "thresholds": {
-      "maze4_c5_pairs": 0.325308641975309,
-      "maze5_c8_pairs": 0.23558558558558576,
-      "maze6_c10_pairs": 0.28490990990991016,
-      "maze7_c10_pairs": 0.26643518518518505,
-      "woods14_c18_pairs": 0.19736842105263158,
-      "mazema_c9_pairs": 0.2722222222222222
+    "comparison_interpretation": {
+      "her_values_p2of3_minus_her_full": "update-rule ablation at the same requested proportion 2/3 on every maze",
+      "her_values_minus_her_full": "separately tuned values control against the fixed predecessor proportion; both proportion and copy update may differ"
     },
-    "baseline_reuse": "archived phase-4b grid only; seed-42 replay is a regression check, not a new baseline grid",
+    "threshold": "For each of the two exact fractions, take the first registered nominal point at which the exact mean test success over seeds 42--61 reaches it; no interpolation; null if never reached. Report both for every measured arm and both archived baselines.",
+    "threshold_arithmetic": "Recover each integer success count from exhaustive success times registered test pairs, requiring distance from the nearest integer at most 1e-8. All ratios, seed means and >= comparisons then use fractions.Fraction; never compare floating means with thresholds.",
+    "thresholds": {
+      "maze4_c5_pairs": {
+        "acs2_final": "527/1620",
+        "acs2er_final": "92/405"
+      },
+      "maze5_c8_pairs": {
+        "acs2_final": "523/2220",
+        "acs2er_final": "89/555"
+      },
+      "maze6_c10_pairs": {
+        "acs2_final": "253/888",
+        "acs2er_final": "739/4440"
+      },
+      "maze7_c10_pairs": {
+        "acs2_final": "1151/4320",
+        "acs2er_final": "259/1440"
+      },
+      "woods14_c18_pairs": {
+        "acs2_final": "15/76",
+        "acs2er_final": "11/60"
+      },
+      "mazema_c9_pairs": {
+        "acs2_final": "49/180",
+        "acs2er_final": "193/900"
+      }
+    },
+    "baseline_threshold_crossing_checks": {
+      "maze4_c5_pairs": {
+        "acs2_final": {
+          "acs2": 2000000,
+          "acs2er": null
+        },
+        "acs2er_final": {
+          "acs2": 300000,
+          "acs2er": 2000000
+        }
+      },
+      "maze5_c8_pairs": {
+        "acs2_final": {
+          "acs2": 1000000,
+          "acs2er": null
+        },
+        "acs2er_final": {
+          "acs2": 300000,
+          "acs2er": 1000000
+        }
+      },
+      "maze6_c10_pairs": {
+        "acs2_final": {
+          "acs2": 1000000,
+          "acs2er": null
+        },
+        "acs2er_final": {
+          "acs2": 300000,
+          "acs2er": 100000
+        }
+      },
+      "maze7_c10_pairs": {
+        "acs2_final": {
+          "acs2": 2000000,
+          "acs2er": null
+        },
+        "acs2er_final": {
+          "acs2": 300000,
+          "acs2er": 100000
+        }
+      },
+      "woods14_c18_pairs": {
+        "acs2_final": {
+          "acs2": 100000,
+          "acs2er": 30000
+        },
+        "acs2er_final": {
+          "acs2": 100000,
+          "acs2er": 30000
+        }
+      },
+      "mazema_c9_pairs": {
+        "acs2_final": {
+          "acs2": 2000000,
+          "acs2er": null
+        },
+        "acs2er_final": {
+          "acs2": 100000,
+          "acs2er": 30000
+        }
+      }
+    },
+    "baseline_reuse": "archived ACS2 and ACS2ER pair grid only; seed-42 replay is a regression check, not a new baseline grid",
+    "values_update_volume": "Report observed full steps / actual environment steps and knowledge curves beside every comparison involving values copies. Every-transition copies have expected full volume 3*(1-p); shortening fallbacks increase this volume, so use realized route counts.",
     "secondary": [
       "knowledge",
       "realized_relabeled_share",
@@ -25532,11 +25661,40 @@
       "population",
       "memory",
       "updates_by_kind",
+      "full_steps_per_environment_step",
+      "knowledge_curves",
       "process_time",
       "allocation_cpu_hours"
     ],
     "comparison_direction": "left agent minus right agent",
-    "primary_block": "test"
+    "primary_block": "test",
+    "baseline_threshold_count_fixture": {
+      "path": "fixtures/pair_baseline_success_counts.json",
+      "sha256": "2c77a10d16b4b231f019cc8f3a835947ae9a27f490e3baa3ce904507f41026ca",
+      "rows": 1960,
+      "crossing_checks": 24
+    }
+  },
+  "identity_checks": {
+    "comparison": "IEEE 754 binary64 bits for floating fields; exact equality otherwise. Exclude only source/hardware identity, three wall times and the separately validated control arm label. Compare every learning, evaluation and knowledge field on shared points.",
+    "pilot": "Seed 42 for er_episodic, her_full and acs2er_u1 must reproduce the verified pilot at all registered points, using the observed U1 pilot.",
+    "tuning": "For each maze and values variant at its selected proportion, seeds 42--46 must reproduce validation-only tuning rows at every shared point; include validation evaluation, learning and knowledge fields.",
+    "selected_two_thirds": "Where a selected values proportion is 2/3, seed 42 also reproduces all three evaluation blocks and learning/knowledge fields of the pilot.",
+    "matched_control": "her_values_p2of3 seeds 42--46 reproduce her_values tuning rows at 2/3 at shared points; seed 42 also reproduces the pilot. Reused tuned rows satisfy the same checks.",
+    "failure": "STOP on any mismatch before analysis; retain the differing artifacts and account for the attempt",
+    "pinned_regression": {
+      "fixture": "fixtures/her_pair_regression.json",
+      "sha256": "63d04fe686c129edd10d94d88369bc1a8bc42214132433d2482a7ab1f9cf8b05",
+      "arms": 5,
+      "mazes": 6,
+      "seed": 42,
+      "points": [
+        1000,
+        3000
+      ],
+      "rows": 60,
+      "comparison": "all nonmetadata fields, with exact IEEE 754 bits for every float"
+    }
   },
   "execution": {
     "partition": "lem-cpu-normal",
@@ -25547,6 +25705,7 @@
     "limit_rule": "max(2, ceil((1.5 * seed42 body wall at registered budget + 30) / 60)) minutes; node process watchdog retains 30 seconds; this is a sizing margin, not a guarantee about new-seed growth",
     "guards": "shared experiments/grid tools; clean pinned musl source and binary, node-side guards, STOP on failure; no lease, pinning or laptop dependency",
     "accounting": "allocation CPUTimeRAW once per attempt, including failed attempts and regression pilots; spent plus reserved plus new limits at most 60 CPU-hours",
+    "additional_control_budget": "The extra control is conditional on tuning. Maximum simultaneous hard reservations can exceed sixty; use measured spent cost as main-grid reservations are released. The 1.5 sizing rule and doubled forecasts are diagnostics, not permission to exceed the admission bound.",
     "copies": "cluster and local raw artifacts independently checksum-verified"
   },
   "forecast": {
@@ -25558,6 +25717,38 @@
     "grid_reservation_cpu_seconds": 158400.0,
     "tuning_reservation_cpu_seconds": 34800.0,
     "memory_mib": 512,
+    "additional_control_maximum_runs": 120,
+    "additional_control_costs": {
+      "maze4_c5_pairs": {
+        "expected_cpu_hours": 0.667446798338889,
+        "reservation_cpu_seconds": 4800
+      },
+      "maze5_c8_pairs": {
+        "expected_cpu_hours": 1.1627053765833333,
+        "reservation_cpu_seconds": 7200
+      },
+      "maze6_c10_pairs": {
+        "expected_cpu_hours": 1.3239299384611112,
+        "reservation_cpu_seconds": 8400
+      },
+      "maze7_c10_pairs": {
+        "expected_cpu_hours": 1.3030715021111112,
+        "reservation_cpu_seconds": 8400
+      },
+      "woods14_c18_pairs": {
+        "expected_cpu_hours": 0.35643636051666666,
+        "reservation_cpu_seconds": 3600
+      },
+      "mazema_c9_pairs": {
+        "expected_cpu_hours": 0.25478657460000004,
+        "reservation_cpu_seconds": 2400
+      }
+    },
+    "additional_control_expected_cpu_hours": 5.068376550611111,
+    "additional_control_reservation_cpu_seconds": 34800,
+    "expected_with_all_additional_controls_cpu_hours": 34.44107873397222,
+    "doubled_forecast_with_all_additional_controls_cpu_hours": 67.36965746794445,
+    "hard_bound_with_all_additional_controls_cpu_hours": 64.84583333333333,
     "limits_minutes": {
       "maze4_c5_pairs": {
         "er_episodic": 4,
@@ -25602,7 +25793,7 @@
         "acs2er_u1": 2
       }
     },
-    "unreserved_cpu_hours": 4.820833333333333
+    "unreserved_before_additional_controls_cpu_hours": 4.820833333333333
   },
   "tuning_set_shrunk": true,
   "measurement_commit": "a592a5bad8bbc13d62553cc09a72748182809879",
@@ -25673,7 +25864,7 @@
         "validation"
       ]
     },
-    "sizing_evidence": "Archived phase-4b maximum body/seed42 ratios <=1.477 on Maze4--7 and <=1.517 overall; local HER body/seed42 ratios <=1.475 except small MazeMA control (1.830), whose two-minute minimum exceeds three times pilot body. Full-budget new-seed growth is unknown; STOP and remaining 4.820833 CPU-hours protect retries.",
+    "sizing_evidence": "Archived pair-baseline maximum body/seed42 ratios <=1.477 on Maze4--7 and <=1.517 overall; local HER body/seed42 ratios <=1.475 except small MazeMA control (1.830), whose two-minute minimum exceeds three times pilot body. Full-budget new-seed growth is unknown; STOP and admission based on spent plus outstanding reservations remain mandatory.",
     "u1_observer": {
       "array": 6074551,
       "runs": 6,
@@ -25688,5 +25879,6 @@
       "full_budget_rows": 49,
       "population_rng_and_replay": "exactly equal to unchanged core; differing telemetry and sidecar logical bytes only"
     }
-  }
+  },
+  "supersedes_plan_sha256": "2823664a04c698f771117787ad92225d86772700ac2990e42d539fec6436ff17"
 }
