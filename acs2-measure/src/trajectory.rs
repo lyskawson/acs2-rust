@@ -1,4 +1,4 @@
-use acs2_core::goal::{Goal, GoalOutcome, GoalStep};
+use acs2_core::ports::goal::{Goal, GoalOutcome, GoalStep};
 use acs2_trajectory::{GoalEvaluator, ObjectiveCost, ReplayCounters, RouteCounters};
 use serde_json::{json, Value};
 

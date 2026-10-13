@@ -1,5 +1,5 @@
-use acs2_core::goal::Goal;
-use acs2_core::rng::RandomSource;
+use acs2_core::ports::goal::Goal;
+use acs2_core::support::rng::RandomSource;
 use acs2_core::trial::TruncationMode;
 
 use crate::cost::CostByPurpose;

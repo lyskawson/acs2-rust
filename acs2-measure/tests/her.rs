@@ -1,6 +1,6 @@
-use acs2_agents::replay::{EpisodicAgent, EpisodicReplay};
+use acs2_agents::episodic_replay::{EpisodicAgent, EpisodicReplay};
 use acs2_agents::{er_episodic, her};
-use acs2_core::agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::Acs2ErAgent;
 use acs2_core::checkpoint::Checkpointed;
 use acs2_core::representation::{
     classifier::Classifier, perception::Perception, population::Population, symbol::Symbol,
@@ -116,7 +116,7 @@ fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
 fn diagnostic_u1_performs_exactly_one_replay_per_environment_step() {
     let preset = Preset::thesis();
     assert_eq!(
-        acs2_agents::acs2er_u1::DiagnosticConfiguration {
+        acs2_agents::acs2er::u1::DiagnosticConfiguration {
             capacity: preset.replay_capacity,
             warmup: preset.replay_warmup,
         }
@@ -230,7 +230,7 @@ fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation()
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     let preset = Preset::thesis();
-    let replay = acs2_agents::acs2er_u1::DiagnosticConfiguration {
+    let replay = acs2_agents::acs2er::u1::DiagnosticConfiguration {
         capacity: preset.replay_capacity,
         warmup: preset.replay_warmup,
     };
@@ -240,7 +240,7 @@ fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation()
         &[10, 40, 100],
         || {
             DiagnosticAdapter(CoreAgent {
-                agent: acs2_agents::acs2er_u1::Agent::<10, _>::new(
+                agent: acs2_agents::acs2er::u1::Agent::<10, _>::new(
                     preset.config(8),
                     replay,
                     preset.truncation,
@@ -577,7 +577,7 @@ fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings
         replay_updates_per_step: 1,
         ..Preset::thesis()
     };
-    let parameters = acs2_agents::acs2er_u1::DiagnosticConfiguration {
+    let parameters = acs2_agents::acs2er::u1::DiagnosticConfiguration {
         capacity: preset.replay_capacity,
         warmup: preset.replay_warmup,
     };
@@ -590,7 +590,7 @@ fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings
         updates: 0,
     };
     let mut observed = DiagnosticAdapter(CoreAgent {
-        agent: acs2_agents::acs2er_u1::Agent::<10, _>::new(
+        agent: acs2_agents::acs2er::u1::Agent::<10, _>::new(
             preset.config(8),
             parameters,
             preset.truncation,

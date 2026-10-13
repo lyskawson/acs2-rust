@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::goal::{Goal, GoalLayout};
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::ports::goal::{Goal, GoalLayout};
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::maze::geometries::geometry_by_id;
 use acs2_measure::pair_protocol::{
@@ -246,7 +246,7 @@ fn pair_evaluation_and_knowledge_preserve_agent_replay_rng_and_training_counters
             42,
             &[50, 100],
             || CoreAgent {
-                agent: acs2_core::agent::Agent::<10, _>::new(
+                agent: acs2_agents::acs2::Agent::<10, _>::new(
                     preset.config(8),
                     ChaChaRandomSource::from_seed_and_stream(42, 1),
                 )
@@ -270,9 +270,9 @@ fn pair_evaluation_and_knowledge_preserve_agent_replay_rng_and_training_counters
             42,
             &[50, 100],
             || CoreAgent {
-                agent: acs2_core::acs2er::Acs2ErAgent::<10, _>::new(
+                agent: acs2_agents::acs2er::Acs2ErAgent::<10, _>::new(
                     preset.config(8),
-                    acs2_core::acs2er::ReplayConfiguration {
+                    acs2_agents::acs2er::replay::ReplayConfiguration {
                         buffer_size: 10_000,
                         min_samples: 1,
                         samples_number: 3,

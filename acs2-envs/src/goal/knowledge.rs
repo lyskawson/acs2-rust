@@ -1,6 +1,6 @@
-use acs2_core::goal::{Goal, GoalLayout};
-use acs2_core::knowledge::Transition;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::goal::{Goal, GoalLayout};
+use acs2_core::support::knowledge::Transition;
+use acs2_core::representation::symbol::Symbol;
 
 pub fn with_wildcard_goals<const S: usize, const G: usize, const M: usize>(
     transitions: impl IntoIterator<Item = Transition<S>>,

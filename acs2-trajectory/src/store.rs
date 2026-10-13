@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 use std::mem::size_of;
 
-use acs2_core::goal::{Goal, GoalStart, GoalStep};
-use acs2_core::perception::Perception;
+use acs2_core::ports::goal::{Goal, GoalStart, GoalStep};
+use acs2_core::representation::perception::Perception;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EpisodeId(pub u64);

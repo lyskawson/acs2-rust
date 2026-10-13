@@ -5,14 +5,14 @@ mod regression {
     use super::*;
     use std::cell::Cell;
     use std::path::{Path, PathBuf};
-    use acs2_core::action_selection::ActionSelector;
-    use acs2_core::environment::Environment;
+    use acs2_core::learning::action_selection::ActionSelector;
+    use acs2_core::ports::environment::Environment;
     use acs2_bench::derived_u_max;
-    use acs2_core::acs2er::ReplayConfiguration;
+    use acs2_agents::acs2er::replay::ReplayConfiguration;
     use acs2_core::checkpoint::AgentState;
-    use acs2_core::rl::BootstrapEstimator;
-    use acs2_core::rng::RandomSource;
-    use acs2_core::symbol::Symbol;
+    use acs2_core::learning::rl::BootstrapEstimator;
+    use acs2_core::support::rng::RandomSource;
+    use acs2_core::representation::symbol::Symbol;
     use acs2_core::trial::TrialMetrics;
 
     struct FrozenAgent {
@@ -648,9 +648,9 @@ mod regression {
         let solved = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
         assert_eq!(solved.verdict, Verdict::Success);
 
-        let mut stored = checkpoint::read::<7>(&settings.path);
+        let mut stored = codec::read::<7>(&settings.path);
         stored.verdict = Some("TIME-LIMITED".to_string());
-        checkpoint::write(&settings.path, &stored);
+        codec::write(&settings.path, &stored);
 
         let resumed = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS * 4), Some(&settings));
         assert_eq!(resumed.verdict, Verdict::Success);
@@ -677,9 +677,9 @@ mod regression {
 
         // Forced below anything this process could be using, so reporting the live peak
         // instead of the saved one cannot pass by accident.
-        let mut stored = checkpoint::read::<7>(&settings.path);
+        let mut stored = codec::read::<7>(&settings.path);
         stored.peak_rss_bytes = 4096;
-        checkpoint::write(&settings.path, &stored);
+        codec::write(&settings.path, &stored);
 
         let reopened = run_mpx6(&checkpoint_limits(CHECKPOINT_TOTAL_TRIALS), Some(&settings));
 
@@ -920,7 +920,7 @@ mod regression {
         );
         // A kill during the staged write legitimately leaves the staging file; what must
         // hold is that the *published* checkpoint is complete.
-        assert_eq!(checkpoint::parse::<21>(&survivor).trials_used, saved_at);
+        assert_eq!(codec::parse::<21>(&survivor).trials_used, saved_at);
 
         let resumed = run_kill_worker("resume", &directory);
         let expected = measurements_after(&uninterrupted, saved_at);
@@ -960,9 +960,9 @@ mod regression {
         assert!(!stopped.contains("reopened=true"));
 
         // Stand in for the job that saved a SUCCESS and was killed before printing it.
-        let mut stored = checkpoint::read::<21>(&path);
+        let mut stored = codec::read::<21>(&path);
         stored.verdict = Some("SUCCESS".to_string());
-        checkpoint::write(&path, &stored);
+        codec::write(&path, &stored);
 
         let reopened = run("600");
         let verdict = reopened

@@ -1,4 +1,4 @@
-use acs2_core::agents::acs2er::{replay_learning_step, ReplaySample};
+use acs2_core::learning::replay::{replay_learning_step, ReplaySample};
 use acs2_core::learning::rl::MaxFitnessBootstrap;
 use acs2_core::representation::{perception::Perception, population::Population};
 use acs2_core::support::{config::Configuration, rng::RandomSource};

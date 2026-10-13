@@ -1,15 +1,15 @@
 mod common;
 
-use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy, RandomAction};
-use acs2_core::alp::{add_classifier, cover};
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::config::Configuration;
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::population::Population;
-use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy, RandomAction};
+use acs2_core::learning::alp::{add_classifier, cover};
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::support::config::Configuration;
+use acs2_core::representation::effect::Effect;
+use acs2_core::representation::mark::Mark;
+use acs2_core::representation::population::Population;
+use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::representation::symbol::Symbol;
 
 use common::{assert_classifier_matches, classifier, fixtures, perception};
 

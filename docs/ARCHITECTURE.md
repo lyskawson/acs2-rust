@@ -8,9 +8,12 @@ plan.
 ## Crate layout and dependency direction
 
 ```
-acs2-bench (bin)  ──▶ acs2-core, acs2-envs        (composition root)
-acs2-envs  (lib)  ──▶ acs2-core
-acs2-core  (lib)  ──▶ (no workspace deps; only rand/rand_chacha)
+acs2-bench      ──▶ acs2-agents, acs2-core, acs2-envs
+acs2-measure    ──▶ acs2-agents, acs2-core, acs2-envs, acs2-trajectory
+acs2-agents     ──▶ acs2-core, acs2-trajectory
+acs2-trajectory ──▶ acs2-core
+acs2-envs       ──▶ acs2-core
+acs2-core      ──▶ (no workspace deps; rand/rand_chacha and sha2)
 ```
 
 `acs2-core` depends on neither `acs2-envs` nor `acs2-bench` (P2 gate). Verified
@@ -18,18 +21,18 @@ with `cargo tree -p acs2-core`.
 
 ## The Environment port lives in `acs2-core`, not `acs2-envs`
 
-PROJECT_CONTEXT §7's module map lists `environment` under `acs2-envs`, but the
-**trait** (`Environment<N>`, `StepOutcome<N>`) is defined in
-`acs2-core::environment`. This is forced, not a preference:
+The **trait** (`Environment<N>`, `StepOutcome<N>`) is defined in
+`acs2-core::ports::environment`. This is forced, not a preference:
 
-- §7/P6 place the single shared trial loop (`Agent`) in `acs2-core`.
+- The shared `LearningAgent` contract and exploitation trial live in `acs2-core::trial`;
+  the learning agents implementing that contract live in `acs2-agents`.
 - The loop calls `env.reset()` / `env.step()`, so it must name the `Environment`
   trait.
 - The P2 gate forbids `acs2-core` depending on `acs2-envs`.
 
 Therefore the port must live in core (Dependency Inversion: the domain defines
 the interface; the outer layer implements it). `acs2-envs::maze::Maze`
-implements `acs2_core::environment::Environment<8>`. A generic `reset`/`step`
+implements `acs2_core::ports::environment::Environment<8>`. A generic `reset`/`step`
 over `Perception<N>` carries no maze specifics, so core keeps "zero environment
 knowledge". This mirrors how RNG is already injected via a core trait (§8).
 
@@ -150,7 +153,7 @@ Methodology constraints that make the timing claim valid:
 - **`Symbol = enum { Wildcard, Token(u8) }`** (Copy/Ord). `Mark<N>` is
   `[BTreeSet<Symbol>; N]`. `Classifier` identity (`PartialEq`) is
   `(condition, action, effect)` only — implemented manually, no `Hash`.
-- **RNG.** `acs2-core::rng::RandomSource` is the injected trait (object-safe:
+- **RNG.** `acs2-core::support::rng::RandomSource` is the injected trait (object-safe:
   `gen_bool`, `gen_range`, `gen_unit`; `shuffle` is a free function). `ChaChaRandomSource`
   wraps `ChaCha8Rng` seeded via `seed_from_u64`. `rand`/`rand_chacha` use
   `default-features = false` so `getrandom`/OS entropy is **not** linked into the
@@ -158,7 +161,7 @@ Methodology constraints that make the timing claim valid:
 
 ## Truncation contract — the trial loop has NO internal step cap (read before writing `Maze::step`)
 
-Decided in P6, binding on P7. The shared trial loop (`acs2-core/src/agents/acs2/mod.rs`,
+Decided in P6, binding on P7. The ACS2 trial loop (`acs2-agents/src/acs2/mod.rs`,
 `run_explore_trial` / `run_exploit_trial`) follows Gymnasium delegation: it has
 **no internal iteration limit** and runs until the `Environment` sets
 `terminated || truncated`. Consequences that `acs2-envs::Maze` MUST honor:
@@ -223,12 +226,12 @@ It does not turn an intrinsic finite-horizon objective into a continuing task;
 such an objective needs remaining time in the observation and terminal horizon
 semantics. Goal-task success within a short evaluation cap is a separate metric.
 
-`acs2-core/tests/truncation.rs` checks all four paths (ACS2 exploration/exploitation and
+`acs2-agents/tests/truncation.rs` checks all four paths (ACS2 exploration/exploitation and
 ACS2ER replay/exploitation), a sample actually replayed twice after warmup,
 termination, both flags, success reward, constructor defaults, restore and the
 buffer guard. It also compares complete population fields and RNG after truncated
 and continuing exploration with GA off/on, and exercises next-match-set deletion
-and quality changes. `acs2-envs/tests/goal_maze.rs` adds an actual cap-one goal success in every
+and quality changes. `acs2-agents/tests/goal_maze.rs` adds an actual cap-one goal success in every
 path and mode. Deliberate mutations swapping modes, zeroing default truncation,
 bootstrapping termination and ignoring ACS2ER truncation each failed a focused
 test before being reverted. The P6 unreachable-goal regression keeps its original
@@ -361,7 +364,7 @@ capability, reusing the P0–P9-validated `acs2-core` domain unchanged. The maze
 path is byte-untouched: the only edits to existing files are additive `pub mod` lines
 (`acs2-core/src/lib.rs`, `acs2-envs/src/lib.rs`) and an additive `Configuration::mpx()`
 (`acs2-core/src/support/config.rs`); everything else is new files (`acs2-envs::multiplexer`,
-`acs2-core::knowledge`, `acs2-bench/src/bin/mpx.rs`). All P3–P8 + maze-parity tests stay
+`acs2-core::support::knowledge`, `acs2-bench/src/bin/mpx.rs`). All P3–P8 + maze-parity tests stay
 green.
 
 ### MPX is anticipatory; the oracle is analytic, not differential
@@ -399,7 +402,7 @@ M1 priority clarification (closed-form truth beats matching any artifact).
 
 ### Knowledge metric — env-agnostic core fn + MPX transition generators
 
-- `acs2-core::knowledge` (pure, zero env knowledge): `Transition<N> { p0, action, p1 }`
+- `acs2-core::support::knowledge` (pure, zero env knowledge): `Transition<N> { p0, action, p1 }`
   and `anticipation_fraction(population, theta_r, transitions)` — the fraction of
   transitions for which SOME reliable (`q > theta_r`) classifier `predicts_successfully`
   (`action` match ∧ `does_match(p0)` ∧ `does_anticipate_correctly(p0,p1)`). This mirrors
@@ -440,7 +443,7 @@ These look interchangeable and are NOT. Conflating them is the M2 / Actor-Critic
   no-change (identity) transition: for the wrong action `p1 == p0`, an all-wildcard-effect
   reliable classifier anticipates correctly. Without this, the wrong-action half of the
   pairs is never credited and knowledge silently caps at 0.5 masquerading as a learning
-  plateau. The ceiling is 1.0 by construction; `acs2-core::knowledge` tests
+  plateau. The ceiling is 1.0 by construction; `acs2-core::support::knowledge` tests
   (`change_only_population_caps_at_half`, `wildcard_effect_credits_identity_transition`)
   pin this.
 
@@ -506,7 +509,7 @@ method correctly — Rust is the correct side.
 
 Additive changes only: `--do-ga` on `mpx.rs`; a new `acs2-bench/src/bin/mpx_reach.rs`
 (reach + per-component memory + 4-way verdict, with `--time-cap-secs`); `libc` dep on the
-bench crate (for `getrusage` peak-RSS). `acs2-core/src/learning/ga.rs`/`acs2-core/src/learning/subsumption.rs`/`acs2-core/src/agents/acs2/mod.rs` and the maze
+bench crate (for `getrusage` peak-RSS). `acs2-core/src/learning/ga.rs`/`acs2-core/src/learning/subsumption.rs`/`acs2-agents/src/acs2/mod.rs` and the maze
 measured path are untouched; P5 GA, P3 subsumption, P8 differential, and maze-parity tests
 all stay green, and the maze P9 learning metrics reproduce BYTE-IDENTICAL (GA flag keeps
 the maze bench on GA-off).
@@ -948,7 +951,7 @@ per-`N` function.
 ### ER configuration is a separate type, not new `Configuration` fields
 
 `ReplayConfiguration { buffer_size, min_samples, samples_number }` lives in
-`acs2-core::acs2er::replay`; `Configuration` is **untouched**.
+`acs2-agents::acs2er::replay`; `Configuration` is **untouched**.
 
 pyalcs models this by inheritance (`acs2er.Configuration` extends
 `acs2.Configuration`). The Rust equivalent of that is composition, and it is
@@ -961,11 +964,13 @@ three knobs `N`, `N_warmup` and `m`.
 
 ### Replay memory
 
-`ReplayMemory<N>` is a `VecDeque<ReplaySample<N>>` bounded by `max_size`, with
+`acs2-agents::acs2er::replay::ReplayMemory<N>` is a `VecDeque<ReplaySample<N>>`
+bounded by `max_size`, with
 `update` evicting the front (oldest) before pushing, matching
 `ReplayMemory.update`'s `pop(0)` exactly. Index `0` is the oldest sample on both
 sides, so replayed indices mean the same thing. `ReplaySample<N>` is `Copy`
-(`Perception<N>` already is), so replaying a sample does not clone the buffer.
+(`Perception<N>` already is), so replaying a sample does not clone the buffer. The sample
+is defined in `acs2-core::learning::replay`, shared with trajectory storage and checkpoints.
 
 All index draws go through the injected `RandomSource` (invariant: no
 `thread_rng`, no global state). `sample_indices` clamps the request to the
@@ -975,7 +980,7 @@ the clamp is unreachable in any configuration with
 
 ### Cost of the deliberate re-derive
 
-`replay_learning_step` re-derives the next match set with
+`acs2-core::learning::replay::replay_learning_step` re-derives the next match set with
 `form_match_set` after `apply_alp`, exactly as `Agent::run_explore_trial` does,
 rather than using the set `apply_alp` maintains in place. The two are provably
 equal (`apply_alp` appends every new `p1`-matcher and remaps deletions, and the
@@ -987,7 +992,7 @@ that must be read side by side.
 
 ### What the differential covers
 
-`baseline/dump_acs2er_differential.py` + `acs2-core/tests/p11_acs2er_differential.rs`
+`baseline/dump_acs2er_differential.py` + `acs2-agents/tests/acs2er_differential.rs`
 run the same 60-trial, 886-step explore experiment on both implementations and
 compare the final population field for field. Both sources of randomness in the
 pyalcs path (the replay index draw, and `PMark.get_differences`' position pick)
@@ -1099,8 +1104,8 @@ learning path.
 
 ### The file format
 
-Line-oriented text, hand-rolled in `acs2-bench/src/checkpoint.rs` so `acs2-core` gains
-no dependency. Two choices worth stating:
+Line-oriented text, hand-rolled in `acs2-core/src/checkpoint/codec.rs`. The format
+lives beside the shared checkpoint contract. Two choices worth stating:
 
 - **Floats are stored as `to_bits` hex, not decimal.** Rust's shortest-round-trip
   `Display` would also be exact, but exactness by construction is cheaper to review than
@@ -1116,8 +1121,8 @@ decoding state. Versions 1 and 2 are refused; there is no implicit unchecked leg
 Continue existing version-2 runs with their matching executable, or arrange an explicit
 conversion after independently checking the source state.
 
-SHA-256 is supplied by RustCrypto's `sha2` crate in `acs2-bench`, with no new dependency in
-`acs2-core`. One extra linear pass over the already-rendered bytes is justified for an
+SHA-256 is supplied by RustCrypto's `sha2` crate in `acs2-core`. One extra linear pass
+over the already-rendered bytes is justified for an
 artifact representing hundreds of hours: valid-looking changes to an RNG position or a
 float previously passed every structural check and silently changed the resumed run.
 The file remains inspectable text. This detects accidental corruption; it does not
@@ -1539,8 +1544,8 @@ Everything it claimed holds.
 Two things the verification added.
 
 **The new dependency had to be checked against the target that matters.** The checksum
-brings `sha2` and its tree into `acs2-bench` — not into `acs2-core`, so that decision
-stands. The cluster binary is built `--target x86_64-unknown-linux-musl`, and nothing had
+originally brought `sha2` and its tree into `acs2-bench`; the dependency now follows the
+unchanged codec into `acs2-core`. The cluster binary is built `--target x86_64-unknown-linux-musl`, and nothing had
 compiled that tree for musl. `cargo check --target x86_64-unknown-linux-musl` passes, which
 covers compilation but not linking; the cluster remains where the real build happens.
 
@@ -1654,32 +1659,37 @@ stored transition recomputed for a goal the transition was not collected under.
 `StepOutcome`, `Info`, `Configuration`, `Classifier` and the checkpoint codec are unchanged,
 and the maze and multiplexer paths do not see it.
 
-### Core module groups and compatibility
+### Core module groups and agent ownership
 
 Core source is grouped by role; paths in this table are relative to `acs2-core/src/`:
 
 | Group | Modules |
 |---|---|
 | `representation/` | `symbol.rs`, `perception.rs`, `condition.rs`, `effect.rs`, `mark.rs`, `classifier.rs`, `population.rs`. |
-| `learning/` | `alp.rs`, `ga.rs`, `rl.rs`, `subsumption.rs`, `action_selection.rs`. |
-| `agents/` | `acs2/mod.rs` (formerly the root ACS2 file), `acs2er/mod.rs` and `acs2er/replay.rs`, `trial.rs` (shared contract and exploitation). |
+| `learning/` | `alp.rs`, `ga.rs`, `rl.rs`, `subsumption.rs`, `action_selection.rs`, `replay.rs` (`ReplaySample` and the shared full replay learning step). |
 | `ports/` | `environment.rs`, `goal.rs`. |
 | `support/` | `config.rs`, `rng.rs`, `knowledge.rs`, `measurement.rs`. |
-| Root exception | `checkpoint.rs` stays in place for possible MPX capture changes. |
+| `trial.rs` | `LearningAgent`, `TrialMetrics`, `TruncationMode` and the shared exploitation trial. |
+| `checkpoint.rs`, `checkpoint/codec.rs` | Agent checkpoint contract/state and the unchanged format-3 codec. |
 
-Each group exposes its modules through its `mod.rs`. `lib.rs` re-exports every former
-crate-root module, including `agents::acs2` as `agent`. Existing imports outside core
-stay unchanged; new code uses the grouped paths. The thirteen module paths imported
-by `acs2-bench/src/bin/mpx_reach.rs` therefore still compile, as do all other existing
-public paths. The source of that binary and its included reach regressions are unchanged.
-This reorganization changes only locations, declarations, re-exports and internal paths.
+Each group exposes its defining modules through `mod.rs`; `lib.rs` declares the groups,
+trial and checkpoint modules. There are no former-path re-exports or facade modules.
+All callers, including `mpx_reach.rs`, P9, measurement, tests and examples, import the
+defining paths. Source locations and declarations change; learning, parameters,
+defaults, checkpoint identities and serialized bytes do not.
 
-Remove compatibility re-exports only after the running MPX checkpoint chain has ended
-and both lines' gates pass; the current queue horizon is April 2027. New learning agents
-belong in a separate crate outside core (planned package name `acs2-agents`), one module
-directory per family with variants inside. That crate now implements the episodic control and HER variants described below. Shared
-mechanisms stay in the shared crates; ACS2 and ACS2ER remain in core for this compatibility
-period. `checkpoint.rs` also retains its bytes and its compatibility imports.
+Every learning agent belongs to `acs2-agents`, one module directory per family:
+`acs2/`, `acs2er/` (FIFO replay memory and `ReplayConfiguration` in `replay.rs`, diagnostic
+U1 variant in `u1.rs`), `er_episodic/` and `her/`. Their shared episodic collection and
+copy-update dispatch live in `episodic_replay.rs`. The full replay step stays in core
+because ACS2ER and episodic/HER learners use it; `ReplaySample` stays there because
+trajectory relabeling and checkpoint storage also use it. Agent parameters stay in their
+family. Agent-dependent test suites live in `acs2-agents`, with environment construction
+as a development dependency; core and environments have no dependency on agents.
+
+The running MPX chain builds from `feature/mpx264` in its own clone and does not merge
+these changes during the chain. Its code has not changed since that branch split from
+`main`, so this branch can use the clean layout without preserving its former imports.
 
 ### Commit-history labels
 
@@ -1756,7 +1766,7 @@ over one length `M` and never learn that part of their perception is a goal;
 
 `GoalConditioned<E, S, G, M>` implements `Environment<M>` for any `GoalEnvironment<S, G>` by
 appending the desired goal to every observation, so an agent that has never heard of goals
-learns a goal-conditioned task through it. `acs2-core/tests/goal_port.rs` runs the unmodified `Agent` on
+learns a goal-conditioned task through it. `acs2-agents/tests/goal_port.rs` runs the unmodified `Agent` on
 a goal corridor and pins determinism from the seed. `reset_with_goal` starts an episode on a
 chosen goal, which evaluation needs.
 
@@ -1843,11 +1853,11 @@ Paths below are relative to `acs2-envs/src/` unless stated otherwise.
 | `Maze` | Validation oracle; P9 and ALCS performance | `maze/mod.rs`, `roles::VALIDATION_MAZES`, `roles::PERFORMANCE_MAZES` |
 | Multi-goal GoalMaze (Maze4/5/6/7) | Thesis research tasks | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
 | GoalMaze (MazeF3/MazeB, coordinates) | Research bridge to predecessor results | `goal/maze.rs`, `roles::RESEARCH_MAZES` |
-| Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `acs2-envs/tests/goal_maze.rs` |
-| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `acs2-envs/tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
+| Single-goal GoalMaze | Validation bridge to `Maze` | `goal/maze.rs`, `acs2-agents/tests/goal_maze.rs` |
+| BitFlipping | Research into the goal-conditioning limitation; HER relabeling oracle | `goal/bit_flipping.rs`, `acs2-agents/tests/bit_flipping.rs`, `roles::RESEARCH_TASKS` |
 | HandEye | Thesis research; simulator and knowledge parity oracle | `goal/hand_eye.rs`, `acs2-envs/tests/hand_eye.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
 | Taxi | Thesis research; gym transition-table parity oracle | `goal/taxi.rs`, `acs2-envs/tests/taxi.rs`, `roles::RESEARCH_TASKS`, `roles::VALIDATION_ORACLES` |
-| Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-core/tests/goal_port.rs` |
+| Goal-port corridor | Validation of goal layout, objective and adapter | `acs2-agents/tests/goal_port.rs` |
 | Multiplexer | Additional MPX scaling research and performance | `multiplexer.rs`, `roles::PERFORMANCE_BENCHMARKS` |
 
 The geometry reorganization changes no dynamics, matrix, cap, fixture or archived measurement.
@@ -2165,7 +2175,7 @@ here. No archived measurement under `reports/` is edited.
 
 ### Single-goal equivalence and mutation coverage
 
-`acs2-envs/tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
+`acs2-agents/tests/goal_maze.rs` compares coordinate single-goal `GoalConditioned` against `Maze` on all
 30 geometries, seeds 42–44, 20 complete random-action episodes per case: reset state and
 position, every next observation's state part, reward, termination and truncation.
 For learning, all eight pyalcs geometries, the same seeds and 100 exploration episodes are
@@ -2444,10 +2454,10 @@ all attempts; a flat observed interval does not establish a learning ceiling.
 
 `acs2-trajectory` depends only on `acs2-core`. It owns storage, selection, scoring,
 sampling and exact composition, without learning, task construction or output policy.
-Future HER, TU and VCP agents can live beside this layer and be constructed by
-`acs2-measure`, which depends on it. There is no dependency cycle and no dependency
-from `acs2-bench`, the multiplexer, or either shared core/environment package back to
-this layer. Nothing changes `Configuration`, `ReplaySample`, agent descriptions,
+HER and future TU/VCP agents live in `acs2-agents` and are constructed by
+`acs2-measure`. Benchmarks also construct ACS2/ACS2ER from that package. There is no
+dependency cycle: trajectory storage and core/environment packages never depend on
+agents or measurement. Nothing changes `Configuration`, `ReplaySample`, agent descriptions,
 checkpoint identities or codecs.
 
 ### Raw history, identifiers and capacity
@@ -3117,9 +3127,10 @@ Execution and analysis tools may evolve without rebuilding this measurement.
 its learners and implements their raw-episode environment port. Agents never
 depend on measurement. `er_episodic/` contains the original-only episodic
 control, `her/` contains the full, values and shortened values variants, and
-`acs2er_u1/` owns the diagnostic replay parameters. Shared collection and update
-dispatch live in `replay.rs`. Core, checkpoint identity and codec, `Configuration`,
-`ReplaySample`, and the multiplexer interfaces remain unchanged.
+`acs2er/u1.rs` owns the diagnostic replay parameters beside ACS2ER's FIFO implementation.
+Shared collection and update dispatch live in `episodic_replay.rs`; the full learning
+step and replay sample live in `acs2-core::learning::replay`. Checkpoint identity and
+codec, `Configuration`, `ReplaySample`, and multiplexer dynamics remain unchanged.
 
 All episodic arms act epsilon-greedily with epsilon 0.8 on the episode's real
 state joined with its real goal. They collect without learning, insert one
@@ -3140,7 +3151,7 @@ The exact update rules are:
 | `her_values` | Future, every transition, selected p | Full step | Action-set RL only, changing r and ir |
 | `her_values_shortened` | Future, counterfactual episode admissibility, selected p | Full step | Action-set RL only |
 | `her_values_p2of3` | Future, every transition, fixed p=2/3 | Full step | Action-set RL only |
-| `acs2er_u1` | Unchanged core FIFO replay, one application per environment step | Full step | None |
+| `acs2er_u1` | Unchanged ACS2ER FIFO replay, one application per environment step | Full step | None |
 
 Values copies bootstrap from the next state joined with the same copied goal.
 They change no conditions, effects, marks, quality, numerosity, experience,
@@ -3554,8 +3565,10 @@ Acceptance has 282 Rust tests; Python gate counts are 47/7/20/13/23/13/33 for to
 random policy, baseline pilot, relabeling composition, grid, maze baselines and HER
 variants. P9 columns 1--7 match all five committed benchmark rows. All six workspace
 packages were cleaned before Clippy: the same 22 older warnings, none in new code.
-All workspace `src` trees, Cargo manifests and the lockfile remain byte-identical
-to the frozen measurement commit; later changes add validation tests and tooling.
+At study acceptance, all workspace `src` trees, Cargo manifests and the lockfile were
+byte-identical to the frozen measurement commit; later validation tests and tooling did
+not rebuild that executable. The subsequent agent-layout move changes source locations,
+module declarations, dependencies and imports while preserving the measured behaviour.
 The fixed research horizon and marginal intervals support the stated comparisons;
 they do not establish convergence, a learning ceiling or performance on other tasks.
 
@@ -3578,7 +3591,7 @@ exception is made locally and in the open — `#[expect(clippy::disallowed_metho
 on code that feeds neither learning nor a reported number.
 
 ```bash
-cargo clean --release -p acs2-core -p acs2-envs -p acs2-bench
+cargo clean --release -p acs2-core -p acs2-envs -p acs2-bench -p acs2-measure -p acs2-trajectory -p acs2-agents
 cargo clippy --workspace --all-targets --release
 ```
 

@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use acs2_core::goal::{ExactMatch, Goal, GoalEnvironment, GoalStart, GoalStep};
-use acs2_core::knowledge::Transition;
-use acs2_core::perception::Perception;
-use acs2_core::rng::RandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::goal::{ExactMatch, Goal, GoalEnvironment, GoalStart, GoalStep};
+use acs2_core::support::knowledge::Transition;
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::RandomSource;
+use acs2_core::representation::symbol::Symbol;
 
 use super::SPARSE_GOAL_REWARD;
 

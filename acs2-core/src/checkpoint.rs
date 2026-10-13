@@ -1,6 +1,8 @@
-use crate::acs2er::ReplaySample;
-use crate::classifier::Classifier;
-use crate::rng::RngState;
+pub mod codec;
+
+use crate::learning::replay::ReplaySample;
+use crate::representation::classifier::Classifier;
+use crate::support::rng::RngState;
 
 #[derive(Clone, Debug)]
 pub struct AgentState<const N: usize> {

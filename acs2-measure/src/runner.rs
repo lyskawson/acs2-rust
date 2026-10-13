@@ -1,23 +1,25 @@
 use std::mem::size_of;
 use std::time::{Duration, Instant};
 
-use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration, ReplaySample};
-use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
-use acs2_core::agent::Agent;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::{AlpGenVariant, Configuration};
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::goal::{
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_core::learning::replay::ReplaySample;
+use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
+use acs2_agents::acs2::Agent;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::{AlpGenVariant, Configuration};
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::ports::goal::{
     Goal, GoalEnvironment, GoalLayout, GoalObjective, GoalOutcome, GoalStart, GoalStep,
 };
-use acs2_core::measurement::{
+use acs2_core::support::measurement::{
     read_match_counters, start_match_counting, stop_match_counting, MatchCounters,
 };
-use acs2_core::perception::Perception;
-use acs2_core::rl::{BootstrapEstimator, MaxFitnessBootstrap};
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::perception::Perception;
+use acs2_core::learning::rl::{BootstrapEstimator, MaxFitnessBootstrap};
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::support::knowledge::{anticipation_fraction, Transition};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use serde_json::{json, Value};
 
@@ -668,12 +670,12 @@ where
             })
         }
         AgentKind::Acs2ErU1 => {
-            let replay = acs2_agents::acs2er_u1::DiagnosticConfiguration {
+            let replay = acs2_agents::acs2er::u1::DiagnosticConfiguration {
                 capacity: preset.replay_capacity,
                 warmup: preset.replay_warmup,
             };
             let mut adapter = crate::agents::DiagnosticAdapter(CoreAgent {
-                agent: acs2_agents::acs2er_u1::Agent::<M, _>::new(
+                agent: acs2_agents::acs2er::u1::Agent::<M, _>::new(
                     config,
                     replay,
                     preset.truncation,
@@ -705,7 +707,7 @@ where
             })
         }
         AgentKind::ErEpisodic => {
-            use acs2_agents::replay::EpisodicAgent;
+            use acs2_agents::episodic_replay::EpisodicAgent;
             let mut agent = crate::agents::EpisodicGoalAgent(acs2_agents::er_episodic::Agent::<
                 S,
                 G,
@@ -735,7 +737,7 @@ where
             })
         }
         AgentKind::HerFull | AgentKind::HerValues { .. } | AgentKind::HerValuesShortened { .. } => {
-            use acs2_agents::replay::EpisodicAgent;
+            use acs2_agents::episodic_replay::EpisodicAgent;
             let variant = match kind {
                 AgentKind::HerFull => acs2_agents::her::Variant::Full,
                 AgentKind::HerValues { proportion } => {

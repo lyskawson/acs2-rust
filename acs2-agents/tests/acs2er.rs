@@ -1,13 +1,14 @@
-use acs2_core::acs2er::replay::{ReplayConfiguration, ReplayMemory, ReplaySample};
-use acs2_core::acs2er::Acs2ErAgent;
-use acs2_core::action_selection::EpsilonGreedy;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::Configuration;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_agents::acs2er::replay::{ReplayConfiguration, ReplayMemory};
+use acs2_core::learning::replay::ReplaySample;
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_core::learning::action_selection::EpsilonGreedy;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::LearningAgent;
 
 fn state(values: [u8; 2]) -> Perception<2> {

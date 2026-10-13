@@ -255,20 +255,26 @@ identically on both sides — the Rust bench (`acs2-bench`) and the pyalcs basel
 
 ## 7. Pinned crate architecture (Rust workspace)
 
-Clean Architecture: domain (`acs2-core`) has zero I/O and zero environment knowledge.
+Clean Architecture: learning mechanisms in `acs2-core` have zero I/O and zero environment
+knowledge; its checkpoint codec handles format integrity and file storage.
 SOLID throughout. No God types. RNG injected via a trait (Dependency Inversion).
 No code comments — semantics live in names. All identifiers in English.
 
 ```
-acs2-core/src/                 pure ACS2 domain, no I/O
+acs2-core/src/                 shared domain, agent/trial and checkpoint contracts
   representation/             symbol, perception, condition, effect, mark, classifier, population
-  learning/                   ALP, GA, RL, subsumption, action selection (actor seam)
-  agents/acs2/mod.rs           ACS2 exploration loop
-  agents/acs2er/               ACS2ER loop, replay memory and configuration
-  agents/trial.rs             LearningAgent, shared exploitation, truncation mode (critic seam)
+  learning/                   ALP, GA, RL, subsumption, action selection, replay sample/full step
+  trial.rs                    LearningAgent, shared exploitation, truncation mode (critic seam)
   ports/                      environment, goal objective/environment and adapter
   support/                    configuration, injected RNG, knowledge, matching counter
-  checkpoint.rs               unchanged path for the running MPX chain
+  checkpoint.rs               AgentState and Checkpointed contract
+  checkpoint/codec.rs         format 3, integrity checks and file storage
+acs2-agents/src/               every learning agent, one directory per family
+  acs2/                       ACS2 exploration and checkpoint implementation
+  acs2er/                     ACS2ER, FIFO replay memory/parameters, U1 diagnostic variant
+  er_episodic/                 original-only episodic replay control
+  her/                        full, values and shortened values variants
+  episodic_replay.rs           shared episodic collection and update dispatch
 acs2-envs/src/                 concrete dynamics, reference/research/performance roles
   maze/                       single-goal dynamics, topology, knowledge and geometries
   maze/geometries/pyalcs/      gym_maze provenance
@@ -276,7 +282,7 @@ acs2-envs/src/                 concrete dynamics, reference/research/performance
   goal/                       multi-goal maze, bit flipping, hand-eye, taxi, knowledge
   roles.rs                    pins P9 validation order separately from research/performance sets
   multiplexer.rs              MPX dynamics and public path
-acs2-bench/src/                P9 benchmark, multiplexer runners, checkpoint codec
+acs2-bench/src/                P9 benchmark and multiplexer runners
 acs2-measure/src/              goal-agent contract, interaction budget, evaluation, references, CLI
   runner.rs                   GoalAgent, CoreAgent, TrainingEnvironment, read-only evaluation
   task.rs                     task construction and explicit thesis preset
@@ -294,13 +300,12 @@ experiments/                   registered protocols and analyses; raw data outsi
   relabeling-composition/     random-policy composition summary
 ```
 
-The workspace has these five crates; optional Python bindings are not a crate yet.
-Every former `acs2_core` crate-root module path remains available through re-exports
-in `acs2-core/src/lib.rs`. New code uses the grouped paths, and compatibility exports
-are removed only after the running MPX chain ends and both lines' gates pass.
-New learning agents go in a separate crate outside core (planned package name
-`acs2-agents`), one module directory per family with variants inside. That package
-is not implemented yet. Shared mechanisms remain in the shared crates.
+The workspace has these six crates; optional Python bindings are not a crate yet.
+Callers import the defining modules, with no former-path compatibility exports or facade
+modules. All learning agents live in `acs2-agents`, with their variants inside each
+family. Shared mechanisms, the agent contract and checkpoint format remain in core;
+trajectory storage depends only on core. The running MPX chain uses its separate branch
+and clone, so this layout does not rebuild its executable.
 
 **The two Actor-Critic seams (built now as architecture, implemented later):**
 

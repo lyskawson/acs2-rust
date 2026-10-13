@@ -1,7 +1,7 @@
-use acs2_core::goal::GoalLayout;
-use acs2_core::knowledge::Transition;
-use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::goal::GoalLayout;
+use acs2_core::support::knowledge::Transition;
+use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::representation::symbol::Symbol;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::HandEye3;
 use acs2_envs::goal::knowledge::with_wildcard_goals;

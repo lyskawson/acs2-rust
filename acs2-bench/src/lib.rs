@@ -1,7 +1,5 @@
-pub mod checkpoint;
-
-use acs2_core::acs2er::ReplayConfiguration;
-use acs2_core::config::AlpGenVariant;
+use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_core::support::config::AlpGenVariant;
 use acs2_envs::multiplexer::control_bits_for;
 
 #[derive(Clone, Copy)]

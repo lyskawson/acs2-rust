@@ -1,6 +1,6 @@
-use acs2_core::goal::{Goal, GoalLayout};
-use acs2_core::knowledge::Transition;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::goal::{Goal, GoalLayout};
+use acs2_core::support::knowledge::Transition;
+use acs2_core::representation::symbol::Symbol;
 
 use super::geometries::MazeGeometry;
 use super::topology::MazeTopology;

@@ -251,11 +251,11 @@ uv run --project baseline python baseline/compare_bench.py
 
 | Crate | Purpose |
 |---|---|
-| [`acs2-core`](acs2-core/src/lib.rs) | Pure domain: representation, learning mechanisms, ACS2/ACS2ER, task ports and support code; module map below. |
+| [`acs2-core`](acs2-core/src/lib.rs) | Shared representation, learning mechanisms, task ports, support code, agent/trial contract and checkpoint contract/format; module map below. |
 | [`acs2-envs`](acs2-envs/src/lib.rs) | [Single-goal maze](acs2-envs/src/maze/mod.rs), [geometry catalogue](acs2-envs/src/maze/geometries/mod.rs), [goal environments](acs2-envs/src/goal/mod.rs), [task/role registry](acs2-envs/src/roles.rs), and [multiplexer](acs2-envs/src/multiplexer.rs) with both encodings. |
 | [`acs2-bench`](acs2-bench/src/main.rs) | P9 maze benchmark and the [MPX reach runner](acs2-bench/src/bin/mpx_reach.rs). |
 | [`acs2-measure`](acs2-measure/src/lib.rs) | [Goal-agent and environment contracts, runner, evaluation and counters](acs2-measure/src/runner.rs), [task construction and preset](acs2-measure/src/task.rs), [floor/reachability references](acs2-measure/src/reference.rs), [CLI](acs2-measure/src/main.rs), [output guard](acs2-measure/src/output.rs), and [replay diagnostic adapter](acs2-measure/src/trajectory.rs). |
-| [`acs2-agents`](acs2-agents/src/lib.rs) | Episodic replay control in `er_episodic/`, hindsight full/values/shortened variants in `her/`, shared replay learning in `replay.rs`, and the `acs2er_u1/` diagnostic parameters. Agents depend on core and trajectory storage, never on measurement. |
+| [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and U1 diagnostic in `acs2er/`; original-only episodic control in `er_episodic/`; hindsight full/values/shortened variants in `her/`; their episodic replay mechanism in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
 | [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
 
 Core modules are grouped by role under [`acs2-core/src/`](acs2-core/src/). Each file
@@ -264,21 +264,21 @@ below defines the module of the same name under its group:
 | Role | Modules and files |
 |---|---|
 | Rule representation and population | [`representation/symbol.rs`](acs2-core/src/representation/symbol.rs), [`perception.rs`](acs2-core/src/representation/perception.rs), [`condition.rs`](acs2-core/src/representation/condition.rs), [`effect.rs`](acs2-core/src/representation/effect.rs), [`mark.rs`](acs2-core/src/representation/mark.rs), [`classifier.rs`](acs2-core/src/representation/classifier.rs), [`population.rs`](acs2-core/src/representation/population.rs). |
-| Shared learning mechanisms | [`learning/alp.rs`](acs2-core/src/learning/alp.rs), [`ga.rs`](acs2-core/src/learning/ga.rs), [`rl.rs`](acs2-core/src/learning/rl.rs), [`subsumption.rs`](acs2-core/src/learning/subsumption.rs), [`action_selection.rs`](acs2-core/src/learning/action_selection.rs). |
-| Implemented agents and trial loop | ACS2: [`agents/acs2/mod.rs`](acs2-core/src/agents/acs2/mod.rs); ACS2ER: [`agents/acs2er/mod.rs`](acs2-core/src/agents/acs2er/mod.rs), with [`replay.rs`](acs2-core/src/agents/acs2er/replay.rs); shared [`agents/trial.rs`](acs2-core/src/agents/trial.rs) defines `LearningAgent` and the exploitation loop. |
+| Shared learning mechanisms | [`learning/alp.rs`](acs2-core/src/learning/alp.rs), [`ga.rs`](acs2-core/src/learning/ga.rs), [`rl.rs`](acs2-core/src/learning/rl.rs), [`subsumption.rs`](acs2-core/src/learning/subsumption.rs), [`action_selection.rs`](acs2-core/src/learning/action_selection.rs), [`replay.rs`](acs2-core/src/learning/replay.rs) (`ReplaySample` and the full replay learning step). |
+| Agent and trial contract | [`trial.rs`](acs2-core/src/trial.rs) defines `LearningAgent`, `TrialMetrics`, `TruncationMode` and the shared exploitation loop. |
 | Task ports | [`ports/environment.rs`](acs2-core/src/ports/environment.rs) and [`ports/goal.rs`](acs2-core/src/ports/goal.rs), including the goal-conditioned adapter. |
-| Support | [`support/config.rs`](acs2-core/src/support/config.rs), [`rng.rs`](acs2-core/src/support/rng.rs), [`knowledge.rs`](acs2-core/src/support/knowledge.rs), [`measurement.rs`](acs2-core/src/support/measurement.rs) (opt-in match counter); [`checkpoint.rs`](acs2-core/src/checkpoint.rs) stays at the source root for the running MPX chain. |
+| Support | [`support/config.rs`](acs2-core/src/support/config.rs), [`rng.rs`](acs2-core/src/support/rng.rs), [`knowledge.rs`](acs2-core/src/support/knowledge.rs), [`measurement.rs`](acs2-core/src/support/measurement.rs) (opt-in match counter). |
+| Checkpoint contract and format | [`checkpoint.rs`](acs2-core/src/checkpoint.rs) defines `AgentState` and `Checkpointed`; [`checkpoint/codec.rs`](acs2-core/src/checkpoint/codec.rs) owns format 3, integrity checks and file storage. |
 
-New code uses grouped paths, for example `acs2_core::agents::acs2::Agent` and
-`acs2_core::ports::goal::GoalEnvironment`. Every former crate-root module path remains
-available through re-exports in `acs2-core/src/lib.rs`, so existing callers and
-`mpx_reach.rs` compile unchanged. Remove those compatibility re-exports only after the
-running MPX checkpoint chain has ended, with both lines' gates passing; its current
-queue horizon is April 2027.
+Callers use the defining modules, for example `acs2_agents::acs2::Agent`,
+`acs2_agents::acs2er::replay::ReplayConfiguration` and
+`acs2_core::ports::goal::GoalEnvironment`. Former paths have no compatibility exports
+or facade modules. `acs2-trajectory` depends only on core; benchmarks and measurement
+construct agents from `acs2-agents`.
 
-New learning agents live in `acs2-agents`, outside `acs2-core`, with one module directory
-per family and variants within it. Shared mechanisms stay in shared crates. The original
-ACS2 and ACS2ER remain in core while its public API supports the MPX chain. The HER
+All learning agents live in `acs2-agents`, with one module directory per family and
+variants within it. Shared mechanisms stay in shared crates. The running MPX chain
+continues from its separate branch and clone; these moves do not rebuild it. The HER
 experiment is complete: validation tuning, the twenty-seed grid and matched-proportion
 controls used 34.6125 of sixty CPU-hours. Its registration and analysis tools are in
 `experiments/her-variants/`; [hindsight copy updates and held-pair replay results](docs/ARCHITECTURE.md#hindsight-copy-updates-and-held-pair-replay-results)

@@ -1,10 +1,11 @@
-use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration};
-use acs2_core::action_selection::EpsilonGreedy;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::goal::GoalLayout;
-use acs2_core::perception::Perception;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_core::learning::action_selection::EpsilonGreedy;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::ports::goal::GoalLayout;
+use acs2_core::representation::perception::Perception;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::{HandEye3, HandEye4, HandEye5};

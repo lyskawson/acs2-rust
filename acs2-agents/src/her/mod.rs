@@ -2,7 +2,7 @@ use acs2_core::support::config::Configuration;
 use acs2_core::support::rng::RandomSource;
 use acs2_trajectory::{Admissibility, GoalStrategy, SamplerConfiguration, Selection};
 
-use crate::replay::{CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay};
+use crate::episodic_replay::{CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay};
 
 #[cfg(test)]
 mod validation;

@@ -1,5 +1,5 @@
-use acs2_core::acs2er::ReplaySample;
-use acs2_core::goal::{Goal, GoalLayout, GoalObjective, GoalOutcome, GoalStep};
+use acs2_core::learning::replay::ReplaySample;
+use acs2_core::ports::goal::{Goal, GoalLayout, GoalObjective, GoalOutcome, GoalStep};
 use acs2_core::trial::TruncationMode;
 
 use crate::cost::{CostByPurpose, ObjectiveCost};

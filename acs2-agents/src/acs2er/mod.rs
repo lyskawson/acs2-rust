@@ -1,17 +1,17 @@
 pub mod replay;
+pub mod u1;
 
-use crate::learning::action_selection::ActionSelector;
-use crate::learning::alp::apply_alp;
-use crate::checkpoint::{AgentState, Checkpointed};
-use crate::support::config::Configuration;
-use crate::ports::environment::Environment;
-use crate::learning::ga::apply_ga;
-use crate::representation::population::{ClassifierRef, Population};
-use crate::learning::rl::{apply_reinforcement_learning, BootstrapEstimator};
-use crate::support::rng::RandomSource;
-use crate::agents::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
+use acs2_core::learning::action_selection::ActionSelector;
+use acs2_core::checkpoint::{AgentState, Checkpointed};
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::Environment;
+use acs2_core::representation::population::Population;
+use acs2_core::learning::rl::BootstrapEstimator;
+use acs2_core::support::rng::RandomSource;
+use acs2_core::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 
-pub use replay::{ReplayConfiguration, ReplayMemory, ReplaySample};
+use replay::{ReplayConfiguration, ReplayMemory};
+use acs2_core::learning::replay::{replay_learning_step, ReplaySample};
 
 pub struct Acs2ErAgent<const N: usize, R: RandomSource> {
     population: Population<N>,
@@ -186,64 +186,5 @@ impl<const N: usize, R: RandomSource> LearningAgent<N> for Acs2ErAgent<N, R> {
             bootstrap,
             self.truncation_mode,
         )
-    }
-}
-
-pub fn replay_learning_step<const N: usize, B>(
-    population: &mut Population<N>,
-    config: &Configuration,
-    bootstrap: &B,
-    sample: &ReplaySample<N>,
-    time: u64,
-    rng: &mut dyn RandomSource,
-) where
-    B: BootstrapEstimator<N>,
-{
-    let match_set = population.form_match_set(&sample.state);
-    let mut action_set = population.form_action_set(&match_set, sample.action);
-    let mut next_match_set = population.form_match_set(&sample.next_state);
-
-    apply_alp(
-        population,
-        &mut next_match_set,
-        &mut action_set,
-        &sample.state,
-        sample.action,
-        &sample.next_state,
-        time,
-        config,
-        rng,
-    );
-
-    next_match_set = population.form_match_set(&sample.next_state);
-    let bootstrap_value = if sample.done {
-        0.0
-    } else {
-        bootstrap.estimate(population, &next_match_set)
-    };
-    apply_reinforcement_learning(
-        population,
-        &action_set,
-        sample.reward,
-        bootstrap_value,
-        config.beta,
-        config.gamma,
-    );
-
-    if config.do_ga {
-        let mut ga_match_set: Vec<ClassifierRef> = if sample.done {
-            Vec::new()
-        } else {
-            next_match_set
-        };
-        apply_ga(
-            time,
-            population,
-            &mut ga_match_set,
-            &mut action_set,
-            &sample.next_state,
-            config,
-            rng,
-        );
     }
 }

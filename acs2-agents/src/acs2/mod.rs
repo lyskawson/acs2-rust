@@ -1,17 +1,17 @@
-use crate::learning::action_selection::ActionSelector;
-use crate::learning::alp::apply_alp;
-use crate::checkpoint::{AgentState, Checkpointed};
-use crate::support::config::Configuration;
-use crate::ports::environment::Environment;
-use crate::learning::ga::apply_ga;
-use crate::representation::population::{ClassifierRef, Population};
-use crate::learning::rl::{apply_reinforcement_learning, BootstrapEstimator};
-use crate::support::rng::RandomSource;
-use crate::agents::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
+use acs2_core::learning::action_selection::ActionSelector;
+use acs2_core::learning::alp::apply_alp;
+use acs2_core::checkpoint::{AgentState, Checkpointed};
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::Environment;
+use acs2_core::learning::ga::apply_ga;
+use acs2_core::representation::population::{ClassifierRef, Population};
+use acs2_core::learning::rl::{apply_reinforcement_learning, BootstrapEstimator};
+use acs2_core::support::rng::RandomSource;
+use acs2_core::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 
 struct PreviousStep<const N: usize> {
     action_set: Vec<ClassifierRef>,
-    state: crate::representation::perception::Perception<N>,
+    state: acs2_core::representation::perception::Perception<N>,
     action: usize,
     reward: f64,
 }

@@ -8,4 +8,5 @@ acs2-core = { path = "../acs2-core" }
 acs2-trajectory = { path = "../acs2-trajectory" }
 
 [dev-dependencies]
+acs2-envs = { path = "../acs2-envs" }
 serde_json = { version = "1", features = ["float_roundtrip"] }

@@ -5,15 +5,15 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
-use acs2_core::acs2er::ReplaySample;
-use acs2_core::checkpoint::AgentState;
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::perception::Perception;
-use acs2_core::rng::RngState;
-use acs2_core::symbol::Symbol;
+use crate::learning::replay::ReplaySample;
+use crate::checkpoint::AgentState;
+use crate::representation::classifier::Classifier;
+use crate::representation::condition::Condition;
+use crate::representation::effect::Effect;
+use crate::representation::mark::Mark;
+use crate::representation::perception::Perception;
+use crate::support::rng::RngState;
+use crate::representation::symbol::Symbol;
 
 pub const FORMAT: &str = "acs2-checkpoint 3";
 const TERMINATOR: &str = "end";
@@ -487,7 +487,7 @@ pub fn read<const N: usize>(path: &Path) -> RunState<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use acs2_core::config::Configuration;
+    use crate::support::config::Configuration;
 
     fn state() -> RunState<7> {
         let mut classifier = Classifier::<7>::general(Some(1), &Configuration::mpx());

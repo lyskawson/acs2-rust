@@ -1,16 +1,16 @@
 mod common;
 
-use acs2_core::alp::{apply_alp, expected_case, unexpected_case};
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::config::Configuration;
-use acs2_core::effect::Effect;
-use acs2_core::ga::{apply_ga, generalizing_mutation, should_apply, two_point_crossover};
-use acs2_core::mark::Mark;
-use acs2_core::population::Population;
-use acs2_core::rl::{apply_reinforcement_learning, update_classifier};
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::learning::alp::{apply_alp, expected_case, unexpected_case};
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::support::config::Configuration;
+use acs2_core::representation::effect::Effect;
+use acs2_core::learning::ga::{apply_ga, generalizing_mutation, should_apply, two_point_crossover};
+use acs2_core::representation::mark::Mark;
+use acs2_core::representation::population::Population;
+use acs2_core::learning::rl::{apply_reinforcement_learning, update_classifier};
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 
 use common::{approx, assert_classifier_matches, classifier, effect, fixtures, mark, perception};
 

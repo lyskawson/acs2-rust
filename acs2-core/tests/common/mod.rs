@@ -2,12 +2,12 @@
 
 use std::collections::BTreeSet;
 
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::perception::Perception;
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::representation::effect::Effect;
+use acs2_core::representation::mark::Mark;
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::symbol::Symbol;
 use serde_json::Value;
 
 pub fn load(file: &str) -> Value {

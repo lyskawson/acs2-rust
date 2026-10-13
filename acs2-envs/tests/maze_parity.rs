@@ -1,7 +1,7 @@
-use acs2_core::environment::Environment;
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::environment::Environment;
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 use serde_json::Value;

@@ -1,6 +1,6 @@
-use acs2_core::agents::acs2er::Acs2ErAgent;
-use acs2_core::agents::acs2er::ReplayConfiguration;
-use acs2_core::agents::trial::{LearningAgent, TrialMetrics, TruncationMode};
+use crate::acs2er::Acs2ErAgent;
+use crate::acs2er::replay::ReplayConfiguration;
+use acs2_core::trial::{LearningAgent, TrialMetrics, TruncationMode};
 use acs2_core::checkpoint::{AgentState, Checkpointed};
 use acs2_core::learning::{action_selection::ActionSelector, rl::BootstrapEstimator};
 use acs2_core::ports::environment::{Environment, StepOutcome};

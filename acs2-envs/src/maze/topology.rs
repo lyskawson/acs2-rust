@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
-use acs2_core::perception::Perception;
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::symbol::Symbol;
 
 use super::geometries::MazeGeometry;
 use super::{MAZE_PERCEPTION_LEN, NEIGHBOUR_OFFSETS};

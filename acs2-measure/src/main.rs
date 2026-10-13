@@ -3,8 +3,8 @@ use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
-use acs2_core::goal::Goal;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::ports::goal::Goal;
+use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::position_goal;
 use acs2_envs::goal::maze::{Coordinates, NeighbourPerception};

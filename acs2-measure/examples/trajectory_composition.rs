@@ -3,9 +3,9 @@ use std::io::{BufWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use acs2_core::environment::Environment;
-use acs2_core::goal::Goal;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::ports::environment::Environment;
+use acs2_core::ports::goal::Goal;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::trial::TruncationMode;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye4, HandEye5};

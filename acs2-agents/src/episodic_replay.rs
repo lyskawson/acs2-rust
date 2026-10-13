@@ -1,5 +1,5 @@
-use acs2_core::agents::acs2er::{replay_learning_step, ReplaySample};
-use acs2_core::agents::trial::TruncationMode;
+use acs2_core::learning::replay::{replay_learning_step, ReplaySample};
+use acs2_core::trial::TruncationMode;
 use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
 use acs2_core::learning::rl::{
     apply_reinforcement_learning, BootstrapEstimator, MaxFitnessBootstrap,

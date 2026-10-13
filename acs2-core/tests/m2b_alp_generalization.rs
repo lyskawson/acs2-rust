@@ -1,14 +1,14 @@
 use std::collections::BTreeSet;
 
-use acs2_core::alp::expected_case;
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::config::{AlpGenVariant, Configuration};
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::learning::alp::expected_case;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::support::config::{AlpGenVariant, Configuration};
+use acs2_core::representation::effect::Effect;
+use acs2_core::representation::mark::Mark;
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 
 const W: Symbol = Symbol::Wildcard;
 

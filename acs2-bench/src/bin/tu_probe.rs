@@ -1,17 +1,18 @@
 use std::collections::{BTreeSet, VecDeque};
 use std::time::{Duration, Instant};
 
-use acs2_core::acs2er::{replay_learning_step, ReplayMemory, ReplaySample};
-use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy, RandomAction};
-use acs2_core::agent::Agent;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::Configuration;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::population::Population;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::learning::replay::{replay_learning_step, ReplaySample};
+use acs2_agents::acs2er::replay::ReplayMemory;
+use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy, RandomAction};
+use acs2_agents::acs2::Agent;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::population::Population;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};
 

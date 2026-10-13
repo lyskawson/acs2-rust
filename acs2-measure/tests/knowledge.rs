@@ -1,9 +1,9 @@
-use acs2_core::classifier::Classifier;
-use acs2_core::goal::GoalLayout;
-use acs2_core::population::Population;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::ports::goal::GoalLayout;
+use acs2_core::representation::population::Population;
+use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_core::support::knowledge::{anticipation_fraction, Transition};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::symbol::Symbol;
 use acs2_envs::goal::maze::{CoordinateGoalMaze, Coordinates};
 use acs2_envs::maze::geometries::geometry_by_id;
 use acs2_measure::knowledge::maze_transitions;
@@ -44,7 +44,7 @@ fn exact_classifier(transition: &Transition<10>) -> Classifier<10> {
 fn fraction(population: &Population<10>, maze: &CoordinateGoalMaze) -> f64 {
     let preset = Preset::thesis();
     let agent = CoreAgent {
-        agent: acs2_core::agent::Agent::<10, _>::with_population(
+        agent: acs2_agents::acs2::Agent::<10, _>::with_population(
             preset.config(8),
             ChaChaRandomSource::from_seed(42),
             Population::from_classifiers(population.classifiers().to_vec()),

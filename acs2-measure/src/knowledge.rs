@@ -1,4 +1,4 @@
-use acs2_core::goal::GoalLayout;
+use acs2_core::ports::goal::GoalLayout;
 use acs2_core::support::knowledge::Transition;
 use acs2_envs::goal::maze::{GoalMaze, MazeGoalEncoding};
 

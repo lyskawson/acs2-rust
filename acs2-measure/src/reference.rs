@@ -1,4 +1,4 @@
-use acs2_core::goal::Goal;
+use acs2_core::ports::goal::Goal;
 
 use crate::task::{Pair, Task};
 

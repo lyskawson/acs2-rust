@@ -1,11 +1,11 @@
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 
-use acs2_core::goal::{Goal, GoalEnvironment, GoalStart};
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::ports::goal::{Goal, GoalEnvironment, GoalStart};
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::support::knowledge::Transition;
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::symbol::Symbol;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye, HandEyeState};
 use acs2_envs::goal::maze::{GoalMaze, MazeGoalEncoding};

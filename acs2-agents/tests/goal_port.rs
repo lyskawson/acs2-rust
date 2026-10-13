@@ -1,15 +1,15 @@
-use acs2_core::action_selection::EpsilonGreedy;
-use acs2_core::agent::Agent;
-use acs2_core::config::Configuration;
-use acs2_core::environment::Environment;
-use acs2_core::goal::{
+use acs2_core::learning::action_selection::EpsilonGreedy;
+use acs2_agents::acs2::Agent;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::Environment;
+use acs2_core::ports::goal::{
     ExactMatch, Goal, GoalConditioned, GoalEnvironment, GoalLayout, GoalObjective, GoalStart,
     GoalStep,
 };
-use acs2_core::perception::Perception;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::perception::Perception;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::LearningAgent;
 
 const LENGTH: u8 = 6;

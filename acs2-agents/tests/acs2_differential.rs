@@ -1,16 +1,17 @@
+#[path = "../../acs2-core/tests/common/mod.rs"]
 mod common;
 
-use acs2_core::alp::apply_alp;
-use acs2_core::action_selection::EpsilonGreedy;
-use acs2_core::agent::Agent;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::Configuration;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::population::{ClassifierRef, Population};
-use acs2_core::rl::{apply_reinforcement_learning, MaxFitnessBootstrap};
-use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::learning::alp::apply_alp;
+use acs2_core::learning::action_selection::EpsilonGreedy;
+use acs2_agents::acs2::Agent;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::population::{ClassifierRef, Population};
+use acs2_core::learning::rl::{apply_reinforcement_learning, MaxFitnessBootstrap};
+use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 
 use common::{approx, assert_classifier_matches, classifier, load, perception};

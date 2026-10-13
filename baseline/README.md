@@ -101,7 +101,7 @@ uv run python run_pyalcs_maze.py Maze4-v0 2>/dev/null | grep -E "===|summary|###
 `dump_acs2er_differential.py` is the oracle for the ACS2ER (experience replay)
 agent. It runs the unmodified pyalcs `ACS2ER` explore loop on a deterministic
 environment and emits `fixtures/acs2er_differential.json`, consumed by
-`acs2-core/tests/p11_acs2er_differential.rs`.
+`acs2-agents/tests/acs2er_differential.rs`.
 
 ```bash
 uv run python dump_acs2er_differential.py

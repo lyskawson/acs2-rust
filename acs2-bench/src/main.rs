@@ -1,13 +1,13 @@
 use std::time::Instant;
 
 use acs2_bench::{AgentChoice, AgentOptions};
-use acs2_core::acs2er::Acs2ErAgent;
-use acs2_core::action_selection::EpsilonGreedy;
-use acs2_core::agent::Agent;
-use acs2_core::config::Configuration;
-use acs2_core::environment::Environment;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_core::learning::action_selection::EpsilonGreedy;
+use acs2_agents::acs2::Agent;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::Environment;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 use acs2_envs::maze::{Maze, MAZE_PERCEPTION_LEN};
 use acs2_envs::maze::geometries::{geometry_by_id, MazeGeometry};

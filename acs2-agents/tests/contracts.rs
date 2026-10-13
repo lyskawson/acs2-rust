@@ -1,10 +1,10 @@
-use acs2_agents::replay::{
+use acs2_agents::episodic_replay::{
     values_learning_step, CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay,
     ReplayEnvironment,
 };
 use acs2_agents::{er_episodic, her};
-use acs2_core::agents::acs2er::ReplaySample;
-use acs2_core::agents::trial::TruncationMode;
+use acs2_core::learning::replay::ReplaySample;
+use acs2_core::trial::TruncationMode;
 use acs2_core::ports::environment::{Environment, StepOutcome};
 use acs2_core::ports::goal::{ExactMatch, Goal, GoalStart, GoalStep};
 use acs2_core::representation::{

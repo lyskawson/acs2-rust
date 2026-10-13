@@ -4,13 +4,13 @@ use std::io::{BufWriter, Write};
 use std::time::Duration;
 
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::environment::Environment;
-use acs2_core::goal::{Goal, GoalEnvironment, GoalLayout, GoalObjective};
-use acs2_core::measurement::{read_match_counters, start_match_counting, stop_match_counting};
-use acs2_core::perception::Perception;
-use acs2_core::population::Population;
-use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::environment::Environment;
+use acs2_core::ports::goal::{Goal, GoalEnvironment, GoalLayout, GoalObjective};
+use acs2_core::support::measurement::{read_match_counters, start_match_counting, stop_match_counting};
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::population::Population;
+use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::representation::symbol::Symbol;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye4, HandEyeState};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::goal::taxi::passenger_goal;
@@ -102,7 +102,7 @@ fn full_goal_pools_are_compact_and_restricted_pools_are_explicit() {
 fn handeye_half_held_and_taxi_distribution_are_explicit() {
     let full = HandEye4::new(
         50,
-        Box::new(acs2_core::rng::ChaChaRandomSource::from_seed(0)),
+        Box::new(acs2_core::support::rng::ChaChaRandomSource::from_seed(0)),
     );
     let handeye = HandEyeTask::<4, 17>::new("handeye4".to_owned(), 50, full.goal_pool().to_vec());
     let pairs = <HandEyeTask<4, 17> as Task<17, 2, 19>>::pairs(&handeye);
@@ -249,7 +249,7 @@ fn registry_and_preset_name_all_factors() {
 #[test]
 fn large_bit_task_samples_evaluation_but_has_analytical_references() {
     let template = acs2_envs::goal::bit_flipping::BitFlipping::<16>::new(Box::new(
-        acs2_core::rng::ChaChaRandomSource::from_seed(0),
+        acs2_core::support::rng::ChaChaRandomSource::from_seed(0),
     ));
     let task = BitTask::<16>::new(1, template.goal_pool().collect());
     let pairs = <BitTask<16> as Task<16, 16, 32>>::pairs(&task);
@@ -276,12 +276,12 @@ fn a_training_call_cannot_hide_multiple_episodes() {
     let task = maze(None);
     let environment = <MazeTask<Coordinates, 2> as Task<8, 2, 10>>::environment(
         &task,
-        acs2_core::rng::ChaChaRandomSource::from_seed(1),
+        acs2_core::support::rng::ChaChaRandomSource::from_seed(1),
     );
     let mut measured = TrainingEnvironment::<_, 8, 2, 10>::new(
         &task,
         environment,
-        acs2_core::rng::ChaChaRandomSource::from_seed(2),
+        acs2_core::support::rng::ChaChaRandomSource::from_seed(2),
     );
     measured.begin_episode();
     measured.reset();
@@ -295,12 +295,12 @@ fn restricted_training_uses_only_real_goals_and_conditioned_starts() {
     let task = HandEyeTask::<4, 17>::new("handeye4".to_owned(), 5, pool.clone());
     let environment = <HandEyeTask<4, 17> as Task<17, 2, 19>>::environment(
         &task,
-        acs2_core::rng::ChaChaRandomSource::from_seed(42),
+        acs2_core::support::rng::ChaChaRandomSource::from_seed(42),
     );
     let mut measured = TrainingEnvironment::<_, 17, 2, 19>::new(
         &task,
         environment,
-        acs2_core::rng::ChaChaRandomSource::from_seed(44),
+        acs2_core::support::rng::ChaChaRandomSource::from_seed(44),
     );
     for _ in 0..30 {
         measured.begin_episode();
@@ -352,7 +352,7 @@ impl GoalAgent<8, 2, 10> for LastActionPolicy {
     fn eval_action(
         &self,
         _state: &Perception<10>,
-        _rng: &mut dyn acs2_core::rng::RandomSource,
+        _rng: &mut dyn acs2_core::support::rng::RandomSource,
     ) -> (usize, f64) {
         (7, 17.0)
     }
@@ -483,7 +483,7 @@ impl<const S: usize, const G: usize, const M: usize> GoalAgent<S, G, M> for Prob
     fn eval_action(
         &self,
         state: &Perception<M>,
-        _rng: &mut dyn acs2_core::rng::RandomSource,
+        _rng: &mut dyn acs2_core::support::rng::RandomSource,
     ) -> (usize, f64) {
         if self.mutate_on_eval {
             self.eval_calls.set(self.eval_calls.get() + 1);
@@ -783,7 +783,7 @@ fn core_agents_pass_reusable_read_only_check() {
         42,
         &[55, 110],
         || CoreAgent {
-            agent: acs2_core::agent::Agent::<10, _>::new(
+            agent: acs2_agents::acs2::Agent::<10, _>::new(
                 preset.config(8),
                 ChaChaRandomSource::from_seed_and_stream(42, 1),
             )
@@ -807,9 +807,9 @@ fn core_agents_pass_reusable_read_only_check() {
         42,
         &[55, 110],
         || CoreAgent {
-            agent: acs2_core::acs2er::Acs2ErAgent::<10, _>::new(
+            agent: acs2_agents::acs2er::Acs2ErAgent::<10, _>::new(
                 preset.config(8),
-                acs2_core::acs2er::ReplayConfiguration {
+                acs2_agents::acs2er::replay::ReplayConfiguration {
                     buffer_size: preset.replay_capacity,
                     min_samples: preset.replay_warmup,
                     samples_number: preset.replay_updates_per_step,

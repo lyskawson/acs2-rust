@@ -2,12 +2,12 @@ use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::mem::size_of;
 
-use acs2_core::goal::{
+use acs2_core::ports::goal::{
     ExactMatch, Goal, GoalEnvironment, GoalLayout, GoalObjective, GoalStart, GoalStep,
 };
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::TruncationMode;
 use acs2_envs::goal::bit_flipping::BitFlipping;
 use acs2_envs::goal::hand_eye::{position_goal, HandEye4, HandEyeState};

@@ -2,10 +2,10 @@ pub mod geometries;
 pub mod knowledge;
 pub mod topology;
 
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::rng::RandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::RandomSource;
+use acs2_core::representation::symbol::Symbol;
 
 use self::geometries::MazeGeometry;
 

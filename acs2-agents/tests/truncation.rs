@@ -1,17 +1,18 @@
 use std::cell::{Cell, RefCell};
 
-use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration};
-use acs2_core::action_selection::ActionSelector;
-use acs2_core::agent::Agent;
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_core::learning::action_selection::ActionSelector;
+use acs2_agents::acs2::Agent;
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::Configuration;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::population::{ClassifierRef, Population};
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource, RngState};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::population::{ClassifierRef, Population};
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource, RngState};
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::{self, LearningAgent, TruncationMode};
 
 fn state(value: u8) -> Perception<2> {

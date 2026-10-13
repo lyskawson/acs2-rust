@@ -3,23 +3,23 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use acs2_bench::checkpoint::{self, CheckpointSettings, RunState};
+use acs2_core::checkpoint::codec::{self, CheckpointSettings, RunState};
 use acs2_bench::{
     parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
     UMaxMode,
 };
-use acs2_core::acs2er::Acs2ErAgent;
-use acs2_core::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
-use acs2_core::agent::Agent;
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
+use acs2_agents::acs2::Agent;
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::config::{AlpGenVariant, Configuration};
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::population::Population;
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::support::config::{AlpGenVariant, Configuration};
+use acs2_core::representation::effect::Effect;
+use acs2_core::representation::mark::Mark;
+use acs2_core::representation::population::Population;
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_core::trial::LearningAgent;
 use acs2_envs::multiplexer::{
     control_bits_for, evaluate_knowledge, parse_encoding, sampled_transitions, transition_is_correct,
@@ -447,7 +447,7 @@ fn save_checkpoint<const N: usize, A>(
             .expect("the environment random source cannot be checkpointed"),
         agent: agent.capture(),
     };
-    checkpoint::write(&plan.settings.path, &state);
+    codec::write(&plan.settings.path, &state);
 }
 
 fn run_reach_protocol<const N: usize, A>(
@@ -490,7 +490,7 @@ where
 
     if let Some(plan) = checkpoint {
         if plan.settings.path.exists() {
-            let restored = checkpoint::read::<N>(&plan.settings.path);
+            let restored = codec::read::<N>(&plan.settings.path);
             assert_eq!(
                 restored.identity, plan.identity,
                 "the checkpoint at {} was written for another configuration",

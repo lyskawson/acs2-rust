@@ -73,17 +73,16 @@ definition of this implementation. Where pyalcs is wrong, the default here is ri
 pyalcs behaviour exists only as a mode that the validation tools select explicitly:
 P8, P11, the maze-parity tests and `acs2-bench` (P9). Those stay byte-identical without
 any change to how they are invoked. Truncated episodes bootstrap from the next state by
-default (`agents/acs2/mod.rs`, `agents/trial.rs`, `agents/acs2er/mod.rs`); terminated episodes bootstrap 0.
+default (`acs2-agents/src/acs2/mod.rs`, `acs2-core/src/trial.rs`, `acs2-agents/src/acs2er/mod.rs`); terminated episodes bootstrap 0.
 `TruncationMode::Pyalcs` explicitly preserves bootstrap 0 on truncation for validation.
 
 Parameters are not behaviours. `Configuration` defaults stay as they are, because the
 checkpoint identity embeds them, and every experiment states its parameters explicitly.
 
-A default change in the shared core must meet three conditions:
+A default change in the shared core must meet two conditions:
 
 - it is inert for the MPX line (show why) or agreed with that line;
-- it leaves `Configuration`, `ReplaySample` and the checkpoint codec unchanged;
-- it keeps source-compatible the core API that `mpx_reach.rs` compiles against.
+- it leaves `Configuration`, `ReplaySample` and the checkpoint codec unchanged.
 
 This replaces the older rule, "behind a flag whose default preserves current
 behaviour", which `docs/AGENT_HANDOFF.md` §11 still quotes. The §2 P9 invariant is met
@@ -108,7 +107,7 @@ the file. The commits and the docs they corrected are the durable record.
 - **An agent's own parameters belong in its own type, never in `Configuration`.**
   `checkpoint_identity` embeds the whole `Configuration` and a resume asserts on it, so a
   new field there invalidates every existing checkpoint and would end the running k=264
-  chain. `ReplayConfiguration` in `acs2-core/src/agents/acs2er/replay.rs` is the pattern to copy;
+  chain. `ReplayConfiguration` in `acs2-agents/src/acs2er/replay.rs` is the pattern to copy;
   §5 of the handoff has the live identity string to compare against.
 - **Only the MPX line submits to the cluster.** Do not submit, cancel or rebuild there on
   any other line — a rebuild reaches every pending segment that has not started yet.

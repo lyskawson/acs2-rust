@@ -1,8 +1,8 @@
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::knowledge::Transition;
-use acs2_core::perception::Perception;
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
-use acs2_core::symbol::Symbol;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::support::knowledge::Transition;
+use acs2_core::representation::perception::Perception;
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::representation::symbol::Symbol;
 
 const DIGIT_ZERO: u8 = b'0';
 const VALIDATION_CLEAR: u8 = 0;
@@ -229,7 +229,7 @@ fn input_index_of<const N: usize>(input: &[u8; N], input_bits: usize) -> usize {
 }
 
 fn mark_covered_cells<const N: usize>(
-    classifier: &acs2_core::classifier::Classifier<N>,
+    classifier: &acs2_core::representation::classifier::Classifier<N>,
     control_bits: usize,
     input_bits: usize,
     covered: &mut [bool],
@@ -285,7 +285,7 @@ fn mark_covered_cells<const N: usize>(
 }
 
 pub fn exhaustive_knowledge<const N: usize>(
-    population: &acs2_core::population::Population<N>,
+    population: &acs2_core::representation::population::Population<N>,
     theta_r: f64,
 ) -> f64 {
     let control_bits = control_bits_for(N);
@@ -302,7 +302,7 @@ pub fn exhaustive_knowledge<const N: usize>(
 }
 
 pub fn evaluate_knowledge<const N: usize>(
-    population: &acs2_core::population::Population<N>,
+    population: &acs2_core::representation::population::Population<N>,
     theta_r: f64,
     sample_inputs: usize,
     sample_seed: u64,
@@ -315,13 +315,13 @@ pub fn evaluate_knowledge<const N: usize>(
             exhaustive_knowledge::<N>(population, theta_r)
         }
         Encoding::Outcome if N - 1 <= EXHAUSTIVE_INPUT_BITS_LIMIT => {
-            acs2_core::knowledge::anticipation_fraction(
+            acs2_core::support::knowledge::anticipation_fraction(
                 population,
                 theta_r,
                 exhaustive_transitions::<N>(encoding),
             )
         }
-        _ => acs2_core::knowledge::anticipation_fraction(
+        _ => acs2_core::support::knowledge::anticipation_fraction(
             population,
             theta_r,
             sampled_transitions::<N>(sample_inputs, sample_seed, encoding),
@@ -349,14 +349,10 @@ define_multiplexers! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use acs2_core::action_selection::EpsilonGreedy;
-    use acs2_core::agent::Agent;
-    use acs2_core::classifier::Classifier;
-    use acs2_core::config::Configuration;
-    use acs2_core::knowledge::anticipation_fraction;
-    use acs2_core::population::Population;
-    use acs2_core::rl::MaxFitnessBootstrap;
-    use acs2_core::trial::LearningAgent;
+    use acs2_core::representation::classifier::Classifier;
+    use acs2_core::support::config::Configuration;
+    use acs2_core::support::knowledge::anticipation_fraction;
+    use acs2_core::representation::population::Population;
 
     fn token(value: u8) -> Symbol {
         Symbol::Token(b'0' + value)
@@ -476,33 +472,6 @@ mod tests {
             (sampled - exhaustive).abs() <= TOLERANCE,
             "sampled {sampled} disagrees with exhaustive {exhaustive} beyond {TOLERANCE}"
         );
-    }
-
-    fn train_population<const N: usize>(explore_trials: u32, seed: u64) -> (Population<N>, f64) {
-        let mut config = Configuration::mpx();
-        config.epsilon = 0.8;
-        let mut env = Multiplexer::<N>::new(Box::new(ChaChaRandomSource::from_seed(seed)));
-        let mut agent = Agent::<N, _>::new(config, ChaChaRandomSource::from_seed(seed));
-        let selector = EpsilonGreedy {
-            number_of_possible_actions: Multiplexer::<N>::NUMBER_OF_POSSIBLE_ACTIONS,
-            epsilon: 0.8,
-        };
-        let bootstrap = MaxFitnessBootstrap;
-        let mut time = 0u64;
-        for _ in 0..explore_trials {
-            let metrics = agent.run_explore_trial(&mut env, &selector, &bootstrap, time);
-            time += metrics.steps as u64;
-        }
-        let theta_r = agent.config().theta_r;
-        (Population::from_classifiers(agent.population().iter().cloned().collect()), theta_r)
-    }
-
-    #[test]
-    fn fast_exhaustive_matches_naive_on_trained_population() {
-        let (population, theta_r) = train_population::<7>(8_000, 42);
-        let fast = exhaustive_knowledge::<7>(&population, theta_r);
-        let naive = anticipation_fraction(&population, theta_r, exhaustive_transitions::<7>(Encoding::Flip));
-        assert_eq!(fast, naive);
     }
 
     #[test]

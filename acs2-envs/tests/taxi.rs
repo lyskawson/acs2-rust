@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
-use acs2_core::environment::Environment;
-use acs2_core::goal::{GoalConditioned, GoalEnvironment};
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::ports::environment::Environment;
+use acs2_core::ports::goal::{GoalConditioned, GoalEnvironment};
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_envs::goal::taxi::{passenger_goal, Taxi, TaxiState, STANDS};
 use serde_json::Value;
 

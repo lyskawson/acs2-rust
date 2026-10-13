@@ -2,13 +2,13 @@ mod common;
 
 use std::collections::BTreeSet;
 
-use acs2_core::classifier::Classifier;
-use acs2_core::condition::Condition;
-use acs2_core::effect::Effect;
-use acs2_core::mark::Mark;
-use acs2_core::rng::ChaChaRandomSource;
-use acs2_core::subsumption::{does_subsume, is_subsumer};
-use acs2_core::symbol::Symbol;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::representation::condition::Condition;
+use acs2_core::representation::effect::Effect;
+use acs2_core::representation::mark::Mark;
+use acs2_core::support::rng::ChaChaRandomSource;
+use acs2_core::learning::subsumption::{does_subsume, is_subsumer};
+use acs2_core::representation::symbol::Symbol;
 use serde_json::Value;
 
 use common::{classifier, condition, effect, fixtures, mark, perception, symbols};

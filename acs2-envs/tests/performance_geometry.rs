@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 
-use acs2_core::environment::Environment;
-use acs2_core::rng::ChaChaRandomSource;
+use acs2_core::ports::environment::Environment;
+use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_envs::maze::Maze;
 use acs2_envs::maze::geometries::MazeSource;
 use acs2_envs::roles::PERFORMANCE_MAZES;

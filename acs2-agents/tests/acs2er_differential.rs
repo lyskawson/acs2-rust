@@ -1,15 +1,17 @@
+#[path = "../../acs2-core/tests/common/mod.rs"]
 mod common;
 
-use acs2_core::acs2er::{Acs2ErAgent, ReplayConfiguration};
-use acs2_core::action_selection::ActionSelector;
-use acs2_core::classifier::Classifier;
-use acs2_core::config::Configuration;
-use acs2_core::environment::{Environment, StepOutcome};
-use acs2_core::perception::Perception;
-use acs2_core::population::{ClassifierRef, Population};
-use acs2_core::rl::MaxFitnessBootstrap;
-use acs2_core::rng::RandomSource;
-use acs2_core::symbol::Symbol;
+use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_core::learning::action_selection::ActionSelector;
+use acs2_core::representation::classifier::Classifier;
+use acs2_core::support::config::Configuration;
+use acs2_core::ports::environment::{Environment, StepOutcome};
+use acs2_core::representation::perception::Perception;
+use acs2_core::representation::population::{ClassifierRef, Population};
+use acs2_core::learning::rl::MaxFitnessBootstrap;
+use acs2_core::support::rng::RandomSource;
+use acs2_core::representation::symbol::Symbol;
 use acs2_core::trial::{LearningAgent, TruncationMode};
 
 use common::{assert_classifier_matches, load};

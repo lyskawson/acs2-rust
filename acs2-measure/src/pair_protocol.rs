@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use acs2_core::goal::{Goal, GoalStart};
-use acs2_core::rng::{ChaChaRandomSource, RandomSource};
+use acs2_core::ports::goal::{Goal, GoalStart};
+use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_core::support::knowledge::Transition;
 use acs2_envs::goal::maze::{GoalMaze, MazeGoalEncoding};
 use acs2_envs::maze::geometries::MazeGeometry;

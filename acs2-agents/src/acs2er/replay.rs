@@ -1,16 +1,7 @@
 use std::collections::VecDeque;
 
-use crate::representation::perception::Perception;
-use crate::support::rng::RandomSource;
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct ReplaySample<const N: usize> {
-    pub state: Perception<N>,
-    pub action: usize,
-    pub reward: f64,
-    pub next_state: Perception<N>,
-    pub done: bool,
-}
+use acs2_core::learning::replay::ReplaySample;
+use acs2_core::support::rng::RandomSource;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ReplayConfiguration {

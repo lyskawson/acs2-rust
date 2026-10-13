@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use acs2_core::goal::Goal;
+use acs2_core::ports::goal::Goal;
 
 use crate::cost::{FactQueries, ObjectiveCost};
 use crate::relabel::{build_sample, GoalEvaluator, SampleError};
