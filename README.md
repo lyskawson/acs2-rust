@@ -258,6 +258,10 @@ uv run --project baseline python baseline/compare_bench.py
 | [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and one-update variant in `acs2er/`; original-only episodic control in `acs2er/episodic.rs`; hindsight full/values/shortened variants in `acs2her/`; their episodic replay mechanism in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
 | [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
 
+The measurement crate constructs the named presets in `runner.rs`, adapts episodic and
+one-update agents in [`agents.rs`](acs2-measure/src/agents.rs), and embeds the shared
+archived-name mapping in [`agent_names.rs`](acs2-measure/src/agent_names.rs).
+
 Core modules are grouped by role under [`acs2-core/src/`](acs2-core/src/). Each file
 below defines the module of the same name under its group:
 

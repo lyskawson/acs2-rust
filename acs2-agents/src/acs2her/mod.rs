@@ -14,6 +14,13 @@ pub enum Preset {
     Acs2HerValuesShortened { proportion: f64 },
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HindsightConfiguration {
+    pub copy_update: CopyUpdate,
+    pub admissibility: Admissibility,
+    pub relabeled_proportion: f64,
+}
+
 impl Preset {
     pub fn name(self) -> &'static str {
         match self {
@@ -22,16 +29,29 @@ impl Preset {
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
         }
     }
-    pub fn proportion(self) -> f64 {
+    pub fn configuration(self) -> HindsightConfiguration {
         match self {
-            Self::Acs2Her => 2.0 / 3.0,
-            Self::Acs2HerValues { proportion } | Self::Acs2HerValuesShortened { proportion } => proportion,
+            Self::Acs2Her => HindsightConfiguration {
+                copy_update: CopyUpdate::Full,
+                admissibility: Admissibility::EveryTransition,
+                relabeled_proportion: 2.0 / 3.0,
+            },
+            Self::Acs2HerValues { proportion } => HindsightConfiguration {
+                copy_update: CopyUpdate::ValuesOnly,
+                admissibility: Admissibility::EveryTransition,
+                relabeled_proportion: proportion,
+            },
+            Self::Acs2HerValuesShortened { proportion } => HindsightConfiguration {
+                copy_update: CopyUpdate::ValuesOnly,
+                admissibility: Admissibility::CounterfactualEpisode,
+                relabeled_proportion: proportion,
+            },
         }
     }
 }
 
 pub struct Agent<const S: usize, const G: usize, const M: usize, R, P> {
-    variant: Preset,
+    preset: Preset,
     learner: EpisodicReplay<S, G, M, R, P>,
 }
 
@@ -41,33 +61,26 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     pub fn new(
         config: Configuration,
         replay: EpisodicConfiguration,
-        variant: Preset,
+        preset: Preset,
         rng: R,
         sampler_rng: P,
     ) -> Self {
+        let parameters = preset.configuration();
         Self {
-            variant,
+            preset,
             learner: EpisodicReplay::new(
                 config,
                 replay,
                 SamplerConfiguration {
                     selection: Selection {
                         strategy: GoalStrategy::Future,
-                        admissibility: if matches!(variant, Preset::Acs2HerValuesShortened { .. }) {
-                            Admissibility::CounterfactualEpisode
-                        } else {
-                            Admissibility::EveryTransition
-                        },
+                        admissibility: parameters.admissibility,
                         candidate_filter: false,
                     },
-                    relabeled_proportion: variant.proportion(),
+                    relabeled_proportion: parameters.relabeled_proportion,
                     truncation: replay.truncation,
                 },
-                if variant == Preset::Acs2Her {
-                    CopyUpdate::Full
-                } else {
-                    CopyUpdate::ValuesOnly
-                },
+                parameters.copy_update,
                 rng,
                 sampler_rng,
             ),
@@ -81,7 +94,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     type PolicyRandom = R;
     type SamplerRandom = P;
     fn name(&self) -> &'static str {
-        self.variant.name()
+        self.preset.name()
     }
     fn learner(&self) -> &EpisodicReplay<S, G, M, R, P> {
         &self.learner

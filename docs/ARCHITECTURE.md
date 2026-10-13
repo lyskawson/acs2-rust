@@ -3179,6 +3179,18 @@ store, sampler stream, sidecar or counters.
 
 The exact update rules are:
 
+`acs2her::HindsightConfiguration` describes three independent choices with the fields
+`copy_update`, `admissibility` and `relabeled_proportion`. `Preset::configuration()`
+expands each named preset into those choices before constructing the shared episodic
+learner. Full updates retain ALP, RL and optional GA; values-only updates retain only
+the action-set RL application. Admissibility uses the existing trajectory enum.
+
+The parameter type can express other combinations, which keeps the two choices usable
+for trajectory utility. `acs2her::Agent::new` accepts only a named `Preset`, and the
+measurement factory/CLI exposes only the three measured combinations below. Other
+parameter combinations have no run name and are not measured. Keeping that boundary
+prevents an unregistered combination from being written under a measured arm's name.
+
 | Arm | Relabeling | Update of an original or fallback | Update of a relabeled copy |
 |---|---|---|---|
 | `acs2er_episodic` | p=0, same episodic path | Core ACS2ER replay step: ALP, RL, optional GA | None |
@@ -3555,8 +3567,8 @@ cost displays reused main-grid work, not an additional allocation.
 | mazema | ACS2ER one update | 0.000 / 0.000 / 0.000 | 286.6 ± 6.2 | 0.864 | 14.3 | 8.687 |
 | mazema | Values p=2/3 | 2.000 / 0.000 / 5.280 | 279.4 ± 7.3 | 0.470 | 33.7 | 8.671 |
 
-The largest population observed at registered points was 4164 (ACS2ER one update, Maze7), and full
-HER reached 4163. Maximum process peak RSS was 9048 KiB, below the 512 MiB node limit.
+The largest population observed at registered points was 4164 (ACS2ER one update, Maze7), and
+ACS2HER reached 4163. Maximum process peak RSS was 9048 KiB, below the 512 MiB node limit.
 These are observations at finite budgets, not limits on future population growth.
 Every point also reports train/evaluation wall time. Process CPU and training CPU
 estimates are separate from allocated CPUTimeRAW used for the budget.

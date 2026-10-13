@@ -286,6 +286,8 @@ acs2-envs/src/                 concrete dynamics, reference/research/performance
   multiplexer.rs              MPX dynamics and public path
 acs2-bench/src/                P9 benchmark and multiplexer runners
 acs2-measure/src/              goal-agent contract, interaction budget, evaluation, references, CLI
+  agent_names.rs              shared archive-name mapping and row normalization
+  agents.rs                   episodic and one-update measurement adapters
   runner.rs                   GoalAgent, CoreAgent, TrainingEnvironment, read-only evaluation
   task.rs                     task construction and explicit thesis preset
   reference.rs                start-goal distribution, random-policy floor and reachability

@@ -453,7 +453,7 @@ fn floating_field_bits(value: &Value) -> Value {
 }
 
 #[test]
-fn new_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
+fn acs2_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
     let oracle: Value =
         serde_json::from_str(include_str!("../../fixtures/her_pair_regression.json")).unwrap();
     assert_eq!(oracle["configurations"].as_array().unwrap().len(), 30);
@@ -564,7 +564,7 @@ fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
 }
 
 #[test]
-fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings() {
+fn acs2er_one_update_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings() {
     use acs2_measure::runner::run_goal_agent_protocol_with_sink;
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");

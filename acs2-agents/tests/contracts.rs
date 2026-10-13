@@ -209,7 +209,7 @@ fn acs2er_episodic_never_relabels_and_replays_with_replacement_below_draw_count(
 }
 
 #[test]
-fn full_reference_has_fixed_proportion_and_shortened_variant_uses_counterfactual_rule() {
+fn acs2her_presets_pin_copy_updates_goal_admissibility_and_proportions() {
     for variant in [
         acs2her::Preset::Acs2Her,
         acs2her::Preset::Acs2HerValues { proportion: 0.9 },
