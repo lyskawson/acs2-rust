@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 
+pub mod agent_names;
 pub mod agents;
 pub mod goal_protocol;
 pub mod knowledge;

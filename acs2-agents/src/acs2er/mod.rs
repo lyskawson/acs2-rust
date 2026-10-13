@@ -1,5 +1,6 @@
 pub mod replay;
-pub mod u1;
+pub mod one_update;
+pub mod episodic;
 
 use acs2_core::learning::action_selection::ActionSelector;
 use acs2_core::checkpoint::{AgentState, Checkpointed};
@@ -13,7 +14,7 @@ use acs2_core::trial::{self, LearningAgent, TrialMetrics, TruncationMode};
 use replay::{ReplayConfiguration, ReplayMemory};
 use acs2_core::learning::replay::{replay_learning_step, ReplaySample};
 
-pub struct Acs2ErAgent<const N: usize, R: RandomSource> {
+pub struct Agent<const N: usize, R: RandomSource> {
     population: Population<N>,
     config: Configuration,
     replay_config: ReplayConfiguration,
@@ -22,7 +23,7 @@ pub struct Acs2ErAgent<const N: usize, R: RandomSource> {
     truncation_mode: TruncationMode,
 }
 
-impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
+impl<const N: usize, R: RandomSource> Agent<N, R> {
     pub fn new(config: Configuration, replay_config: ReplayConfiguration, rng: R) -> Self {
         Self {
             population: Population::new(),
@@ -68,7 +69,7 @@ impl<const N: usize, R: RandomSource> Acs2ErAgent<N, R> {
     }
 }
 
-impl<const N: usize, R: RandomSource> Checkpointed<N> for Acs2ErAgent<N, R> {
+impl<const N: usize, R: RandomSource> Checkpointed<N> for Agent<N, R> {
     fn capture(&self) -> AgentState<N> {
         AgentState {
             population: self.population.classifiers().to_vec(),
@@ -93,7 +94,7 @@ impl<const N: usize, R: RandomSource> Checkpointed<N> for Acs2ErAgent<N, R> {
     }
 }
 
-impl<const N: usize, R: RandomSource> LearningAgent<N> for Acs2ErAgent<N, R> {
+impl<const N: usize, R: RandomSource> LearningAgent<N> for Agent<N, R> {
     fn population(&self) -> &Population<N> {
         &self.population
     }

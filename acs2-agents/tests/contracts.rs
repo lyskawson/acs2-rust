@@ -2,7 +2,8 @@ use acs2_agents::episodic_replay::{
     values_learning_step, CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay,
     ReplayEnvironment,
 };
-use acs2_agents::{er_episodic, her};
+use acs2_agents::acs2er::episodic;
+use acs2_agents::acs2her;
 use acs2_core::learning::replay::ReplaySample;
 use acs2_core::trial::TruncationMode;
 use acs2_core::ports::environment::{Environment, StepOutcome};
@@ -179,7 +180,7 @@ fn exploration_and_greedy_selection_condition_on_the_entire_real_goal() {
 
 #[test]
 fn warmup_is_checked_after_whole_episode_insertion_without_backpay() {
-    let mut agent = er_episodic::Agent::<1, 1, 2, _, _>::new(config(), replay(4), rng(1), rng(7));
+    let mut agent = episodic::Agent::<1, 1, 2, _, _>::new(config(), replay(4), rng(1), rng(7));
     let mut env = Steps::new(2, 9);
     agent.learner_mut().train_episode(&mut env, 0);
     assert_eq!(agent.learner().counts().full, 0);
@@ -194,8 +195,8 @@ fn warmup_is_checked_after_whole_episode_insertion_without_backpay() {
 }
 
 #[test]
-fn episodic_control_never_relabels_and_replays_with_replacement_below_draw_count() {
-    let mut agent = er_episodic::Agent::<1, 1, 2, _, _>::new(config(), replay(1), rng(1), rng(7));
+fn acs2er_episodic_never_relabels_and_replays_with_replacement_below_draw_count() {
+    let mut agent = episodic::Agent::<1, 1, 2, _, _>::new(config(), replay(1), rng(1), rng(7));
     agent.learner_mut().train_episode(&mut Steps::new(1, 1), 0);
     let learner = agent.learner();
     assert_eq!(learner.store().len(), 1);
@@ -210,21 +211,21 @@ fn episodic_control_never_relabels_and_replays_with_replacement_below_draw_count
 #[test]
 fn full_reference_has_fixed_proportion_and_shortened_variant_uses_counterfactual_rule() {
     for variant in [
-        her::Variant::Full,
-        her::Variant::Values { proportion: 0.9 },
-        her::Variant::ValuesShortened {
+        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2HerValues { proportion: 0.9 },
+        acs2her::Preset::Acs2HerValuesShortened {
             proportion: 1.0 / 3.0,
         },
     ] {
-        let agent = her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), variant, rng(1), rng(7));
+        let agent = acs2her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), variant, rng(1), rng(7));
         let learner = agent.learner();
         let sampler = learner.sampler().configuration();
         assert_eq!(
             sampler.relabeled_proportion.to_bits(),
             match variant {
-                her::Variant::Full => (2.0_f64 / 3.0).to_bits(),
-                her::Variant::Values { proportion }
-                | her::Variant::ValuesShortened { proportion } => proportion.to_bits(),
+                acs2her::Preset::Acs2Her => (2.0_f64 / 3.0).to_bits(),
+                acs2her::Preset::Acs2HerValues { proportion }
+                | acs2her::Preset::Acs2HerValuesShortened { proportion } => proportion.to_bits(),
             }
         );
         assert_eq!(
@@ -233,7 +234,7 @@ fn full_reference_has_fixed_proportion_and_shortened_variant_uses_counterfactual
         );
         assert_eq!(
             sampler.selection.admissibility,
-            if matches!(variant, her::Variant::ValuesShortened { .. }) {
+            if matches!(variant, acs2her::Preset::Acs2HerValuesShortened { .. }) {
                 Admissibility::CounterfactualEpisode
             } else {
                 Admissibility::EveryTransition
@@ -241,7 +242,7 @@ fn full_reference_has_fixed_proportion_and_shortened_variant_uses_counterfactual
         );
         assert_eq!(
             learner.copy_update(),
-            if variant == her::Variant::Full {
+            if variant == acs2her::Preset::Acs2Her {
                 CopyUpdate::Full
             } else {
                 CopyUpdate::ValuesOnly
@@ -351,15 +352,15 @@ fn values_step_preserves_all_model_fields_and_randomness_but_full_step_can_creat
         )
         .unwrap()
         .remove(0);
-    let mut values = her::Agent::<1, 1, 2, _, _>::new(
+    let mut values = acs2her::Agent::<1, 1, 2, _, _>::new(
         config(),
         replay(1),
-        her::Variant::Values { proportion: 1.0 },
+        acs2her::Preset::Acs2HerValues { proportion: 1.0 },
         rng(1),
         rng(7),
     );
     let mut full =
-        her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), her::Variant::Full, rng(1), rng(7));
+        acs2her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), acs2her::Preset::Acs2Her, rng(1), rng(7));
     values.learner_mut().learn_draw(&draw, 2);
     full.learner_mut().learn_draw(&draw, 2);
     assert!(values.learner().population().is_empty());

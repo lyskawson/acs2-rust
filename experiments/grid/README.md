@@ -49,6 +49,20 @@ allocation CPU and process CPU are reported separately.
 Archived scope accounting includes every root once, explicitly records zero
 for empty roots and takes pilot cost from the registered scope.
 
+`agent_names.json` is the sole archived-to-current run-name mapping. Both the Rust
+fixture/CLI reader and `agent_names.py` consume it. Row collection and replay validation
+accept either spelling when reading archived data; identity and learning-field comparisons
+normalize only the `agent` field in a copy. Per-agent settings are resolved through the
+same mapping. Include both adjacent files in operation snapshots. New rows and manifests
+use `acs2`, `acs2er`, `acs2er_one_update`, `acs2er_episodic`, `acs2her`,
+`acs2her_values` and `acs2her_values_shortened`. The measurement CLI accepts those names
+only. Closed registrations, manifests, fixture bytes and the phase-5 analysis label
+`her_values_p2of3` retain their original spelling.
+
+Use `grid_identity.compare` to compare new rows with archived runs. It normalizes names,
+compares binary64 bits and keeps the existing exclusions for provenance, hardware,
+timing and the analysis-only `arm` label. A different arm still fails identity checks.
+
 ```bash
 python3 -B -m unittest discover -s experiments/grid -p 'test_*.py'
 python3 -B experiments/grid/submit.py --root RESULT_ROOT --manifest MANIFEST --repo TU_CLONE

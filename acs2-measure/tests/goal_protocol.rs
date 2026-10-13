@@ -293,7 +293,7 @@ fn read_only_blocks_preserve_the_complete_state_of_both_agents() {
             42,
             &[50, 100],
             || CoreAgent {
-                agent: acs2_agents::acs2er::Acs2ErAgent::<10, _>::new(
+                agent: acs2_agents::acs2er::Agent::<10, _>::new(
                     preset.config(8),
                     acs2_agents::acs2er::replay::ReplayConfiguration {
                         buffer_size: 10_000,

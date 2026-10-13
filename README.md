@@ -255,7 +255,7 @@ uv run --project baseline python baseline/compare_bench.py
 | [`acs2-envs`](acs2-envs/src/lib.rs) | [Single-goal maze](acs2-envs/src/maze/mod.rs), [geometry catalogue](acs2-envs/src/maze/geometries/mod.rs), [goal environments](acs2-envs/src/goal/mod.rs), [task/role registry](acs2-envs/src/roles.rs), and [multiplexer](acs2-envs/src/multiplexer.rs) with both encodings. |
 | [`acs2-bench`](acs2-bench/src/main.rs) | P9 maze benchmark and the [MPX reach runner](acs2-bench/src/bin/mpx_reach.rs). |
 | [`acs2-measure`](acs2-measure/src/lib.rs) | [Goal-agent and environment contracts, runner, evaluation and counters](acs2-measure/src/runner.rs), [task construction and preset](acs2-measure/src/task.rs), [floor/reachability references](acs2-measure/src/reference.rs), [CLI](acs2-measure/src/main.rs), [output guard](acs2-measure/src/output.rs), and [replay diagnostic adapter](acs2-measure/src/trajectory.rs). |
-| [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and U1 diagnostic in `acs2er/`; original-only episodic control in `er_episodic/`; hindsight full/values/shortened variants in `her/`; their episodic replay mechanism in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
+| [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and one-update variant in `acs2er/`; original-only episodic control in `acs2er/episodic.rs`; hindsight full/values/shortened variants in `acs2her/`; their episodic replay mechanism in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
 | [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
 
 Core modules are grouped by role under [`acs2-core/src/`](acs2-core/src/). Each file
@@ -274,7 +274,15 @@ Callers use the defining modules, for example `acs2_agents::acs2::Agent`,
 `acs2_agents::acs2er::replay::ReplayConfiguration` and
 `acs2_core::ports::goal::GoalEnvironment`. Former paths have no compatibility exports
 or facade modules. `acs2-trajectory` depends only on core; benchmarks and measurement
-construct agents from `acs2-agents`.
+construct agents from `acs2-agents`. Every agent type is named `Agent` in its defining
+module; callers using several agents qualify modules or alias imports.
+
+The measurement CLI names are `acs2`, `acs2er`, `acs2er_one_update`,
+`acs2er_episodic`, `acs2her`, `acs2her_values` and `acs2her_values_shortened`.
+The [dated name table](docs/ARCHITECTURE.md#agent-run-names-2026-10-14) relates them to
+closed experiment records. Archived rows and fixtures are read through the shared
+mapping in `experiments/grid/agent_names.json`; the CLI rejects old names with their
+replacements.
 
 All learning agents live in `acs2-agents`, with one module directory per family and
 variants within it. Shared mechanisms stay in shared crates. The running MPX chain

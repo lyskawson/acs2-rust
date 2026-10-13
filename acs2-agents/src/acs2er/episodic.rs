@@ -44,7 +44,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     type PolicyRandom = R;
     type SamplerRandom = P;
     fn name(&self) -> &'static str {
-        "er_episodic"
+        "acs2er_episodic"
     }
     fn learner(&self) -> &EpisodicReplay<S, G, M, R, P> {
         &self.learner

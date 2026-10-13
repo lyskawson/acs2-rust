@@ -271,9 +271,11 @@ acs2-core/src/                 shared domain, agent/trial and checkpoint contrac
   checkpoint/codec.rs         format 3, integrity checks and file storage
 acs2-agents/src/               every learning agent, one directory per family
   acs2/                       ACS2 exploration and checkpoint implementation
-  acs2er/                     ACS2ER, FIFO replay memory/parameters, U1 diagnostic variant
-  er_episodic/                 original-only episodic replay control
-  her/                        full, values and shortened values variants
+  acs2er/                     ACS2ER schedules, FIFO replay memory/parameters
+    one_update.rs             one replay update per environment step
+    episodic.rs               original-only replay after complete episodes
+  acs2her/                    ACS2HER and values/shortened named presets
+    pyalcs_differential.rs     test-only reference oracle
   episodic_replay.rs           shared episodic collection and update dispatch
 acs2-envs/src/                 concrete dynamics, reference/research/performance roles
   maze/                       single-goal dynamics, topology, knowledge and geometries

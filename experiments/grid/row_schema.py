@@ -1,5 +1,7 @@
 import math
 
+from agent_names import agent_settings, canonical_run_name
+
 EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachable_after_cap',
                      'unreachable_or_ambiguous', 'evaluation_pairs', 'evaluation_distribution',
                      'evaluation_standard_error', 'evaluation_sample_seed', 'evaluation_sample_stream',
@@ -56,7 +58,8 @@ def validate_blocks(row, config):
 
 
 def validate_replay(row, config, agent):
-    if agent not in ('er_episodic', 'her_full', 'her_values', 'her_values_shortened', 'acs2er_u1'):
+    agent = canonical_run_name(agent)
+    if agent not in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened', 'acs2er_one_update'):
         return
     updates = row['replay_updates']
     kinds = row.get('learning_update_counts', {})
@@ -66,10 +69,10 @@ def validate_replay(row, config, agent):
         raise ValueError('update kinds disagree with thesis warmup or replay count')
     parameters = row['agent_parameters']
     expected = dict(replay=True, replay_capacity=10000, replay_warmup=1,
-                    replay_updates_per_step=1 if agent == 'acs2er_u1' else 3)
+                    replay_updates_per_step=1 if agent == 'acs2er_one_update' else 3)
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('agent replay parameters differ from the registered preset')
-    if agent == 'acs2er_u1':
+    if agent == 'acs2er_one_update':
         if kinds['values_only'] or row['trajectory_logical_bytes'] != 0:
             raise ValueError('diagnostic arm must use unchanged core ACS2ER')
         diagnostics = row['replay_diagnostics']
@@ -101,9 +104,9 @@ def validate_replay(row, config, agent):
                     draws='uniform_transitions_with_replacement', truncation='Bootstrap', sampler_truncation='Bootstrap',
                     sampler_stream=7, learning_clock='episode_end_environment_steps',
                     warmup_rule='retained_steps_after_episode_insertion_at_least_warmup_no_backpay',
-                    admissibility='CounterfactualEpisode' if agent == 'her_values_shortened' else 'EveryTransition',
-                    copy_update='Full' if agent in ('er_episodic', 'her_full') else 'ValuesOnly',
-                    relabeled_proportion=0.0 if agent == 'er_episodic' else config.get('agent_settings', {}).get(agent, {}).get('relabeled_proportion', 2 / 3))
+                    admissibility='CounterfactualEpisode' if agent == 'acs2her_values_shortened' else 'EveryTransition',
+                    copy_update='Full' if agent in ('acs2er_episodic', 'acs2her') else 'ValuesOnly',
+                    relabeled_proportion=0.0 if agent == 'acs2er_episodic' else agent_settings(config, agent).get('relabeled_proportion', 2 / 3))
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('episodic agent rules differ from the registered settings')
     diagnostics = row['replay_diagnostics']
@@ -114,10 +117,10 @@ def validate_replay(row, config, agent):
         raise ValueError('replay routes do not partition draws')
     if diagnostics['realized_relabeled_share'] != relabeled / updates:
         raise ValueError('realized relabeled share differs from route counts')
-    if agent in ('her_values', 'her_values_shortened'):
+    if agent in ('acs2her_values', 'acs2her_values_shortened'):
         if kinds['values_only'] != relabeled or kinds['full'] != original:
             raise ValueError('values-only learning does not follow replay routes')
-    elif kinds['values_only'] or (agent == 'er_episodic' and relabeled):
+    elif kinds['values_only'] or (agent == 'acs2er_episodic' and relabeled):
         raise ValueError('full/control arm has invalid copy updates or relabeling')
     if not 0 < diagnostics['stored_steps'] <= 10000 or row['trajectory_logical_bytes'] <= 0 or row['replay_samples'] or row['replay_logical_bytes']:
         raise ValueError('episodic replay must retain raw trajectories only')

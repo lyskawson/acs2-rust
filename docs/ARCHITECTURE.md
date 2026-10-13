@@ -1680,7 +1680,8 @@ defaults, checkpoint identities and serialized bytes do not.
 
 Every learning agent belongs to `acs2-agents`, one module directory per family:
 `acs2/`, `acs2er/` (FIFO replay memory and `ReplayConfiguration` in `replay.rs`, diagnostic
-U1 variant in `u1.rs`), `er_episodic/` and `her/`. Their shared episodic collection and
+one-update variant in `one_update.rs`, episodic variant in `episodic.rs`) and `acs2her/`.
+Their shared episodic collection and
 copy-update dispatch live in `episodic_replay.rs`. The full replay step stays in core
 because ACS2ER and episodic/HER learners use it; `ReplaySample` stays there because
 trajectory relabeling and checkpoint storage also use it. Agent parameters stay in their
@@ -1690,6 +1691,40 @@ as a development dependency; core and environments have no dependency on agents.
 The running MPX chain builds from `feature/mpx264` in its own clone and does not merge
 these changes during the chain. Its code has not changed since that branch split from
 `main`, so this branch can use the clean layout without preserving its former imports.
+
+### Agent run names (2026-10-14)
+
+Every agent type is named `Agent` in its defining module. Callers using several agents
+qualify those modules or alias imports, for example `acs2er::Agent as Acs2ErAgent`.
+ACS2ER owns both replay schedules and the one-update variant; episodic replay without
+goal substitution is a variant of ACS2ER. ACS2HER owns its named hindsight presets
+and the test-only `pyalcs_differential.rs` oracle.
+
+| Archived run name | Current run name | Module in `acs2_agents` | Type |
+|---|---|---|---|
+| `acs2` | `acs2` | `acs2` | `Agent` |
+| `acs2er` | `acs2er` | `acs2er` | `Agent` |
+| `acs2er_u1` | `acs2er_one_update` | `acs2er::one_update` | `Agent` |
+| `er_episodic` | `acs2er_episodic` | `acs2er::episodic` | `Agent` |
+| `her_full` | `acs2her` | `acs2her` | `Agent`, preset `Acs2Her` |
+| `her_values` | `acs2her_values` | `acs2her` | `Agent`, preset `Acs2HerValues` |
+| `her_values_shortened` | `acs2her_values_shortened` | `acs2her` | `Agent`, preset `Acs2HerValuesShortened` |
+
+The executable accepts and writes current names only. An archived CLI name is refused
+with its replacement. The sole machine-readable mapping is
+[`experiments/grid/agent_names.json`](../experiments/grid/agent_names.json).
+`acs2-measure::agent_names` embeds those bytes for the pinned fixture readers and CLI
+diagnostics. The adjacent Python module supplies the shared collector, replay-rule
+validator, duplicate/pilot learning-field reader and cross-version identity comparator.
+Readers normalize a copy of the `agent` field and resolve per-agent settings under
+either spelling; raw rows, manifests and their checksums remain unchanged.
+
+New comparisons with archived rows use `grid_identity.compare`, which compares binary64
+bits after excluding the existing provenance/timing fields and the analysis-only `arm`.
+The registered phase-5 code, plan, fixtures and rows retain archived names and use their
+pinned binaries. Its analysis label `her_values_p2of3` remains unchanged and is absent
+from the run-name mapping. The agent and arm names in the implementation/results
+sections below use current names, except that closed analysis label.
 
 ### Commit-history labels
 
@@ -3125,9 +3160,9 @@ Execution and analysis tools may evolve without rebuilding this measurement.
 
 `acs2-agents` depends on `acs2-core` and `acs2-trajectory`; measurement constructs
 its learners and implements their raw-episode environment port. Agents never
-depend on measurement. `er_episodic/` contains the original-only episodic
-control, `her/` contains the full, values and shortened values variants, and
-`acs2er/u1.rs` owns the diagnostic replay parameters beside ACS2ER's FIFO implementation.
+depend on measurement. `acs2er/episodic.rs` contains the original-only episodic
+control, `acs2her/` contains the full, values and shortened values variants, and
+`acs2er/one_update.rs` owns the diagnostic replay parameters beside ACS2ER's FIFO implementation.
 Shared collection and update dispatch live in `episodic_replay.rs`; the full learning
 step and replay sample live in `acs2-core::learning::replay`. Checkpoint identity and
 codec, `Configuration`, `ReplaySample`, and multiplexer dynamics remain unchanged.
@@ -3146,12 +3181,12 @@ The exact update rules are:
 
 | Arm | Relabeling | Update of an original or fallback | Update of a relabeled copy |
 |---|---|---|---|
-| `er_episodic` | p=0, same episodic path | Core ACS2ER replay step: ALP, RL, optional GA | None |
-| `her_full` | Future, every transition, fixed p=2/3 | Full step | Full step |
-| `her_values` | Future, every transition, selected p | Full step | Action-set RL only, changing r and ir |
-| `her_values_shortened` | Future, counterfactual episode admissibility, selected p | Full step | Action-set RL only |
+| `acs2er_episodic` | p=0, same episodic path | Core ACS2ER replay step: ALP, RL, optional GA | None |
+| `acs2her` | Future, every transition, fixed p=2/3 | Full step | Full step |
+| `acs2her_values` | Future, every transition, selected p | Full step | Action-set RL only, changing r and ir |
+| `acs2her_values_shortened` | Future, counterfactual episode admissibility, selected p | Full step | Action-set RL only |
 | `her_values_p2of3` | Future, every transition, fixed p=2/3 | Full step | Action-set RL only |
-| `acs2er_u1` | Unchanged ACS2ER FIFO replay, one application per environment step | Full step | None |
+| `acs2er_one_update` | Unchanged ACS2ER FIFO replay, one application per environment step | Full step | None |
 
 Values copies bootstrap from the next state joined with the same copied goal.
 They change no conditions, effects, marks, quality, numerosity, experience,
@@ -3159,7 +3194,7 @@ timestamps or population size. Copies equal to the original goal still belong
 to the relabeled route. All research rewards and endings come from the task
 objective: 1000/0 here, terminal goal reaches bootstrap zero, and time-limit
 truncations bootstrap under the thesis preset. Sampler and learner truncation
-modes must agree. The diagnostic U1 observer forwards every random draw
+modes must agree. The one-update observer forwards every random draw
 unchanged and records selected original reward/done using a FIFO outcome
 sidecar. It makes no additional random or objective calls, and its sidecar
 logical bytes belong to replay memory. It has no new checkpoint interface.
@@ -3262,7 +3297,7 @@ eight registered points, or nine on Woods14; it is not final-point success. Budg
 remain 2M interactions, 4M on Woods14. Caps are 5, 8, 10, 10, 18 and 9 respectively.
 Training, validation and test pair blocks retain the archived protocol and hashes.
 
-| Maze | ACS2 | ACS2ER | Episodic ER | HER full | Values tuned | Values shortened | ACS2ER U1 | Values p=2/3 |
+| Maze | ACS2 | ACS2ER | ACS2ER episodic | ACS2HER | ACS2HER values | ACS2HER values shortened | ACS2ER one update | Values p=2/3 |
 |---|---|---|---|---|---|---|---|---|
 | maze4 | 0.1934 ± 0.0038 | 0.1665 ± 0.0050 | 0.1726 ± 0.0045 | 0.1847 ± 0.0041 | 0.1576 ± 0.0036 | 0.1672 ± 0.0049 | 0.1694 ± 0.0045 | 0.1390 ± 0.0043 |
 | maze5 | 0.1313 ± 0.0028 | 0.1161 ± 0.0033 | 0.1110 ± 0.0035 | 0.1405 ± 0.0029 | 0.1111 ± 0.0020 | 0.1325 ± 0.0026 | 0.1145 ± 0.0031 | 0.0981 ± 0.0021 |
@@ -3281,101 +3316,101 @@ primary interval, knowledge curve and observed update-volume curve in the same r
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | +0.0121 | 0.0059 | [-0.0002, +0.0245] |
-| Values tuned − Episodic ER | -0.0150 | 0.0049 | [-0.0253, -0.0047] |
-| Values shortened − Episodic ER | -0.0054 | 0.0064 | [-0.0189, +0.0081] |
-| Values tuned − HER full | -0.0271 | 0.0059 | [-0.0393, -0.0148] |
-| Values shortened − Values tuned | +0.0095 | 0.0042 | [+0.0008, +0.0183] |
-| Episodic ER − ACS2ER | +0.0061 | 0.0059 | [-0.0063, +0.0185] |
-| Episodic ER − ACS2 | -0.0208 | 0.0049 | [-0.0311, -0.0105] |
-| ACS2ER U1 − ACS2ER | +0.0029 | 0.0068 | [-0.0114, +0.0172] |
-| ACS2ER U1 − ACS2 | -0.0240 | 0.0068 | [-0.0382, -0.0098] |
-| Values p=2/3 − HER full | -0.0458 | 0.0067 | [-0.0598, -0.0317] |
+| ACS2HER − ACS2ER episodic | +0.0121 | 0.0059 | [-0.0002, +0.0245] |
+| ACS2HER values − ACS2ER episodic | -0.0150 | 0.0049 | [-0.0253, -0.0047] |
+| ACS2HER values shortened − ACS2ER episodic | -0.0054 | 0.0064 | [-0.0189, +0.0081] |
+| ACS2HER values − ACS2HER | -0.0271 | 0.0059 | [-0.0393, -0.0148] |
+| ACS2HER values shortened − ACS2HER values | +0.0095 | 0.0042 | [+0.0008, +0.0183] |
+| ACS2ER episodic − ACS2ER | +0.0061 | 0.0059 | [-0.0063, +0.0185] |
+| ACS2ER episodic − ACS2 | -0.0208 | 0.0049 | [-0.0311, -0.0105] |
+| ACS2ER one update − ACS2ER | +0.0029 | 0.0068 | [-0.0114, +0.0172] |
+| ACS2ER one update − ACS2 | -0.0240 | 0.0068 | [-0.0382, -0.0098] |
+| Values p=2/3 − ACS2HER | -0.0458 | 0.0067 | [-0.0598, -0.0317] |
 
 **maze5**, twenty paired seeds:
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | +0.0295 | 0.0047 | [+0.0197, +0.0394] |
-| Values tuned − Episodic ER | +0.0001 | 0.0049 | [-0.0101, +0.0103] |
-| Values shortened − Episodic ER | +0.0215 | 0.0041 | [+0.0130, +0.0300] |
-| Values tuned − HER full | -0.0294 | 0.0036 | [-0.0369, -0.0220] |
-| Values shortened − Values tuned | +0.0214 | 0.0036 | [+0.0138, +0.0290] |
-| Episodic ER − ACS2ER | -0.0051 | 0.0052 | [-0.0160, +0.0058] |
-| Episodic ER − ACS2 | -0.0203 | 0.0049 | [-0.0306, -0.0100] |
-| ACS2ER U1 − ACS2ER | -0.0016 | 0.0051 | [-0.0122, +0.0090] |
-| ACS2ER U1 − ACS2 | -0.0168 | 0.0039 | [-0.0250, -0.0085] |
-| Values p=2/3 − HER full | -0.0425 | 0.0036 | [-0.0501, -0.0349] |
+| ACS2HER − ACS2ER episodic | +0.0295 | 0.0047 | [+0.0197, +0.0394] |
+| ACS2HER values − ACS2ER episodic | +0.0001 | 0.0049 | [-0.0101, +0.0103] |
+| ACS2HER values shortened − ACS2ER episodic | +0.0215 | 0.0041 | [+0.0130, +0.0300] |
+| ACS2HER values − ACS2HER | -0.0294 | 0.0036 | [-0.0369, -0.0220] |
+| ACS2HER values shortened − ACS2HER values | +0.0214 | 0.0036 | [+0.0138, +0.0290] |
+| ACS2ER episodic − ACS2ER | -0.0051 | 0.0052 | [-0.0160, +0.0058] |
+| ACS2ER episodic − ACS2 | -0.0203 | 0.0049 | [-0.0306, -0.0100] |
+| ACS2ER one update − ACS2ER | -0.0016 | 0.0051 | [-0.0122, +0.0090] |
+| ACS2ER one update − ACS2 | -0.0168 | 0.0039 | [-0.0250, -0.0085] |
+| Values p=2/3 − ACS2HER | -0.0425 | 0.0036 | [-0.0501, -0.0349] |
 
 **maze6**, twenty paired seeds:
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | +0.0229 | 0.0048 | [+0.0127, +0.0330] |
-| Values tuned − Episodic ER | -0.0124 | 0.0042 | [-0.0211, -0.0036] |
-| Values shortened − Episodic ER | +0.0029 | 0.0044 | [-0.0062, +0.0121] |
-| Values tuned − HER full | -0.0352 | 0.0033 | [-0.0423, -0.0282] |
-| Values shortened − Values tuned | +0.0153 | 0.0040 | [+0.0070, +0.0236] |
-| Episodic ER − ACS2ER | +0.0048 | 0.0060 | [-0.0077, +0.0174] |
-| Episodic ER − ACS2 | -0.0233 | 0.0047 | [-0.0331, -0.0136] |
-| ACS2ER U1 − ACS2ER | +0.0058 | 0.0047 | [-0.0040, +0.0155] |
-| ACS2ER U1 − ACS2 | -0.0224 | 0.0044 | [-0.0316, -0.0132] |
-| Values p=2/3 − HER full | -0.0547 | 0.0042 | [-0.0635, -0.0459] |
+| ACS2HER − ACS2ER episodic | +0.0229 | 0.0048 | [+0.0127, +0.0330] |
+| ACS2HER values − ACS2ER episodic | -0.0124 | 0.0042 | [-0.0211, -0.0036] |
+| ACS2HER values shortened − ACS2ER episodic | +0.0029 | 0.0044 | [-0.0062, +0.0121] |
+| ACS2HER values − ACS2HER | -0.0352 | 0.0033 | [-0.0423, -0.0282] |
+| ACS2HER values shortened − ACS2HER values | +0.0153 | 0.0040 | [+0.0070, +0.0236] |
+| ACS2ER episodic − ACS2ER | +0.0048 | 0.0060 | [-0.0077, +0.0174] |
+| ACS2ER episodic − ACS2 | -0.0233 | 0.0047 | [-0.0331, -0.0136] |
+| ACS2ER one update − ACS2ER | +0.0058 | 0.0047 | [-0.0040, +0.0155] |
+| ACS2ER one update − ACS2 | -0.0224 | 0.0044 | [-0.0316, -0.0132] |
+| Values p=2/3 − ACS2HER | -0.0547 | 0.0042 | [-0.0635, -0.0459] |
 
 **maze7**, twenty paired seeds:
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | +0.0195 | 0.0051 | [+0.0088, +0.0302] |
-| Values tuned − Episodic ER | -0.0137 | 0.0049 | [-0.0240, -0.0034] |
-| Values shortened − Episodic ER | +0.0070 | 0.0048 | [-0.0030, +0.0169] |
-| Values tuned − HER full | -0.0332 | 0.0037 | [-0.0409, -0.0254] |
-| Values shortened − Values tuned | +0.0206 | 0.0039 | [+0.0126, +0.0287] |
-| Episodic ER − ACS2ER | +0.0009 | 0.0035 | [-0.0064, +0.0082] |
-| Episodic ER − ACS2 | -0.0096 | 0.0043 | [-0.0186, -0.0007] |
-| ACS2ER U1 − ACS2ER | -0.0077 | 0.0040 | [-0.0161, +0.0007] |
-| ACS2ER U1 − ACS2 | -0.0183 | 0.0043 | [-0.0273, -0.0092] |
-| Values p=2/3 − HER full | -0.0601 | 0.0030 | [-0.0663, -0.0539] |
+| ACS2HER − ACS2ER episodic | +0.0195 | 0.0051 | [+0.0088, +0.0302] |
+| ACS2HER values − ACS2ER episodic | -0.0137 | 0.0049 | [-0.0240, -0.0034] |
+| ACS2HER values shortened − ACS2ER episodic | +0.0070 | 0.0048 | [-0.0030, +0.0169] |
+| ACS2HER values − ACS2HER | -0.0332 | 0.0037 | [-0.0409, -0.0254] |
+| ACS2HER values shortened − ACS2HER values | +0.0206 | 0.0039 | [+0.0126, +0.0287] |
+| ACS2ER episodic − ACS2ER | +0.0009 | 0.0035 | [-0.0064, +0.0082] |
+| ACS2ER episodic − ACS2 | -0.0096 | 0.0043 | [-0.0186, -0.0007] |
+| ACS2ER one update − ACS2ER | -0.0077 | 0.0040 | [-0.0161, +0.0007] |
+| ACS2ER one update − ACS2 | -0.0183 | 0.0043 | [-0.0273, -0.0092] |
+| Values p=2/3 − ACS2HER | -0.0601 | 0.0030 | [-0.0663, -0.0539] |
 
 **woods14**, twenty paired seeds:
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | -0.0019 | 0.0064 | [-0.0154, +0.0115] |
-| Values tuned − Episodic ER | -0.0309 | 0.0065 | [-0.0444, -0.0174] |
-| Values shortened − Episodic ER | +0.0203 | 0.0070 | [+0.0056, +0.0350] |
-| Values tuned − HER full | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
-| Values shortened − Values tuned | +0.0512 | 0.0064 | [+0.0378, +0.0646] |
-| Episodic ER − ACS2ER | -0.0060 | 0.0089 | [-0.0247, +0.0126] |
-| Episodic ER − ACS2 | -0.0179 | 0.0080 | [-0.0346, -0.0013] |
-| ACS2ER U1 − ACS2ER | +0.0006 | 0.0093 | [-0.0189, +0.0201] |
-| ACS2ER U1 − ACS2 | -0.0113 | 0.0091 | [-0.0304, +0.0078] |
-| Values p=2/3 − HER full | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
+| ACS2HER − ACS2ER episodic | -0.0019 | 0.0064 | [-0.0154, +0.0115] |
+| ACS2HER values − ACS2ER episodic | -0.0309 | 0.0065 | [-0.0444, -0.0174] |
+| ACS2HER values shortened − ACS2ER episodic | +0.0203 | 0.0070 | [+0.0056, +0.0350] |
+| ACS2HER values − ACS2HER | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
+| ACS2HER values shortened − ACS2HER values | +0.0512 | 0.0064 | [+0.0378, +0.0646] |
+| ACS2ER episodic − ACS2ER | -0.0060 | 0.0089 | [-0.0247, +0.0126] |
+| ACS2ER episodic − ACS2 | -0.0179 | 0.0080 | [-0.0346, -0.0013] |
+| ACS2ER one update − ACS2ER | +0.0006 | 0.0093 | [-0.0189, +0.0201] |
+| ACS2ER one update − ACS2 | -0.0113 | 0.0091 | [-0.0304, +0.0078] |
+| Values p=2/3 − ACS2HER | -0.0289 | 0.0067 | [-0.0430, -0.0149] |
 
 **mazema**, twenty paired seeds:
 
 | Left − right | Difference | SE | Marginal 95% t(19) interval |
 |---|---:|---:|---|
-| HER full − Episodic ER | +0.0017 | 0.0117 | [-0.0228, +0.0261] |
-| Values tuned − Episodic ER | -0.0217 | 0.0106 | [-0.0438, +0.0005] |
-| Values shortened − Episodic ER | -0.0015 | 0.0120 | [-0.0267, +0.0236] |
-| Values tuned − HER full | -0.0233 | 0.0120 | [-0.0485, +0.0019] |
-| Values shortened − Values tuned | +0.0201 | 0.0132 | [-0.0075, +0.0478] |
-| Episodic ER − ACS2ER | +0.0064 | 0.0111 | [-0.0169, +0.0297] |
-| Episodic ER − ACS2 | +0.0100 | 0.0096 | [-0.0100, +0.0300] |
-| ACS2ER U1 − ACS2ER | -0.0075 | 0.0069 | [-0.0219, +0.0069] |
-| ACS2ER U1 − ACS2 | -0.0039 | 0.0092 | [-0.0231, +0.0153] |
-| Values p=2/3 − HER full | -0.0379 | 0.0088 | [-0.0564, -0.0195] |
+| ACS2HER − ACS2ER episodic | +0.0017 | 0.0117 | [-0.0228, +0.0261] |
+| ACS2HER values − ACS2ER episodic | -0.0217 | 0.0106 | [-0.0438, +0.0005] |
+| ACS2HER values shortened − ACS2ER episodic | -0.0015 | 0.0120 | [-0.0267, +0.0236] |
+| ACS2HER values − ACS2HER | -0.0233 | 0.0120 | [-0.0485, +0.0019] |
+| ACS2HER values shortened − ACS2HER values | +0.0201 | 0.0132 | [-0.0075, +0.0478] |
+| ACS2ER episodic − ACS2ER | +0.0064 | 0.0111 | [-0.0169, +0.0297] |
+| ACS2ER episodic − ACS2 | +0.0100 | 0.0096 | [-0.0100, +0.0300] |
+| ACS2ER one update − ACS2ER | -0.0075 | 0.0069 | [-0.0219, +0.0069] |
+| ACS2ER one update − ACS2 | -0.0039 | 0.0092 | [-0.0231, +0.0153] |
+| Values p=2/3 − ACS2HER | -0.0379 | 0.0088 | [-0.0564, -0.0195] |
 
-Full HER improves primary success over episodic ER on Maze5--7 with intervals above
+ACS2HER improves primary success over ACS2ER episodic on Maze5--7 with intervals above
 zero; Maze4, Woods14 and MazeMA remain uncertain. Fixed-p values is below full on all
 six mazes. The comparison changes model update volume from three to approximately
 one full application per interaction, with slower early knowledge acquisition; it
 does not identify the value estimator's quality separately from model learning dose.
 Shortening improves the tuned values result on Maze4--7 and Woods14; MazeMA is
 uncertain. The Woods14 shortening contrast also changes selected p from 2/3 to 1/3.
-Shortened values improves over episodic ER on Maze5 and Woods14. Neither episodic
-ER nor U1 has a positive interval excluding zero against archived ACS2ER on any maze.
+ACS2HER values shortened improves over ACS2ER episodic on Maze5 and Woods14. Neither episodic
+ER nor ACS2ER one update has a positive interval excluding zero against archived ACS2ER on any maze.
 
 ### Exact interaction thresholds
 
@@ -3396,7 +3431,7 @@ as exact integer interactions. `null` is no crossing at a registered point; it i
 a claim that a threshold is unreachable. The 24 archived-baseline crossings match the
 registration exactly. No interpolation or rounded-float comparison is used.
 
-| Maze | ACS2 | ACS2ER | Episodic ER | HER full | Values tuned | Values shortened | ACS2ER U1 | Values p=2/3 |
+| Maze | ACS2 | ACS2ER | ACS2ER episodic | ACS2HER | ACS2HER values | ACS2HER values shortened | ACS2ER one update | Values p=2/3 |
 |---|---|---|---|---|---|---|---|---|
 | maze4 | 2000000 / 300000 | null / 2000000 | null / 300000 | null / 30000 | null / null | null / null | null / 300000 | null / null |
 | maze5 | 1000000 / 300000 | null / 1000000 | null / null | null / 30000 | null / null | null / 300000 | null / 1000000 | null / null |
@@ -3411,57 +3446,57 @@ The following means ± SE use the same checkpoint averaging and twenty seeds. Fu
 applications divide cumulative full-step counts by actual physical interactions,
 including episode overshoot. Values applications fill the remaining replay budget.
 Original and fallback routes receive the full step. Total replay volume is three for
-episodic arms, one for U1; archived online ACS2 has one full application per step.
+episodic arms, one for ACS2ER one update; archived online ACS2 has one full application per step.
 
 | Maze | Arm | Realized copy share | Full applications / interaction | Knowledge |
 |---|---|---|---|---|
 | maze4 | ACS2 | — | 1.0000 ± 0.0000 | 0.7619 ± 0.0013 |
 | maze4 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8878 ± 0.0022 |
-| maze4 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8892 ± 0.0013 |
-| maze4 | HER full | 0.6672 ± 0.0003 | 3.0000 ± 0.0000 | 0.8818 ± 0.0013 |
-| maze4 | Values tuned | 0.3333 ± 0.0003 | 2.0001 ± 0.0010 | 0.8465 ± 0.0018 |
-| maze4 | Values shortened | 0.2587 ± 0.0007 | 2.2240 ± 0.0021 | 0.8537 ± 0.0023 |
-| maze4 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7674 ± 0.0017 |
+| maze4 | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8892 ± 0.0013 |
+| maze4 | ACS2HER | 0.6672 ± 0.0003 | 3.0000 ± 0.0000 | 0.8818 ± 0.0013 |
+| maze4 | ACS2HER values | 0.3333 ± 0.0003 | 2.0001 ± 0.0010 | 0.8465 ± 0.0018 |
+| maze4 | ACS2HER values shortened | 0.2587 ± 0.0007 | 2.2240 ± 0.0021 | 0.8537 ± 0.0023 |
+| maze4 | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7674 ± 0.0017 |
 | maze4 | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0011 | 0.7674 ± 0.0017 |
 | maze5 | ACS2 | — | 1.0000 ± 0.0000 | 0.7225 ± 0.0013 |
 | maze5 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8486 ± 0.0019 |
-| maze5 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8458 ± 0.0013 |
-| maze5 | HER full | 0.6665 ± 0.0004 | 3.0000 ± 0.0000 | 0.8441 ± 0.0012 |
-| maze5 | Values tuned | 0.3343 ± 0.0003 | 1.9970 ± 0.0010 | 0.7997 ± 0.0018 |
-| maze5 | Values shortened | 0.2602 ± 0.0009 | 2.2195 ± 0.0026 | 0.8115 ± 0.0022 |
-| maze5 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7303 ± 0.0018 |
+| maze5 | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8458 ± 0.0013 |
+| maze5 | ACS2HER | 0.6665 ± 0.0004 | 3.0000 ± 0.0000 | 0.8441 ± 0.0012 |
+| maze5 | ACS2HER values | 0.3343 ± 0.0003 | 1.9970 ± 0.0010 | 0.7997 ± 0.0018 |
+| maze5 | ACS2HER values shortened | 0.2602 ± 0.0009 | 2.2195 ± 0.0026 | 0.8115 ± 0.0022 |
+| maze5 | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7303 ± 0.0018 |
 | maze5 | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0012 | 0.7208 ± 0.0020 |
 | maze6 | ACS2 | — | 1.0000 ± 0.0000 | 0.7194 ± 0.0019 |
 | maze6 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8453 ± 0.0017 |
-| maze6 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8439 ± 0.0019 |
-| maze6 | HER full | 0.6674 ± 0.0004 | 3.0000 ± 0.0000 | 0.8455 ± 0.0021 |
-| maze6 | Values tuned | 0.3333 ± 0.0004 | 2.0000 ± 0.0013 | 0.7998 ± 0.0022 |
-| maze6 | Values shortened | 0.2648 ± 0.0010 | 2.2055 ± 0.0031 | 0.8093 ± 0.0021 |
-| maze6 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7235 ± 0.0022 |
+| maze6 | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8439 ± 0.0019 |
+| maze6 | ACS2HER | 0.6674 ± 0.0004 | 3.0000 ± 0.0000 | 0.8455 ± 0.0021 |
+| maze6 | ACS2HER values | 0.3333 ± 0.0004 | 2.0000 ± 0.0013 | 0.7998 ± 0.0022 |
+| maze6 | ACS2HER values shortened | 0.2648 ± 0.0010 | 2.2055 ± 0.0031 | 0.8093 ± 0.0021 |
+| maze6 | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7235 ± 0.0022 |
 | maze6 | Values p=2/3 | 0.6668 ± 0.0003 | 0.9995 ± 0.0010 | 0.7181 ± 0.0023 |
 | maze7 | ACS2 | — | 1.0000 ± 0.0000 | 0.7160 ± 0.0015 |
 | maze7 | ACS2ER | — | 2.9994 ± 0.0000 | 0.8445 ± 0.0018 |
-| maze7 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8449 ± 0.0018 |
-| maze7 | HER full | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.8426 ± 0.0021 |
-| maze7 | Values tuned | 0.3340 ± 0.0005 | 1.9979 ± 0.0016 | 0.7937 ± 0.0021 |
-| maze7 | Values shortened | 0.2625 ± 0.0008 | 2.2124 ± 0.0025 | 0.8055 ± 0.0017 |
-| maze7 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7254 ± 0.0020 |
+| maze7 | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.8449 ± 0.0018 |
+| maze7 | ACS2HER | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.8426 ± 0.0021 |
+| maze7 | ACS2HER values | 0.3340 ± 0.0005 | 1.9979 ± 0.0016 | 0.7937 ± 0.0021 |
+| maze7 | ACS2HER values shortened | 0.2625 ± 0.0008 | 2.2124 ± 0.0025 | 0.8055 ± 0.0017 |
+| maze7 | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.7254 ± 0.0020 |
 | maze7 | Values p=2/3 | 0.6669 ± 0.0005 | 0.9994 ± 0.0014 | 0.7162 ± 0.0019 |
 | woods14 | ACS2 | — | 1.0000 ± 0.0000 | 0.8577 ± 0.0018 |
 | woods14 | ACS2ER | — | 2.9995 ± 0.0000 | 0.9548 ± 0.0018 |
-| woods14 | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9574 ± 0.0021 |
-| woods14 | HER full | 0.6679 ± 0.0004 | 3.0000 ± 0.0000 | 0.9497 ± 0.0022 |
-| woods14 | Values tuned | 0.6666 ± 0.0004 | 1.0001 ± 0.0011 | 0.8543 ± 0.0019 |
-| woods14 | Values shortened | 0.2076 ± 0.0011 | 2.3772 ± 0.0032 | 0.9327 ± 0.0027 |
-| woods14 | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8636 ± 0.0017 |
+| woods14 | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9574 ± 0.0021 |
+| woods14 | ACS2HER | 0.6679 ± 0.0004 | 3.0000 ± 0.0000 | 0.9497 ± 0.0022 |
+| woods14 | ACS2HER values | 0.6666 ± 0.0004 | 1.0001 ± 0.0011 | 0.8543 ± 0.0019 |
+| woods14 | ACS2HER values shortened | 0.2076 ± 0.0011 | 2.3772 ± 0.0032 | 0.9327 ± 0.0027 |
+| woods14 | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8636 ± 0.0017 |
 | woods14 | Values p=2/3 | 0.6666 ± 0.0004 | 1.0001 ± 0.0011 | 0.8543 ± 0.0019 |
 | mazema | ACS2 | — | 1.0000 ± 0.0000 | 0.8707 ± 0.0028 |
 | mazema | ACS2ER | — | 2.9994 ± 0.0000 | 0.9704 ± 0.0023 |
-| mazema | Episodic ER | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9681 ± 0.0021 |
-| mazema | HER full | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.9637 ± 0.0020 |
-| mazema | Values tuned | 0.3339 ± 0.0004 | 1.9984 ± 0.0011 | 0.9361 ± 0.0027 |
-| mazema | Values shortened | 0.2194 ± 0.0012 | 2.3419 ± 0.0037 | 0.9497 ± 0.0016 |
-| mazema | ACS2ER U1 | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8741 ± 0.0026 |
+| mazema | ACS2ER episodic | 0.0000 ± 0.0000 | 3.0000 ± 0.0000 | 0.9681 ± 0.0021 |
+| mazema | ACS2HER | 0.6672 ± 0.0004 | 3.0000 ± 0.0000 | 0.9637 ± 0.0020 |
+| mazema | ACS2HER values | 0.3339 ± 0.0004 | 1.9984 ± 0.0011 | 0.9361 ± 0.0027 |
+| mazema | ACS2HER values shortened | 0.2194 ± 0.0012 | 2.3419 ± 0.0037 | 0.9497 ± 0.0016 |
+| mazema | ACS2ER one update | 0.0000 ± 0.0000 | 1.0000 ± 0.0000 | 0.8741 ± 0.0026 |
 | mazema | Values p=2/3 | 0.6673 ± 0.0004 | 0.9980 ± 0.0013 | 0.8705 ± 0.0024 |
 
 Counterfactual admissibility removes copies whose goals were already reached at the
@@ -3476,51 +3511,51 @@ counterparts are retained at every point in the raw rows and analysis JSON.
 
 Purpose costs below are objective-query counts per replay draw, averaged over points
 and twenty seeds. Scoring includes one reward and one reach query. Selection and
-provenance are reach queries; U1 forwards recorded outcomes and makes none. Logical
+provenance are reach queries; ACS2ER one update forwards recorded outcomes and makes none. Logical
 memory is a lower bound independent of process peak RSS. Population is the final
 point mean ± SE; CPU is mean process CPU seconds over the twenty seeds. Woods14 fixed-p
 cost displays reused main-grid work, not an additional allocation.
 
 | Maze | Arm | Scoring / selection / provenance per draw | Final population | Final logical MiB | Mean process CPU-s | Mean peak RSS MiB |
 |---|---|---|---|---:|---:|---:|
-| maze4 | Episodic ER | 2.000 / 0.000 / 2.950 | 925.6 ± 15.5 | 0.743 | 107.2 | 8.750 |
-| maze4 | HER full | 2.000 / 0.000 / 3.752 | 924.3 ± 19.6 | 0.744 | 109.6 | 8.758 |
-| maze4 | Values tuned | 2.000 / 0.000 / 3.359 | 1013.5 ± 17.8 | 0.775 | 115.1 | 8.706 |
-| maze4 | Values shortened | 2.000 / 1.399 / 2.275 | 1030.2 ± 22.6 | 0.781 | 116.2 | 8.736 |
-| maze4 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1126.5 ± 22.8 | 1.159 | 55.5 | 8.750 |
+| maze4 | ACS2ER episodic | 2.000 / 0.000 / 2.950 | 925.6 ± 15.5 | 0.743 | 107.2 | 8.750 |
+| maze4 | ACS2HER | 2.000 / 0.000 / 3.752 | 924.3 ± 19.6 | 0.744 | 109.6 | 8.758 |
+| maze4 | ACS2HER values | 2.000 / 0.000 / 3.359 | 1013.5 ± 17.8 | 0.775 | 115.1 | 8.706 |
+| maze4 | ACS2HER values shortened | 2.000 / 1.399 / 2.275 | 1030.2 ± 22.6 | 0.781 | 116.2 | 8.736 |
+| maze4 | ACS2ER one update | 0.000 / 0.000 / 0.000 | 1126.5 ± 22.8 | 1.159 | 55.5 | 8.750 |
 | maze4 | Values p=2/3 | 2.000 / 0.000 / 3.745 | 1116.8 ± 22.9 | 0.811 | 121.3 | 8.727 |
-| maze5 | Episodic ER | 2.000 / 0.000 / 4.427 | 1376.3 ± 24.1 | 0.859 | 183.3 | 8.805 |
-| maze5 | HER full | 2.000 / 0.000 / 6.083 | 1478.0 ± 27.9 | 0.896 | 218.1 | 8.832 |
-| maze5 | Values tuned | 2.000 / 0.000 / 5.299 | 1538.2 ± 27.2 | 0.916 | 200.0 | 8.799 |
-| maze5 | Values shortened | 2.000 / 2.365 / 3.428 | 1495.8 ± 24.7 | 0.901 | 196.8 | 8.820 |
-| maze5 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1769.3 ± 34.4 | 1.384 | 106.0 | 8.816 |
+| maze5 | ACS2ER episodic | 2.000 / 0.000 / 4.427 | 1376.3 ± 24.1 | 0.859 | 183.3 | 8.805 |
+| maze5 | ACS2HER | 2.000 / 0.000 / 6.083 | 1478.0 ± 27.9 | 0.896 | 218.1 | 8.832 |
+| maze5 | ACS2HER values | 2.000 / 0.000 / 5.299 | 1538.2 ± 27.2 | 0.916 | 200.0 | 8.799 |
+| maze5 | ACS2HER values shortened | 2.000 / 2.365 / 3.428 | 1495.8 ± 24.7 | 0.901 | 196.8 | 8.820 |
+| maze5 | ACS2ER one update | 0.000 / 0.000 / 0.000 | 1769.3 ± 34.4 | 1.384 | 106.0 | 8.816 |
 | maze5 | Values p=2/3 | 2.000 / 0.000 / 6.102 | 1759.7 ± 32.9 | 0.994 | 224.7 | 8.810 |
-| maze6 | Episodic ER | 2.000 / 0.000 / 5.390 | 1512.0 ± 30.1 | 0.893 | 204.1 | 8.812 |
-| maze6 | HER full | 2.000 / 0.000 / 8.235 | 1625.1 ± 31.1 | 0.934 | 240.6 | 8.828 |
-| maze6 | Values tuned | 2.000 / 0.000 / 6.853 | 1669.2 ± 26.0 | 0.949 | 220.9 | 8.819 |
-| maze6 | Values shortened | 2.000 / 3.279 / 4.155 | 1653.8 ± 33.1 | 0.943 | 226.5 | 8.809 |
-| maze6 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 1845.2 ± 31.0 | 1.411 | 112.3 | 8.810 |
+| maze6 | ACS2ER episodic | 2.000 / 0.000 / 5.390 | 1512.0 ± 30.1 | 0.893 | 204.1 | 8.812 |
+| maze6 | ACS2HER | 2.000 / 0.000 / 8.235 | 1625.1 ± 31.1 | 0.934 | 240.6 | 8.828 |
+| maze6 | ACS2HER values | 2.000 / 0.000 / 6.853 | 1669.2 ± 26.0 | 0.949 | 220.9 | 8.819 |
+| maze6 | ACS2HER values shortened | 2.000 / 3.279 / 4.155 | 1653.8 ± 33.1 | 0.943 | 226.5 | 8.809 |
+| maze6 | ACS2ER one update | 0.000 / 0.000 / 0.000 | 1845.2 ± 31.0 | 1.411 | 112.3 | 8.810 |
 | maze6 | Values p=2/3 | 2.000 / 0.000 / 8.144 | 1843.0 ± 35.0 | 1.010 | 232.2 | 8.803 |
-| maze7 | Episodic ER | 2.000 / 0.000 / 5.392 | 1607.5 ± 34.8 | 0.927 | 224.1 | 8.815 |
-| maze7 | HER full | 2.000 / 0.000 / 8.040 | 1790.3 ± 35.2 | 0.992 | 272.3 | 8.788 |
-| maze7 | Values tuned | 2.000 / 0.000 / 6.723 | 1905.2 ± 26.4 | 1.032 | 259.8 | 8.802 |
-| maze7 | Values shortened | 2.000 / 3.213 / 4.165 | 1721.8 ± 27.0 | 0.968 | 232.8 | 8.774 |
-| maze7 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 2014.8 ± 35.0 | 1.470 | 123.4 | 8.800 |
+| maze7 | ACS2ER episodic | 2.000 / 0.000 / 5.392 | 1607.5 ± 34.8 | 0.927 | 224.1 | 8.815 |
+| maze7 | ACS2HER | 2.000 / 0.000 / 8.040 | 1790.3 ± 35.2 | 0.992 | 272.3 | 8.788 |
+| maze7 | ACS2HER values | 2.000 / 0.000 / 6.723 | 1905.2 ± 26.4 | 1.032 | 259.8 | 8.802 |
+| maze7 | ACS2HER values shortened | 2.000 / 3.213 / 4.165 | 1721.8 ± 27.0 | 0.968 | 232.8 | 8.774 |
+| maze7 | ACS2ER one update | 0.000 / 0.000 / 0.000 | 2014.8 ± 35.0 | 1.470 | 123.4 | 8.800 |
 | maze7 | Values p=2/3 | 2.000 / 0.000 / 7.946 | 1949.8 ± 31.2 | 1.048 | 246.3 | 8.800 |
-| woods14 | Episodic ER | 2.000 / 0.000 / 9.211 | 255.4 ± 8.3 | 0.428 | 62.5 | 8.694 |
-| woods14 | HER full | 2.000 / 0.000 / 9.869 | 276.8 ± 5.7 | 0.436 | 73.0 | 8.690 |
-| woods14 | Values tuned | 2.000 / 0.000 / 9.730 | 327.9 ± 12.4 | 0.453 | 70.0 | 8.701 |
-| woods14 | Values shortened | 2.000 / 3.632 / 7.769 | 271.4 ± 10.5 | 0.434 | 65.7 | 8.688 |
-| woods14 | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 305.4 ± 8.9 | 0.870 | 29.2 | 8.681 |
+| woods14 | ACS2ER episodic | 2.000 / 0.000 / 9.211 | 255.4 ± 8.3 | 0.428 | 62.5 | 8.694 |
+| woods14 | ACS2HER | 2.000 / 0.000 / 9.869 | 276.8 ± 5.7 | 0.436 | 73.0 | 8.690 |
+| woods14 | ACS2HER values | 2.000 / 0.000 / 9.730 | 327.9 ± 12.4 | 0.453 | 70.0 | 8.701 |
+| woods14 | ACS2HER values shortened | 2.000 / 3.632 / 7.769 | 271.4 ± 10.5 | 0.434 | 65.7 | 8.688 |
+| woods14 | ACS2ER one update | 0.000 / 0.000 / 0.000 | 305.4 ± 8.9 | 0.870 | 29.2 | 8.681 |
 | woods14 | Values p=2/3 | 2.000 / 0.000 / 9.730 | 327.9 ± 12.4 | 0.453 | 70.0 | 8.701 |
-| mazema | Episodic ER | 2.000 / 0.000 / 4.843 | 243.1 ± 10.3 | 0.457 | 33.4 | 8.650 |
-| mazema | HER full | 2.000 / 0.000 / 5.258 | 255.6 ± 9.6 | 0.461 | 37.4 | 8.654 |
-| mazema | Values tuned | 2.000 / 0.000 / 5.087 | 271.4 ± 6.3 | 0.467 | 34.9 | 8.671 |
-| mazema | Values shortened | 2.000 / 1.883 / 3.996 | 266.2 ± 6.3 | 0.465 | 35.6 | 8.667 |
-| mazema | ACS2ER U1 | 0.000 / 0.000 / 0.000 | 286.6 ± 6.2 | 0.864 | 14.3 | 8.687 |
+| mazema | ACS2ER episodic | 2.000 / 0.000 / 4.843 | 243.1 ± 10.3 | 0.457 | 33.4 | 8.650 |
+| mazema | ACS2HER | 2.000 / 0.000 / 5.258 | 255.6 ± 9.6 | 0.461 | 37.4 | 8.654 |
+| mazema | ACS2HER values | 2.000 / 0.000 / 5.087 | 271.4 ± 6.3 | 0.467 | 34.9 | 8.671 |
+| mazema | ACS2HER values shortened | 2.000 / 1.883 / 3.996 | 266.2 ± 6.3 | 0.465 | 35.6 | 8.667 |
+| mazema | ACS2ER one update | 0.000 / 0.000 / 0.000 | 286.6 ± 6.2 | 0.864 | 14.3 | 8.687 |
 | mazema | Values p=2/3 | 2.000 / 0.000 / 5.280 | 279.4 ± 7.3 | 0.470 | 33.7 | 8.671 |
 
-The largest population observed at registered points was 4164 (U1, Maze7), and full
+The largest population observed at registered points was 4164 (ACS2ER one update, Maze7), and full
 HER reached 4163. Maximum process peak RSS was 9048 KiB, below the 512 MiB node limit.
 These are observations at finite budgets, not limits on future population growth.
 Every point also reports train/evaluation wall time. Process CPU and training CPU

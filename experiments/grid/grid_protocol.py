@@ -8,6 +8,8 @@ import statistics
 import tempfile
 import time
 
+from agent_names import canonical_row
+
 T19 = 2.093024054408263
 NONLEARNING_FIELDS = {'host', 'cpu_model', 'wall_seconds_train', 'wall_seconds_eval', 'wall_seconds_total'}
 TERMINAL = {'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT', 'OUT_OF_MEMORY', 'NODE_FAIL', 'PREEMPTED', 'BOOT_FAIL', 'DEADLINE', 'REVOKED'}
@@ -94,7 +96,7 @@ def verdict(acs2_final, er_final, acs2_first, floor, ceiling):
 
 
 def learning_fields(row):
-    return {key: value for key, value in row.items() if key not in NONLEARNING_FIELDS}
+    return canonical_row({key: value for key, value in row.items() if key not in NONLEARNING_FIELDS})
 
 
 def compare_pilot(grid_rows, pilot_rows):

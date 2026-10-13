@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use acs2_bench::{AgentChoice, AgentOptions};
-use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_core::learning::action_selection::EpsilonGreedy;
 use acs2_agents::acs2::Agent;
 use acs2_core::support::config::Configuration;

@@ -71,6 +71,14 @@ The pilot tooling is preserved as the record of how this grid ran. Its reusable 
 now lives in `grid/`; later experiments add registrations and analyses without
 changing this archived directory.
 
+Current hindsight run names are `acs2her`, `acs2her_values` and
+`acs2her_values_shortened`; their episodic ACS2ER control is `acs2er_episodic`,
+and the one-update ACS2ER variant is `acs2er_one_update`. The closed `her-variants/`
+registration, analysis and rows retain their old names and pinned binaries. Shared
+grid readers use [one mapping](grid/agent_names.json) when comparing new rows with
+that archive; the [dated architecture table](../docs/ARCHITECTURE.md#agent-run-names-2026-10-14)
+records the names and defining modules.
+
 ## Relabeling composition
 
 The probe measures final, future, episode and uniform-real goal strategies, three

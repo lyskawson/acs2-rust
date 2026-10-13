@@ -1,6 +1,6 @@
 use std::cell::{Cell, RefCell};
 
-use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_agents::acs2er::replay::ReplayConfiguration;
 use acs2_core::learning::action_selection::ActionSelector;
 use acs2_agents::acs2::Agent;

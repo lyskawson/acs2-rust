@@ -1,7 +1,7 @@
 use std::mem::size_of;
 use std::time::{Duration, Instant};
 
-use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_agents::acs2er::replay::ReplayConfiguration;
 use acs2_core::learning::replay::ReplaySample;
 use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
@@ -37,23 +37,40 @@ pub const EVALUATION_ENVIRONMENT_STREAM: u64 = 6;
 pub enum AgentKind {
     Acs2,
     Acs2Er,
-    Acs2ErU1,
-    ErEpisodic,
-    HerFull,
-    HerValues { proportion: f64 },
-    HerValuesShortened { proportion: f64 },
+    Acs2ErOneUpdate,
+    Acs2ErEpisodic,
+    Acs2Her,
+    Acs2HerValues { proportion: f64 },
+    Acs2HerValuesShortened { proportion: f64 },
 }
 
 impl AgentKind {
+    pub fn from_run_name(name: &str, proportion: f64) -> Result<Self, String> {
+        let replacement = crate::agent_names::canonical_run_name(name);
+        if replacement != name {
+            return Err(format!("agent {name} was renamed to {replacement}; use {replacement}"));
+        }
+        match name {
+            "acs2" => Ok(Self::Acs2),
+            "acs2er" => Ok(Self::Acs2Er),
+            "acs2er_one_update" => Ok(Self::Acs2ErOneUpdate),
+            "acs2er_episodic" => Ok(Self::Acs2ErEpisodic),
+            "acs2her" => Ok(Self::Acs2Her),
+            "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
+            "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
+            _ => Err(format!("unknown agent {name}")),
+        }
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Self::Acs2 => "acs2",
             Self::Acs2Er => "acs2er",
-            Self::Acs2ErU1 => "acs2er_u1",
-            Self::ErEpisodic => "er_episodic",
-            Self::HerFull => "her_full",
-            Self::HerValues { .. } => "her_values",
-            Self::HerValuesShortened { .. } => "her_values_shortened",
+            Self::Acs2ErOneUpdate => "acs2er_one_update",
+            Self::Acs2ErEpisodic => "acs2er_episodic",
+            Self::Acs2Her => "acs2her",
+            Self::Acs2HerValues { .. } => "acs2her_values",
+            Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
         }
     }
 }
@@ -669,13 +686,13 @@ where
                 )
             })
         }
-        AgentKind::Acs2ErU1 => {
-            let replay = acs2_agents::acs2er::u1::DiagnosticConfiguration {
+        AgentKind::Acs2ErOneUpdate => {
+            let replay = acs2_agents::acs2er::one_update::OneUpdateConfiguration {
                 capacity: preset.replay_capacity,
                 warmup: preset.replay_warmup,
             };
-            let mut adapter = crate::agents::DiagnosticAdapter(CoreAgent {
-                agent: acs2_agents::acs2er::u1::Agent::<M, _>::new(
+            let mut adapter = crate::agents::OneUpdateAdapter(CoreAgent {
+                agent: acs2_agents::acs2er::one_update::Agent::<M, _>::new(
                     config,
                     replay,
                     preset.truncation,
@@ -706,9 +723,9 @@ where
                 )
             })
         }
-        AgentKind::ErEpisodic => {
+        AgentKind::Acs2ErEpisodic => {
             use acs2_agents::episodic_replay::EpisodicAgent;
-            let mut agent = crate::agents::EpisodicGoalAgent(acs2_agents::er_episodic::Agent::<
+            let mut agent = crate::agents::EpisodicGoalAgent(acs2_agents::acs2er::episodic::Agent::<
                 S,
                 G,
                 M,
@@ -736,20 +753,20 @@ where
                 )
             })
         }
-        AgentKind::HerFull | AgentKind::HerValues { .. } | AgentKind::HerValuesShortened { .. } => {
+        AgentKind::Acs2Her | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. } => {
             use acs2_agents::episodic_replay::EpisodicAgent;
             let variant = match kind {
-                AgentKind::HerFull => acs2_agents::her::Variant::Full,
-                AgentKind::HerValues { proportion } => {
-                    acs2_agents::her::Variant::Values { proportion }
+                AgentKind::Acs2Her => acs2_agents::acs2her::Preset::Acs2Her,
+                AgentKind::Acs2HerValues { proportion } => {
+                    acs2_agents::acs2her::Preset::Acs2HerValues { proportion }
                 }
-                AgentKind::HerValuesShortened { proportion } => {
-                    acs2_agents::her::Variant::ValuesShortened { proportion }
+                AgentKind::Acs2HerValuesShortened { proportion } => {
+                    acs2_agents::acs2her::Preset::Acs2HerValuesShortened { proportion }
                 }
                 _ => unreachable!(),
             };
             let mut agent =
-                crate::agents::EpisodicGoalAgent(acs2_agents::her::Agent::<S, G, M, _, _>::new(
+                crate::agents::EpisodicGoalAgent(acs2_agents::acs2her::Agent::<S, G, M, _, _>::new(
                     config,
                     crate::agents::episodic_configuration(preset),
                     variant,

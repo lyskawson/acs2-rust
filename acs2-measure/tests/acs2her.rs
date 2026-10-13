@@ -1,6 +1,7 @@
 use acs2_agents::episodic_replay::{EpisodicAgent, EpisodicReplay};
-use acs2_agents::{er_episodic, her};
-use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::episodic;
+use acs2_agents::acs2her;
+use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_core::checkpoint::Checkpointed;
 use acs2_core::representation::{
     classifier::Classifier, perception::Perception, population::Population, symbol::Symbol,
@@ -8,7 +9,8 @@ use acs2_core::representation::{
 use acs2_core::support::rng::{ChaChaRandomSource, RandomSource};
 use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::maze::geometries::pyalcs::MAZE4;
-use acs2_measure::agents::{episodic_configuration, DiagnosticAdapter, EpisodicGoalAgent};
+use acs2_measure::agent_names::{canonical_row, canonical_run_name};
+use acs2_measure::agents::{episodic_configuration, OneUpdateAdapter, EpisodicGoalAgent};
 use acs2_measure::pair_protocol::MazePairDistributions;
 use acs2_measure::runner::{
     assert_protocol_evaluation_read_only, run_protocol_with_sink, AgentKind, CoreAgent, GoalAgent,
@@ -87,22 +89,22 @@ where
 #[test]
 fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
     let preset = Preset::thesis();
-    check_greedy_evaluation(er_episodic::Agent::<1, 1, 2, _, _>::new(
+    check_greedy_evaluation(episodic::Agent::<1, 1, 2, _, _>::new(
         preset.config(2),
         episodic_configuration(preset),
         random(1),
         random(7),
     ));
     for variant in [
-        her::Variant::Full,
-        her::Variant::Values {
+        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
-        her::Variant::ValuesShortened {
+        acs2her::Preset::Acs2HerValuesShortened {
             proportion: 2.0 / 3.0,
         },
     ] {
-        check_greedy_evaluation(her::Agent::<1, 1, 2, _, _>::new(
+        check_greedy_evaluation(acs2her::Agent::<1, 1, 2, _, _>::new(
             preset.config(2),
             episodic_configuration(preset),
             variant,
@@ -113,10 +115,10 @@ fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
 }
 
 #[test]
-fn diagnostic_u1_performs_exactly_one_replay_per_environment_step() {
+fn acs2er_one_update_performs_exactly_one_replay_per_environment_step() {
     let preset = Preset::thesis();
     assert_eq!(
-        acs2_agents::acs2er::u1::DiagnosticConfiguration {
+        acs2_agents::acs2er::one_update::OneUpdateConfiguration {
             capacity: preset.replay_capacity,
             warmup: preset.replay_warmup,
         }
@@ -128,7 +130,7 @@ fn diagnostic_u1_performs_exactly_one_replay_per_environment_step() {
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     run_protocol_with_sink::<_, _, 8, 2, 10>(
         &distributions.protocol(),
-        AgentKind::Acs2ErU1,
+        AgentKind::Acs2ErOneUpdate,
         42,
         &[20, 60, 100],
         &RunMetadata::test("test"),
@@ -145,16 +147,16 @@ fn diagnostic_u1_performs_exactly_one_replay_per_environment_step() {
 }
 
 #[test]
-fn her_factory_uses_sampler_stream_seven_independently_of_agent_stream() {
+fn acs2her_factory_uses_sampler_stream_seven_independently_of_agent_stream() {
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     for kind in [
-        AgentKind::ErEpisodic,
-        AgentKind::HerFull,
-        AgentKind::HerValues {
+        AgentKind::Acs2ErEpisodic,
+        AgentKind::Acs2Her,
+        AgentKind::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
-        AgentKind::HerValuesShortened {
+        AgentKind::Acs2HerValuesShortened {
             proportion: 2.0 / 3.0,
         },
     ] {
@@ -189,7 +191,7 @@ fn all_episodic_agents_preserve_population_store_sampler_rng_and_counters_under_
         42,
         &[10, 40, 100],
         || {
-            EpisodicGoalAgent(er_episodic::Agent::<8, 2, 10, _, _>::new(
+            EpisodicGoalAgent(episodic::Agent::<8, 2, 10, _, _>::new(
                 preset.config(8),
                 episodic_configuration(preset),
                 random(1),
@@ -199,11 +201,11 @@ fn all_episodic_agents_preserve_population_store_sampler_rng_and_counters_under_
         |agent| agent.0.learner().snapshot(),
     );
     for variant in [
-        her::Variant::Full,
-        her::Variant::Values {
+        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
-        her::Variant::ValuesShortened {
+        acs2her::Preset::Acs2HerValuesShortened {
             proportion: 2.0 / 3.0,
         },
     ] {
@@ -212,7 +214,7 @@ fn all_episodic_agents_preserve_population_store_sampler_rng_and_counters_under_
             42,
             &[10, 40, 100],
             || {
-                EpisodicGoalAgent(her::Agent::<8, 2, 10, _, _>::new(
+                EpisodicGoalAgent(acs2her::Agent::<8, 2, 10, _, _>::new(
                     preset.config(8),
                     episodic_configuration(preset),
                     variant,
@@ -226,11 +228,11 @@ fn all_episodic_agents_preserve_population_store_sampler_rng_and_counters_under_
 }
 
 #[test]
-fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation() {
+fn acs2er_one_update_preserves_the_unchanged_core_replay_and_rng_during_evaluation() {
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     let preset = Preset::thesis();
-    let replay = acs2_agents::acs2er::u1::DiagnosticConfiguration {
+    let replay = acs2_agents::acs2er::one_update::OneUpdateConfiguration {
         capacity: preset.replay_capacity,
         warmup: preset.replay_warmup,
     };
@@ -239,8 +241,8 @@ fn diagnostic_u1_preserves_the_unchanged_core_replay_and_rng_during_evaluation()
         42,
         &[10, 40, 100],
         || {
-            DiagnosticAdapter(CoreAgent {
-                agent: acs2_agents::acs2er::u1::Agent::<10, _>::new(
+            OneUpdateAdapter(CoreAgent {
+                agent: acs2_agents::acs2er::one_update::Agent::<10, _>::new(
                     preset.config(8),
                     replay,
                     preset.truncation,
@@ -271,15 +273,15 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     for kind in [
-        AgentKind::ErEpisodic,
-        AgentKind::HerFull,
-        AgentKind::HerValues {
+        AgentKind::Acs2ErEpisodic,
+        AgentKind::Acs2Her,
+        AgentKind::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
-        AgentKind::HerValuesShortened {
+        AgentKind::Acs2HerValuesShortened {
             proportion: 2.0 / 3.0,
         },
-        AgentKind::Acs2ErU1,
+        AgentKind::Acs2ErOneUpdate,
     ] {
         let mut rows = Vec::new();
         run_protocol_with_sink::<_, _, 8, 2, 10>(
@@ -304,7 +306,7 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
             assert_eq!(row["replay_updates"], updates);
             assert_eq!(
                 updates,
-                if kind == AgentKind::Acs2ErU1 {
+                if kind == AgentKind::Acs2ErOneUpdate {
                     steps
                 } else {
                     3 * steps
@@ -313,7 +315,7 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
             assert!(row["knowledge"].is_number());
             assert!(row["population_logical_bytes"].is_number());
             assert!(row["evaluation_blocks"]["test"]["success"].is_number());
-            if kind == AgentKind::Acs2ErU1 {
+            if kind == AgentKind::Acs2ErOneUpdate {
                 assert_eq!(row["agent_parameters"]["replay_updates_per_step"], 1);
                 assert_eq!(row["replay_diagnostics"]["original"], updates);
                 assert_eq!(row["replay_diagnostics"]["relabeled"], 0);
@@ -350,11 +352,11 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
                 row["agent_parameters"]["truncation"]
             );
             match kind {
-                AgentKind::ErEpisodic => {
+                AgentKind::Acs2ErEpisodic => {
                     assert_eq!(relabeled, 0);
                     assert_eq!(row["learning_update_counts"]["full"], updates);
                 }
-                AgentKind::HerFull => {
+                AgentKind::Acs2Her => {
                     assert!(relabeled > 0);
                     assert_eq!(row["learning_update_counts"]["full"], updates);
                 }
@@ -383,11 +385,11 @@ fn pair_baselines_reproduce_archived_seed42_learning_fields() {
             configuration["cap"].as_u64().unwrap() as u32,
             "coordinates",
         );
-        let kind = if configuration["agent"] == "acs2" {
-            AgentKind::Acs2
-        } else {
-            AgentKind::Acs2Er
-        };
+        let kind = AgentKind::from_run_name(
+            canonical_run_name(configuration["agent"].as_str().unwrap()),
+            2.0 / 3.0,
+        )
+        .unwrap();
         let targets: Vec<_> = configuration["rows"]
             .as_array()
             .unwrap()
@@ -426,7 +428,7 @@ fn pair_baselines_reproduce_archived_seed42_learning_fields() {
                 row.as_object_mut().unwrap().remove(key);
             }
             assert_eq!(
-                &row, expected,
+                row, canonical_row(expected),
                 "{} {}",
                 configuration["task"], configuration["agent"]
             );
@@ -468,18 +470,11 @@ fn new_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
             configuration["cap"].as_u64().unwrap() as u32,
             "coordinates",
         );
-        let kind = match configuration["agent"].as_str().unwrap() {
-            "er_episodic" => AgentKind::ErEpisodic,
-            "her_full" => AgentKind::HerFull,
-            "her_values" => AgentKind::HerValues {
-                proportion: 2.0 / 3.0,
-            },
-            "her_values_shortened" => AgentKind::HerValuesShortened {
-                proportion: 2.0 / 3.0,
-            },
-            "acs2er_u1" => AgentKind::Acs2ErU1,
-            _ => unreachable!(),
-        };
+        let kind = AgentKind::from_run_name(
+            canonical_run_name(configuration["agent"].as_str().unwrap()),
+            2.0 / 3.0,
+        )
+        .unwrap();
         let expected = configuration["rows"].as_array().unwrap();
         let mut actual = Vec::new();
         run_protocol_with_sink::<_, _, 8, 2, 10>(
@@ -503,8 +498,8 @@ fn new_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
                 row.as_object_mut().unwrap().remove(key.as_str().unwrap());
             }
             assert_eq!(
-                &floating_field_bits(&row),
-                pinned,
+                floating_field_bits(&row),
+                canonical_row(pinned),
                 "{} {} at {}",
                 task,
                 configuration["agent"],
@@ -516,7 +511,7 @@ fn new_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
 
 #[test]
 fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
-    let path = std::env::temp_dir().join(format!("her-cli-{}.jsonl", std::process::id()));
+    let path = std::env::temp_dir().join(format!("acs2her-cli-{}.jsonl", std::process::id()));
     let args = [
         "--task",
         "maze4",
@@ -525,7 +520,7 @@ fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
         "--protocol",
         "maze-pairs-v1",
         "--agents",
-        "her_values",
+        "acs2her_values",
         "--seeds",
         "42",
         "--targets",
@@ -557,7 +552,7 @@ fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
     );
     assert_eq!(row["agent_parameters"]["relabeled_proportion"], 0.9);
     let mut invalid = args;
-    invalid[7] = "her_full";
+    invalid[7] = "acs2her";
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
         .args(invalid)
         .arg(&path)
@@ -577,7 +572,7 @@ fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings
         replay_updates_per_step: 1,
         ..Preset::thesis()
     };
-    let parameters = acs2_agents::acs2er::u1::DiagnosticConfiguration {
+    let parameters = acs2_agents::acs2er::one_update::OneUpdateConfiguration {
         capacity: preset.replay_capacity,
         warmup: preset.replay_warmup,
     };
@@ -589,8 +584,8 @@ fn u1_observer_preserves_the_exact_core_state_and_counts_actual_replayed_endings
         steps: 0,
         updates: 0,
     };
-    let mut observed = DiagnosticAdapter(CoreAgent {
-        agent: acs2_agents::acs2er::u1::Agent::<10, _>::new(
+    let mut observed = OneUpdateAdapter(CoreAgent {
+        agent: acs2_agents::acs2er::one_update::Agent::<10, _>::new(
             preset.config(8),
             parameters,
             preset.truncation,

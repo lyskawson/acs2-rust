@@ -11,6 +11,7 @@ import time
 
 from grid_protocol import stop_phase
 from row_schema import validate_blocks, validate_replay
+from agent_names import canonical_run_name
 
 
 def outside_repository(path):
@@ -32,13 +33,14 @@ def complete_rows(path):
 def validate_row(row, config, agent, seed, commit, target):
     expected = {
         "schema": config.get("row_schema", 2), "commit": commit, "source_state": "clean",
-        "task": config.get("row_task", config["task"]), "cap": config["cap"], "agent": agent,
+        "task": config.get("row_task", config["task"]), "cap": config["cap"], "agent": canonical_run_name(agent),
         "seed": seed, "nominal_step": target, "starts": None,
         "goal_pool": config["row_pool"], "goal_encoding": config["encoding"],
         "evaluated_policy": "greedy_change_anticipating_population",
     }
     for key, value in expected.items():
-        if row.get(key) != value:
+        actual = canonical_run_name(row.get(key)) if key == 'agent' else row.get(key)
+        if actual != value:
             raise ValueError(f"{key}: expected {value!r}, got {row.get(key)!r}")
     if row.get('arm') != config.get('row_arm'):
         raise ValueError('row arm differs from its manifest label')
@@ -52,11 +54,12 @@ def validate_row(row, config, agent, seed, commit, target):
         raise ValueError("unexpected replay volume")
     if config["task"].startswith("bitflip") and row["preset"]["number_of_possible_actions"] != int(config["task"][7:]):
         raise ValueError("unexpected BitFlipping width")
+    agent = canonical_run_name(agent)
     if agent == "acs2":
         expected_updates = (steps, 0)
-    elif agent == "acs2er_u1":
+    elif agent == "acs2er_one_update":
         expected_updates = (0, steps)
-    elif agent in ('er_episodic', 'her_full', 'her_values', 'her_values_shortened'):
+    elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened'):
         expected_updates = (0, 3 * steps)
     else:
         expected_updates = (0, sum(min(i, 3) for i in range(1, min(steps, 2) + 1)) + max(steps - 2, 0) * 3)

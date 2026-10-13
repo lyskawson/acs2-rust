@@ -7,11 +7,11 @@ use serde_json::Value;
 #[path = "../../../acs2-core/tests/common/mod.rs"]
 mod common;
 
-struct ValidationRandom {
+struct DifferentialRandom {
     draws: Vec<(usize, usize)>,
     cursor: usize,
 }
-impl ValidationRandom {
+impl DifferentialRandom {
     fn from_json(value: &Value) -> Self {
         Self {
             draws: value
@@ -29,7 +29,7 @@ impl ValidationRandom {
         }
     }
 }
-impl RandomSource for ValidationRandom {
+impl RandomSource for DifferentialRandom {
     fn gen_bool(&mut self, _: f64) -> bool {
         panic!("unexpected boolean draw")
     }
@@ -44,9 +44,9 @@ impl RandomSource for ValidationRandom {
     }
 }
 
-struct PyalcsValidation;
-impl PyalcsValidation {
-    fn samples(case: &Value, rng: &mut ValidationRandom) -> Vec<ReplaySample<8>> {
+struct PyalcsDifferential;
+impl PyalcsDifferential {
+    fn samples(case: &Value, rng: &mut DifferentialRandom) -> Vec<ReplaySample<8>> {
         let trial = case["trial"].as_array().unwrap();
         let index = case["transition"].as_u64().unwrap() as usize;
         let chosen = &trial[index];
@@ -109,7 +109,7 @@ impl PyalcsValidation {
         config: &Configuration,
         sample: &ReplaySample<8>,
         time: u64,
-        rng: &mut ValidationRandom,
+        rng: &mut DifferentialRandom,
     ) {
         replay_learning_step(population, config, &MaxFitnessBootstrap, sample, time, rng);
     }
@@ -151,8 +151,8 @@ fn pyalcs_relabeling_and_random_replay_steps_match_complete_populations() {
         ..Configuration::default_protocol()
     };
     for (index, case) in data["cases"].as_array().unwrap().iter().enumerate() {
-        let mut goals_rng = ValidationRandom::from_json(&case["goal_draws"]);
-        let samples = PyalcsValidation::samples(case, &mut goals_rng);
+        let mut goals_rng = DifferentialRandom::from_json(&case["goal_draws"]);
+        let samples = PyalcsDifferential::samples(case, &mut goals_rng);
         assert_eq!(samples.len(), case["samples"].as_array().unwrap().len());
         for (actual, expected) in samples.iter().zip(case["samples"].as_array().unwrap()) {
             assert_eq!(actual.state, common::perception::<8>(&expected["state"]));
@@ -180,8 +180,8 @@ fn pyalcs_relabeling_and_random_replay_steps_match_complete_populations() {
                 })
                 .collect(),
         );
-        let mut learning_rng = ValidationRandom::from_json(&case["learning_draws"]);
-        PyalcsValidation::learn(
+        let mut learning_rng = DifferentialRandom::from_json(&case["learning_draws"]);
+        PyalcsDifferential::learn(
             &mut population,
             &config,
             &samples[case["selected"].as_u64().unwrap() as usize],

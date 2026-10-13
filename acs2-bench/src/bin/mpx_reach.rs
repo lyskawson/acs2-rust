@@ -8,7 +8,7 @@ use acs2_bench::{
     parse_u_max_mode, parse_variant, resolve_u_max, variant_label, AgentChoice, AgentOptions,
     UMaxMode,
 };
-use acs2_agents::acs2er::Acs2ErAgent;
+use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
 use acs2_agents::acs2::Agent;
 use acs2_core::checkpoint::Checkpointed;

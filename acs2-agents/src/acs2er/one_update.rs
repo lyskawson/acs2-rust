@@ -1,4 +1,4 @@
-use crate::acs2er::Acs2ErAgent;
+use crate::acs2er::Agent as Acs2ErAgent;
 use crate::acs2er::replay::ReplayConfiguration;
 use acs2_core::trial::{LearningAgent, TrialMetrics, TruncationMode};
 use acs2_core::checkpoint::{AgentState, Checkpointed};
@@ -16,12 +16,12 @@ use acs2_trajectory::ReplayCounters;
 use std::{cell::RefCell, collections::VecDeque, mem::size_of, rc::Rc};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DiagnosticConfiguration {
+pub struct OneUpdateConfiguration {
     pub capacity: usize,
     pub warmup: usize,
 }
 
-impl DiagnosticConfiguration {
+impl OneUpdateConfiguration {
     pub fn replay(self) -> ReplayConfiguration {
         ReplayConfiguration {
             buffer_size: self.capacity,
@@ -127,14 +127,14 @@ impl<E: Environment<M>, const M: usize> Environment<M> for RecordingEnvironment<
 pub struct Agent<const M: usize, R: RandomSource> {
     core: Acs2ErAgent<M, ObservedRandom<R>>,
     trace: Rc<RefCell<Trace>>,
-    parameters: DiagnosticConfiguration,
+    parameters: OneUpdateConfiguration,
     truncation: TruncationMode,
 }
 
 impl<const M: usize, R: RandomSource> Agent<M, R> {
     pub fn new(
         config: Configuration,
-        parameters: DiagnosticConfiguration,
+        parameters: OneUpdateConfiguration,
         truncation: TruncationMode,
         rng: R,
     ) -> Self {

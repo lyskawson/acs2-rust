@@ -5,33 +5,33 @@ use acs2_trajectory::{Admissibility, GoalStrategy, SamplerConfiguration, Selecti
 use crate::episodic_replay::{CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay};
 
 #[cfg(test)]
-mod validation;
+mod pyalcs_differential;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Variant {
-    Full,
-    Values { proportion: f64 },
-    ValuesShortened { proportion: f64 },
+pub enum Preset {
+    Acs2Her,
+    Acs2HerValues { proportion: f64 },
+    Acs2HerValuesShortened { proportion: f64 },
 }
 
-impl Variant {
+impl Preset {
     pub fn name(self) -> &'static str {
         match self {
-            Self::Full => "her_full",
-            Self::Values { .. } => "her_values",
-            Self::ValuesShortened { .. } => "her_values_shortened",
+            Self::Acs2Her => "acs2her",
+            Self::Acs2HerValues { .. } => "acs2her_values",
+            Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
         }
     }
     pub fn proportion(self) -> f64 {
         match self {
-            Self::Full => 2.0 / 3.0,
-            Self::Values { proportion } | Self::ValuesShortened { proportion } => proportion,
+            Self::Acs2Her => 2.0 / 3.0,
+            Self::Acs2HerValues { proportion } | Self::Acs2HerValuesShortened { proportion } => proportion,
         }
     }
 }
 
 pub struct Agent<const S: usize, const G: usize, const M: usize, R, P> {
-    variant: Variant,
+    variant: Preset,
     learner: EpisodicReplay<S, G, M, R, P>,
 }
 
@@ -41,7 +41,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     pub fn new(
         config: Configuration,
         replay: EpisodicConfiguration,
-        variant: Variant,
+        variant: Preset,
         rng: R,
         sampler_rng: P,
     ) -> Self {
@@ -53,7 +53,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
                 SamplerConfiguration {
                     selection: Selection {
                         strategy: GoalStrategy::Future,
-                        admissibility: if matches!(variant, Variant::ValuesShortened { .. }) {
+                        admissibility: if matches!(variant, Preset::Acs2HerValuesShortened { .. }) {
                             Admissibility::CounterfactualEpisode
                         } else {
                             Admissibility::EveryTransition
@@ -63,7 +63,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
                     relabeled_proportion: variant.proportion(),
                     truncation: replay.truncation,
                 },
-                if variant == Variant::Full {
+                if variant == Preset::Acs2Her {
                     CopyUpdate::Full
                 } else {
                     CopyUpdate::ValuesOnly

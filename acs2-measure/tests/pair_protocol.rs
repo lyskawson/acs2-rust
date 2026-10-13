@@ -270,7 +270,7 @@ fn pair_evaluation_and_knowledge_preserve_agent_replay_rng_and_training_counters
             42,
             &[50, 100],
             || CoreAgent {
-                agent: acs2_agents::acs2er::Acs2ErAgent::<10, _>::new(
+                agent: acs2_agents::acs2er::Agent::<10, _>::new(
                     preset.config(8),
                     acs2_agents::acs2er::replay::ReplayConfiguration {
                         buffer_size: 10_000,

@@ -3,6 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from agent_names import canonical_row
+
 OMIT = {'commit', 'source_state', 'host', 'cpu_model', 'wall_seconds_train',
         'wall_seconds_eval', 'wall_seconds_total', 'arm'}
 
@@ -20,7 +22,7 @@ def field_bits(value):
 def fields(row, blocks):
     result = {key: value for key, value in row.items() if key not in OMIT}
     result['evaluation_blocks'] = {name: row['evaluation_blocks'][name] for name in blocks}
-    return field_bits(result)
+    return field_bits(canonical_row(result))
 
 
 def compare(current, reference, seeds, targets, blocks):

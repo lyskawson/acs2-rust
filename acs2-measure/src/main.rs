@@ -70,19 +70,9 @@ impl Options {
                 "--agents" => {
                     agents = value
                         .split(',')
-                        .map(|part| match part {
-                            "acs2" => AgentKind::Acs2,
-                            "acs2er" => AgentKind::Acs2Er,
-                            "acs2er_u1" => AgentKind::Acs2ErU1,
-                            "er_episodic" => AgentKind::ErEpisodic,
-                            "her_full" => AgentKind::HerFull,
-                            "her_values" => AgentKind::HerValues {
-                                proportion: 2.0 / 3.0,
-                            },
-                            "her_values_shortened" => AgentKind::HerValuesShortened {
-                                proportion: 2.0 / 3.0,
-                            },
-                            _ => panic!("unknown agent {part}"),
+                        .map(|part| {
+                            AgentKind::from_run_name(part, 2.0 / 3.0)
+                                .unwrap_or_else(|message| panic!("{message}"))
                         })
                         .collect()
                 }
@@ -130,15 +120,15 @@ impl Options {
             assert!(
                 agents.iter().all(|agent| matches!(
                     agent,
-                    AgentKind::HerValues { .. } | AgentKind::HerValuesShortened { .. }
+                    AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. }
                 )),
                 "only values variants accept a tuned relabel proportion"
             );
             for agent in &mut agents {
                 *agent = match agent {
-                    AgentKind::HerValues { .. } => AgentKind::HerValues { proportion },
-                    AgentKind::HerValuesShortened { .. } => {
-                        AgentKind::HerValuesShortened { proportion }
+                    AgentKind::Acs2HerValues { .. } => AgentKind::Acs2HerValues { proportion },
+                    AgentKind::Acs2HerValuesShortened { .. } => {
+                        AgentKind::Acs2HerValuesShortened { proportion }
                     }
                     _ => unreachable!(),
                 };
