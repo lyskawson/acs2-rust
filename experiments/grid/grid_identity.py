@@ -1,6 +1,7 @@
 import struct
 import hashlib
 import json
+import importlib.util
 from pathlib import Path
 
 from agent_names import canonical_row
@@ -58,6 +59,20 @@ def verify_references(plan, entry, rows, resolve_path=None):
         if hashlib.sha256(content).hexdigest() != reference['sha256']:
             raise ValueError('identity reference artifact checksum changed')
         pinned = [json.loads(line) for line in content.splitlines()]
-        result = compare(rows, pinned, [entry['seed']], reference['targets'], reference['blocks'])
+        mode = reference.get('comparison')
+        if mode == 'vcp_pilot':
+            directory = Path(__file__).resolve().parents[1] / 'value-consistency'
+            source = directory / 'pilot_identity.py'
+            import sys
+            if str(directory) not in sys.path:
+                sys.path.insert(0, str(directory))
+            spec = importlib.util.spec_from_file_location('vcp_pilot_equivalence', source)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            result = module.compare_rows(rows, pinned, entry['seed'], reference['targets'])
+        elif mode is None:
+            result = compare(rows, pinned, [entry['seed']], reference['targets'], reference['blocks'])
+        else:
+            raise ValueError('unregistered identity reference comparison')
         results.append(dict(result, reference_path=reference['path'], reference_sha256=reference['sha256']))
     return results

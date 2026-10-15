@@ -154,6 +154,25 @@ class MeasurementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_row(pilot, config, pilot['agent'], 42, 'pinned', pilot['nominal_step'])
 
+    def test_revised_controls_refuse_nonzero_value_queries_and_nonnull_training_variances(self):
+        for agent in ['acs2vcp_k2_uniform', 'acs2vcp_k4_uniform']:
+            pilot = next(row for row in self.rows if row['agent'] == agent)
+            row = self.revised_row(pilot)
+            self.validate(row)
+            for queries in [1, row['agent_parameters']['heads'] * row['replay_diagnostics']['priority']['proposals']]:
+                changed = copy.deepcopy(row)
+                changed['replay_diagnostics']['priority']['value_queries'] = queries
+                changed['match_formations_train'] += queries
+                with self.subTest(agent=agent, queries=queries):
+                    with self.assertRaisesRegex(ValueError, 'priority queries'):
+                        self.validate(changed)
+            for field in ['proposal_variance', 'accepted_variance']:
+                changed = copy.deepcopy(row)
+                changed['replay_diagnostics']['priority'][field] = copy.deepcopy(pilot['replay_diagnostics']['priority'][field])
+                with self.subTest(agent=agent, variance=field):
+                    with self.assertRaisesRegex(ValueError, 'unmeasured training variance'):
+                        self.validate(changed)
+
 
 if __name__ == '__main__':
     unittest.main()

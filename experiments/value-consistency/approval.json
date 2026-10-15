@@ -1,0 +1,14 @@
+{
+  "approved": true,
+  "plan_sha256": "9428773fa7861f6102fdccb165ae711b597d1fd61a9e644f8becb17399ebf4eb",
+  "confirmed_on": "2026-10-16",
+  "phase_cpu_hour_limit": 110,
+  "pilot_allocation_cpu_seconds": 16041,
+  "hindsight": {
+    "copy_update": "Full",
+    "strategy": "future",
+    "admissibility": "EveryTransition",
+    "relabeled_proportion_exact": "2/3"
+  },
+  "scope": "fixed_temperature_grid_only"
+}

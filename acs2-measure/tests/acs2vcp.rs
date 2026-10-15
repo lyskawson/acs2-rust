@@ -287,6 +287,76 @@ fn ensemble_rows_count_joint_interactions_updates_queries_routes_and_total_memor
     }
 }
 
+#[test]
+fn disagreement_rows_count_only_non_identity_transitions_of_each_evaluated_pair_block() {
+    for task in ["maze4", "maze5", "maze6", "maze7", "woods14", "mazema"] {
+        let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
+            acs2_envs::roles::ResearchTask::named(task).unwrap()
+        else {
+            unreachable!()
+        };
+        let registration = acs2_measure::pair_protocol::registered_configuration(task);
+        let distributions = MazePairDistributions::<Coordinates, 2>::registered(
+            task,
+            geometry,
+            registration["cap"].as_u64().unwrap() as u32,
+            "coordinates",
+        );
+        let protocol = distributions.protocol();
+        let expected: std::collections::BTreeMap<_, _> = protocol
+            .evaluations
+            .iter()
+            .map(|block| {
+                let count: usize = <_ as Task<8, 2, 10>>::pairs(block.task)
+                    .iter()
+                    .map(|(state, _, _)| {
+                        (0..8)
+                            .filter(|&action| {
+                                <_ as Task<8, 2, 10>>::next(block.task, *state, action) != *state
+                            })
+                            .count()
+                    })
+                    .sum();
+                (block.name, count as u64)
+            })
+            .collect();
+        for preset in [
+            acs2vcp::Preset::PrioritizedTwo { temperature: 24 },
+            acs2vcp::Preset::PrioritizedFour { temperature: 24 },
+            acs2vcp::Preset::UniformTwo,
+            acs2vcp::Preset::UniformFour,
+        ] {
+            let mut rows = Vec::new();
+            run_protocol_with_sink::<_, _, 8, 2, 10>(
+                &protocol,
+                AgentKind::Acs2Vcp(preset),
+                42,
+                &[1],
+                &RunMetadata::test("test"),
+                RunSettings {
+                    evaluate_points: true,
+                    capture_final_state: false,
+                },
+                &mut |row| rows.push(row),
+            );
+            assert_eq!(rows.len(), 1);
+            for (block, &count) in &expected {
+                let diagnostic = &rows[0]["evaluation_blocks"][block]["head_disagreement"];
+                assert_eq!(
+                    diagnostic["count"],
+                    count,
+                    "{task} {} {block}",
+                    preset.name()
+                );
+                assert_eq!(
+                    diagnostic["value_queries"],
+                    count * preset.parameters().heads as u64
+                );
+            }
+        }
+    }
+}
+
 struct GreedyRandom;
 impl RandomSource for GreedyRandom {
     fn gen_bool(&mut self, _: f64) -> bool {
