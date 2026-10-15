@@ -55,6 +55,9 @@ pub trait Task<const S: usize, const G: usize, const M: usize> {
     fn knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
         None
     }
+    fn evaluation_knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
+        None
+    }
 }
 
 pub struct MazeTask<E, const G: usize> {
@@ -154,6 +157,12 @@ impl<E: MazeGoalEncoding<G>, const G: usize, const M: usize> Task<8, G, M> for M
     }
     fn knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
         Some(crate::knowledge::maze_transitions(&self.template))
+    }
+    fn evaluation_knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
+        Some(crate::knowledge::maze_pair_transitions(
+            &self.template,
+            <Self as Task<8, G, M>>::pairs(self).into_iter().map(|(state, goal, _)| (state, goal)),
+        ))
     }
 }
 

@@ -17,7 +17,7 @@ class ArchiveTests(unittest.TestCase):
             root = Path(directory)
             (root / 'pilot-registration.json').write_text(json.dumps(dict(measurement=identity, authorized_cpu_hours=5)))
             (root / 'acs2-measure-musl').write_bytes(b'substituted')
-            with patch('archive.measurement_identity', return_value=identity):
+            with patch('archive.pilot_measurement_identity', return_value=identity):
                 with self.assertRaisesRegex(ValueError, 'binary differs'):
                     audit(root)
 

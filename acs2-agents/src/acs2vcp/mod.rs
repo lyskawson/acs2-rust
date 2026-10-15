@@ -343,6 +343,15 @@ impl<
         count: usize,
         evaluator: &impl GoalEvaluator<S, G>,
     ) -> Vec<DrawnSample<G, M>> {
+        self.draw_batch_observed(count, evaluator, &mut |_, _| {})
+    }
+
+    pub fn draw_batch_observed(
+        &mut self,
+        count: usize,
+        evaluator: &impl GoalEvaluator<S, G>,
+        observe: &mut impl FnMut(f64, bool),
+    ) -> Vec<DrawnSample<G, M>> {
         let mut draws = Vec::with_capacity(count);
         let maximum = self.parameters.variance_maximum();
         let mut since_acceptance = 0u64;
@@ -360,21 +369,28 @@ impl<
                         && drawn.scored.sample.reward <= self.parameters.reward_on_reach),
                 "VCP requires sparse terminal rewards within its registered scale"
             );
-            let variance = self.variance(&drawn.scored.sample);
+            let measure_variance = self.parameters.temperature > 0;
+            let variance = if measure_variance {
+                self.variance(&drawn.scored.sample)
+            } else {
+                0.0
+            };
             let probability = acceptance(variance, maximum, self.parameters.temperature);
             self.priority.proposals += 1;
-            self.priority.value_queries += if self.heads.len() == 1 {
+            self.priority.value_queries += if !measure_variance || self.heads.len() == 1 {
                 0
             } else {
                 self.heads.len() as u64
             };
-            self.priority.variance.record(variance, maximum);
             self.priority.acceptance_sum += probability;
-            let base = (maximum - variance + priority::EPSILON) / (maximum + priority::EPSILON);
-            let mut weight = 1.0;
-            for sum in &mut self.priority.candidate_acceptance_sums {
-                weight *= base;
-                *sum += weight;
+            if measure_variance {
+                self.priority.variance.record(variance, maximum);
+                let base = (maximum - variance + priority::EPSILON) / (maximum + priority::EPSILON);
+                let mut weight = 1.0;
+                for sum in &mut self.priority.candidate_acceptance_sums {
+                    weight *= base;
+                    *sum += weight;
+                }
             }
             let accepted = if probability == 1.0 {
                 true
@@ -382,10 +398,15 @@ impl<
                 self.priority.acceptance_coins += 1;
                 self.acceptance_rng.gen_bool(probability)
             };
+            if measure_variance {
+                observe(variance, accepted);
+            }
             if accepted {
                 since_acceptance = 0;
                 self.priority.accepted += 1;
-                self.priority.accepted_variance.record(variance, maximum);
+                if measure_variance {
+                    self.priority.accepted_variance.record(variance, maximum);
+                }
                 record_accepted(&mut self.accepted, &drawn);
                 draws.push(drawn);
             }
@@ -418,6 +439,15 @@ impl<
     }
 
     pub fn train_episode(&mut self, env: &mut impl ReplayEnvironment<S, G, M>, time: u64) {
+        self.train_episode_observed(env, time, &mut |_, _| {});
+    }
+
+    pub fn train_episode_observed(
+        &mut self,
+        env: &mut impl ReplayEnvironment<S, G, M>,
+        time: u64,
+        observe: &mut impl FnMut(f64, bool),
+    ) {
         let index = self.playing_head();
         let mut state = env.reset();
         let start = env.episode_start();
@@ -454,7 +484,7 @@ impl<
         let count = steps
             .checked_mul(self.replay.updates_per_step)
             .expect("VCP draw count overflow");
-        let draws = self.draw_batch(count, env);
+        let draws = self.draw_batch_observed(count, env, observe);
         for drawn in &draws {
             self.learn_draw(index, drawn, time + steps as u64);
         }

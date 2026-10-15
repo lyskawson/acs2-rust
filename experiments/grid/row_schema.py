@@ -23,6 +23,8 @@ def evaluation_blocks(row, required_blocks=None):
         raise ValueError('split row contains ambiguous top-level evaluation fields')
     ensemble = canonical_run_name(row.get('agent', '')).startswith('acs2vcp')
     expected_fields = set(EVALUATION_FIELDS) | ({'heads'} if ensemble else set())
+    if ensemble and 'training_variance_measured' in row.get('replay_diagnostics', {}).get('priority', {}):
+        expected_fields.add('head_disagreement')
     if any(set(block) != expected_fields for block in blocks.values()):
         raise ValueError('incomplete evaluation block')
     if ensemble and any(set(head) != set(EVALUATION_FIELDS) for block in blocks.values() for head in block['heads']):

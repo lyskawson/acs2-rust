@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from execution import measurement_identity
+from execution import pilot_measurement_identity
 from protocol import PILOT_PARTS, ROOT, pilot
 
 sys.path.append(str(ROOT / 'experiments/grid'))
@@ -37,7 +37,7 @@ def prepare(output, destination):
     output, destination = Path(output), Path(destination)
     commit = operations_snapshot(output)
     operations = output / 'operations'
-    identity = measurement_identity()
+    identity = pilot_measurement_identity()
     registration = dict(measurement=identity, pilot_parts=[pilot(part) for part in PILOT_PARTS],
         authorized_cpu_hours=5, second_temperature='all six mazes if admission fits; otherwise the registered reduced set, never both second-temperature parts',
         execution_order='complete temperature1-and-controls, then admit exactly one temperature24 part',

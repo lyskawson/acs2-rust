@@ -172,6 +172,7 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     }
     fn agent_parameters(&self) -> Value;
     fn ensemble_diagnostics(&self, _transitions: Option<&[Transition<M>]>) -> Option<Value> { None }
+    fn head_disagreement(&self, _transitions: &[Transition<M>]) -> Option<Value> { None }
 }
 
 pub struct CoreAgent<A, const M: usize> {
@@ -680,9 +681,10 @@ where
                     config, crate::agents::episodic_configuration(Preset::thesis()), preset.parameters(), seed, AGENT_STREAM,
                 ),
                 preset,
+                training_disagreement: Default::default(),
             };
             run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata, settings.evaluate_points, emit);
-            settings.capture_final_state.then(|| (format!("{:?}", agent.agent.heads().iter().map(|head| head.population().classifiers()).collect::<Vec<_>>()), agent.agent.snapshot()))
+            settings.capture_final_state.then(|| (format!("{:?}", agent.agent.heads().iter().map(|head| head.population().classifiers()).collect::<Vec<_>>()), agent.snapshot()))
         }
         AgentKind::Acs2 => {
             let mut agent = CoreAgent {
@@ -1194,6 +1196,19 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             json!(knowledge_transitions.as_ref().map(Vec::len));
         if let Some(diagnostics) = agent.ensemble_diagnostics(if plan.evaluate_points { knowledge_transitions.as_deref() } else { None }) {
             row["ensemble"] = diagnostics;
+        }
+        if plan.evaluate_points && agent.evaluation_heads() > 1 {
+            for block in plan.blocks {
+                let diagnostic = block.task.evaluation_knowledge_transitions()
+                    .and_then(|transitions| agent.head_disagreement(&transitions));
+                if let Some(diagnostic) = diagnostic {
+                    if plan.registration.is_some() {
+                        row["evaluation_blocks"][block.name]["head_disagreement"] = diagnostic;
+                    } else {
+                        row["head_disagreement"] = diagnostic;
+                    }
+                }
+            }
         }
         eval_elapsed += eval_started.elapsed();
         row["wall_seconds_eval"] = json!(eval_elapsed.as_secs_f64());

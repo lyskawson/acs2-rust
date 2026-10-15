@@ -209,6 +209,50 @@ fn probability_one_keeps_the_proposal_order_and_the_sampler_stream() {
 }
 
 #[test]
+fn uniform_draws_with_disagreeing_populations_form_no_match_sets_or_variance_observations() {
+    for heads in [2, 4] {
+        let mut learner = agent(configuration(
+            heads,
+            0,
+            CopyUpdate::Full,
+            Admissibility::EveryTransition,
+            2.0 / 3.0,
+        ));
+        for index in 0..heads {
+            learner.heads[index].population = Population::from_classifiers(vec![classifier(
+                0,
+                9,
+                0,
+                index as f64 * 300.0,
+                true,
+                learner.config(),
+            )]);
+        }
+        fill_store(&mut learner.store);
+        let objective = ExactMatch {
+            reward_on_reach: 1000.0,
+        };
+        let mut observed = 0;
+        start_match_counting();
+        let draws =
+            learner.draw_batch_observed(100, &ObjectiveEvaluator(&objective), &mut |_, _| {
+                observed += 1
+            });
+        let counts = read_match_counters().unwrap();
+        stop_match_counting();
+        assert_eq!(counts.formations, 0);
+        assert_eq!(counts.classifier_tests, 0);
+        assert_eq!(learner.priority.value_queries, 0);
+        assert_eq!(learner.priority.variance.count, 0);
+        assert_eq!(learner.priority.accepted_variance.count, 0);
+        assert_eq!(learner.priority.candidate_acceptance_sums, [0.0; 24]);
+        assert_eq!(learner.priority.acceptance_coins, 0);
+        assert_eq!(learner.priority.proposals, draws.len() as u64);
+        assert_eq!(observed, 0);
+    }
+}
+
+#[test]
 fn retained_future_proposals_reweighted_by_priority_match_independent_enumeration() {
     let objective = ExactMatch {
         reward_on_reach: 1000.0,

@@ -222,6 +222,12 @@ impl<E: MazeGoalEncoding<G>, const G: usize, const M: usize> Task<8, G, M> for M
     fn knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
         Some(crate::knowledge::maze_transitions(&self.maze.template))
     }
+    fn evaluation_knowledge_transitions(&self) -> Option<Vec<Transition<M>>> {
+        Some(crate::knowledge::maze_pair_transitions(
+            &self.maze.template,
+            <Self as Task<8, G, M>>::pairs(self).into_iter().map(|(state, goal, _)| (state, goal)),
+        ))
+    }
 }
 
 pub struct MazePairDistributions<E, const G: usize> {

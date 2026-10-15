@@ -3,7 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from execution import measurement_identity
+from execution import pilot_measurement_identity
 from prepare_pilot import operations_snapshot
 from protocol import RECOVERY_PARTS, SECOND_TEMPERATURE_ORDER, recovery
 from grid_protocol import atomic_json
@@ -13,7 +13,7 @@ def prepare_recovery(output, destination, initial_registration, cancellation):
     output, destination = Path(output), Path(destination)
     initial = json.loads(Path(initial_registration).read_text())
     cancelled = json.loads(Path(cancellation).read_text())
-    identity = measurement_identity()
+    identity = pilot_measurement_identity()
     if initial['measurement'] != identity or initial['authorized_cpu_hours'] != 5:
         raise ValueError('initial pilot has a different identity or limit')
     if len(cancelled['verified_pending_jobs']) != 20 or len(cancelled['authorized_arrays']) != 5:

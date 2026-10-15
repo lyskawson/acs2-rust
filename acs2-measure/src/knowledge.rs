@@ -1,6 +1,28 @@
-use acs2_core::ports::goal::GoalLayout;
+use acs2_core::ports::goal::{Goal, GoalLayout};
 use acs2_core::support::knowledge::Transition;
 use acs2_envs::goal::maze::{GoalMaze, MazeGoalEncoding};
+use acs2_envs::maze::topology::Cell;
+
+pub fn maze_pair_transitions<E: MazeGoalEncoding<G>, const G: usize, const M: usize>(
+    maze: &GoalMaze<E, G>,
+    pairs: impl IntoIterator<Item = (Cell, Goal<G>)>,
+) -> Vec<Transition<M>> {
+    let topology = maze.topology();
+    let mut transitions = Vec::new();
+    for (start, goal) in pairs {
+        for action in 0..8 {
+            let next = topology.next_cell(start, action);
+            if next != start {
+                transitions.push(Transition::new(
+                    GoalLayout::<8, G, M>::join(&topology.perception_at(start), &goal),
+                    action,
+                    GoalLayout::<8, G, M>::join(&topology.perception_at(next), &goal),
+                ));
+            }
+        }
+    }
+    transitions
+}
 
 pub fn maze_transitions<E: MazeGoalEncoding<G>, const G: usize, const M: usize>(
     maze: &GoalMaze<E, G>,

@@ -3665,8 +3665,11 @@ consecutive rejected proposals abort loudly without yielding an unprioritized fa
 This explicit operational guard stops a pathological run; it does not cap a completed
 draw or silently change its distribution. Acceptance one consumes no random coin. For
 K=1, variance is analytically zero without value queries; at T=0 all proposals are accepted
-in sampler order. Multi-head T=0 also records variances and their query costs, allowing
-the same cost/statistics audit for the ensemble control.
+in sampler order. T=0 makes no training value query, records no proposal/accepted
+variance or candidate-temperature curve, and consumes no acceptance randomness. Its
+learning remains identical; unused priority queries are removed from both independent
+training counters. The measurement adapter counts the avoided classifier tests arithmetically
+from the pre-episode head sizes and accepted volume, without forming a match set.
 
 Priority calculation is immutable over every head, store and sampler. Proposal/acceptance
 statistics record the work separately. Accepted routes describe actual learning samples;
@@ -3674,6 +3677,11 @@ objective calls include all proposals and retain scoring/selection/provenance at
 The proposal routes are emitted beside accepted routes. Rows add variance moments,
 minimum, maximum, a sixteen-bin histogram on [0,B], B, acceptance probabilities, counts
 and candidate-temperature acceptance sums, without altering existing arms' rows.
+Prioritized multi-head arms also add a positive logarithmic histogram beside each existing
+sixteen-bin summary. Exact zeros have their own count; positive upper bounds are
+1e-12, 1e-9, 1e-6, 1e-3, 0.01, 0.1, 1, then powers of two through 131072, and 250000.
+Bins exclude their lower bound and include their upper bound. This resolves the pilot
+range while retaining every existing prioritized floating field and bin.
 The independent core match counter must satisfy
 `formations = environment_steps + 3*full + 2*values_only + priority_value_queries`.
 Each priority value query forms exactly one match set. Tests check this identity and
@@ -3689,7 +3697,20 @@ The raw store is counted once. Unused capacities and allocator overhead remain e
 the largest transient accepted batch is reported separately. Environment interactions,
 update applications, priority value queries, objective calls, memory and train/evaluation
 wall time are separate measurements. Read-only checks snapshot all heads, clocks, raw
-history, sampler and acceptance streams, routes and counters.
+history, sampler and acceptance streams, routes, counters and the measurement sidecar.
+
+Every evaluated block adds immutable head disagreement for every multi-head arm,
+including T=0. The fixed reference set contains the existing non-identity knowledge
+transitions whose source/goal pair belongs to that evaluation block, with equal weight
+per transition. Knowledge itself keeps its previously registered universe. The diagnostic
+reports population-variance moments, the existing sixteen equal bins, the logarithmic
+bins and exact-zero share, nearest-rank p25/p50/p75/p90/p99, and maximum. It makes
+K times the reference-count value queries with the training counters paused; attempting
+it in an active training counter scope fails. Neither learner nor evaluation random
+streams are read or advanced. Queries, reference/variance temporary payload and elapsed
+evaluation time remain outside training cost. Additional fixed histograms live in the
+measurement adapter, preserving the old agent/header memory fields; additive fields report
+the adapter bytes and the combined agent/measurement lower bound.
 
 No importance weights are applied. The predecessor computes inverse-probability weights
 and discards them; Xu's normalized-priority loss weight adds selection bias rather than
@@ -3779,8 +3800,9 @@ raw archive and derived summaries are retained on the cluster and locally.
 At final points, cumulative mean proposal variance spans 69.743--759.568 at T=1
 and 5036.500--23874.746 at T=24. Realized acceptance spans 0.996934--0.999723 and
 0.827010--0.962502 respectively; proposals per draw span 1.000277--1.003075 and
-1.038959--1.209175. The bound stays 250000 at every point. T=0 accepts every
-proposal and still reports its value-query cost. Full per-point moments, histograms,
+1.038959--1.209175. The bound stays 250000 at every point. The archived T=0 pilot queried values for diagnostics despite accepting every
+proposal. The revised control removes that cost and measures disagreement only during
+evaluation; the immutable pilot retains its original counters. Full per-point moments, histograms,
 accepted/proposal routes, objective costs, per-head success/knowledge/population,
 memory and times remain in the verified archive. These one-seed operational
 measurements do not rank policies or establish convergence.
@@ -3792,7 +3814,14 @@ Every portable floating field
 uses binary64 bits. Inline type headers have two measured native layouts: head/agent
 without store headers of 376/1832 bytes on the laptop and 384/1856 on the musl build.
 The fixture factors those separately, accepts only these measured layouts, and checks
-the remaining row plus reconstructed native memory fields bit for bit. It does not
+the remaining row plus reconstructed native memory fields bit for bit. The revised
+comparison names exactly six changed control paths: training match formations, training
+classifier-perception tests, priority value queries, proposal variance, accepted variance
+and candidate acceptance sums. The last three become null; the first three remove
+exactly the unused queries. All other existing control fields, all existing prioritized
+fields and the 96 one-head HER identity rows remain bit-identical. The fixture bytes
+are unchanged. Direct differing-head tests now require first-action values 100/300
+to average to 200 and knowledge 1/0.5 to average to 0.75. It does not
 pretend that compiler/target-dependent inline storage is identical across targets.
 Classifiers, marks, raw storage and all learning/evaluation/knowledge fields agree in
 the shared 1k/10k cross-platform check.
@@ -3809,42 +3838,49 @@ substituted measurement identities. All mutated sources are restored afterwards.
 
 The experiment-specific code in `experiments/value-consistency/` supplies exact
 head-averaged rational success/threshold calculations, paired seed summaries in both
-registered views, priority-only temperature candidate selection, a doubled forecast
-with hard reservations, and a draft builder. The builder refuses an incomplete cost
-pilot or substituted binary. Scientific settings still require confirmation before
-registration; the execution adapter refuses stage 2. The four research agents'
-measurement paths are unchanged by the later test and K=1 policy-identity additions.
-Hard reservations group the actual twenty-to-forty-job batches and charge the largest
-limit to every allocation in each group. The draft defines a large forecast as above
-the preceding HER study's sixty-hour approval: retain the acceptance-1/2 candidate
-first, then remove prioritized K=2 if needed. Both controls, all six mazes and twenty
-seeds remain; any resulting omitted contrasts are explicit. A remaining cost above
-sixty hours requires its own requested approval limit.
+registered views, the priority-only pilot acceptance curves, a deterministic control-work
+calibration, a doubled forecast with actual batch reservations, and the draft builder.
+The historical pilot identity is frozen separately in `pilot-measurement.json`; the
+current clean source/binary identity belongs to `measurement.json`. Archive validation
+continues to audit the original pilot without rewriting its registrations or counters.
+`pilot_equivalence.py` checks full pilot-overlapping rows with only the documented
+control-cost changes, additive diagnostics, and measured native header reconstruction.
+The execution adapter refuses stage 2 until registration and approval.
 
-`plan-draft.json` is the concrete review artifact, not an approved registration.
-Every priority-only target (mean acceptance 3/4, 1/2, 1/4) selects T=24 at the boundary
-of the allowed range after deduplication. The observed curves do not reach those
-targets; no success field enters this choice. The full two-K forecast was 146.7759
-CPU-hours after doubling and including the pilot, with a 124.7892-hour hard bound.
-Keeping only the candidate nearest 1/2 already leaves T=24; the cost rule then removes
-prioritized K=2. Both controls, every maze and twenty seeds remain. The resulting
-draft has 30 validation tuning runs and 360 final-grid runs, with five retained
-comparisons and four explicit omissions involving prioritized K=2. It reuses the
-approved HER and baseline references, exact thresholds and both registered views.
+`plan-draft.json` is a review artifact. It retains all four arms, six mazes and seeds
+42--61: prioritized K=2 and K=4 at fixed T=24, and both uniform controls at T=0.
+There is no tuning stage and no automatic sixty-hour cost trigger. Across 1..24 the
+pooled pilot acceptance curves remain at least 0.90 and cannot reach the original
+3/4, 1/2 or 1/4 targets. T=1 accepted 99.69--99.97% of proposals, effectively repeating
+the uniform control; T=24 is the strongest prioritization in the registered range. This choice
+precedes the final results. Full copies, every transition, future and p=2/3 remain a
+draft hindsight choice requiring confirmation before registration.
 
-The reduced expected tuning/grid costs are 5.251148/51.924127 CPU-hours. Doubling
-their sum and adding all pilot attempts gives **118.806383 hours**; actual grouped
-hard reservations plus the pilot give **100.455833 hours**. The requested approval
-limit is therefore **120 CPU-hours**. The hindsight draft is full copies, every
-transition, future and p=2/3. Confirmation precedes registration; a changed choice
-outside approved HER arms requires its twenty-seed one-head reference and a revised
-forecast. No tuning or final grid has run.
+The fixed grid has 480 runs, all three evaluation blocks, all registered budgets and
+points, and nine comparisons in both views: VCP minus control at each K; VCP and
+control minus HER at each K; VCP minus episodic replay at each K; and VCP K=4 minus
+K=2. It reuses the approved HER and phase-4b references, exact thresholds, and their
+threshold-crossing checks. Seed-42 grid rows must reproduce every overlapping pilot
+learning/evaluation/knowledge field; controls follow the zero-query identity. Maze6
+T=24 has no pilot identity oracle and is explicitly excluded from that claim.
+
+`calibrate_controls.py` runs the two revised controls sequentially for a short local
+seed-42 check on all six mazes, at the registered 1k/3k/30k points. Its classifier-test
+ratio to the same pilot point scales each control's expected cost, while every control
+limit stays at least its original pilot-derived size. Maze6 T=24 uses the T=1 cost
+scaled by the largest observed T=24/T=1 allocation-CPUTimeRAW ratio on the other five
+mazes, separately for each K. Additional evaluation work for all blocks is budgeted
+from their fixed transition/pair counts and pilot classifier-test cost. Hard reservations
+charge every actual twenty-job batch at its shared maximum limit. The requested limit
+is the larger of the doubled forecast including every pilot attempt and that hard bound,
+rounded up to five CPU-hours; the user sets the limit at approval. No tuning, final grid,
+cluster job or additional pilot is authorized by this revision.
 
 Complete episodes retain the registered overshoot below cap: nominally equal budgets
 can have slightly different actual_steps. Actual interactions are counted once and
 updates equal three times that actual count; K never multiplies the budget.
 
-Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/21
+Implemented-contract gates pass 308 Rust tests; Python suites pass 47/7/20/37/37/14/13/23
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.

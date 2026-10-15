@@ -1,6 +1,7 @@
 use std::mem::size_of;
 
 use acs2_agents::acs2vcp::{self, priority::DistributionSummary};
+use acs2_core::learning::replay::ReplaySample;
 use acs2_core::representation::{classifier::Classifier, perception::Perception, symbol::Symbol};
 use acs2_core::support::{
     knowledge::{anticipation_fraction, Transition},
@@ -11,9 +12,27 @@ use serde_json::{json, Value};
 use super::EpisodeAdapter;
 use crate::runner::{GoalAgent, MeasuredEnvironment};
 
+mod disagreement;
+pub use disagreement::TrainingDisagreement;
+
 pub struct VcpGoalAgent<const S: usize, const G: usize, const M: usize, R, P, A> {
     pub agent: acs2vcp::Agent<S, G, M, R, P, A>,
     pub preset: acs2vcp::Preset,
+    pub training_disagreement: TrainingDisagreement,
+}
+
+impl<
+        const S: usize,
+        const G: usize,
+        const M: usize,
+        R: RandomSource,
+        P: RandomSource,
+        A: RandomSource,
+    > VcpGoalAgent<S, G, M, R, P, A>
+{
+    pub fn snapshot(&self) -> String {
+        format!("{}{:?}", self.agent.snapshot(), self.training_disagreement)
+    }
 }
 
 fn summary(value: &DistributionSummary) -> Value {
@@ -56,8 +75,21 @@ impl<
         self.preset.name()
     }
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64) {
-        self.agent
-            .train_episode(&mut EpisodeAdapter::<_, M>(env), time);
+        let proposals_before = self.agent.priority_counts().proposals;
+        let classifiers_before = self.population_classifiers();
+        let diagnostic = &mut self.training_disagreement;
+        self.agent.train_episode_observed(
+            &mut EpisodeAdapter::<_, M>(env),
+            time,
+            &mut |variance, accepted| diagnostic.record(variance, accepted),
+        );
+        if self.agent.parameters().temperature == 0 && self.agent.heads().len() > 1 {
+            let proposals = self.agent.priority_counts().proposals - proposals_before;
+            self.training_disagreement.avoided_value_queries +=
+                proposals * self.agent.heads().len() as u64;
+            self.training_disagreement.avoided_classifier_tests +=
+                proposals * classifiers_before as u64;
+        }
     }
     fn declared_policy(&self) -> &'static str {
         if self.agent.heads().len() == 1 {
@@ -148,6 +180,35 @@ impl<
             .sum();
         Some(sum / self.evaluation_heads() as f64)
     }
+    fn head_disagreement(&self, transitions: &[Transition<M>]) -> Option<Value> {
+        if self.evaluation_heads() == 1 {
+            return None;
+        }
+        assert!(
+            acs2_core::support::measurement::read_match_counters().is_none(),
+            "head disagreement requires paused training counters"
+        );
+        let variances = transitions
+            .iter()
+            .map(|transition| {
+                self.agent.variance(&ReplaySample {
+                    state: transition.p0,
+                    action: transition.action,
+                    reward: 0.0,
+                    next_state: transition.p1,
+                    done: false,
+                })
+            })
+            .collect();
+        let mut diagnostic = disagreement::evaluation_summary(
+            variances,
+            self.agent.parameters().variance_maximum(),
+            self.evaluation_heads(),
+        );
+        diagnostic["reference_transition_payload_bytes"] =
+            json!(std::mem::size_of_val(transitions));
+        Some(diagnostic)
+    }
     fn ensemble_diagnostics(&self, transitions: Option<&[Transition<M>]>) -> Option<Value> {
         let mut total_head_bytes = 0;
         let heads: Vec<_> = self.agent.heads().iter().enumerate().map(|(index, head)| {
@@ -167,15 +228,24 @@ impl<
                 "full": counts.full, "values_only": counts.values_only, "skipped_warmup_steps": counts.skipped_warmup_steps,
                 "random_stream": head.random_source().capture_state().map(|state| state.stream)})
         }).collect();
-        Some(
-            json!({"heads": heads, "head_count": heads.len(), "heads_known_bytes_lower_bound": total_head_bytes,
+        let mut diagnostics = json!({"heads": heads, "head_count": heads.len(), "heads_known_bytes_lower_bound": total_head_bytes,
             "mean_population_classifiers": self.population_classifiers() as f64 / heads.len() as f64,
             "mean_population_numerosity": f64::from(self.population_numerosity()) / heads.len() as f64,
             "agent_known_bytes_lower_bound": total_head_bytes + self.trajectory_logical_bytes()
                 + size_of::<acs2vcp::Agent<S, G, M, R, P, A>>() - size_of::<acs2_trajectory::TrajectoryStore<S, G>>(),
             "pending_sample_bytes": 0, "batch_peak_bytes": self.agent.priority_counts().batch_peak_bytes,
-            "memory_scope": "logical_payload_and_inline_headers_excludes_unused_capacity_and_allocator_overhead"}),
-        )
+            "memory_scope": "logical_payload_and_inline_headers_excludes_unused_capacity_and_allocator_overhead"});
+        if self.evaluation_heads() > 1 {
+            let extra = size_of::<Self>() - size_of::<acs2vcp::Agent<S, G, M, R, P, A>>();
+            diagnostics["measurement_diagnostics_inline_bytes"] = json!(extra);
+            diagnostics["agent_and_measurement_known_bytes_lower_bound"] = json!(
+                diagnostics["agent_known_bytes_lower_bound"]
+                    .as_u64()
+                    .unwrap()
+                    + extra as u64
+            );
+        }
+        Some(diagnostics)
     }
     fn replay_diagnostics(&self) -> Option<Value> {
         let agent = &self.agent;
@@ -201,6 +271,30 @@ impl<
             "candidate_acceptance_sums": priority.candidate_acceptance_sums,
             "candidate_temperatures": (1..=acs2vcp::priority::MAX_TEMPERATURE).collect::<Vec<_>>(),
             "match_formation_identity": "environment_steps + 3 * full + 2 * values_only + priority_value_queries"});
+        if agent.parameters().temperature == 0 {
+            for field in [
+                "proposal_variance",
+                "accepted_variance",
+                "candidate_acceptance_sums",
+            ] {
+                diagnostics["priority"][field] = Value::Null;
+            }
+        } else if self.evaluation_heads() > 1 {
+            diagnostics["priority"]["proposal_variance"]["logarithmic"] =
+                self.training_disagreement.proposals.json();
+            diagnostics["priority"]["accepted_variance"]["logarithmic"] =
+                self.training_disagreement.accepted.json();
+        }
+        if self.evaluation_heads() > 1 {
+            diagnostics["priority"]["training_variance_measured"] =
+                json!(agent.parameters().temperature > 0);
+            if agent.parameters().temperature == 0 {
+                diagnostics["priority"]["avoided_value_queries"] =
+                    json!(self.training_disagreement.avoided_value_queries);
+                diagnostics["priority"]["avoided_classifier_perception_tests"] =
+                    json!(self.training_disagreement.avoided_classifier_tests);
+            }
+        }
         Some(diagnostics)
     }
     fn agent_parameters(&self) -> Value {

@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 import sys
 
-from execution import authorization_manifest, measurement_identity
-from protocol import AGENTS, PILOT_PARTS, PRIORITIZED, ROOT, SECOND_TEMPERATURE_ORDER, configurations, draft
+from execution import authorization_manifest, pilot_measurement_identity
+from protocol import AGENTS, PILOT_PARTS, PRIORITIZED, ROOT, SECOND_TEMPERATURE_ORDER, configurations
 from summarize_check import metrics
 
 sys.path.append(str(ROOT / 'experiments/grid'))
@@ -67,7 +67,7 @@ def audit(root):
     recovery_mode = (root / 'recovery-registration.json').exists()
     registration_name = 'recovery-registration.json' if recovery_mode else 'pilot-registration.json'
     registration = json.loads((root / registration_name).read_text())
-    identity = measurement_identity()
+    identity = pilot_measurement_identity()
     if registration['measurement'] != identity or registration['authorized_cpu_hours'] != 5:
         raise ValueError('pilot measurement identity or authorization limit differs')
     if hashlib.sha256((root / 'acs2-measure-musl').read_bytes()).hexdigest() != identity['binary_sha256']:
@@ -170,7 +170,6 @@ def audit(root):
 def summarize_pilot(root):
     root = Path(root)
     summary, rows, cells = audit(root)
-    plan = draft(cells, rows, summary['allocation_cpu_seconds'], measurement_identity())
     atomic_json(root / 'pilot-summary.json', summary)
     with (root / 'pilot-rows.jsonl').open('w') as stream:
         for row in rows:
@@ -192,18 +191,11 @@ def summarize_pilot(root):
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(statistics)
-    plan['cost_pilot'] = dict(runs=summary['runs'], rows=summary['rows'], allocations=summary['allocations'],
-        allocation_cpu_seconds=summary['allocation_cpu_seconds'], second_temperature_mazes=summary['second_temperature_mazes'],
-        summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
-        rows_sha256=hashlib.sha256((root / 'pilot-rows.jsonl').read_bytes()).hexdigest(),
-        generator_sha256={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                          for name in ['protocol.py', 'archive.py']})
-    atomic_json(root / 'plan-draft.json', plan)
     raw = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
            for path in sorted(root.rglob('*')) if path.is_file() and path.name != 'raw-files.sha256.json'}
     atomic_json(root / 'raw-files.sha256.json', raw)
     return dict(runs=summary['runs'], rows=summary['rows'], allocation_cpu_seconds=summary['allocation_cpu_seconds'],
-                raw_files=len(raw), forecast=plan['forecast'], requested_cpu_hour_limit=plan['requested_cpu_hour_limit'])
+                raw_files=len(raw))
 
 
 if __name__ == '__main__':

@@ -28,6 +28,7 @@ fn make(preset: acs2vcp::Preset) -> MeasuredVcp {
             1,
         ),
         preset,
+        training_disagreement: Default::default(),
     }
 }
 
@@ -97,6 +98,7 @@ fn one_head_at_zero_and_positive_temperature_reproduces_every_pinned_hindsight_f
                     1,
                 ),
                 preset: acs2vcp::Preset::UniformTwo,
+                training_disagreement: Default::default(),
             };
             let mut rows = vec![];
             run_goal_agent_protocol_with_sink(
@@ -152,7 +154,7 @@ fn all_registered_ensembles_preserve_every_head_store_stream_and_counter_during_
             42,
             &[20, 60, 100],
             || make(preset),
-            |agent| agent.agent.snapshot(),
+            |agent| agent.snapshot(),
         );
     }
 }
@@ -214,7 +216,11 @@ fn ensemble_rows_count_joint_interactions_updates_queries_routes_and_total_memor
             assert_eq!(priority["accepted_draws"], full + values);
             assert_eq!(
                 queries,
-                priority["proposals"].as_u64().unwrap() * preset.parameters().heads as u64
+                if preset.parameters().temperature == 0 {
+                    0
+                } else {
+                    priority["proposals"].as_u64().unwrap() * preset.parameters().heads as u64
+                }
             );
             let heads = row["ensemble"]["heads"].as_array().unwrap();
             assert_eq!(heads.len(), preset.parameters().heads);
@@ -269,6 +275,13 @@ fn ensemble_rows_count_joint_interactions_updates_queries_routes_and_total_memor
                     evaluated["success"].as_f64().unwrap().to_bits(),
                     mean.to_bits()
                 );
+                let disagreement = &evaluated["head_disagreement"];
+                assert!(disagreement["count"].as_u64().unwrap() > 0);
+                assert_eq!(
+                    disagreement["cost_scope"],
+                    "evaluation_only_training_counters_paused"
+                );
+                assert_eq!(disagreement["logarithmic"]["count"], disagreement["count"]);
             }
         }
     }
@@ -314,7 +327,7 @@ fn every_head_uses_the_goal_in_greedy_evaluation_and_exploration_and_evaluation_
             let mut classifier = Classifier::<10>::general(Some(action), &config);
             classifier.effect.symbols[0] = Symbol::Token(0);
             classifier.q = 1.0;
-            classifier.r = 100.0;
+            classifier.r = if action == 2 { 100.0 } else { 300.0 };
             Population::from_classifiers(vec![classifier])
         })
         .collect();
@@ -335,6 +348,9 @@ fn every_head_uses_the_goal_in_greedy_evaluation_and_exploration_and_evaluation_
     assert_eq!(heads[0].success, 1.0);
     assert_eq!(heads[1].success, 0.0);
     assert_eq!(result.success, 0.5);
+    assert_eq!(heads[0].estimated_first_action_value, 100.0);
+    assert_eq!(heads[1].estimated_first_action_value, 300.0);
+    assert_eq!(result.estimated_first_action_value, 200.0);
     assert_eq!(agent.agent.snapshot(), before);
     let mut rules = vec![];
     for desired in [7, 9] {
@@ -375,6 +391,94 @@ fn every_head_uses_the_goal_in_greedy_evaluation_and_exploration_and_evaluation_
             );
         }
         assert_eq!(learner.explore_action(&state), action);
+    }
+}
+
+#[test]
+fn differing_head_knowledge_and_values_have_direct_mean_and_disagreement_oracles() {
+    use acs2_core::support::knowledge::Transition;
+    let config = Preset::thesis().config(2);
+    let rule = |action, value| {
+        let mut classifier = Classifier::<2>::general(Some(action), &config);
+        classifier.effect.symbols[0] = Symbol::Token(1);
+        classifier.q = 1.0;
+        classifier.r = value;
+        classifier
+    };
+    let agent = VcpGoalAgent {
+        agent: acs2vcp::Agent::<1, 1, 2, _, _, _>::seeded(
+            config.clone(),
+            episodic_configuration(Preset::thesis()),
+            acs2vcp::Preset::UniformTwo.parameters(),
+            42,
+            1,
+        )
+        .with_populations(vec![
+            Population::from_classifiers(vec![rule(0, 10.0), rule(1, 20.0)]),
+            Population::from_classifiers(vec![rule(0, 50.0)]),
+        ]),
+        preset: acs2vcp::Preset::UniformTwo,
+        training_disagreement: Default::default(),
+    };
+    let p0 = Perception::new([Symbol::Token(0), Symbol::Token(7)]);
+    let p1 = Perception::new([Symbol::Token(1), Symbol::Token(7)]);
+    let transitions = [Transition::new(p0, 0, p1), Transition::new(p0, 1, p1)];
+    let before = agent.snapshot();
+    let ensemble = agent.ensemble_diagnostics(Some(&transitions)).unwrap();
+    assert_eq!(ensemble["heads"][0]["knowledge"], 1.0);
+    assert_eq!(ensemble["heads"][1]["knowledge"], 0.5);
+    assert_eq!(agent.knowledge(&transitions), Some(0.75));
+    let disagreement = agent.head_disagreement(&transitions).unwrap();
+    assert_eq!(disagreement["mean"], 250.0);
+    assert_eq!(disagreement["maximum"], 400.0);
+    assert_eq!(disagreement["quantiles"]["p50"], 100.0);
+    assert_eq!(disagreement["exact_zero_share"], 0.0);
+    assert_eq!(disagreement["value_queries"], 4);
+    assert_eq!(agent.snapshot(), before);
+    acs2_core::support::measurement::start_match_counting();
+    let refused = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        agent.head_disagreement(&transitions)
+    }));
+    let counters = acs2_core::support::measurement::stop_match_counting().unwrap();
+    assert!(refused.is_err());
+    assert_eq!(counters.formations, 0);
+    assert_eq!(counters.classifier_tests, 0);
+}
+
+#[test]
+fn disagreement_reference_contains_only_non_identity_transitions_of_each_evaluated_pair_block() {
+    let distributions =
+        MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
+    let mut seen = std::collections::BTreeSet::new();
+    for block in distributions.protocol().evaluations {
+        let pairs = <_ as Task<8, 2, 10>>::pairs(block.task);
+        let transitions =
+            <_ as Task<8, 2, 10>>::evaluation_knowledge_transitions(block.task).unwrap();
+        let expected: usize = pairs
+            .iter()
+            .map(|(state, _, _)| {
+                (0..8)
+                    .filter(|&action| {
+                        <_ as Task<8, 2, 10>>::next(block.task, *state, action) != *state
+                    })
+                    .count()
+            })
+            .sum();
+        assert_eq!(transitions.len(), expected);
+        let mut env =
+            <_ as Task<8, 2, 10>>::environment(block.task, ChaChaRandomSource::from_seed(0));
+        let states: Vec<_> = pairs
+            .iter()
+            .map(|(state, goal, _)| {
+                let start = <_ as Task<8, 2, 10>>::reset_at(block.task, &mut env, *state, *goal);
+                GoalLayout::<8, 2, 10>::join(&start.observation, goal)
+            })
+            .collect();
+        for transition in transitions {
+            assert_ne!(transition.p0, transition.p1);
+            assert!(states.contains(&transition.p0));
+            assert!(seen.insert(format!("{:?}:{}", transition.p0, transition.action)));
+        }
     }
 }
 
@@ -482,6 +586,92 @@ fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measur
             expected["ensemble"]["agent_known_bytes_lower_bound"] = serde_json::json!(
                 total + expected["trajectory_logical_bytes"].as_u64().unwrap() + agent_bytes as u64
             );
+            let extra_bytes = row["ensemble"]["measurement_diagnostics_inline_bytes"]
+                .as_u64()
+                .unwrap();
+            assert_eq!(
+                row["ensemble"]["agent_and_measurement_known_bytes_lower_bound"],
+                row["ensemble"]["agent_known_bytes_lower_bound"]
+                    .as_u64()
+                    .unwrap()
+                    + extra_bytes,
+            );
+            for field in [
+                "measurement_diagnostics_inline_bytes",
+                "agent_and_measurement_known_bytes_lower_bound",
+            ] {
+                row["ensemble"].as_object_mut().unwrap().remove(field);
+            }
+            for block in row["evaluation_blocks"]
+                .as_object_mut()
+                .unwrap()
+                .values_mut()
+            {
+                assert!(block
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("head_disagreement")
+                    .is_some());
+            }
+            let measured = row["replay_diagnostics"]["priority"]
+                .as_object_mut()
+                .unwrap()
+                .remove("training_variance_measured")
+                .unwrap();
+            assert_eq!(measured, temperature > 0);
+            if temperature == 0 {
+                let removed_queries = row["replay_diagnostics"]["priority"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("avoided_value_queries")
+                    .unwrap()
+                    .as_u64()
+                    .unwrap();
+                let removed_tests = row["replay_diagnostics"]["priority"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("avoided_classifier_perception_tests")
+                    .unwrap()
+                    .as_u64()
+                    .unwrap();
+                assert_eq!(
+                    removed_queries,
+                    expected["replay_diagnostics"]["priority"]["value_queries"]
+                );
+                assert!(removed_tests > 0);
+                expected["match_formations_train"] = serde_json::json!(
+                    expected["match_formations_train"].as_u64().unwrap() - removed_queries
+                );
+                expected["classifier_perception_tests_train"] = serde_json::json!(
+                    expected["classifier_perception_tests_train"]
+                        .as_u64()
+                        .unwrap()
+                        - removed_tests
+                );
+                expected["replay_diagnostics"]["priority"]["value_queries"] = serde_json::json!(0);
+                assert_eq!(
+                    row["match_formations_train"],
+                    10 * row["actual_steps"].as_u64().unwrap()
+                );
+                for field in [
+                    "proposal_variance",
+                    "accepted_variance",
+                    "candidate_acceptance_sums",
+                ] {
+                    assert!(row["replay_diagnostics"]["priority"][field].is_null());
+                    expected["replay_diagnostics"]["priority"][field] = Value::Null;
+                }
+            } else {
+                for field in ["proposal_variance", "accepted_variance"] {
+                    let summary = &mut row["replay_diagnostics"]["priority"][field];
+                    let added = summary
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("logarithmic")
+                        .unwrap();
+                    assert_eq!(added["count"], summary["count"]);
+                }
+            }
             assert_eq!(bits(&row), expected, "{task} {name} T={temperature}");
         }
     }

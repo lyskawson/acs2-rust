@@ -1,6 +1,28 @@
 import math
 
 AGENTS = ('acs2vcp_k2', 'acs2vcp_k4', 'acs2vcp_k2_uniform', 'acs2vcp_k4_uniform')
+POSITIVE_UPPER_BOUNDS = [1e-12, 1e-9, 1e-6, 1e-3, .01, .1, 1., 2., 4., 8., 16., 32.,
+                        64., 128., 256., 512., 1024., 2048., 4096., 8192., 16384., 32768.,
+                        65536., 131072., 250000.]
+
+
+def validate_logarithmic(summary, count):
+    bins = summary['positive_bin_counts']
+    zeros = summary['exact_zero_count']
+    if (summary['count'] != count or summary['positive_bin_upper_bounds'] != POSITIVE_UPPER_BOUNDS
+            or len(bins) != len(POSITIVE_UPPER_BOUNDS)
+            or any(type(value) is not int or value < 0 for value in [zeros, *bins])
+            or zeros + sum(bins) != count
+            or summary['exact_zero_share'] != (zeros / count if count else None)
+            or summary['bin_rule'] != 'exact_zero_separate_positive_lower_exclusive_upper_inclusive'):
+        raise ValueError('VCP logarithmic variance summary differs')
+
+
+def validate_variance(summary, count):
+    if summary['count'] != count or sum(summary['histogram']) != count:
+        raise ValueError('VCP variance histogram/count differs')
+    if not 0 <= summary['minimum'] <= summary['mean'] <= summary['maximum'] <= 250000:
+        raise ValueError('VCP variance summary is outside the value scale')
 
 
 def validate_vcp(row, config, agent):
@@ -28,10 +50,15 @@ def validate_vcp(row, config, agent):
         raise ValueError('VCP must make three unweighted full applications per joint interaction')
     diagnostics = row['replay_diagnostics']
     priority = diagnostics['priority']
+    revised = 'training_variance_measured' in priority
+    if config.get('vcp_diagnostics') == 'evaluation_disagreement' and not revised:
+        raise ValueError('VCP row lacks the registered revised diagnostics')
+    if revised and priority['training_variance_measured'] is not (temperature > 0):
+        raise ValueError('VCP training variance measurement differs')
     proposals, accepted = priority['proposals'], priority['accepted_draws']
     if accepted != updates or not proposals >= accepted > 0 or diagnostics['draws'] != accepted:
         raise ValueError('VCP draw/proposal counts disagree')
-    if priority['value_queries'] != heads * proposals:
+    if priority['value_queries'] != (0 if revised and temperature == 0 else heads * proposals):
         raise ValueError('VCP priority queries disagree with actual proposals')
     if row['match_formations_train'] != steps + 3 * updates + priority['value_queries']:
         raise ValueError('VCP independent match-formation identity failed')
@@ -41,12 +68,16 @@ def validate_vcp(row, config, agent):
         raise ValueError('uniform ensemble must accept every proposal without randomness')
     if priority['variance_maximum'] != 250000.0 or not 0 < priority['mean_acceptance_probability'] <= 1:
         raise ValueError('VCP acceptance envelope differs')
-    for name, count in [('proposal_variance', proposals), ('accepted_variance', accepted)]:
-        summary = priority[name]
-        if summary['count'] != count or sum(summary['histogram']) != count:
-            raise ValueError('VCP variance histogram/count differs')
-        if not 0 <= summary['minimum'] <= summary['mean'] <= summary['maximum'] <= 250000:
-            raise ValueError('VCP variance summary is outside the value scale')
+    if revised and temperature == 0:
+        if any(priority[name] is not None for name in ['proposal_variance', 'accepted_variance', 'candidate_acceptance_sums']):
+            raise ValueError('uniform VCP must not report an unmeasured training variance')
+        if priority['avoided_value_queries'] != heads * proposals or priority['avoided_classifier_perception_tests'] < 0:
+            raise ValueError('uniform VCP removed-query accounting differs')
+    else:
+        for name, count in [('proposal_variance', proposals), ('accepted_variance', accepted)]:
+            validate_variance(priority[name], count)
+            if revised:
+                validate_logarithmic(priority[name]['logarithmic'], count)
     routes = diagnostics['routes']
     if diagnostics['original'] + diagnostics['relabeled'] != accepted or diagnostics['failed_draws'] or diagnostics['fallbacks']:
         raise ValueError('VCP accepted routes disagree')
@@ -88,3 +119,21 @@ def validate_vcp(row, config, agent):
     for block in row['evaluation_blocks'].values():
         if len(block['heads']) != heads or not math.isclose(block['success'], sum(head['success'] for head in block['heads']) / heads, rel_tol=0, abs_tol=1e-12):
             raise ValueError('VCP evaluation must average every head')
+        if revised:
+            summary = block['head_disagreement']
+            count = summary['count']
+            validate_variance(summary, count)
+            validate_logarithmic(summary['logarithmic'], count)
+            if (not 0 < count <= row['knowledge_transition_goal_pairs']
+                    or summary['value_queries'] != heads * count
+                    or summary['exact_zero_share'] != summary['logarithmic']['exact_zero_share']
+                    or summary['variance_maximum'] != 250000
+                    or summary['cost_scope'] != 'evaluation_only_training_counters_paused'
+                    or summary['reference_set'] != 'non_identity_knowledge_transitions_from_evaluated_block_start_goal_pairs_equal_transition_weights'
+                    or summary['quantile_rule'] != 'nearest_rank_ceil_n_times_percentile'):
+                raise ValueError('VCP evaluation disagreement reference or cost differs')
+            quantiles = [summary['quantiles'][name] for name in ['p25', 'p50', 'p75', 'p90', 'p99']]
+            if quantiles != sorted(quantiles) or not summary['minimum'] <= quantiles[0] <= quantiles[-1] <= summary['maximum']:
+                raise ValueError('VCP evaluation disagreement quantiles differ')
+    if revised and ensemble['agent_and_measurement_known_bytes_lower_bound'] != ensemble['agent_known_bytes_lower_bound'] + ensemble['measurement_diagnostics_inline_bytes']:
+        raise ValueError('VCP added diagnostic memory accounting differs')

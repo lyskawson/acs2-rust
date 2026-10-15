@@ -284,7 +284,8 @@ The measurement CLI names are `acs2`, `acs2er`, `acs2er_one_update`,
 `acs2er_episodic`, `acs2her`, `acs2her_values` and `acs2her_values_shortened`.
 ACS2VCP adds `acs2vcp_k2`, `acs2vcp_k4`, `acs2vcp_k2_uniform` and
 `acs2vcp_k4_uniform`; the positive-temperature presets accept
-`--vcp-temperature` from 1 through 24, with default 1. Uniform presets fix T=0.
+`--vcp-temperature` from 1 through 24, with default 1. Uniform presets fix T=0 and perform no training value queries. The current grid draft
+fixes T=24 before results; every multi-head arm reports separate evaluation disagreement.
 These four names register full hindsight copy updates, future goals, every-transition
 admissibility and proportion 2/3. Other hindsight choices have no measurement name.
 The [dated name table](docs/ARCHITECTURE.md#agent-run-names-2026-10-14) relates them to
