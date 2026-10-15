@@ -163,7 +163,9 @@ def analyze(study, her, baseline, destination):
                 entry = entries[identifier, name, seed]
                 rows = [json.loads(line) for line in (entry['path'] / 'rows.jsonl').read_text().splitlines()]
                 datasets[name].extend(rows)
-                tables['run-costs'].append(dict(configuration=identifier, arm=name, seed=seed, **run_cost(entry, rows)))
+                tables['run-costs'].append(dict(configuration=identifier, arm=name, seed=seed,
+                    allocation_scope='new_selected_run' if name in plan['agents'] else 'reused_reference',
+                    source_directory=str(entry['path']), **run_cost(entry, rows)))
         result, scores = analyze_maze(datasets, config, plan)
         results.append(result)
         for name, arm in result['arms'].items():
@@ -206,6 +208,7 @@ def analyze(study, her, baseline, destination):
                   diagnostics='mean and SE of per-seed diagnostics; quantiles are per-seed reference-set quantiles, then averaged',
                   histogram_weighting='pooled raw counts at each point; proposals weight training bins, fixed transitions weight evaluation bins',
                   time='process wait4 CPU, allocation CPUTimeRAW and wall time reported separately; sampled training CPU is an estimate',
+                  allocation_scope='run-costs separates selected new runs from historical reused references; verification charges all new attempts and the pilot',
                   memory='logical payload and known inline headers are lower bounds; process peak RSS reported separately',
                   horizon='registered 2M/4M interactions; no convergence claim',
                   source_archives=dict(study=str(study), her=str(Path(her)), baseline=str(Path(baseline))))

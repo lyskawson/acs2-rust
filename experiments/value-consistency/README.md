@@ -52,6 +52,10 @@ are not labelled as pooled quantiles. Histogram pooling uses raw counts. Uniform
 arms have no measured training proposal variance; no zero is imputed. Process
 CPU, sampled training CPU, allocation CPU, wall time and memory lower bounds have
 separate fields.
+Run-cost rows explicitly distinguish selected new runs from reused historical
+references. The study allocation total instead includes every new attempt and
+the pilot, including failed attempts; historical reference allocations are not
+charged to the new ceiling.
 
 `plots.py` accepts only checksum-verified output declaring all 480 runs and 180
 pilot identity rows. It exports static SVG/PNG test curves, common head disagreement,

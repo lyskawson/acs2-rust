@@ -71,6 +71,8 @@ class ArtifactAnalysisTests(unittest.TestCase):
             self.assertEqual(len(table('thresholds')), 16)
             self.assertEqual(len(table('learning-curves')), 48)
             self.assertEqual(len(table('run-costs')), 160)
+            self.assertEqual(sum(row['allocation_scope'] == 'new_selected_run' for row in table('run-costs')), 80)
+            self.assertEqual(sum(row['allocation_scope'] == 'reused_reference' for row in table('run-costs')), 80)
             self.assertEqual(float(table('run-costs')[0]['process_cpu_seconds']), 10.)
             self.assertEqual(float(table('run-costs')[0]['allocation_cpu_seconds']), 15.)
             self.assertEqual(float(table('run-costs')[0]['training_cpu_seconds_estimate']), 7.)
