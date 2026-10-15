@@ -1,11 +1,26 @@
 import copy
+import hashlib
+import json
+from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
-from archive import require_agreement, require_coverage
+from archive import audit, require_agreement, require_coverage
 from protocol import AGENTS, PRIORITIZED, SECOND_TEMPERATURE_ORDER, configurations
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_archived_binary_substitution_is_refused_even_when_metadata_is_unchanged(self):
+        identity = dict(binary_sha256=hashlib.sha256(b'frozen').hexdigest())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'pilot-registration.json').write_text(json.dumps(dict(measurement=identity, authorized_cpu_hours=5)))
+            (root / 'acs2-measure-musl').write_bytes(b'substituted')
+            with patch('archive.measurement_identity', return_value=identity):
+                with self.assertRaisesRegex(ValueError, 'binary differs'):
+                    audit(root)
+
     def test_recovery_cannot_drop_a_control_or_charge_only_one_head_count_at_the_second_temperature(self):
         configs = configurations()
         first = {(config['id'], agent, 0 if agent.endswith('_uniform') else 1): None

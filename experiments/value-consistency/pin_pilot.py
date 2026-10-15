@@ -26,6 +26,8 @@ def pin(root, output):
     fixture = {key: value for key, value in original.items() if key != 'configurations'}
     fixture['scope'] = 'All completed stage-1 cost-pilot arms and mazes, first two registered validation points; every failed and cancelled attempt remains in the external pilot inventory.'
     fixture['source_pilot_allocation_cpu_seconds'] = summary['allocation_cpu_seconds']
+    fixture['source_pilot_runs'] = summary['runs']
+    fixture['second_temperature_mazes'] = summary['second_temperature_mazes']
     fixture['configurations'] = []
     excluded = set(fixture['excluded'])
     for run in summary['selected_runs']:

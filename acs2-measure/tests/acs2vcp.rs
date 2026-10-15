@@ -398,6 +398,7 @@ fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measur
         "unmeasured native inline memory layout"
     );
     let mut arms = std::collections::BTreeSet::new();
+    let mut tasks = std::collections::BTreeSet::new();
     for configuration in oracle["configurations"].as_array().unwrap() {
         let name = configuration["agent"].as_str().unwrap();
         arms.insert(name);
@@ -410,6 +411,7 @@ fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measur
             _ => panic!("unregistered VCP arm"),
         };
         let task = configuration["task"].as_str().unwrap();
+        tasks.insert(task);
         let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
             acs2_envs::roles::ResearchTask::named(task).unwrap()
         else {
@@ -493,6 +495,16 @@ fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measur
         ]
         .into_iter()
         .collect()
+    );
+    assert_eq!(
+        tasks,
+        ["maze4", "maze5", "maze6", "maze7", "woods14", "mazema"]
+            .into_iter()
+            .collect()
+    );
+    assert_eq!(
+        oracle["configurations"].as_array().unwrap().len() as u64,
+        oracle["source_pilot_runs"].as_u64().unwrap()
     );
 }
 

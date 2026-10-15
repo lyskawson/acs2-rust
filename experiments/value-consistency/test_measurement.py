@@ -6,6 +6,7 @@ import sys
 import unittest
 
 from protocol import ROOT, configurations
+from archive import require_coverage
 
 sys.path.append(str(ROOT / 'experiments/grid'))
 from collect import validate_row
@@ -28,14 +29,24 @@ class MeasurementTests(unittest.TestCase):
         self.rows = [dict(decode(row), commit='pinned', source_state='clean', host='fixture-host',
                          cpu_model='AMD EPYC 9554 64-Core Processor')
                      for config in self.fixture['configurations'] for row in config['rows']]
+        self.temperatures = [config['temperature'] for config in self.fixture['configurations'] for _ in config['rows']]
 
-    def validate(self, row):
-        validate_row(row, self.configs[row['task']], row['agent'], row['seed'], 'pinned', row['nominal_step'])
+    def validate(self, row, temperature=1):
+        config = dict(self.configs[row['task']], agent_settings={row['agent']: dict(temperature=temperature)})
+        validate_row(row, config, row['agent'], row['seed'], 'pinned', row['nominal_step'])
 
     def test_actual_pilot_rows_pass_shared_collection_guards(self):
         self.assertGreaterEqual(len(self.rows), 8)
-        for row in self.rows:
-            self.validate(row)
+        for row, temperature in zip(self.rows, self.temperatures):
+            self.validate(row, temperature)
+
+    def test_pinned_scope_contains_every_first_temperature_control_and_both_heads_of_the_declared_second_temperature(self):
+        selected = {(self.configs[row['task']]['id'], row['agent'], row['agent_parameters']['temperature']): None
+                    for row in self.rows}
+        second = require_coverage(selected, True)
+        self.assertEqual(second, self.fixture['second_temperature_mazes'])
+        self.assertEqual(len(selected), self.fixture['source_pilot_runs'])
+        self.assertEqual(len(self.rows), 2 * self.fixture['source_pilot_runs'])
 
     def test_ensemble_cost_and_behavior_defects_are_refused(self):
         row = next(row for row in self.rows if row['agent'] == 'acs2vcp_k4')

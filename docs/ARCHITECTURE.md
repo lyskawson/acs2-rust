@@ -3721,7 +3721,7 @@ or additional diagnostics. Separate defect tests cover joined goals, change anti
 independent heads/streams, acting rotation, joint budgets, greedy ensemble evaluation,
 frozen priorities, unweighted full/values steps and the match-count identities.
 
-### Local checks and interrupted cost pilot
+### Local checks, cost pilot and registration draft
 
 Clean measurement `79648424076144c77a3a87acf87418bb61aa7c42`, musl binary SHA-256
 `c2478eb60caad34a5bdcc949b77018c329c4fbcdbd8629b60ca7dcb87c2fb6fa`, supplies the
@@ -3734,11 +3734,10 @@ full copies, every transition and p=2/3.
 The first cluster allocation group measured Maze4, seed 42. Both K=2 arms completed
 2M interactions; both K=4 arms reached the 1M point but hit the 449-second process
 watchdog before the 2M point. The four allocation CPUTimeRAW values are 283, 451, 295
-and 451 seconds: 1480 seconds (0.411111 CPU-hours). After explicit user authorization,
-the twenty dependent pending jobs were cancelled with zero allocation cost. STOP is retained. This is an
-undersized process limit, not evidence of a learning ceiling. The full six-maze,
-two-temperature pilot, its complete forecast and scientific registration remain
-unfinished; no tuning or final-grid execution is authorized.
+and 451 seconds: 1480 seconds (0.411111 CPU-hours), including 902 seconds in failed
+attempts. After explicit user authorization, the twenty dependent pending jobs were
+cancelled with zero allocation cost. STOP is retained. This was an undersized process
+limit, not evidence of a learning ceiling.
 
 `prepare_recovery.py` freezes separate operational manifests with one maze and one K
 per part, at most two jobs, and longer per-maze/head limits. Its shared accounting
@@ -3751,9 +3750,45 @@ cancellations, verifies all raw hashes, and requires interrupted prefixes to agr
 with complete retries. `pin_pilot.py` derives the portable regression fixture only
 from this independently audited inventory.
 
-`fixtures/vcp_pair_regression.json` pins the two earliest points of these four real
-pilot trajectories (eight validation rows), including the usable prefixes of interrupted
-runs. Its scope explicitly records this partial pilot. Every portable floating field
+The completed pilot has **34 successful trajectories and 278 validation rows**:
+all six mazes at T=1 and both T=0 controls, and both K values at T=24 on Maze4,
+Maze5, Maze7, Woods14 and MazeMA. Woods14 has nine registered points; the others have
+eight. The second temperature on Maze6 was not admitted: already used allocations
+plus its two registered limits (1080 and 1680 seconds) exceeded the 18000-second
+authorization even after releasing all outstanding reservations. The immutable
+decision records that omitted scope without reducing any interaction budget.
+
+Allocation CPUTimeRAW, seconds, for successful selected trajectories:
+
+| Task | K=2, T=1 | K=4, T=1 | K=2, T=0 | K=4, T=0 | K=2, T=24 | K=4, T=24 |
+|---|---:|---:|---:|---:|---:|---:|
+| Maze4 | 283 | 446 | 295 | 460 | 203 | 431 |
+| Maze5 | 479 | 833 | 453 | 905 | 458 | 871 |
+| Maze6 | 469 | 916 | 477 | 899 | not admitted | not admitted |
+| Maze7 | 548 | 1064 | 521 | 979 | 484 | 1038 |
+| Woods14 | 125 | 195 | 132 | 199 | 137 | 296 |
+| MazeMA | 58 | 117 | 58 | 110 | 68 | 132 |
+
+All **56 allocations** are accounted for: 34 completed, two failed and twenty
+cancelled. Including the failed attempts, the pilot used **16041 seconds =
+4.455833 CPU-hours**, with zero remaining reservations. The largest admission bound
+was 17992 seconds. Every submission checked the shared grant and test-only schedule.
+All 874 source files were independently checksum-verified after transfer; the full
+raw archive and derived summaries are retained on the cluster and locally.
+
+At final points, cumulative mean proposal variance spans 69.743--759.568 at T=1
+and 5036.500--23874.746 at T=24. Realized acceptance spans 0.996934--0.999723 and
+0.827010--0.962502 respectively; proposals per draw span 1.000277--1.003075 and
+1.038959--1.209175. The bound stays 250000 at every point. T=0 accepts every
+proposal and still reports its value-query cost. Full per-point moments, histograms,
+accepted/proposal routes, objective costs, per-head success/knowledge/population,
+memory and times remain in the verified archive. These one-seed operational
+measurements do not rank policies or establish convergence.
+
+`fixtures/vcp_pair_regression.json` pins the two earliest points of all 34 selected
+pilot trajectories (68 validation rows). Coverage guards require all six first-temperature
+mazes and controls and both K values for every declared second-temperature maze.
+Every portable floating field
 uses binary64 bits. Inline type headers have two measured native layouts: head/agent
 without store headers of 376/1832 bytes on the laptop and 384/1856 on the musl build.
 The fixture factors those separately, accepts only these measured layouts, and checks
@@ -3776,16 +3811,40 @@ The experiment-specific code in `experiments/value-consistency/` supplies exact
 head-averaged rational success/threshold calculations, paired seed summaries in both
 registered views, priority-only temperature candidate selection, a doubled forecast
 with hard reservations, and a draft builder. The builder refuses an incomplete cost
-pilot. Scientific settings still require confirmation before registration; the
-execution adapter refuses stage 2. The four research agents' measurement paths are
-unchanged by the later test and K=1 policy-identity additions.
+pilot or substituted binary. Scientific settings still require confirmation before
+registration; the execution adapter refuses stage 2. The four research agents'
+measurement paths are unchanged by the later test and K=1 policy-identity additions.
 Hard reservations group the actual twenty-to-forty-job batches and charge the largest
 limit to every allocation in each group. The draft defines a large forecast as above
 the preceding HER study's sixty-hour approval: retain the acceptance-1/2 candidate
 first, then remove prioritized K=2 if needed. Both controls, all six mazes and twenty
 seeds remain; any resulting omitted contrasts are explicit. A remaining cost above
 sixty hours requires its own requested approval limit.
-Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/19
+
+`plan-draft.json` is the concrete review artifact, not an approved registration.
+Every priority-only target (mean acceptance 3/4, 1/2, 1/4) selects T=24 at the boundary
+of the allowed range after deduplication. The observed curves do not reach those
+targets; no success field enters this choice. The full two-K forecast was 146.7759
+CPU-hours after doubling and including the pilot, with a 124.7892-hour hard bound.
+Keeping only the candidate nearest 1/2 already leaves T=24; the cost rule then removes
+prioritized K=2. Both controls, every maze and twenty seeds remain. The resulting
+draft has 30 validation tuning runs and 360 final-grid runs, with five retained
+comparisons and four explicit omissions involving prioritized K=2. It reuses the
+approved HER and baseline references, exact thresholds and both registered views.
+
+The reduced expected tuning/grid costs are 5.251148/51.924127 CPU-hours. Doubling
+their sum and adding all pilot attempts gives **118.806383 hours**; actual grouped
+hard reservations plus the pilot give **100.455833 hours**. The requested approval
+limit is therefore **120 CPU-hours**. The hindsight draft is full copies, every
+transition, future and p=2/3. Confirmation precedes registration; a changed choice
+outside approved HER arms requires its twenty-seed one-head reference and a revised
+forecast. No tuning or final grid has run.
+
+Complete episodes retain the registered overshoot below cap: nominally equal budgets
+can have slightly different actual_steps. Actual interactions are counted once and
+updates equal three times that actual count; K never multiplies the budget.
+
+Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/21
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.

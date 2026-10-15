@@ -70,6 +70,8 @@ def audit(root):
     identity = measurement_identity()
     if registration['measurement'] != identity or registration['authorized_cpu_hours'] != 5:
         raise ValueError('pilot measurement identity or authorization limit differs')
+    if hashlib.sha256((root / 'acs2-measure-musl').read_bytes()).hexdigest() != identity['binary_sha256']:
+        raise ValueError('archived measurement binary differs from its frozen identity')
     if recovery_mode:
         for name, field in [('pilot-registration.json', 'original_registration_sha256'),
                             ('authorized-cancellation.json', 'cancellation_sha256')]:
@@ -169,7 +171,6 @@ def summarize_pilot(root):
     root = Path(root)
     summary, rows, cells = audit(root)
     plan = draft(cells, rows, summary['allocation_cpu_seconds'], measurement_identity())
-    atomic_json(root / 'plan-draft.json', plan)
     atomic_json(root / 'pilot-summary.json', summary)
     with (root / 'pilot-rows.jsonl').open('w') as stream:
         for row in rows:
@@ -191,6 +192,13 @@ def summarize_pilot(root):
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(statistics)
+    plan['cost_pilot'] = dict(runs=summary['runs'], rows=summary['rows'], allocations=summary['allocations'],
+        allocation_cpu_seconds=summary['allocation_cpu_seconds'], second_temperature_mazes=summary['second_temperature_mazes'],
+        summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
+        rows_sha256=hashlib.sha256((root / 'pilot-rows.jsonl').read_bytes()).hexdigest(),
+        generator_sha256={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+                          for name in ['protocol.py', 'archive.py']})
+    atomic_json(root / 'plan-draft.json', plan)
     raw = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
            for path in sorted(root.rglob('*')) if path.is_file() and path.name != 'raw-files.sha256.json'}
     atomic_json(root / 'raw-files.sha256.json', raw)
