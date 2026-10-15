@@ -1,0 +1,8 @@
+{
+  "approved": true,
+  "confirmed_on": "2026-10-16",
+  "plan_sha256": "9428773fa7861f6102fdccb165ae711b597d1fd61a9e644f8becb17399ebf4eb",
+  "recovery_sha256": "afae09a7e1e96ba48c35169cf7bd45ca6452c2a6dc303e2bb8db1d377e989615",
+  "scope": "seven_incomplete_maze4_k2_retries_at_ten_minutes_only",
+  "phase_cpu_hour_limit": 110
+}

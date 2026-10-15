@@ -1,0 +1,46 @@
+{
+  "status": "draft_requires_user_approval",
+  "type": "operational_recovery_after_process_timeout",
+  "approved_plan_sha256": "9428773fa7861f6102fdccb165ae711b597d1fd61a9e644f8becb17399ebf4eb",
+  "measurement_commit": "82c08b5a89a63878fddfb76be8d5e25d0ae17a41",
+  "binary_sha256": "0c8dcb9c539462f9b84800519237a24e34c49e4d81b70a79a17cae0d7a98816d",
+  "scientific_protocol": "Unchanged: all four arms, six mazes, twenty seeds, T=24/0, budgets, points, hindsight settings and comparisons remain registered.",
+  "cause": {
+    "array_id": 6109875,
+    "configuration_id": "maze4_c5_pairs",
+    "agent": "acs2vcp_k2",
+    "seed": 44,
+    "allocation_limit_seconds": 360,
+    "process_limit_seconds": 328,
+    "failure": "TimeoutError: process deadline exceeded"
+  },
+  "recovery": {
+    "configuration_id": "maze4_c5_pairs",
+    "agent": "acs2vcp_k2",
+    "seeds": [
+      44,
+      46,
+      49,
+      52,
+      53,
+      59,
+      61
+    ],
+    "allocation_limit_seconds": 600,
+    "attempt": "a02",
+    "cause": "one process timeout and six collateral stops",
+    "batch_size_exception": "seven retries only; all untouched batches remain twenty jobs",
+    "original_attempts": "Preserve every raw artifact, allocation and completion; earliest complete attempt selected, complete duplicates must agree on learning fields."
+  },
+  "accounting": {
+    "limit_cpu_seconds": 396000,
+    "pilot_allocated_cpu_seconds": 16041,
+    "grid_spent_cpu_seconds": 5634,
+    "outstanding_reserved_seconds": 0,
+    "new_retry_hard_seconds": 4200,
+    "all_remaining_registered_hard_seconds": 366000,
+    "whole_study_upper_bound_seconds": 391875
+  },
+  "guards": "Preserve STOP until approval and recorded resolution; use the same clean source and frozen binary; mechanically derived retry manifest, node guards, grant and test-only before submission, cumulative allocation admission, no analysis until all identities pass.",
+  "scope": "This proposal changes only the seven retry allocation limits and allows their recovery batch to contain seven jobs. It does not authorize further increases or new experiments."
+}
