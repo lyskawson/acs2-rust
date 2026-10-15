@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from execution import authorization_manifest, measurement_identity
 from protocol import AGENTS, PRIORITIZED, PILOT_PARTS, candidates_from_priorities, configurations, forecast, pilot, select_temperature
-from protocol import ROOT, RECOVERY_PARTS, SECOND_TEMPERATURE_ORDER, recovery
+from protocol import ROOT, RECOVERY_PARTS, SECOND_TEMPERATURE_ORDER, cost_reduction, recovery, reservation_batches
 
 sys.path.append(str(ROOT / 'experiments/grid'))
 from submit import run_batches
@@ -114,6 +114,29 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(value['grid_reservation_cpu_seconds'], 6 * 4 * 20 * 120)
         self.assertEqual(value['tuning_reservation_cpu_seconds'], 6 * 2 * 5 * 3 * 120)
         self.assertAlmostEqual(value['doubled_forecast_with_pilots_cpu_hours'], 1 + 2 * 65 * (480 + 180) / 3600)
+
+    def test_hard_reservations_charge_the_shared_limit_of_each_actual_batch(self):
+        jobs = [dict(limit_minutes=limit) for limit in [1] * 15 + [5] * 15]
+        batches = reservation_batches(jobs)
+        self.assertEqual(len(batches), 1)
+        self.assertEqual(len(batches[0]['jobs']), 30)
+        self.assertEqual(batches[0]['reservation_cpu_seconds'], 30 * 5 * 60)
+        self.assertGreater(batches[0]['reservation_cpu_seconds'], sum(job['limit_minutes'] * 60 for job in jobs))
+
+    def test_large_forecast_cuts_candidates_before_prioritized_k2_and_preserves_both_controls(self):
+        cells = {(config['id'], agent): dict(body_wall_seconds=600, allocation_cpu_seconds=605,
+            process_cpu_seconds=600, peak_rss_kib=8192) for config in configurations() for agent in AGENTS}
+        candidates = {config['id']: {agent: dict(temperatures=[1, 8, 24],
+            acceptance_curve=[0.95 ** t for t in range(1, 25)]) for agent in PRIORITIZED} for config in configurations()}
+        agents, retained, prediction, changes = cost_reduction(cells, candidates, 3600)
+        self.assertEqual(agents, ['acs2vcp_k4', 'acs2vcp_k2_uniform', 'acs2vcp_k4_uniform'])
+        self.assertEqual(len(changes['applied']), 2)
+        self.assertEqual(changes['trigger_cpu_hours'], 60)
+        self.assertEqual(len(prediction['limits_minutes']), 6)
+        self.assertEqual(sum(len(batch['jobs']) for batch in prediction['grid_batches']), 360)
+        self.assertEqual(sum(len(batch['jobs']) for batch in prediction['tuning_batches']), 30)
+        self.assertTrue(all(choice['temperatures'] == [8] for choices in retained.values() for choice in choices.values()))
+        self.assertTrue(all(choice['temperatures'] == [1, 8, 24] for choices in candidates.values() for choice in choices.values()))
 
 
 if __name__ == '__main__':

@@ -3746,6 +3746,10 @@ scope includes the immutable initial ledger and every potential recovery part, s
 failed allocations remain charged and completed K=2 Maze4 runs are reused. A separate
 STOP preserves the original failure record. The second temperature is admitted by
 complete maze pairs in a fixed cost-pilot order, within the same five-hour bound.
+The archive verifier charges every terminal allocation, including failures and
+cancellations, verifies all raw hashes, and requires interrupted prefixes to agree
+with complete retries. `pin_pilot.py` derives the portable regression fixture only
+from this independently audited inventory.
 
 `fixtures/vcp_pair_regression.json` pins the two earliest points of these four real
 pilot trajectories (eight validation rows), including the usable prefixes of interrupted
@@ -3775,7 +3779,13 @@ with hard reservations, and a draft builder. The builder refuses an incomplete c
 pilot. Scientific settings still require confirmation before registration; the
 execution adapter refuses stage 2. The four research agents' measurement paths are
 unchanged by the later test and K=1 policy-identity additions.
-Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/15
+Hard reservations group the actual twenty-to-forty-job batches and charge the largest
+limit to every allocation in each group. The draft defines a large forecast as above
+the preceding HER study's sixty-hour approval: retain the acceptance-1/2 candidate
+first, then remove prioritized K=2 if needed. Both controls, all six mazes and twenty
+seeds remain; any resulting omitted contrasts are explicit. A remaining cost above
+sixty hours requires its own requested approval limit.
+Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/19
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.
