@@ -3619,6 +3619,108 @@ module declarations, dependencies and imports while preserving the measured beha
 The fixed research horizon and marginal intervals support the stated comparisons;
 they do not establish convergence, a learning ceiling or performance on other tasks.
 
+## Value consistency prioritization with independent hindsight heads
+
+`acs2-agents/src/acs2vcp/` owns ACS2VCP, its separate
+`ConsistencyConfiguration`, exact priority calculations and test-only reference adapter.
+The configuration contains head count, integer temperature, reward scale and the existing
+`acs2her::HindsightConfiguration` (copy update, admissibility, proportion). It adds no core
+configuration, replay-sample or checkpoint field. Measurement exposes only four named
+presets: `acs2vcp_k2`, `acs2vcp_k4` (positive T, default 1) and
+`acs2vcp_k2_uniform`, `acs2vcp_k4_uniform` (T=0). All four use full copies,
+future goals, every-transition admissibility and p=2/3. Values-only and shortened copies
+are implemented as independent hindsight choices and checked against HER, but have no
+registered measurement name. K=1 is an identity check, without a research run name.
+
+Each head owns a separate population, random source, environment/update counts and
+episode count. Episode e is played epsilon-greedily by head e modulo K on s joined with
+the real goal. One shared raw trajectory store receives the episode; capacity, warmup
+and three replay draws per interaction are the unchanged thesis preset. After insertion,
+the acting head alone learns 3L samples. Every sample is drawn before any of these learning
+steps. Originals get the shared full replay step; copies follow the configured full or
+values-only HER step, with no sample-dependent learning rate. Head zero uses stream 1,
+additional heads use 8/9/10, the existing sampler uses 7 and acceptance uses 12.
+
+For a fixed end-of-episode ensemble, let q(x) denote the existing hindsight proposal
+distribution over retained transition, route and selected goal. The value of each head is
+`MaxFitnessBootstrap` on that sample's action set: the maximum fitness of change-anticipating
+classifiers, or zero. The priority uses population variance v of these K values. Define
+B = reward_on_reach squared / 4 = 250000, epsilon=1e-6 and w(x)=(B-v(x)+epsilon)^T.
+Rejection sampling proposes x from q and accepts with a(x)=w(x)/(B+epsilon)^T.
+The accepted law is exactly q(x)w(x)/sum_y q(y)w(y): summing over the geometric number
+of preceding rejections cancels the common envelope. There is no finite materialized HER
+buffer, resampling approximation, stale priority or importance correction. Both routes
+are prioritized. The expected proposals per accepted draw are 1/E_q[a] at each frozen
+ensemble; cumulative realized proposals/draw and acceptance are reported separately.
+
+The fixed B avoids a running maximum discovered only after earlier samples have already
+been accepted. Popoviciu's bound holds because qualities and value estimates stay in
+[0,1] and [0,1000], respectively: the constructor validates beta/gamma, initial values
+and reward scale, and proposals require zero nonterminal reward and terminal positive
+reward within that scale. Every queried head value is checked against it. Research
+temperatures are integers 0..24, computed by repeated multiplication. This range keeps
+both raw priorities and their ratio finite and positive even at v=B; no logarithmic or
+platform-dependent power routine is used. Underflow, invalid scales and a million
+consecutive rejected proposals abort loudly without yielding an unprioritized fallback.
+This explicit operational guard stops a pathological run; it does not cap a completed
+draw or silently change its distribution. Acceptance one consumes no random coin. For
+K=1, variance is analytically zero without value queries; at T=0 all proposals are accepted
+in sampler order. Multi-head T=0 also records variances and their query costs, allowing
+the same cost/statistics audit for the ensemble control.
+
+Priority calculation is immutable over every head, store and sampler. Proposal/acceptance
+statistics record the work separately. Accepted routes describe actual learning samples;
+objective calls include all proposals and retain scoring/selection/provenance attribution.
+The proposal routes are emitted beside accepted routes. Rows add variance moments,
+minimum, maximum, a sixteen-bin histogram on [0,B], B, acceptance probabilities, counts
+and candidate-temperature acceptance sums, without altering existing arms' rows.
+The independent core match counter must satisfy
+`formations = environment_steps + 3*full + 2*values_only + priority_value_queries`.
+Each priority value query forms exactly one match set. Tests check this identity and
+the head-specific interaction/update totals rather than inferring them from preset U.
+
+Evaluation resets the evaluation RNG separately for each head, uses its own BestAction
+with thesis epsilon still 0.8, and reports mean success over all heads. Every evaluation
+block also contains the complete per-head evaluation fields; knowledge is averaged over
+heads and recorded per head. Existing population and population-memory fields sum every
+head. The additive ensemble payload contains each head's population, numerosity, marks,
+logical bytes, knowledge, updates and stream, plus mean populations and total known bytes.
+The raw store is counted once. Unused capacities and allocator overhead remain excluded;
+the largest transient accepted batch is reported separately. Environment interactions,
+update applications, priority value queries, objective calls, memory and train/evaluation
+wall time are separate measurements. Read-only checks snapshot all heads, clocks, raw
+history, sampler and acceptance streams, routes and counters.
+
+No importance weights are applied. The predecessor computes inverse-probability weights
+and discards them; Xu's normalized-priority loss weight adds selection bias rather than
+inverting it. ACS2 also shares beta between quality and reward learning. Preference for
+consistent experiences is the mechanism measured here, with its bias a stated limitation.
+This implementation differs from Xu's current materialized-buffer maximum and Zemlo's
+running maximum, independently represented in the differential below.
+
+The private `pyalcs_differential.rs` mode alone implements the reference whole-action-set
+maximum, population variance, running maximum, raw priority, normalized buffer probability
+and one V10 learning round followed by unique-sample priority updates. The fixture dumper
+in `baseline/dump_vcp_differential.py` instruments the unmodified locked reference. Its
+1000 cases cover K=1/2/4, T=0/1/2/4, 6996 full applications, 3474 priority refreshes,
+duplicates, undrawn stale entries, covering, expected/unexpected ALP and random mark choices.
+Raw priority and complete population fields use the P11 absolute 1e-9 tolerance. Cases
+with T>1 use rewards 0/1 to keep raw powered values within this absolute tolerance;
+T=0/1 also cover reward 1000. GA/PEE are disabled and theta_i=0 excludes the known deletion
+skip hazard; no classifier deletion occurs. Selection indices are supplied to isolate the
+learning/priority round from NumPy's random generator. It does not validate NumPy sampling,
+unused weights, goal-blind exploration, K episodes per trial, head-zero metrics or
+exploitation learning. Research constructors and CLI cannot select this mode.
+
+Independent small-store enumeration checks future proposal masses, duplicate-goal weights,
+original fallback, both used admissibility rules and proportions 0, 1/3, 2/3 and 1,
+against accepted frequencies and the inverse-acceptance cost. K=1 at T=0 and T=24 reproduces
+96 pinned HER/control rows across all six mazes, including all learning, evaluation and
+knowledge fields. The only excluded fields are provenance/timing and VCP-only identity
+or additional diagnostics. Separate defect tests cover joined goals, change anticipation,
+independent heads/streams, acting rotation, joint budgets, greedy ensemble evaluation,
+frozen priorities, unweighted full/values steps and the match-count identities.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

@@ -42,6 +42,7 @@ pub enum AgentKind {
     Acs2Her,
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
+    Acs2Vcp(acs2_agents::acs2vcp::Preset),
 }
 
 impl AgentKind {
@@ -58,6 +59,10 @@ impl AgentKind {
             "acs2her" => Ok(Self::Acs2Her),
             "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
             "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
+            "acs2vcp_k2" => Ok(Self::Acs2Vcp(acs2_agents::acs2vcp::Preset::PrioritizedTwo { temperature: 1 })),
+            "acs2vcp_k4" => Ok(Self::Acs2Vcp(acs2_agents::acs2vcp::Preset::PrioritizedFour { temperature: 1 })),
+            "acs2vcp_k2_uniform" => Ok(Self::Acs2Vcp(acs2_agents::acs2vcp::Preset::UniformTwo)),
+            "acs2vcp_k4_uniform" => Ok(Self::Acs2Vcp(acs2_agents::acs2vcp::Preset::UniformFour)),
             _ => Err(format!("unknown agent {name}")),
         }
     }
@@ -71,6 +76,7 @@ impl AgentKind {
             Self::Acs2Her => "acs2her",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
+            Self::Acs2Vcp(preset) => preset.name(),
         }
     }
 }
@@ -139,6 +145,11 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64);
     fn declared_policy(&self) -> &'static str;
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64);
+    fn evaluation_heads(&self) -> usize { 1 }
+    fn eval_head_action(&self, head: usize, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64) {
+        assert_eq!(head, 0);
+        self.eval_action(state, rng)
+    }
     fn online_updates(&self) -> u64;
     fn replay_updates(&self) -> u64;
     fn learning_update_counts(&self) -> Option<Value> {
@@ -160,6 +171,7 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
         None
     }
     fn agent_parameters(&self) -> Value;
+    fn ensemble_diagnostics(&self, _transitions: Option<&[Transition<M>]>) -> Option<Value> { None }
 }
 
 pub struct CoreAgent<A, const M: usize> {
@@ -432,6 +444,7 @@ where
 
 #[derive(Default)]
 pub struct EvalResult {
+    pub heads: Option<Vec<EvalResult>>,
     pub success: f64,
     pub successful_steps: Option<f64>,
     pub successful_step_ratio: Option<f64>,
@@ -456,6 +469,38 @@ where
     T: Task<S, G, M>,
     A: GoalAgent<S, G, M>,
 {
+    if agent.evaluation_heads() == 1 {
+        return evaluate_head(task, agent, pairs, seed, gamma, record_starts, 0);
+    }
+    let heads: Vec<_> = (0..agent.evaluation_heads()).map(|head| {
+        evaluate_head(task, agent, pairs, seed, gamma, record_starts, head)
+    }).collect();
+    let count = heads.len() as f64;
+    let mut result = EvalResult::default();
+    for head in &heads {
+        result.success += head.success / count;
+        result.estimated_first_action_value += head.estimated_first_action_value / count;
+        result.discounted_return += head.discounted_return / count;
+    }
+    result.value_gap = result.estimated_first_action_value - result.discounted_return;
+    let conditional_mean = |field: fn(&EvalResult) -> Option<f64>| {
+        (result.success > 0.0).then(|| heads.iter().map(|head| field(head).unwrap_or(0.0) * head.success / count).sum::<f64>() / result.success)
+    };
+    result.successful_steps = conditional_mean(|head| head.successful_steps);
+    result.successful_step_ratio = conditional_mean(|head| head.successful_step_ratio);
+    result.successful_estimated_first_action_value = conditional_mean(|head| head.successful_estimated_first_action_value);
+    result.successful_discounted_return = conditional_mean(|head| head.successful_discounted_return);
+    result.successful_value_gap = conditional_mean(|head| head.successful_value_gap);
+    result.heads = Some(heads);
+    result
+}
+
+fn evaluate_head<T, A, const S: usize, const G: usize, const M: usize>(
+    task: &T, agent: &A, pairs: &[Pair<T::State, G>], seed: u64, gamma: f64,
+    record_starts: bool, head: usize,
+) -> EvalResult
+where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
+{
     let mut env = task.environment(ChaChaRandomSource::from_seed_and_stream(
         seed,
         EVALUATION_ENVIRONMENT_STREAM,
@@ -478,7 +523,7 @@ where
         let mut first_action = 0usize;
         let mut estimate = 0.0;
         let success = loop {
-            let (action, value) = agent.eval_action(&state, &mut rng);
+            let (action, value) = agent.eval_head_action(head, &state, &mut rng);
             if steps == 0 {
                 first_action = action;
                 estimate = value;
@@ -629,6 +674,16 @@ where
     let config = preset.config(task.actions());
     let agent_rng = ChaChaRandomSource::from_seed_and_stream(seed, AGENT_STREAM);
     match kind {
+        AgentKind::Acs2Vcp(preset) => {
+            let mut agent = crate::agents::vcp::VcpGoalAgent {
+                agent: acs2_agents::acs2vcp::Agent::<S, G, M, _, _, _>::seeded(
+                    config, crate::agents::episodic_configuration(Preset::thesis()), preset.parameters(), seed, AGENT_STREAM,
+                ),
+                preset,
+            };
+            run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata, settings.evaluate_points, emit);
+            settings.capture_final_state.then(|| (format!("{:?}", agent.agent.heads().iter().map(|head| head.population().classifiers()).collect::<Vec<_>>()), agent.agent.snapshot()))
+        }
         AgentKind::Acs2 => {
             let mut agent = CoreAgent {
                 agent: Agent::<M, _>::new(config, agent_rng)
@@ -1098,6 +1153,9 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
         if let Some(counts) = agent.learning_update_counts() {
             row["learning_update_counts"] = counts;
         }
+        if let Some(heads) = &eval.heads {
+            row["heads"] = json!(heads.iter().map(|head| evaluation_json(head, pairs.len(), refs)).collect::<Vec<_>>());
+        }
         if let Some(registration) = plan.registration {
             let mut blocks = serde_json::Map::new();
             blocks.insert(block.name.to_owned(), evaluation_fields(&mut row));
@@ -1134,6 +1192,9 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
         }));
         row["knowledge_transition_goal_pairs"] =
             json!(knowledge_transitions.as_ref().map(Vec::len));
+        if let Some(diagnostics) = agent.ensemble_diagnostics(if plan.evaluate_points { knowledge_transitions.as_deref() } else { None }) {
+            row["ensemble"] = diagnostics;
+        }
         eval_elapsed += eval_started.elapsed();
         row["wall_seconds_eval"] = json!(eval_elapsed.as_secs_f64());
         row["wall_seconds_total"] = json!((train_elapsed + eval_elapsed).as_secs_f64());
@@ -1166,11 +1227,14 @@ fn evaluation_fields(row: &mut Value) -> Value {
             row.as_object_mut().unwrap().remove(key).unwrap(),
         );
     }
+    if let Some(heads) = row.as_object_mut().unwrap().remove("heads") {
+        block.insert("heads".to_owned(), heads);
+    }
     Value::Object(block)
 }
 
 fn evaluation_json(eval: &EvalResult, pairs: usize, refs: Reference) -> Value {
-    json!({
+    let mut result = json!({
         "evaluation_distribution": "exhaustive_exact_weights", "evaluation_sample_seed": null,
         "evaluation_sample_stream": null, "evaluation_pairs": pairs, "evaluation_standard_error": 0.0,
         "success": eval.success, "mean_success_steps": eval.successful_steps,
@@ -1182,5 +1246,9 @@ fn evaluation_json(eval: &EvalResult, pairs: usize, refs: Reference) -> Value {
         "starts": eval.starts, "reference_distribution": "task_start_goal_distribution",
         "random_floor": refs.random_success, "reachable_within_cap": refs.reachable_within_cap,
         "reachable_after_cap": refs.reachable_after_cap, "unreachable_or_ambiguous": refs.unreachable_or_ambiguous
-    })
+    });
+    if let Some(heads) = &eval.heads {
+        result["heads"] = json!(heads.iter().map(|head| evaluation_json(head, pairs, refs)).collect::<Vec<_>>());
+    }
+    result
 }

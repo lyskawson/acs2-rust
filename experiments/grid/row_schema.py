@@ -1,6 +1,7 @@
 import math
 
 from agent_names import agent_settings, canonical_run_name
+from vcp_schema import validate_vcp
 
 EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachable_after_cap',
                      'unreachable_or_ambiguous', 'evaluation_pairs', 'evaluation_distribution',
@@ -20,8 +21,12 @@ def evaluation_blocks(row, required_blocks=None):
         raise ValueError('expected three separate evaluation blocks')
     if any(key in row for key in EVALUATION_FIELDS):
         raise ValueError('split row contains ambiguous top-level evaluation fields')
-    if any(set(block) != set(EVALUATION_FIELDS) for block in blocks.values()):
+    ensemble = canonical_run_name(row.get('agent', '')).startswith('acs2vcp')
+    expected_fields = set(EVALUATION_FIELDS) | ({'heads'} if ensemble else set())
+    if any(set(block) != expected_fields for block in blocks.values()):
         raise ValueError('incomplete evaluation block')
+    if ensemble and any(set(head) != set(EVALUATION_FIELDS) for block in blocks.values() for head in block['heads']):
+        raise ValueError('incomplete per-head evaluation block')
     return blocks
 
 
@@ -59,6 +64,9 @@ def validate_blocks(row, config):
 
 def validate_replay(row, config, agent):
     agent = canonical_run_name(agent)
+    if agent.startswith('acs2vcp'):
+        validate_vcp(row, config, agent)
+        return
     if agent not in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened', 'acs2er_one_update'):
         return
     updates = row['replay_updates']

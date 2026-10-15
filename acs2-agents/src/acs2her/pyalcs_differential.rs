@@ -4,8 +4,7 @@ use acs2_core::representation::{perception::Perception, population::Population};
 use acs2_core::support::{config::Configuration, rng::RandomSource};
 use serde_json::Value;
 
-#[path = "../../../acs2-core/tests/common/mod.rs"]
-mod common;
+use crate::differential_common as common;
 
 struct DifferentialRandom {
     draws: Vec<(usize, usize)>,

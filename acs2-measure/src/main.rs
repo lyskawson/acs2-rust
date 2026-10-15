@@ -53,6 +53,7 @@ impl Options {
         let mut protocol = None;
         let mut evaluation_blocks = None;
         let mut relabel_proportion: Option<f64> = None;
+        let mut vcp_temperature: Option<u32> = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -96,6 +97,7 @@ impl Options {
                 "--relabel-proportion" => {
                     relabel_proportion = Some(value.parse().expect("relabel proportion"))
                 }
+                "--vcp-temperature" => vcp_temperature = Some(value.parse().expect("integer VCP temperature")),
                 _ => panic!("unknown option {flag}"),
             }
         }
@@ -130,6 +132,20 @@ impl Options {
                     AgentKind::Acs2HerValuesShortened { .. } => {
                         AgentKind::Acs2HerValuesShortened { proportion }
                     }
+                    _ => unreachable!(),
+                };
+            }
+        }
+        if let Some(temperature) = vcp_temperature {
+            use acs2_agents::acs2vcp::Preset;
+            assert!((1..=acs2_agents::acs2vcp::priority::MAX_TEMPERATURE).contains(&temperature));
+            assert!(agents.iter().all(|agent| matches!(agent,
+                AgentKind::Acs2Vcp(Preset::PrioritizedTwo { .. } | Preset::PrioritizedFour { .. }))),
+                "temperature is accepted only by prioritized VCP presets");
+            for agent in &mut agents {
+                *agent = match agent {
+                    AgentKind::Acs2Vcp(Preset::PrioritizedTwo { .. }) => AgentKind::Acs2Vcp(Preset::PrioritizedTwo { temperature }),
+                    AgentKind::Acs2Vcp(Preset::PrioritizedFour { .. }) => AgentKind::Acs2Vcp(Preset::PrioritizedFour { temperature }),
                     _ => unreachable!(),
                 };
             }

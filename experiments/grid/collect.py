@@ -38,6 +38,8 @@ def validate_row(row, config, agent, seed, commit, target):
         "goal_pool": config["row_pool"], "goal_encoding": config["encoding"],
         "evaluated_policy": "greedy_change_anticipating_population",
     }
+    if agent.startswith('acs2vcp'):
+        expected['evaluated_policy'] = 'mean_of_heads_greedy_change_anticipating_success'
     for key, value in expected.items():
         actual = canonical_run_name(row.get(key)) if key == 'agent' else row.get(key)
         if actual != value:
@@ -59,7 +61,7 @@ def validate_row(row, config, agent, seed, commit, target):
         expected_updates = (steps, 0)
     elif agent == "acs2er_one_update":
         expected_updates = (0, steps)
-    elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened'):
+    elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened') or agent.startswith('acs2vcp'):
         expected_updates = (0, 3 * steps)
     else:
         expected_updates = (0, sum(min(i, 3) for i in range(1, min(steps, 2) + 1)) + max(steps - 2, 0) * 3)
@@ -138,6 +140,8 @@ def run(args):
     agent_settings = config.get('agent_settings', {}).get(agent, {})
     if 'relabeled_proportion' in agent_settings:
         command.extend(['--relabel-proportion', str(agent_settings['relabeled_proportion'])])
+    if 'temperature' in agent_settings:
+        command.extend(['--vcp-temperature', str(agent_settings['temperature'])])
     metadata = {"command": command, "commit": args.commit, "manifest": manifest,
                 "manifest_sha256": hashlib.sha256(Path(args.manifest).read_bytes()).hexdigest(),
                 "binary_sha256": hashlib.sha256(Path(args.binary).read_bytes()).hexdigest(),

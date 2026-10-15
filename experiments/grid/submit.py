@@ -49,6 +49,8 @@ def prepare(root, manifest, repo, approval=None):
     digest = hashlib.sha256((json.dumps(plan, indent=2) + '\n').encode()).hexdigest()
     require_authorization(root, plan, digest, approval)
     maximum = 60 if plan.get('experiment') == 'her-variants' else 40
+    if plan.get('experiment') == 'value-consistency':
+        maximum = 5 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
     if plan['partition'] != 'lem-cpu-normal' or not 20 <= plan['concurrency'] <= 40 or not 0 < plan['phase_cpu_hour_limit'] <= maximum:
         raise ValueError('wrong partition, concurrency or CPU-hour limit')
     root.mkdir(parents=True, exist_ok=False)

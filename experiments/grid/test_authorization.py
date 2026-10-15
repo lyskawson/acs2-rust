@@ -48,6 +48,20 @@ def changed_manifests(plan):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_substituted_measurement_commit_and_binary_are_refused_before_scheduler_access(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            plan = tuning_fixture(base)
+            for field, value in [('measurement_commit', '0' * 40), ('binary_sha256', '0' * 64)]:
+                with self.subTest(field=field):
+                    manifest = base / 'manifest.json'
+                    atomic_json(manifest, dict(plan, **{field: value}))
+                    with patch('submit.execute') as execute:
+                        with self.assertRaisesRegex(ValueError, field):
+                            submit(base / 'tuning', manifest, base / 'clone', base / 'approval.json')
+                        execute.assert_not_called()
+                    self.assertFalse((base / 'tuning').exists())
+
     def test_submission_rederives_every_run_before_any_scheduler_call(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)

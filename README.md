@@ -9,9 +9,8 @@ The thesis develops an ACS2HER extension that uses the utility of stored traject
 choose goals from training tasks and regulates the share of those experiences against
 HER's, with an optional conservative value correction. The intended comparison is with
 ACS2, ACS2ER, ACS2HER and ACS2VCP on discrete multi-goal mazes with sparse rewards at
-equal numbers of environment interactions. The goal tasks, measurement layer and
-trajectory store, episodic replay and HER variants are implemented; trajectory utility
-and VCP remain planned.
+equal numbers of environment interactions. The goal tasks, measurement layer, trajectory store, episodic replay, HER variants
+and value consistency prioritization are implemented; trajectory utility remains planned.
 
 Two lines of work share this repository:
 
@@ -255,7 +254,7 @@ uv run --project baseline python baseline/compare_bench.py
 | [`acs2-envs`](acs2-envs/src/lib.rs) | [Single-goal maze](acs2-envs/src/maze/mod.rs), [geometry catalogue](acs2-envs/src/maze/geometries/mod.rs), [goal environments](acs2-envs/src/goal/mod.rs), [task/role registry](acs2-envs/src/roles.rs), and [multiplexer](acs2-envs/src/multiplexer.rs) with both encodings. |
 | [`acs2-bench`](acs2-bench/src/main.rs) | P9 maze benchmark and the [MPX reach runner](acs2-bench/src/bin/mpx_reach.rs). |
 | [`acs2-measure`](acs2-measure/src/lib.rs) | [Goal-agent and environment contracts, runner, evaluation and counters](acs2-measure/src/runner.rs), [task construction and preset](acs2-measure/src/task.rs), [floor/reachability references](acs2-measure/src/reference.rs), [CLI](acs2-measure/src/main.rs), [output guard](acs2-measure/src/output.rs), and [replay diagnostic adapter](acs2-measure/src/trajectory.rs). |
-| [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and one-update variant in `acs2er/`; original-only episodic control in `acs2er/episodic.rs`; hindsight full/values/shortened variants in `acs2her/`; their episodic replay mechanism in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
+| [`acs2-agents`](acs2-agents/src/lib.rs) | Every learning agent: ACS2 in `acs2/`; ACS2ER, its FIFO memory/parameters and one-update variant in `acs2er/`; original-only episodic control in `acs2er/episodic.rs`; hindsight full/values/shortened variants in `acs2her/`; independent-head hindsight learners and exact consistency sampling in `acs2vcp/`; shared episodic mechanisms in `episodic_replay.rs`. Depends on core and trajectory storage, never on measurement. |
 | [`acs2-trajectory`](acs2-trajectory/src/lib.rs) | [Raw episode store](acs2-trajectory/src/store.rs), [goal selection and admissibility](acs2-trajectory/src/selection.rs), [objective-based relabeling](acs2-trajectory/src/relabel.rs), [sampler and route counters](acs2-trajectory/src/sampler.rs), [exact composition](acs2-trajectory/src/composition.rs), and [objective cost accounting](acs2-trajectory/src/cost.rs). |
 
 The measurement crate constructs the named presets in `runner.rs`, adapts episodic and
@@ -283,6 +282,11 @@ module; callers using several agents qualify modules or alias imports.
 
 The measurement CLI names are `acs2`, `acs2er`, `acs2er_one_update`,
 `acs2er_episodic`, `acs2her`, `acs2her_values` and `acs2her_values_shortened`.
+ACS2VCP adds `acs2vcp_k2`, `acs2vcp_k4`, `acs2vcp_k2_uniform` and
+`acs2vcp_k4_uniform`; the positive-temperature presets accept
+`--vcp-temperature` from 1 through 24, with default 1. Uniform presets fix T=0.
+These four names register full hindsight copy updates, future goals, every-transition
+admissibility and proportion 2/3. Other hindsight choices have no measurement name.
 The [dated name table](docs/ARCHITECTURE.md#agent-run-names-2026-10-14) relates them to
 closed experiment records. Archived rows and fixtures are read through the shared
 mapping in `experiments/grid/agent_names.json`; the CLI rejects old names with their
@@ -337,8 +341,9 @@ wall-clock depends on the machine and instrumentation.
 
 ACS2 and ACS2ER are implemented, as are the goal environments, read-only measurement
 layer, raw trajectory store, goal-selection primitives and objective-based relabeling.
-ACS2ER supplies uniform replay. ACS2HER, the trajectory-utility agent, ACS2VCP and the
-optional conservative value correction are not implemented yet. Trajectory utility
+ACS2ER supplies uniform replay; ACS2HER supplies hindsight replay and ACS2VCP adds
+independent heads and consistency prioritization with an unprioritized ensemble control.
+The trajectory-utility agent and optional conservative value correction remain planned. Trajectory utility
 selects training-task goals and regulates experience composition; it is not simply
 priority sampling from ACS2ER's replay buffer.
 

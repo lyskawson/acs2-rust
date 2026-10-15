@@ -12,6 +12,8 @@ use serde_json::{json, Value};
 
 use crate::runner::{CoreAgent, GoalAgent, MeasuredEnvironment, Preset};
 
+pub mod vcp;
+
 pub fn episodic_configuration(preset: Preset) -> EpisodicConfiguration {
     EpisodicConfiguration {
         capacity: preset.replay_capacity,
