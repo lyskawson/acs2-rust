@@ -18,6 +18,8 @@ REFERENCES = ['acs2her', 'acs2er_episodic', 'acs2', 'acs2er']
 
 def numeric_fields(value, prefix=''):
     result = {}
+    if value is None:
+        return result
     for name, item in value.items():
         key = prefix + name
         if type(item) in (int, float):
@@ -38,9 +40,10 @@ def metrics(row):
     result = {name: row[name] for name in names if name in row}
     for name in ['learning_update_counts', 'replay_diagnostics', 'ensemble']:
         result.update(numeric_fields(row.get(name, {}), name + '.'))
-    for head in row.get('ensemble', {}).get('heads', []):
+    ensemble = row.get('ensemble') or {}
+    for head in ensemble.get('heads', []):
         result.update(numeric_fields(head, f"head.{head['head']}."))
-    heads = row.get('ensemble', {}).get('heads')
+    heads = ensemble.get('heads')
     if heads:
         for name in ['knowledge', 'population_classifiers', 'population_numerosity']:
             result['heads.' + name + '.population_standard_deviation'] = statistics.pstdev(head[name] for head in heads)
@@ -71,7 +74,7 @@ def metric_summaries(rows, targets):
 
 
 def distribution_summaries(row):
-    priority = row.get('replay_diagnostics', {}).get('priority', {})
+    priority = (row.get('replay_diagnostics') or {}).get('priority') or {}
     values = {'training.' + name: priority.get(name) for name in ['proposal_variance', 'accepted_variance']}
     values.update({'evaluation.' + name: block.get('head_disagreement') for name, block in row['evaluation_blocks'].items()})
     return {name: value for name, value in values.items() if value is not None}

@@ -1,4 +1,5 @@
 import copy
+import csv
 import json
 from pathlib import Path
 import tempfile
@@ -28,10 +29,53 @@ def fixture():
                            replay_diagnostics=dict(priority=dict(proposal_variance=None)))
                        for seed in range(42, 62) for point, counts in zip(config['targets'], values)]
                 for name, values in patterns.items()}
+    for row in datasets['acs2']:
+        row['replay_diagnostics'] = None
     return plan, config, datasets
 
 
 class ArtifactAnalysisTests(unittest.TestCase):
+    def test_exported_tables_retain_both_views_exact_scores_and_separate_run_costs(self):
+        plan, config, datasets = fixture()
+        plan['configurations'] = [config]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            entries = {}
+            for name, rows in datasets.items():
+                for seed in range(42, 62):
+                    path = root / (name + str(seed))
+                    path.mkdir()
+                    selected = copy.deepcopy([row for row in rows if row['seed'] == seed])
+                    for row in selected:
+                        row.update(actual_steps=row['nominal_step'], wall_seconds_train=8., wall_seconds_eval=1., wall_seconds_total=9.)
+                        row['evaluation_blocks'].update(training=copy.deepcopy(row['evaluation_blocks']['test']),
+                                                         validation=copy.deepcopy(row['evaluation_blocks']['test']))
+                    (path / 'rows.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in selected))
+                    (path / 'completion.json').write_text(json.dumps(dict(user_cpu_seconds=9., system_cpu_seconds=1.,
+                                                                          elapsed_seconds=12., peak_rss_kib=3000)))
+                    (path / 'resources.jsonl').write_text(''.join(json.dumps(dict(train_cpu_seconds_estimate=value))+'\n' for value in [2., 5.]))
+                    entries[config['id'], name, seed] = dict(path=path, allocation_cpu_seconds=15)
+            current = {key: value for key, value in entries.items() if key[1] in plan['agents']}
+            references = {key: value for key, value in entries.items() if key not in current}
+            with patch('analyze.verify_study', return_value=(current, dict(pilot_identity_rows=180))):
+                with patch('analyze.reused', return_value=references), patch('analyze.approved', return_value=plan):
+                    destination = root / 'analysis'
+                    analyze(root, root, root, destination)
+            def table(name):
+                with (destination / (name+'.csv')).open() as stream:
+                    return list(csv.DictReader(stream))
+            self.assertEqual(len(table('primary')), 16)
+            self.assertEqual(len(table('comparisons')), 18)
+            self.assertEqual({row['view'] for row in table('comparisons')}, {'checkpoint_mean_within_seed', 'final_point'})
+            self.assertEqual(len(table('seed-scores')), 320)
+            self.assertEqual(len(table('thresholds')), 16)
+            self.assertEqual(len(table('learning-curves')), 48)
+            self.assertEqual(len(table('run-costs')), 160)
+            self.assertEqual(float(table('run-costs')[0]['process_cpu_seconds']), 10.)
+            self.assertEqual(float(table('run-costs')[0]['allocation_cpu_seconds']), 15.)
+            self.assertEqual(float(table('run-costs')[0]['training_cpu_seconds_estimate']), 7.)
+            self.assertTrue((destination / 'files.sha256.json').exists())
+
     def test_all_nine_comparisons_have_both_views_and_twenty_seed_units(self):
         plan, config, datasets = fixture()
         result, scores = analyze_maze(datasets, config, plan)
