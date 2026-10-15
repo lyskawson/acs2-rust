@@ -26,7 +26,7 @@ def calibrate(binary, pilot_root, output):
             path = output / f"{config['id']}_{agent}.jsonl"
             command = [str(binary), '--task', config['task'], '--cap', str(config['cap']),
                        '--protocol', 'maze-pairs-v1', '--agents', agent, '--seeds', '42',
-                       '--targets', '1000,3000,30000', '--evaluation-blocks', 'training,validation,test', '--out', str(path)]
+                       '--targets', '1000,3000,30000', '--out', str(path)]
             subprocess.run(command, check=True, stdout=subprocess.DEVNULL, timeout=90)
             rows = [json.loads(line) for line in path.read_text().splitlines()]
             if [row['nominal_step'] for row in rows] != [1000, 3000, 30000]:
