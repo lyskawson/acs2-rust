@@ -9,6 +9,7 @@ from protocol import ROOT
 
 sys.path.append(str(ROOT / 'experiments/grid'))
 from submit import run_batches
+from grid_authorization import require_derivation
 
 
 class ProtocolTests(unittest.TestCase):
@@ -46,6 +47,19 @@ class ProtocolTests(unittest.TestCase):
             changed = dict(plan, stage='tuning_pending_approval')
             with self.assertRaisesRegex(ValueError, 'stage 2'):
                 authorization_manifest(changed)
+
+    def test_cost_pilot_cannot_substitute_measurement_identity_or_a_temperature(self):
+        identity = dict(measurement_commit='a' * 40, binary_sha256='b' * 64, preset={})
+        with patch('execution.measurement_identity', return_value=identity):
+            expected = authorization_manifest(pilot(PILOT_PARTS[0]))
+            for field, value in [('measurement_commit', 'c' * 40), ('binary_sha256', 'd' * 64), ('seeds', [43])]:
+                with self.subTest(field=field):
+                    with self.assertRaises(ValueError):
+                        require_derivation(dict(expected, **{field: value}), expected)
+            changed = copy.deepcopy(expected)
+            changed['configurations'][0]['agent_settings'][AGENTS[0]]['temperature'] = 2
+            with self.assertRaises(ValueError):
+                require_derivation(changed, expected)
 
     def test_temperature_selection_is_validation_only_and_ties_choose_smaller(self):
         self.assertEqual(select_temperature({1: 0.4, 8: 0.4, 24: 0.3}, [1, 8, 24]), 1)

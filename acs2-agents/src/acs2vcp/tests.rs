@@ -74,7 +74,7 @@ fn classifier(
 }
 
 fn fill_store(store: &mut TrajectoryStore<1, 1>) {
-    for (desired, states) in [(9, vec![0, 1, 0, 2]), (8, vec![2, 0, 1])] {
+    for (desired, states) in [(9, vec![0, 1, 0, 2]), (8, vec![2, 0, 2])] {
         let mut episode = Episode::new(GoalStart {
             observation: perception([states[0]]),
             achieved: Goal::new([Symbol::Token(states[0])]),
@@ -237,7 +237,7 @@ fn retained_future_proposals_reweighted_by_priority_match_independent_enumeratio
             }
             learner.heads[1].population = Population::from_classifiers(rules);
             let mut mass = BTreeMap::new();
-            for (desired, states) in [(9, vec![0, 1, 0, 2]), (8, vec![2, 0, 1])] {
+            for (desired, states) in [(9, vec![0, 1, 0, 2]), (8, vec![2, 0, 2])] {
                 for t in 0..states.len() - 1 {
                     let mut future = vec![];
                     for &goal in &states[t + 1..] {
@@ -269,6 +269,9 @@ fn retained_future_proposals_reweighted_by_priority_match_independent_enumeratio
             }
             let samples = 30_000;
             let draws = learner.draw_batch(samples, &evaluator);
+            if rule == Admissibility::CounterfactualEpisode && proportion > 0.0 {
+                assert!(learner.accepted.fallbacks > 0);
+            }
             let mut observed = BTreeMap::new();
             for drawn in &draws {
                 let symbols = |p: Perception<2>, index: usize| match p.symbols[index] {
@@ -339,8 +342,8 @@ fn all_priority_queries_precede_the_unweighted_hindsight_steps() {
         learner.learn_draw(0, drawn, 100);
     }
     assert_eq!(
-        expected.classifiers(),
-        learner.heads[0].population.classifiers()
+        format!("{:?}", expected.classifiers()),
+        format!("{:?}", learner.heads[0].population.classifiers())
     );
     assert!(learner.heads[1].population.is_empty());
     assert_eq!(learner.heads[0].rng.capture_state(), rng.capture_state());
@@ -479,7 +482,10 @@ fn one_joint_interaction_budget_rotates_heads_and_only_the_acting_head_learns_th
                         before[index].1.environment_steps + 1
                     );
                 } else {
-                    assert_eq!(head.population.classifiers(), before[index].0);
+                    assert_eq!(
+                        format!("{:?}", head.population.classifiers()),
+                        format!("{:?}", before[index].0)
+                    );
                     assert_eq!(head.counts, before[index].1);
                     assert_eq!(head.rng.capture_state(), before[index].2);
                 }
@@ -598,8 +604,8 @@ fn values_copies_use_the_same_unweighted_step_and_the_match_identity_includes_tw
         3 * learner.counts().full + 2 * learner.counts().values_only
     );
     assert_eq!(
-        expected.classifiers(),
-        learner.heads[0].population.classifiers()
+        format!("{:?}", expected.classifiers()),
+        format!("{:?}", learner.heads[0].population.classifiers())
     );
     assert_eq!(rng.capture_state(), learner.heads[0].rng.capture_state());
 }
@@ -609,26 +615,119 @@ fn original_and_copied_rewards_and_endings_use_the_objective_and_the_agents_trun
     use acs2_core::trial::TruncationMode;
     for mode in [TruncationMode::Bootstrap, TruncationMode::Pyalcs] {
         for proportion in [0.0, 1.0] {
-            let mut learner = agent(configuration(2, 1, CopyUpdate::Full, Admissibility::EveryTransition, proportion));
+            let mut learner = agent(configuration(
+                2,
+                1,
+                CopyUpdate::Full,
+                Admissibility::EveryTransition,
+                proportion,
+            ));
             learner.replay.truncation = mode;
-            let config = SamplerConfiguration { truncation: mode, ..learner.sampler.configuration() };
+            let config = SamplerConfiguration {
+                truncation: mode,
+                ..learner.sampler.configuration()
+            };
             learner.sampler = Sampler::new(config, ChaChaRandomSource::from_seed_and_stream(42, 7));
             fill_store(&mut learner.store);
-            let objective = ExactMatch { reward_on_reach: 500.0 };
+            let objective = ExactMatch {
+                reward_on_reach: 500.0,
+            };
             let draws = learner.draw_batch(100, &ObjectiveEvaluator(&objective));
-            assert_eq!(learner.sampler.configuration().truncation, learner.replay.truncation);
+            assert_eq!(
+                learner.sampler.configuration().truncation,
+                learner.replay.truncation
+            );
             for drawn in draws {
-                let episode = learner.store.episodes().find(|episode| episode.id() == drawn.episode).unwrap();
+                let episode = learner
+                    .store
+                    .episodes()
+                    .find(|episode| episode.id() == drawn.episode)
+                    .unwrap();
                 let step = &episode.steps()[drawn.transition].step;
                 let reached = step.achieved == drawn.goal;
                 let truncated = !reached && step.time_limit_reached;
-                assert_eq!(drawn.scored.sample.reward, if reached { 500.0 } else { 0.0 });
-                assert_eq!(drawn.scored.sample.done, reached || (truncated && mode == TruncationMode::Pyalcs));
+                assert_eq!(
+                    drawn.scored.sample.reward,
+                    if reached { 500.0 } else { 0.0 }
+                );
+                assert_eq!(
+                    drawn.scored.sample.done,
+                    reached || (truncated && mode == TruncationMode::Pyalcs)
+                );
                 assert_eq!(drawn.scored.outcome.terminated, reached);
                 assert_eq!(drawn.scored.outcome.truncated, truncated);
                 assert_eq!(drawn.scored.sample.state.symbols[1], drawn.goal.symbols[0]);
-                assert_eq!(drawn.scored.sample.next_state.symbols[1], drawn.goal.symbols[0]);
+                assert_eq!(
+                    drawn.scored.sample.next_state.symbols[1],
+                    drawn.goal.symbols[0]
+                );
             }
         }
+    }
+}
+
+struct ExploreGreedyBranch;
+
+impl RandomSource for ExploreGreedyBranch {
+    fn gen_bool(&mut self, probability: f64) -> bool {
+        assert_eq!(probability, 0.8);
+        false
+    }
+    fn gen_range(&mut self, _: usize) -> usize {
+        0
+    }
+    fn gen_unit(&mut self) -> f64 {
+        panic!("unexpected unit draw")
+    }
+}
+
+#[test]
+fn every_rotating_head_explores_on_the_goal_join_under_epsilon_point_eight() {
+    let parameters = configuration(
+        4,
+        1,
+        CopyUpdate::Full,
+        Admissibility::EveryTransition,
+        2.0 / 3.0,
+    );
+    let config = Configuration {
+        epsilon: 0.8,
+        number_of_possible_actions: 2,
+        do_ga: false,
+        ..Configuration::default_protocol()
+    };
+    let replay = agent(parameters).replay_configuration();
+    let populations = (0..4)
+        .map(|head| {
+            let mut rules = vec![];
+            for goal in [7, 9] {
+                for action in [0, 1] {
+                    let best = if goal == 7 { head % 2 } else { 1 - head % 2 };
+                    rules.push(classifier(
+                        0,
+                        goal,
+                        action,
+                        if action == best { 100.0 } else { 1.0 },
+                        true,
+                        &config,
+                    ));
+                }
+            }
+            Population::from_classifiers(rules)
+        })
+        .collect();
+    let mut learner = Agent::<1, 1, 2, _, _, _>::new(
+        config,
+        replay,
+        parameters,
+        (0..4).map(|_| ExploreGreedyBranch).collect(),
+        ChaChaRandomSource::from_seed_and_stream(42, 7),
+        ChaChaRandomSource::from_seed_and_stream(42, 12),
+    )
+    .with_populations(populations);
+    for head in 0..4 {
+        learner.episodes = head as u64;
+        assert_eq!(learner.explore_action(&perception([0, 7])), head % 2);
+        assert_eq!(learner.explore_action(&perception([0, 9])), 1 - head % 2);
     }
 }

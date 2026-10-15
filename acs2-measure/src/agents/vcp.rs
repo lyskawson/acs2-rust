@@ -60,7 +60,11 @@ impl<
             .train_episode(&mut EpisodeAdapter::<_, M>(env), time);
     }
     fn declared_policy(&self) -> &'static str {
-        "mean_of_heads_greedy_change_anticipating_success"
+        if self.agent.heads().len() == 1 {
+            "greedy_change_anticipating_population"
+        } else {
+            "mean_of_heads_greedy_change_anticipating_success"
+        }
     }
     fn evaluation_heads(&self) -> usize {
         self.agent.heads().len()

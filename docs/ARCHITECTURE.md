@@ -3721,6 +3721,58 @@ or additional diagnostics. Separate defect tests cover joined goals, change anti
 independent heads/streams, acting rotation, joint budgets, greedy ensemble evaluation,
 frozen priorities, unweighted full/values steps and the match-count identities.
 
+### Local checks and interrupted cost pilot
+
+Clean measurement `79648424076144c77a3a87acf87418bb61aa7c42`, musl binary SHA-256
+`c2478eb60caad34a5bdcc949b77018c329c4fbcdbd8629b60ca7dcb87c2fb6fa`, supplies the
+initial checks. Sequential validation-only checks completed all 180 runs: six mazes,
+seeds 42--46, K=2/4 at T=1/24 and both T=0 controls, with points 1k/10k/20k.
+All 540 rows pass the joint interaction/update/match identities. This is an operational
+check, without a performance ranking or test-block analysis. Hindsight settings remain
+full copies, every transition and p=2/3.
+
+The first cluster allocation group measured Maze4, seed 42. Both K=2 arms completed
+2M interactions; both K=4 arms reached the 1M point but hit the 449-second process
+watchdog before the 2M point. The four allocation CPUTimeRAW values are 283, 451, 295
+and 451 seconds: 1480 seconds (0.411111 CPU-hours). The twenty dependent jobs have not
+run; their original reservations total 12480 seconds. STOP is retained. This is an
+undersized process limit, not evidence of a learning ceiling. The full six-maze,
+two-temperature pilot, its complete forecast and scientific registration remain
+unfinished; no tuning or final-grid execution is authorized.
+
+`fixtures/vcp_pair_regression.json` pins the two earliest points of these four real
+pilot trajectories (eight validation rows), including the usable prefixes of interrupted
+runs. Its scope explicitly records this partial pilot. Every portable floating field
+uses binary64 bits. Inline type headers have two measured native layouts: head/agent
+without store headers of 376/1832 bytes on the laptop and 384/1856 on the musl build.
+The fixture factors those separately, accepts only these measured layouts, and checks
+the remaining row plus reconstructed native memory fields bit for bit. It does not
+pretend that compiler/target-dependent inline storage is identical across targets.
+Classifiers, marks, raw storage and all learning/evaluation/knowledge fields agree in
+the shared 1k/10k cross-platform check.
+
+The test-only K=1 adapter declares the same greedy policy identity as HER, in addition
+to matching all numeric fields. Mutation checks found that structural `Classifier`
+equality alone omitted reward/quality statistics in the initial unweighted-step test.
+Those checks now compare the complete classifier state. Nine Rust mutations are caught:
+whole-action-set value, sample variance, a probability-one coin, an extra exponent,
+head-zero acting, weighted learning, learning between priority draws, head-multiplied
+draw volume and head-zero evaluation. Both shared-tooling gaps also have failing
+mutation checks: removing the committed baseline-registration comparison and allowing
+substituted measurement identities. All mutated sources are restored afterwards.
+
+The experiment-specific code in `experiments/value-consistency/` supplies exact
+head-averaged rational success/threshold calculations, paired seed summaries in both
+registered views, priority-only temperature candidate selection, a doubled forecast
+with hard reservations, and a draft builder. The builder refuses an incomplete cost
+pilot. Scientific settings still require confirmation before registration; the
+execution adapter refuses stage 2. The four research agents' measurement paths are
+unchanged by the later test and K=1 policy-identity additions.
+Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/14
+for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
+and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
+before Clippy reproduces the same 22 older warnings, with none in the additions.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

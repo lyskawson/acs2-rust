@@ -125,7 +125,7 @@ fn one_head_at_zero_and_positive_temperature_reproduces_every_pinned_hindsight_f
                         .remove(key);
                 }
                 let mut expected = expected.clone();
-                for key in ["agent", "agent_parameters", "evaluated_policy", "ensemble"] {
+                for key in ["agent", "agent_parameters", "ensemble"] {
                     row.as_object_mut().unwrap().remove(key);
                     expected.as_object_mut().unwrap().remove(key);
                 }
@@ -376,4 +376,158 @@ fn every_head_uses_the_goal_in_greedy_evaluation_and_exploration_and_evaluation_
         }
         assert_eq!(learner.explore_action(&state), action);
     }
+}
+
+#[test]
+fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measured_native_layouts()
+{
+    use std::mem::size_of;
+    let oracle: Value =
+        serde_json::from_str(include_str!("../../fixtures/vcp_pair_regression.json")).unwrap();
+    let head_bytes = size_of::<acs2vcp::Head<10, ChaChaRandomSource>>();
+    let agent_bytes = size_of::<
+        acs2vcp::Agent<8, 2, 10, ChaChaRandomSource, ChaChaRandomSource, ChaChaRandomSource>,
+    >() - size_of::<acs2_trajectory::TrajectoryStore<8, 2>>();
+    assert!(
+        oracle["inline_memory_layouts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|layout| layout["head_inline_bytes"] == head_bytes
+                && layout["agent_inline_without_store_bytes"] == agent_bytes),
+        "unmeasured native inline memory layout"
+    );
+    let mut arms = std::collections::BTreeSet::new();
+    for configuration in oracle["configurations"].as_array().unwrap() {
+        let name = configuration["agent"].as_str().unwrap();
+        arms.insert(name);
+        let temperature = configuration["temperature"].as_u64().unwrap() as u32;
+        let kind = match name {
+            "acs2vcp_k2" => acs2vcp::Preset::PrioritizedTwo { temperature },
+            "acs2vcp_k4" => acs2vcp::Preset::PrioritizedFour { temperature },
+            "acs2vcp_k2_uniform" => acs2vcp::Preset::UniformTwo,
+            "acs2vcp_k4_uniform" => acs2vcp::Preset::UniformFour,
+            _ => panic!("unregistered VCP arm"),
+        };
+        let task = configuration["task"].as_str().unwrap();
+        let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
+            acs2_envs::roles::ResearchTask::named(task).unwrap()
+        else {
+            unreachable!()
+        };
+        let distributions = MazePairDistributions::<Coordinates, 2>::registered(
+            task,
+            geometry,
+            configuration["cap"].as_u64().unwrap() as u32,
+            "coordinates",
+        );
+        let full = distributions.protocol();
+        let protocol = acs2_measure::goal_protocol::TaskProtocol {
+            training: full.training,
+            evaluations: full
+                .evaluations
+                .into_iter()
+                .filter(|block| block.name == "validation")
+                .collect(),
+            registration: full.registration,
+        };
+        let targets: Vec<_> = oracle["nominal_points"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|point| point.as_u64().unwrap())
+            .collect();
+        let mut rows = vec![];
+        run_protocol_with_sink::<_, _, 8, 2, 10>(
+            &protocol,
+            AgentKind::Acs2Vcp(kind),
+            42,
+            &targets,
+            &RunMetadata {
+                record_starts: false,
+                ..RunMetadata::test("test")
+            },
+            RunSettings {
+                evaluate_points: true,
+                capture_final_state: false,
+            },
+            &mut |row| rows.push(row),
+        );
+        assert_eq!(rows.len(), configuration["rows"].as_array().unwrap().len());
+        for (mut row, expected) in rows
+            .into_iter()
+            .zip(configuration["rows"].as_array().unwrap())
+        {
+            for key in oracle["excluded"].as_array().unwrap() {
+                row.as_object_mut().unwrap().remove(key.as_str().unwrap());
+            }
+            let mut expected = expected.clone();
+            let mut total = 0;
+            for head in expected["ensemble"]["heads"].as_array_mut().unwrap() {
+                let portable = head["population_known_bytes_lower_bound"].as_u64().unwrap();
+                assert_eq!(
+                    head["head_known_bytes_lower_bound"],
+                    portable
+                        + oracle["source_inline_memory_layout"]["head_inline_bytes"]
+                            .as_u64()
+                            .unwrap()
+                );
+                head["head_known_bytes_lower_bound"] =
+                    serde_json::json!(portable + head_bytes as u64);
+                total += portable + head_bytes as u64;
+            }
+            expected["ensemble"]["heads_known_bytes_lower_bound"] = serde_json::json!(total);
+            expected["ensemble"]["agent_known_bytes_lower_bound"] = serde_json::json!(
+                total + expected["trajectory_logical_bytes"].as_u64().unwrap() + agent_bytes as u64
+            );
+            assert_eq!(bits(&row), expected, "{task} {name} T={temperature}");
+        }
+    }
+    assert_eq!(
+        arms,
+        [
+            "acs2vcp_k2",
+            "acs2vcp_k4",
+            "acs2vcp_k2_uniform",
+            "acs2vcp_k4_uniform"
+        ]
+        .into_iter()
+        .collect()
+    );
+}
+
+#[test]
+fn vcp_cli_refuses_unregistered_hindsight_names_and_invalid_temperature_combinations() {
+    let output_path =
+        std::env::temp_dir().join(format!("acs2vcp-cli-{}.jsonl", std::process::id()));
+    let base = [
+        "--task",
+        "maze4",
+        "--cap",
+        "5",
+        "--protocol",
+        "maze-pairs-v1",
+        "--seeds",
+        "42",
+        "--targets",
+        "20",
+        "--evaluation-blocks",
+        "validation",
+    ];
+    for (name, option, value) in [
+        ("acs2vcp_k2_values", "--vcp-temperature", "1"),
+        ("acs2vcp_k2", "--vcp-temperature", "0"),
+        ("acs2vcp_k4", "--vcp-temperature", "25"),
+        ("acs2vcp_k2_uniform", "--vcp-temperature", "1"),
+        ("acs2vcp_k2", "--relabel-proportion", "0.5"),
+    ] {
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+            .args(base)
+            .args(["--agents", name, option, value, "--out"])
+            .arg(&output_path)
+            .output()
+            .unwrap();
+        assert!(!output.status.success(), "{name} {option} {value}");
+    }
+    assert!(!output_path.exists());
 }
