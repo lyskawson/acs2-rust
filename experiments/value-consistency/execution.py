@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import sys
 
-from protocol import PILOT_PARTS, pilot
+from protocol import PILOT_PARTS, RECOVERY_PARTS, pilot, recovery
 
 
 def measurement_identity():
@@ -16,9 +16,12 @@ def measurement_identity():
 def authorization_manifest(manifest, registration_path=None):
     if manifest['stage'] != 'authorized_cost_pilot':
         raise ValueError('VCP stage 2 is not registered or approved; stop after the stage-1 plan')
-    if manifest.get('pilot_part') not in PILOT_PARTS:
+    part = manifest.get('pilot_part')
+    if part in RECOVERY_PARTS:
+        return recovery(part) | measurement_identity()
+    if part not in PILOT_PARTS:
         raise ValueError('unregistered VCP pilot part')
-    return pilot(manifest['pilot_part']) | measurement_identity()
+    return pilot(part) | measurement_identity()
 
 
 if __name__ == '__main__':

@@ -3734,11 +3734,18 @@ full copies, every transition and p=2/3.
 The first cluster allocation group measured Maze4, seed 42. Both K=2 arms completed
 2M interactions; both K=4 arms reached the 1M point but hit the 449-second process
 watchdog before the 2M point. The four allocation CPUTimeRAW values are 283, 451, 295
-and 451 seconds: 1480 seconds (0.411111 CPU-hours). The twenty dependent jobs have not
-run; their original reservations total 12480 seconds. STOP is retained. This is an
+and 451 seconds: 1480 seconds (0.411111 CPU-hours). After explicit user authorization,
+the twenty dependent pending jobs were cancelled with zero allocation cost. STOP is retained. This is an
 undersized process limit, not evidence of a learning ceiling. The full six-maze,
 two-temperature pilot, its complete forecast and scientific registration remain
 unfinished; no tuning or final-grid execution is authorized.
+
+`prepare_recovery.py` freezes separate operational manifests with one maze and one K
+per part, at most two jobs, and longer per-maze/head limits. Its shared accounting
+scope includes the immutable initial ledger and every potential recovery part, so
+failed allocations remain charged and completed K=2 Maze4 runs are reused. A separate
+STOP preserves the original failure record. The second temperature is admitted by
+complete maze pairs in a fixed cost-pilot order, within the same five-hour bound.
 
 `fixtures/vcp_pair_regression.json` pins the two earliest points of these four real
 pilot trajectories (eight validation rows), including the usable prefixes of interrupted
@@ -3768,7 +3775,7 @@ with hard reservations, and a draft builder. The builder refuses an incomplete c
 pilot. Scientific settings still require confirmation before registration; the
 execution adapter refuses stage 2. The four research agents' measurement paths are
 unchanged by the later test and K=1 policy-identity additions.
-Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/14
+Implemented-contract gates pass 303 Rust tests; Python suites pass 47/7/20/37/37/14/13/15
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.

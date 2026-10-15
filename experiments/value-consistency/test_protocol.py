@@ -3,9 +3,9 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from execution import authorization_manifest
+from execution import authorization_manifest, measurement_identity
 from protocol import AGENTS, PRIORITIZED, PILOT_PARTS, candidates_from_priorities, configurations, forecast, pilot, select_temperature
-from protocol import ROOT
+from protocol import ROOT, RECOVERY_PARTS, SECOND_TEMPERATURE_ORDER, recovery
 
 sys.path.append(str(ROOT / 'experiments/grid'))
 from submit import run_batches
@@ -13,6 +13,25 @@ from grid_authorization import require_derivation
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_recovery_reuses_completed_runs_and_reserves_small_independent_batches(self):
+        plans = list(map(recovery, RECOVERY_PARTS))
+        first = [plan for plan in plans if plan['pilot_part'].startswith('recovery-t1-')]
+        self.assertEqual(sum(len(plan['agents']) for plan in first), 22)
+        self.assertEqual(len(first), 11)
+        self.assertNotIn('recovery-t1-maze4-k2', RECOVERY_PARTS)
+        self.assertEqual(set(SECOND_TEMPERATURE_ORDER), {config['task'] for config in configurations()})
+        for plan in plans:
+            batches = run_batches(plan)
+            self.assertEqual(len(batches), 1)
+            self.assertLessEqual(len(batches[0]), 2)
+            self.assertEqual(plan['phase_cpu_hour_limit'], 5)
+            self.assertEqual(plan['seeds'], [42])
+            self.assertEqual(authorization_manifest(plan), plan | measurement_identity())
+        changed = copy.deepcopy(recovery(RECOVERY_PARTS[0]))
+        changed['configurations'][0]['limits_minutes'][changed['agents'][0]] += 1
+        with self.assertRaises(ValueError):
+            require_derivation(changed, recovery(RECOVERY_PARTS[0]))
+
     def test_cost_pilot_reserves_each_maze_limit_instead_of_the_slowest_limit_for_every_job(self):
         plan = pilot(PILOT_PARTS[0])
         batches = run_batches(plan)

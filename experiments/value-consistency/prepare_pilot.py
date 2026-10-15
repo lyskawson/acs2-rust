@@ -12,16 +12,15 @@ sys.path.append(str(ROOT / 'experiments/grid'))
 from grid_protocol import atomic_json
 
 
-def prepare(output, destination):
+def operations_snapshot(output, name='operations'):
     output = Path(output)
-    destination = Path(destination)
     if any(parent.joinpath('.git').exists() for parent in [output.resolve(), *output.resolve().parents]):
         raise ValueError('pilot artifacts must be outside a checkout')
     if subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'status', '--porcelain'], text=True).strip():
         raise ValueError('operations source must be clean')
     commit = subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
     output.mkdir(parents=True, exist_ok=False)
-    operations = output / 'operations'
+    operations = output / name
     files = subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'ls-files', 'experiments'], text=True).splitlines()
     hashes = {}
     for name in files:
@@ -31,6 +30,13 @@ def prepare(output, destination):
         path.chmod((ROOT / name).stat().st_mode & 0o777)
         hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
     atomic_json(operations / 'manifest.json', dict(commit=commit, files=hashes))
+    return commit
+
+
+def prepare(output, destination):
+    output, destination = Path(output), Path(destination)
+    commit = operations_snapshot(output)
+    operations = output / 'operations'
     identity = measurement_identity()
     registration = dict(measurement=identity, pilot_parts=[pilot(part) for part in PILOT_PARTS],
         authorized_cpu_hours=5, second_temperature='all six mazes if admission fits; otherwise the registered reduced set, never both second-temperature parts',

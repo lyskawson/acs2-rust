@@ -12,6 +12,12 @@ TEMPERATURE_RANGE = list(range(1, 25))
 PILOT_TEMPERATURES = [1, 24]
 PILOT_PARTS = ['temperature1-and-controls', 'temperature24', 'temperature24-reduced']
 REDUCED_MAZES = ['maze4', 'maze7', 'woods14']
+RECOVERY_LIMITS = dict(maze4=(10, 14), maze5=(16, 24), maze6=(18, 28),
+                      maze7=(20, 32), woods14=(8, 10), mazema=(8, 10))
+SECOND_TEMPERATURE_ORDER = ['woods14', 'maze4', 'maze7', 'mazema', 'maze5', 'maze6']
+RECOVERY_PARTS = [f'recovery-t{temperature}-{maze}-k{heads}'
+                  for temperature in PILOT_TEMPERATURES for maze in RECOVERY_LIMITS for heads in [2, 4]
+                  if (temperature, maze, heads) != (1, 'maze4', 2)]
 
 
 def configurations():
@@ -40,6 +46,24 @@ def pilot(part):
     return dict(stage='authorized_cost_pilot', experiment='value-consistency', pilot_part=part,
                 seeds=[42], agents=agents, configurations=configs, partition='lem-cpu-normal',
                 cpu_model='AMD EPYC 9554 64-Core Processor', memory_mib=512, concurrency=24,
+                phase_cpu_hour_limit=5, pilot_allocation_cpu_seconds=0, accounting_since='2026-10-15')
+
+
+def recovery(part):
+    if part not in RECOVERY_PARTS:
+        raise ValueError('unregistered VCP recovery part')
+    _, temperature, maze, heads = part.split('-')
+    temperature, heads = int(temperature[1:]), int(heads[1:])
+    agents = [f'acs2vcp_k{heads}']
+    if temperature == 1:
+        agents.append(f'acs2vcp_k{heads}_uniform')
+    config = next(item for item in configurations() if item['task'] == maze)
+    config['limits_minutes'] = {agent: RECOVERY_LIMITS[maze][heads // 2 - 1] for agent in agents}
+    config['agent_settings'] = {agent: dict(temperature=temperature) for agent in agents if agent in PRIORITIZED}
+    config['evaluation_blocks'] = ['validation']
+    return dict(stage='authorized_cost_pilot', experiment='value-consistency', pilot_part=part,
+                seeds=[42], agents=agents, configurations=[config], partition='lem-cpu-normal',
+                cpu_model='AMD EPYC 9554 64-Core Processor', memory_mib=512, concurrency=20,
                 phase_cpu_hour_limit=5, pilot_allocation_cpu_seconds=0, accounting_since='2026-10-15')
 
 
