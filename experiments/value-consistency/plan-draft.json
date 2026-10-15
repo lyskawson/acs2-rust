@@ -1,8 +1,8 @@
 {
   "stage": "draft_pending_hindsight_confirmation_and_cpu_approval",
   "experiment": "value-consistency",
-  "measurement_commit": "79648424076144c77a3a87acf87418bb61aa7c42",
-  "binary_sha256": "c2478eb60caad34a5bdcc949b77018c329c4fbcdbd8629b60ca7dcb87c2fb6fa",
+  "measurement_commit": "82c08b5a89a63878fddfb76be8d5e25d0ae17a41",
+  "binary_sha256": "0c8dcb9c539462f9b84800519237a24e34c49e4d81b70a79a17cae0d7a98816d",
   "preset": {
     "alp_gen_variant": "Pyalcs",
     "beta": 0.05,
@@ -63,6 +63,7 @@
     61
   ],
   "agents": [
+    "acs2vcp_k2",
     "acs2vcp_k4",
     "acs2vcp_k2_uniform",
     "acs2vcp_k4_uniform"
@@ -3629,10 +3630,25 @@
         2000000
       ],
       "limits_minutes": {
+        "acs2vcp_k2": 6,
         "acs2vcp_k4": 12,
         "acs2vcp_k2_uniform": 8,
         "acs2vcp_k4_uniform": 12
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     },
     {
       "id": "maze5_c8_pairs",
@@ -9931,10 +9947,25 @@
         2000000
       ],
       "limits_minutes": {
+        "acs2vcp_k2": 13,
         "acs2vcp_k4": 23,
         "acs2vcp_k2_uniform": 12,
         "acs2vcp_k4_uniform": 24
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     },
     {
       "id": "maze6_c10_pairs",
@@ -16233,10 +16264,25 @@
         2000000
       ],
       "limits_minutes": {
-        "acs2vcp_k4": 24,
+        "acs2vcp_k2": 15,
+        "acs2vcp_k4": 36,
         "acs2vcp_k2_uniform": 13,
         "acs2vcp_k4_uniform": 23
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     },
     {
       "id": "maze7_c10_pairs",
@@ -22223,10 +22269,25 @@
         2000000
       ],
       "limits_minutes": {
-        "acs2vcp_k4": 28,
+        "acs2vcp_k2": 13,
+        "acs2vcp_k4": 27,
         "acs2vcp_k2_uniform": 14,
         "acs2vcp_k4_uniform": 25
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     },
     {
       "id": "woods14_c18_pairs",
@@ -24134,10 +24195,25 @@
         4000000
       ],
       "limits_minutes": {
+        "acs2vcp_k2": 4,
         "acs2vcp_k4": 8,
         "acs2vcp_k2_uniform": 4,
         "acs2vcp_k4_uniform": 6
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     },
     {
       "id": "mazema_c9_pairs",
@@ -25420,10 +25496,25 @@
         2000000
       ],
       "limits_minutes": {
+        "acs2vcp_k2": 3,
         "acs2vcp_k4": 4,
         "acs2vcp_k2_uniform": 2,
         "acs2vcp_k4_uniform": 4
-      }
+      },
+      "agent_settings": {
+        "acs2vcp_k2": {
+          "temperature": 24
+        },
+        "acs2vcp_k4": {
+          "temperature": 24
+        }
+      },
+      "evaluation_blocks": [
+        "training",
+        "validation",
+        "test"
+      ],
+      "vcp_diagnostics": "evaluation_disagreement"
     }
   ],
   "hindsight": {
@@ -25433,21 +25524,51 @@
     "relabeled_proportion": 0.6666666666666666,
     "relabeled_proportion_exact": "2/3",
     "confirmation_required_before_registration": true,
-    "changed_choice": "If confirmed settings differ from every approved phase-5 arm, add its one-head reference on seeds 42--61 at all registered points."
+    "changed_choice": "If confirmed settings differ from every approved phase-5 arm, add its one-head reference on seeds 42--61 at all registered points and revise the forecast before approval."
   },
-  "tuning": {
-    "seeds": [
-      42,
-      43,
-      44,
-      45,
-      46
-    ],
-    "evaluation_blocks": [
-      "validation"
-    ],
-    "candidates": {
+  "temperature": {
+    "prioritized": 24,
+    "controls": 0,
+    "fixed_before_results": true,
+    "tuning": false,
+    "rationale": "Across the representable integer range 1..24, the priority-statistics rule cannot reach mean-acceptance targets 3/4, 1/2 or 1/4: the pooled pilot curves remain at least 0.90 on every maze and K. T=1, the predecessor setting, accepted 99.69--99.97% of proposals and is practically the T=0 control already in the grid. T=24 is the strongest prioritization available in the registered range; tuning between them would mostly repeat the registered VCP-minus-control comparison.",
+    "pilot_priority_evidence": {
       "maze4_c5_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9866453957823196,
+            0.9849019841706738,
+            0.9841503783685568,
+            0.9836383894420504,
+            0.9832254482040086,
+            0.9828685573527696,
+            0.9825486421107059,
+            0.9822551936266055,
+            0.9819816909022469,
+            0.981723775803338,
+            0.9814783789309561,
+            0.9812432516240446,
+            0.9810166954177203,
+            0.980797396000959,
+            0.9805843161796651,
+            0.9803766240032962,
+            0.9801736428508208,
+            0.9799748157890075,
+            0.9797796795288105,
+            0.9795878450199315,
+            0.9793989827552236,
+            0.9792128114790617,
+            0.9790290894041174,
+            0.9788476073014802
+          ],
+          "observed_pilot_temperatures": [
+            1,
+            24
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25481,13 +25602,45 @@
           "observed_pilot_temperatures": [
             1,
             24
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       },
       "maze5_c8_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9690298992753569,
+            0.9654056823380817,
+            0.9634674346925729,
+            0.9621376131338057,
+            0.9611343858916258,
+            0.9603317904859794,
+            0.9596618264133908,
+            0.9590842190991966,
+            0.9585735837232066,
+            0.9581131373176494,
+            0.9576913483322151,
+            0.957300038054588,
+            0.9569332493982714,
+            0.9565865437504018,
+            0.9562565478680898,
+            0.9559406528564691,
+            0.9556368089128476,
+            0.9553433822349551,
+            0.9550590533291577,
+            0.9547827435159724,
+            0.9545135610077469,
+            0.9542507608092795,
+            0.9539937145217923,
+            0.9537418873396015
+          ],
+          "observed_pilot_temperatures": [
+            1,
+            24
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25521,13 +25674,44 @@
           "observed_pilot_temperatures": [
             1,
             24
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       },
       "maze6_c10_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9983253647314935,
+            0.9975667257049318,
+            0.9969495790709215,
+            0.996399895761576,
+            0.9958958290485993,
+            0.9954262789205901,
+            0.9949841785258594,
+            0.9945645876169615,
+            0.9941638693644982,
+            0.9937792506244566,
+            0.9934085598604275,
+            0.9930500600826371,
+            0.9927023372071961,
+            0.9923642227219257,
+            0.9920347385530334,
+            0.9917130568064523,
+            0.9913984697675706,
+            0.9910903671439557,
+            0.9907882185307643,
+            0.9904915597107212,
+            0.9901999818167064,
+            0.9899131226595589,
+            0.9896306597182865,
+            0.9893523044199325
+          ],
+          "observed_pilot_temperatures": [
+            1
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25560,13 +25744,45 @@
           ],
           "observed_pilot_temperatures": [
             1
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       },
       "maze7_c10_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9749828419643929,
+            0.9700174447691869,
+            0.9671996400225011,
+            0.9652334870677517,
+            0.9637522557551237,
+            0.9625816611029694,
+            0.9616213838940242,
+            0.9608089976240115,
+            0.9601039073457738,
+            0.9594788496662858,
+            0.9589150119053718,
+            0.9583990943350752,
+            0.9579214825892608,
+            0.9574750803408392,
+            0.9570545466155169,
+            0.9566557872661524,
+            0.9562756095287279,
+            0.9559114832639992,
+            0.955561373227177,
+            0.9552236194164496,
+            0.9548968504627153,
+            0.9545799200584633,
+            0.9542718596770328,
+            0.9539718429543258
+          ],
+          "observed_pilot_temperatures": [
+            1,
+            24
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25600,13 +25816,45 @@
           "observed_pilot_temperatures": [
             1,
             24
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       },
       "woods14_c18_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9852236554179172,
+            0.9808073775115782,
+            0.978779881386302,
+            0.9775790555168198,
+            0.9767606580187717,
+            0.9761521374485322,
+            0.9756698021278196,
+            0.9752676548899388,
+            0.9749185810294152,
+            0.9746058539755826,
+            0.9743187946736647,
+            0.974050386362088,
+            0.9737958999137039,
+            0.9735520730330867,
+            0.9733166058918763,
+            0.973087843602491,
+            0.9728645719692035,
+            0.972645883549063,
+            0.972431088220331,
+            0.9722196524443281,
+            0.9720111573348911,
+            0.971805269251897,
+            0.9716017188619569,
+            0.9714002860048618
+          ],
+          "observed_pilot_temperatures": [
+            1,
+            24
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25640,13 +25888,45 @@
           "observed_pilot_temperatures": [
             1,
             24
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       },
       "mazema_c9_pairs": {
+        "acs2vcp_k2": {
+          "temperatures": [
+            24
+          ],
+          "acceptance_curve": [
+            0.9897875142028822,
+            0.9854603602797833,
+            0.9829327343478482,
+            0.9812916819097481,
+            0.9801517916718583,
+            0.9793183616359811,
+            0.9786814555321982,
+            0.9781746178366675,
+            0.9777559277542773,
+            0.9773981921986812,
+            0.977083419471573,
+            0.9767995200082685,
+            0.9765382596289436,
+            0.976293957047216,
+            0.9760626404173001,
+            0.9758414942074307,
+            0.9756284928324969,
+            0.9754221558661862,
+            0.9752213831688553,
+            0.9750253429302159,
+            0.9748333950111401,
+            0.9746450379860754,
+            0.9744598722060236,
+            0.9742775737811908
+          ],
+          "observed_pilot_temperatures": [
+            1,
+            24
+          ]
+        },
         "acs2vcp_k4": {
           "temperatures": [
             24
@@ -25680,21 +25960,14 @@
           "observed_pilot_temperatures": [
             1,
             24
-          ],
-          "before_cost_reduction": [
-            24
           ]
         }
       }
-    },
-    "candidate_rule": "For each maze and K, pool each measured pilot temperature equally using its final cumulative proposal-variance acceptance curve. For target mean acceptances 3/4, 1/2 and 1/4 choose the nearest integer T in 1..24, ties to smaller T; deduplicate. No success field is read.",
-    "selection": "Highest equally weighted checkpoint-mean validation success within each seed, averaged over five seeds; scores within 1e-12 tie to smaller T.",
-    "controls": "T=0 fixed; not tuned",
-    "budgets": "the registered final budgets and nominal points",
-    "test_access": "none"
+    }
   },
   "final_grid": {
     "agents": [
+      "acs2vcp_k2",
       "acs2vcp_k4",
       "acs2vcp_k2_uniform",
       "acs2vcp_k4_uniform"
@@ -25726,8 +25999,8 @@
       "validation",
       "test"
     ],
-    "runs": 360,
-    "temperature": "the selected T separately for every retained maze and K; controls zero"
+    "runs": 480,
+    "temperature": "T=24 fixed for both prioritized arms; T=0 for both controls; no tuning stage"
   },
   "references": {
     "her_plan_sha256": "e18aca0f513ac3f6b6c0b9a52063acc78d9dc1becf369bcd5e755f5050ac6444",
@@ -25741,6 +26014,12 @@
     "archived_names": "experiments/grid/agent_names.json",
     "rule": "reuse verified approved archives; never rerun"
   },
+  "identity_checks": {
+    "seed": 42,
+    "source_pilot_commit": "79648424076144c77a3a87acf87418bb61aa7c42",
+    "rule": "Before accepting grid results, all seed-42 pilot-overlapping nominal points reproduce every learning, evaluation and knowledge field of each matching arm and temperature. Compare the validation block, since the pilot evaluated validation only. Prioritized arms retain every existing portable counter and priority field; controls remove exactly the independently counted value queries and classifier tests, satisfy formations=steps+3*full+2*values_only with zero priority queries, and report no training variance. Additive diagnostics and target-native inline headers are checked separately.",
+    "missing_scope": "Maze6 T=24 has no pilot identity oracle; the unchanged core/HER pins and joint-volume identities still apply. T=1 pilot rows are not a T=24 oracle."
+  },
   "analysis": {
     "views": [
       "checkpoint_mean_within_seed",
@@ -25752,8 +26031,16 @@
     "paired_interval": "marginal 95% Student t(19), critical value 2.093024054408263, without multiplicity correction",
     "comparisons": [
       [
+        "acs2vcp_k2",
+        "acs2vcp_k2_uniform"
+      ],
+      [
         "acs2vcp_k4",
         "acs2vcp_k4_uniform"
+      ],
+      [
+        "acs2vcp_k2",
+        "acs2her"
       ],
       [
         "acs2vcp_k4",
@@ -25768,21 +26055,11 @@
         "acs2her"
       ],
       [
-        "acs2vcp_k4",
+        "acs2vcp_k2",
         "acs2er_episodic"
-      ]
-    ],
-    "omitted_for_registered_cost_reduction": [
-      [
-        "acs2vcp_k2",
-        "acs2vcp_k2_uniform"
       ],
       [
-        "acs2vcp_k2",
-        "acs2her"
-      ],
-      [
-        "acs2vcp_k2",
+        "acs2vcp_k4",
         "acs2er_episodic"
       ],
       [
@@ -25882,7 +26159,8 @@
     "secondary": [
       "knowledge",
       "head_spread",
-      "proposal_and_accepted_variance",
+      "evaluation_head_disagreement_on_fixed_block_transitions",
+      "proposal_and_accepted_variance_with_logarithmic_bins_and_exact_zeros",
       "variance_maximum",
       "acceptance",
       "proposals_per_draw",
@@ -25890,7 +26168,7 @@
       "objective_cost_by_purpose",
       "priority_value_queries",
       "population_per_head_and_total",
-      "memory_per_head_and_total",
+      "memory_per_head_and_total_including_measurement_diagnostics",
       "learning_updates",
       "process_and_wall_time",
       "allocation_cpu_hours"
@@ -25906,63 +26184,181 @@
     "guards": "clean frozen musl measurement, mechanical manifests before sbatch, grant and test-only before each submission, node guards and STOP; no lease, host pinning or laptop automation",
     "admission": "pilots + all attempted allocation CPUTimeRAW + outstanding hard reservations + new limits <= the approved limit",
     "copies": "two independently checksum-verified raw copies",
-    "cost_reduction": "Apply the registered sixty-hour forecast trigger before registration. Any later change to candidates or arms requires a revised registration and approval before tuning; keep all six mazes, twenty seeds and both T=0 controls."
-  },
-  "cost_reduction": {
-    "trigger_cpu_hours": 60,
-    "rationale": "Use the previous HER study approval of sixty CPU-hours as the pre-results definition of a large forecast, not as authorization for this study.",
-    "initial_doubled_cpu_hours": 146.7758547092111,
-    "initial_hard_bound_cpu_hours": 124.78916666666667,
-    "applied": [
-      "Retain only the priority-derived candidate nearest mean acceptance 1/2 per maze and K.",
-      "Remove prioritized K=2 from tuning and the final grid; retain both unprioritized controls, every maze and all twenty seeds."
-    ],
-    "remaining_rule": "If the retained controls and K=4 still exceed sixty hours, request the explicit resulting limit; do not cut mazes, seeds or controls."
+    "scope": "All four arms, six mazes, twenty seeds and nine comparisons are fixed. The user sets the CPU-hour limit at approval; no automatic sixty-hour trigger or arm reduction."
   },
   "forecast": {
-    "grid_expected_cpu_hours": 51.92412691285556,
-    "tuning_expected_cpu_hours": 5.251147951944445,
-    "doubled_forecast_with_pilots_cpu_hours": 118.80638306293336,
-    "hard_bound_with_pilots_cpu_hours": 100.45583333333333,
-    "grid_reservation_cpu_seconds": 295200,
-    "tuning_reservation_cpu_seconds": 50400,
+    "grid_expected_cpu_hours": 50.83021211720554,
+    "doubled_forecast_with_pilots_cpu_hours": 106.11625756774443,
+    "hard_bound_with_pilots_cpu_hours": 108.1225,
+    "grid_reservation_cpu_seconds": 373200,
     "pilot_allocation_cpu_seconds": 16041,
     "limits_minutes": {
       "maze4_c5_pairs": {
+        "acs2vcp_k2": 6,
         "acs2vcp_k4": 12,
         "acs2vcp_k2_uniform": 8,
         "acs2vcp_k4_uniform": 12
       },
       "maze5_c8_pairs": {
+        "acs2vcp_k2": 13,
         "acs2vcp_k4": 23,
         "acs2vcp_k2_uniform": 12,
         "acs2vcp_k4_uniform": 24
       },
       "maze6_c10_pairs": {
-        "acs2vcp_k4": 24,
+        "acs2vcp_k2": 15,
+        "acs2vcp_k4": 36,
         "acs2vcp_k2_uniform": 13,
         "acs2vcp_k4_uniform": 23
       },
       "maze7_c10_pairs": {
-        "acs2vcp_k4": 28,
+        "acs2vcp_k2": 13,
+        "acs2vcp_k4": 27,
         "acs2vcp_k2_uniform": 14,
         "acs2vcp_k4_uniform": 25
       },
       "woods14_c18_pairs": {
+        "acs2vcp_k2": 4,
         "acs2vcp_k4": 8,
         "acs2vcp_k2_uniform": 4,
         "acs2vcp_k4_uniform": 6
       },
       "mazema_c9_pairs": {
+        "acs2vcp_k2": 3,
         "acs2vcp_k4": 4,
         "acs2vcp_k2_uniform": 2,
         "acs2vcp_k4_uniform": 4
       }
     },
     "memory_mib": 512,
-    "grid_runs": 360,
-    "tuning_runs": 30,
+    "grid_runs": 480,
     "grid_batches": [
+      {
+        "jobs": [
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 6
+          },
+          {
+            "configuration_id": "maze4_c5_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 6
+          }
+        ],
+        "limit_minutes": 6,
+        "reservation_cpu_seconds": 7200
+      },
       {
         "jobs": [
           {
@@ -26345,6 +26741,132 @@
         "jobs": [
           {
             "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze5_c8_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 13
+          }
+        ],
+        "limit_minutes": 13,
+        "reservation_cpu_seconds": 15600
+      },
+      {
+        "jobs": [
+          {
+            "configuration_id": "maze5_c8_pairs",
             "agent": "acs2vcp_k4",
             "seed": 42,
             "limit_minutes": 23
@@ -26723,127 +27245,253 @@
         "jobs": [
           {
             "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 15
+          },
+          {
+            "configuration_id": "maze6_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 15
+          }
+        ],
+        "limit_minutes": 15,
+        "reservation_cpu_seconds": 18000
+      },
+      {
+        "jobs": [
+          {
+            "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 42,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 43,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 44,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 45,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 46,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 47,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 48,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 49,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 50,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 51,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 52,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 53,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 54,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 55,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 56,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 57,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 58,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 59,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 60,
-            "limit_minutes": 24
+            "limit_minutes": 36
           },
           {
             "configuration_id": "maze6_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 61,
-            "limit_minutes": 24
+            "limit_minutes": 36
           }
         ],
-        "limit_minutes": 24,
-        "reservation_cpu_seconds": 28800
+        "limit_minutes": 36,
+        "reservation_cpu_seconds": 43200
       },
       {
         "jobs": [
@@ -27101,127 +27749,253 @@
         "jobs": [
           {
             "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 13
+          },
+          {
+            "configuration_id": "maze7_c10_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 13
+          }
+        ],
+        "limit_minutes": 13,
+        "reservation_cpu_seconds": 15600
+      },
+      {
+        "jobs": [
+          {
+            "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 42,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 43,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 44,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 45,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 46,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 47,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 48,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 49,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 50,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 51,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 52,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 53,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 54,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 55,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 56,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 57,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 58,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 59,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 60,
-            "limit_minutes": 28
+            "limit_minutes": 27
           },
           {
             "configuration_id": "maze7_c10_pairs",
             "agent": "acs2vcp_k4",
             "seed": 61,
-            "limit_minutes": 28
+            "limit_minutes": 27
           }
         ],
-        "limit_minutes": 28,
-        "reservation_cpu_seconds": 33600
+        "limit_minutes": 27,
+        "reservation_cpu_seconds": 32400
       },
       {
         "jobs": [
@@ -27474,6 +28248,132 @@
         ],
         "limit_minutes": 25,
         "reservation_cpu_seconds": 30000
+      },
+      {
+        "jobs": [
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 4
+          },
+          {
+            "configuration_id": "woods14_c18_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 4
+          }
+        ],
+        "limit_minutes": 4,
+        "reservation_cpu_seconds": 4800
       },
       {
         "jobs": [
@@ -27857,6 +28757,132 @@
         "jobs": [
           {
             "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 42,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 43,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 44,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 45,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 46,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 47,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 48,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 49,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 50,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 51,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 52,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 53,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 54,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 55,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 56,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 57,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 58,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 59,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 60,
+            "limit_minutes": 3
+          },
+          {
+            "configuration_id": "mazema_c9_pairs",
+            "agent": "acs2vcp_k2",
+            "seed": 61,
+            "limit_minutes": 3
+          }
+        ],
+        "limit_minutes": 3,
+        "reservation_cpu_seconds": 3600
+      },
+      {
+        "jobs": [
+          {
+            "configuration_id": "mazema_c9_pairs",
             "agent": "acs2vcp_k4",
             "seed": 42,
             "limit_minutes": 4
@@ -28232,227 +29258,647 @@
         "reservation_cpu_seconds": 4800
       }
     ],
-    "tuning_batches": [
+    "cells": [
       {
-        "jobs": [
-          {
-            "configuration_id": "maze4_c5_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 12
-          },
-          {
-            "configuration_id": "maze4_c5_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 12
-          },
-          {
-            "configuration_id": "maze4_c5_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 12
-          },
-          {
-            "configuration_id": "maze4_c5_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 12
-          },
-          {
-            "configuration_id": "maze4_c5_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 12
-          },
-          {
-            "configuration_id": "maze5_c8_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 23
-          },
-          {
-            "configuration_id": "maze5_c8_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 23
-          },
-          {
-            "configuration_id": "maze5_c8_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 23
-          },
-          {
-            "configuration_id": "maze5_c8_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 23
-          },
-          {
-            "configuration_id": "maze5_c8_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 23
-          },
-          {
-            "configuration_id": "maze6_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 24
-          },
-          {
-            "configuration_id": "maze6_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 24
-          },
-          {
-            "configuration_id": "maze6_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 24
-          },
-          {
-            "configuration_id": "maze6_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 24
-          },
-          {
-            "configuration_id": "maze6_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 24
-          },
-          {
-            "configuration_id": "maze7_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 28
-          },
-          {
-            "configuration_id": "maze7_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 28
-          },
-          {
-            "configuration_id": "maze7_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 28
-          },
-          {
-            "configuration_id": "maze7_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 28
-          },
-          {
-            "configuration_id": "maze7_c10_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 28
-          },
-          {
-            "configuration_id": "woods14_c18_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 8
-          },
-          {
-            "configuration_id": "woods14_c18_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 8
-          },
-          {
-            "configuration_id": "woods14_c18_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 8
-          },
-          {
-            "configuration_id": "woods14_c18_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 8
-          },
-          {
-            "configuration_id": "woods14_c18_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 8
-          },
-          {
-            "configuration_id": "mazema_c9_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 42,
-            "limit_minutes": 4
-          },
-          {
-            "configuration_id": "mazema_c9_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 43,
-            "limit_minutes": 4
-          },
-          {
-            "configuration_id": "mazema_c9_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 44,
-            "limit_minutes": 4
-          },
-          {
-            "configuration_id": "mazema_c9_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 45,
-            "limit_minutes": 4
-          },
-          {
-            "configuration_id": "mazema_c9_pairs",
-            "agent": "acs2vcp_k4",
-            "temperature": 24,
-            "seed": 46,
-            "limit_minutes": 4
-          }
-        ],
-        "limit_minutes": 28,
-        "reservation_cpu_seconds": 50400
+        "configuration_id": "maze4_c5_pairs",
+        "task": "maze4",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 202.300820772,
+        "pilot_allocation_cpu_seconds": 203,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.7027275263728491,
+        "expected_body_seconds": 203.00354829837286,
+        "expected_allocation_seconds": 206.26191329837286,
+        "pilot_derived_limit_minutes": 6,
+        "limit_minutes": 6,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze4_c5_pairs",
+        "task": "maze4",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 430.312490365,
+        "pilot_allocation_cpu_seconds": 431,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 1.8871044115674074,
+        "expected_body_seconds": 432.1995947765674,
+        "expected_allocation_seconds": 438.8305177765674,
+        "pilot_derived_limit_minutes": 12,
+        "limit_minutes": 12,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze4_c5_pairs",
+        "task": "maze4",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 293.381068092,
+        "pilot_allocation_cpu_seconds": 295,
+        "scale": 0.6250584283299491,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 1.0467743681804988,
+        "expected_body_seconds": 184.4270836915278,
+        "expected_allocation_seconds": 191.56441569152776,
+        "pilot_derived_limit_minutes": 8,
+        "limit_minutes": 8,
+        "calibration": {
+          "configuration_id": "maze4_c5_pairs",
+          "task": "maze4",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30000,
+          "pilot_classifier_tests": 814228304,
+          "revised_classifier_tests": 508940264,
+          "avoided_classifier_tests": 305288040,
+          "ratio": 0.6250584283299491,
+          "all_block_disagreement_transitions": 3068,
+          "additional_policy_pairs": 540
+        }
+      },
+      {
+        "configuration_id": "maze4_c5_pairs",
+        "task": "maze4",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 458.271012527,
+        "pilot_allocation_cpu_seconds": 460,
+        "scale": 0.45457885842820295,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 2.153945628859161,
+        "expected_body_seconds": 210.4742593541195,
+        "expected_allocation_seconds": 218.57818035411952,
+        "pilot_derived_limit_minutes": 12,
+        "limit_minutes": 12,
+        "calibration": {
+          "configuration_id": "maze4_c5_pairs",
+          "task": "maze4",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30004,
+          "pilot_classifier_tests": 993224222,
+          "revised_classifier_tests": 451498733,
+          "avoided_classifier_tests": 541725489,
+          "ratio": 0.45457885842820295,
+          "all_block_disagreement_transitions": 3068,
+          "additional_policy_pairs": 540
+        }
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
+        "task": "maze5",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 456.829030797,
+        "pilot_allocation_cpu_seconds": 458,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 3.4652131951201097,
+        "expected_body_seconds": 460.2942439921201,
+        "expected_allocation_seconds": 469.1015599921201,
+        "pilot_derived_limit_minutes": 12,
+        "limit_minutes": 13,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
+        "task": "maze5",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 870.195801486,
+        "pilot_allocation_cpu_seconds": 871,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 8.404864597757266,
+        "expected_body_seconds": 878.6006660837573,
+        "expected_allocation_seconds": 894.4016840837573,
+        "pilot_derived_limit_minutes": 23,
+        "limit_minutes": 23,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
+        "task": "maze5",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 452.123104601,
+        "pilot_allocation_cpu_seconds": 453,
+        "scale": 0.6250342499601843,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 3.7641899911470804,
+        "expected_body_seconds": 286.3566155651031,
+        "expected_allocation_seconds": 293.44415856510307,
+        "pilot_derived_limit_minutes": 12,
+        "limit_minutes": 12,
+        "calibration": {
+          "configuration_id": "maze5_c8_pairs",
+          "task": "maze5",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30005,
+          "pilot_classifier_tests": 1265432128,
+          "revised_classifier_tests": 790938421,
+          "avoided_classifier_tests": 474493707,
+          "ratio": 0.6250342499601843,
+          "all_block_disagreement_transitions": 5328,
+          "additional_policy_pairs": 1110
+        }
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
+        "task": "maze5",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 903.727012625,
+        "pilot_allocation_cpu_seconds": 905,
+        "scale": 0.45456790699900307,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 8.931757587614312,
+        "expected_body_seconds": 419.73705421502217,
+        "expected_allocation_seconds": 433.6523952150222,
+        "pilot_derived_limit_minutes": 24,
+        "limit_minutes": 24,
+        "calibration": {
+          "configuration_id": "maze5_c8_pairs",
+          "task": "maze5",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30000,
+          "pilot_classifier_tests": 1480170284,
+          "revised_classifier_tests": 672837908,
+          "avoided_classifier_tests": 807332376,
+          "ratio": 0.45456790699900307,
+          "all_block_disagreement_transitions": 5328,
+          "additional_policy_pairs": 1110
+        }
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "task": "maze6",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "Maze6 T=1 scaled by the largest measured T=24/T=1 allocation CPUTimeRAW ratio for the same K",
+        "pilot_body_wall_seconds": 467.901332609,
+        "pilot_allocation_cpu_seconds": 469,
+        "scale": 1.1724137931034482,
+        "ratio_source_configuration": "mazema_c9_pairs",
+        "additional_evaluation_seconds": 5.492752327380399,
+        "expected_body_seconds": 554.0667284896562,
+        "expected_allocation_seconds": 561.4759684896562,
+        "pilot_derived_limit_minutes": 13,
+        "limit_minutes": 15,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "task": "maze6",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "Maze6 T=1 scaled by the largest measured T=24/T=1 allocation CPUTimeRAW ratio for the same K",
+        "pilot_body_wall_seconds": 914.376456023,
+        "pilot_allocation_cpu_seconds": 916,
+        "scale": 1.5179487179487179,
+        "ratio_source_configuration": "woods14_c18_pairs",
+        "additional_evaluation_seconds": 16.2593473445067,
+        "expected_body_seconds": 1404.2359164871118,
+        "expected_allocation_seconds": 1418.7213844871117,
+        "pilot_derived_limit_minutes": 24,
+        "limit_minutes": 36,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "task": "maze6",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 475.622245851,
+        "pilot_allocation_cpu_seconds": 477,
+        "scale": 0.6250719551687424,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 4.598166087948838,
+        "expected_body_seconds": 301.89629322378164,
+        "expected_allocation_seconds": 309.80765322378164,
+        "pilot_derived_limit_minutes": 13,
+        "limit_minutes": 13,
+        "calibration": {
+          "configuration_id": "maze6_c10_pairs",
+          "task": "maze6",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30006,
+          "pilot_classifier_tests": 1321755291,
+          "revised_classifier_tests": 826192164,
+          "avoided_classifier_tests": 495563127,
+          "ratio": 0.6250719551687424,
+          "all_block_disagreement_transitions": 5544,
+          "additional_policy_pairs": 1110
+        }
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "task": "maze6",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 898.195129462,
+        "pilot_allocation_cpu_seconds": 899,
+        "scale": 0.4547073647415537,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 10.939542814066968,
+        "expected_body_seconds": 419.3554831554316,
+        "expected_allocation_seconds": 432.9910721554316,
+        "pilot_derived_limit_minutes": 23,
+        "limit_minutes": 23,
+        "calibration": {
+          "configuration_id": "maze6_c10_pairs",
+          "task": "maze6",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30006,
+          "pilot_classifier_tests": 1724472788,
+          "revised_classifier_tests": 784130477,
+          "avoided_classifier_tests": 940342311,
+          "ratio": 0.4547073647415537,
+          "all_block_disagreement_transitions": 5544,
+          "additional_policy_pairs": 1110
+        }
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "task": "maze7",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 483.022109539,
+        "pilot_allocation_cpu_seconds": 484,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 4.143642103852174,
+        "expected_body_seconds": 487.1657516428522,
+        "expected_allocation_seconds": 494.40706464285216,
+        "pilot_derived_limit_minutes": 13,
+        "limit_minutes": 13,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "task": "maze7",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 1036.655745827,
+        "pilot_allocation_cpu_seconds": 1038,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 10.557197100852353,
+        "expected_body_seconds": 1047.2129429278523,
+        "expected_allocation_seconds": 1065.3228469278522,
+        "pilot_derived_limit_minutes": 27,
+        "limit_minutes": 27,
+        "calibration": null
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "task": "maze7",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 520.124678759,
+        "pilot_allocation_cpu_seconds": 521,
+        "scale": 0.6250688385020798,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 4.789467195094183,
+        "expected_body_seconds": 329.9031960232497,
+        "expected_allocation_seconds": 338.01650002324976,
+        "pilot_derived_limit_minutes": 14,
+        "limit_minutes": 14,
+        "calibration": {
+          "configuration_id": "maze7_c10_pairs",
+          "task": "maze7",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30000,
+          "pilot_classifier_tests": 1491507251,
+          "revised_classifier_tests": 932294705,
+          "avoided_classifier_tests": 559212546,
+          "ratio": 0.6250688385020798,
+          "all_block_disagreement_transitions": 5110,
+          "additional_policy_pairs": 1044
+        }
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "task": "maze7",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 978.091425735,
+        "pilot_allocation_cpu_seconds": 979,
+        "scale": 0.45462097985341304,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 11.132367732529083,
+        "expected_body_seconds": 455.79325008639654,
+        "expected_allocation_seconds": 469.92216408639655,
+        "pilot_derived_limit_minutes": 25,
+        "limit_minutes": 25,
+        "calibration": {
+          "configuration_id": "maze7_c10_pairs",
+          "task": "maze7",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30009,
+          "pilot_classifier_tests": 1862157253,
+          "revised_classifier_tests": 846575755,
+          "avoided_classifier_tests": 1015581498,
+          "ratio": 0.45462097985341304,
+          "all_block_disagreement_transitions": 5110,
+          "additional_policy_pairs": 1044
+        }
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "task": "woods14",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 135.383191886,
+        "pilot_allocation_cpu_seconds": 137,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.255771061473126,
+        "expected_body_seconds": 135.63896294747312,
+        "expected_allocation_seconds": 138.98881994747313,
+        "pilot_derived_limit_minutes": 4,
+        "limit_minutes": 4,
+        "calibration": null
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "task": "woods14",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 294.808586269,
+        "pilot_allocation_cpu_seconds": 296,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.7917393345353794,
+        "expected_body_seconds": 295.6003256035354,
+        "expected_allocation_seconds": 300.6454496035354,
+        "pilot_derived_limit_minutes": 8,
+        "limit_minutes": 8,
+        "calibration": null
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "task": "woods14",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 131.002547854,
+        "pilot_allocation_cpu_seconds": 132,
+        "scale": 0.6251022473824266,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.26861264403737417,
+        "expected_body_seconds": 82.15859972039667,
+        "expected_allocation_seconds": 84.90211172039668,
+        "pilot_derived_limit_minutes": 4,
+        "limit_minutes": 4,
+        "calibration": {
+          "configuration_id": "woods14_c18_pairs",
+          "task": "woods14",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30016,
+          "pilot_classifier_tests": 268132781,
+          "revised_classifier_tests": 167610404,
+          "avoided_classifier_tests": 100522377,
+          "ratio": 0.6251022473824266,
+          "all_block_disagreement_transitions": 648,
+          "additional_policy_pairs": 285
+        }
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "task": "woods14",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 197.564799257,
+        "pilot_allocation_cpu_seconds": 199,
+        "scale": 0.4545330837981087,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.5898383817109594,
+        "expected_body_seconds": 90.38957583794947,
+        "expected_allocation_seconds": 94.72184183794947,
+        "pilot_derived_limit_minutes": 6,
+        "limit_minutes": 6,
+        "calibration": {
+          "configuration_id": "woods14_c18_pairs",
+          "task": "woods14",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30008,
+          "pilot_classifier_tests": 365326646,
+          "revised_classifier_tests": 166053047,
+          "avoided_classifier_tests": 199273599,
+          "ratio": 0.4545330837981087,
+          "all_block_disagreement_transitions": 648,
+          "additional_policy_pairs": 285
+        }
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "task": "mazema",
+        "agent": "acs2vcp_k2",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 66.2843038,
+        "pilot_allocation_cpu_seconds": 68,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.07790489519338728,
+        "expected_body_seconds": 66.36220869519339,
+        "expected_allocation_seconds": 69.11002469519339,
+        "pilot_derived_limit_minutes": 3,
+        "limit_minutes": 3,
+        "calibration": null
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "task": "mazema",
+        "agent": "acs2vcp_k4",
+        "temperature": 24,
+        "basis": "measured T=24",
+        "pilot_body_wall_seconds": 129.730727681,
+        "pilot_allocation_cpu_seconds": 132,
+        "scale": 1.0,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.21409416824774583,
+        "expected_body_seconds": 129.94482184924775,
+        "expected_allocation_seconds": 134.20610584924776,
+        "pilot_derived_limit_minutes": 4,
+        "limit_minutes": 4,
+        "calibration": null
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "task": "mazema",
+        "agent": "acs2vcp_k2_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 56.568187087,
+        "pilot_allocation_cpu_seconds": 58,
+        "scale": 0.6250617060471007,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.07077011455920787,
+        "expected_body_seconds": 35.429377643151,
+        "expected_allocation_seconds": 37.625802643151,
+        "pilot_derived_limit_minutes": 2,
+        "limit_minutes": 2,
+        "calibration": {
+          "configuration_id": "mazema_c9_pairs",
+          "task": "mazema",
+          "agent": "acs2vcp_k2_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30003,
+          "pilot_classifier_tests": 220170885,
+          "revised_classifier_tests": 137620389,
+          "avoided_classifier_tests": 82550496,
+          "ratio": 0.6250617060471007,
+          "all_block_disagreement_transitions": 476,
+          "additional_policy_pairs": 165
+        }
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "task": "mazema",
+        "agent": "acs2vcp_k4_uniform",
+        "temperature": 0,
+        "basis": "measured T=0 scaled by deterministic classifier-perception work",
+        "pilot_body_wall_seconds": 108.150163064,
+        "pilot_allocation_cpu_seconds": 110,
+        "scale": 0.45452445000712083,
+        "ratio_source_configuration": null,
+        "additional_evaluation_seconds": 0.19221540228606382,
+        "expected_body_seconds": 49.3491087871311,
+        "expected_allocation_seconds": 52.7385457871311,
+        "pilot_derived_limit_minutes": 4,
+        "limit_minutes": 4,
+        "calibration": {
+          "configuration_id": "mazema_c9_pairs",
+          "task": "mazema",
+          "agent": "acs2vcp_k4_uniform",
+          "seed": 42,
+          "nominal_step": 30000,
+          "actual_steps": 30002,
+          "pilot_classifier_tests": 357675949,
+          "revised_classifier_tests": 162572464,
+          "avoided_classifier_tests": 195103485,
+          "ratio": 0.45452445000712083,
+          "all_block_disagreement_transitions": 476,
+          "additional_policy_pairs": 165
+        }
       }
-    ]
+    ],
+    "maze6_ratio_metric": "allocation CPUTimeRAW T=24 divided by T=1; maximum over the five measured mazes separately for K=2 and K=4",
+    "control_scale": "classifier-perception tests at the same registered seed-42 checkpoint; no timing ratio",
+    "added_evaluation_rule": "Additional training/test policies charged at every pair times cap, plus disagreement queries for all three blocks, times the pilot training wall seconds per classifier-perception test. Sum the pilot head populations at every registered point; scale the missing Maze6 T=24 estimate by its same-K cost ratio.",
+    "limitations": "One seed, short control calibration and a missing Maze6 T=24 pilot are forecasts, not guaranteed costs; actual limits and accounting govern admission."
   },
-  "requested_cpu_hour_limit": 120,
+  "requested_cpu_hour_limit": 110,
   "stage2_authorized": false,
+  "measurement_evidence": {
+    "pilot_measurement": {
+      "measurement_commit": "79648424076144c77a3a87acf87418bb61aa7c42",
+      "binary_sha256": "c2478eb60caad34a5bdcc949b77018c329c4fbcdbd8629b60ca7dcb87c2fb6fa",
+      "preset": {
+        "alp_gen_variant": "Pyalcs",
+        "beta": 0.05,
+        "bootstrap": "MaxFitnessBootstrap",
+        "chi": 0.8,
+        "do_action_planning": false,
+        "do_ga": false,
+        "do_pee": false,
+        "do_subsumption": true,
+        "epsilon": 0.8,
+        "exploration": "EpsilonGreedy",
+        "gamma": 0.95,
+        "initial_ir": 0.0,
+        "initial_q": 0.5,
+        "initial_r": 0.5,
+        "mu": 0.3,
+        "number_of_possible_actions": 8,
+        "random_streams": {
+          "agent": 1,
+          "environment": 2,
+          "evaluation": 3,
+          "evaluation_environment": 6,
+          "evaluation_sample": 5,
+          "restricted_pool": 4
+        },
+        "replay_capacity": 10000,
+        "replay_updates_per_step": 3,
+        "replay_warmup": 1,
+        "theta_as": 20,
+        "theta_exp": 20,
+        "theta_ga": 100,
+        "theta_i": 0.1,
+        "theta_r": 0.9,
+        "truncation": "Bootstrap",
+        "u_max": 100000
+      }
+    },
+    "source_diff_from_pilot": [
+      "M\tacs2-agents/src/acs2vcp/mod.rs",
+      "M\tacs2-agents/src/acs2vcp/tests.rs",
+      "M\tacs2-measure/src/agents/vcp.rs",
+      "A\tacs2-measure/src/agents/vcp/disagreement.rs",
+      "M\tacs2-measure/src/knowledge.rs",
+      "M\tacs2-measure/src/pair_protocol.rs",
+      "M\tacs2-measure/src/runner.rs",
+      "M\tacs2-measure/src/task.rs",
+      "M\tacs2-measure/tests/acs2vcp.rs",
+      "A\tfixtures/vcp_pair_regression.json"
+    ],
+    "source_diff_from_review": [
+      "M\tacs2-agents/src/acs2vcp/mod.rs",
+      "M\tacs2-agents/src/acs2vcp/tests.rs",
+      "M\tacs2-measure/src/agents/vcp.rs",
+      "A\tacs2-measure/src/agents/vcp/disagreement.rs",
+      "M\tacs2-measure/src/knowledge.rs",
+      "M\tacs2-measure/src/pair_protocol.rs",
+      "M\tacs2-measure/src/runner.rs",
+      "M\tacs2-measure/src/task.rs",
+      "M\tacs2-measure/tests/acs2vcp.rs"
+    ],
+    "validity": "The priority distribution, populations, update steps, acting/evaluation streams and all old learning/evaluation/knowledge fields remain pinned. T=0 skips only unused training value queries; the separate observer and immutable evaluation diagnostics consume no learner randomness. Header-preserving measurement sidecars account for their additional memory separately.",
+    "local_native_calibration_binary_sha256": "e0189410afe7b6675aaf25e8658c15a9c7473798089e9aae1e1d1fba6e7ad1d1",
+    "calibration_source_commit": "82c08b5a89a63878fddfb76be8d5e25d0ae17a41"
+  },
   "cost_pilot": {
     "runs": 34,
     "rows": 278,
@@ -28467,9 +29913,12 @@
     ],
     "summary_sha256": "07d95baa4d44b6533107b8de338eca930039e61614d7616deac8eff1256327dc",
     "rows_sha256": "b7c3a1fb728c44c2a1d8367919ea61243d31c1659af90141b2eeee09df48b627",
+    "control_work_calibration_sha256": "a6f70fe3c17890ee11a575e43a8cfd3c2c04ff5332d63bd295b9a8d584e64439",
     "generator_sha256": {
-      "protocol.py": "d9e258692ea2bc6983f579a1bac4c743edc97f702ef87e21a500befad9dbc760",
-      "archive.py": "cd112f499ef330cf61c5233f71143e85b728b2c3db2f9cca5bf05913a8fcfd1a"
+      "protocol.py": "67023fe2fce397c0b409b44f58cd92a48510d12e34866b932d3b9f03a6f9b9ce",
+      "prepare_draft.py": "63e498ee265a1de4d03abfc14defad8a4fea673a970b242dd7cf97fc67367428",
+      "pilot_equivalence.py": "23d6eda7fd9acfa749c599b62f21cdc89290ec7a1323128db86c96a89e687b08",
+      "calibrate_controls.py": "4765d6d9ccf77e56dcb7a20eab6d3c23ea00e2c8fdecc567168176d398d30bc2"
     }
   }
 }

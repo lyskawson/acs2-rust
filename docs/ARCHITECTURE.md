@@ -3876,11 +3876,51 @@ is the larger of the doubled forecast including every pilot attempt and that har
 rounded up to five CPU-hours; the user sets the limit at approval. No tuning, final grid,
 cluster job or additional pilot is authorized by this revision.
 
+The revised clean measurement is `82c08b5a89a63878fddfb76be8d5e25d0ae17a41`, with
+locally cross-built musl SHA-256
+`0c8dcb9c539462f9b84800519237a24e34c49e4d81b70a79a17cae0d7a98816d`.
+The short control calibration completed twelve sequential runs and 36 rows in 85.65
+seconds. All 1k/3k/30k pilot-overlapping learning/evaluation/knowledge fields agree.
+Classifier-test cost ratios span 0.625034--0.625102 for K=2 and 0.454524--0.454707
+for K=4. `control-work-calibration.json` pins these deterministic ratios and the raw
+checksums; none is a timing ratio or a policy ranking.
+
+Maze6 T=24 is estimated from the T=1 pilot with same-K maximum allocation ratios
+68/58 = 1.172413793 (MazeMA, K=2) and 296/195 = 1.517948718 (Woods14, K=4).
+Including separately budgeted additional evaluation, the expected body/allocation
+seconds are 554.067/561.476 and 1404.236/1418.721. Their hard run limits are 15 and
+36 minutes. Every control keeps its previous pilot-derived grid limit.
+
+| Arm | Expected grid CPU-hours | Hard first-attempt reservations, hours |
+|---|---:|---:|
+| K=2, T=24 | 10.774141 | 18.000000 |
+| K=4, T=24 | 23.622933 | 36.666667 |
+| K=2, T=0 | 6.974226 | 17.666667 |
+| K=4, T=0 | 9.458912 | 31.333333 |
+
+The expected 480-run grid cost is **50.830212 hours**. Twice that forecast plus all
+16041 pilot allocation seconds is **106.116258 hours**. Actual twenty-job batches
+reserve 373200 seconds; with the pilot the hard bound is **108.122500 hours**.
+The revised draft requests **110 cumulative CPU-hours**, pending the user's approval.
+This is a forecast from one seed, a short work calibration and an unmeasured Maze6
+second temperature; the new training histogram overhead has not been timed separately.
+The unchanged control limits, 1.5-body-plus-30-second run margins, doubled estimate,
+STOP and cumulative hard admission accounting remain the operational bounds.
+
+Eight further mutations are caught directly: restored T=0 value queries, a summed
+first-action estimate, head-zero knowledge, merging exact zeros into positive bins,
+an off-by-one quantile rank, an unscaled Maze6 estimate, an unscaled control cost and
+changing the fixed temperature. Every mutation is restored before the gates. Shared
+collection accepts the original pilot schema and requires the revised zero-query and
+per-block disagreement schema for the new grid. Artifact tests check the actual draft,
+its source/calibration hashes, all nine contrasts and the real shared-tooling batches.
+No cluster access or additional cluster allocation occurred during this revision.
+
 Complete episodes retain the registered overshoot below cap: nominally equal budgets
 can have slightly different actual_steps. Actual interactions are counted once and
 updates equal three times that actual count; K never multiplies the budget.
 
-Implemented-contract gates pass 308 Rust tests; Python suites pass 47/7/20/37/37/14/13/23
+Implemented-contract gates pass 308 Rust tests; Python suites pass 47/7/20/37/37/14/13/25
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.
