@@ -72,6 +72,9 @@ def balance(plan, ledger, executor=execute):
 
 
 def run_batches(plan):
+    if plan['stage'] == 'authorized_cost_pilot' and plan.get('experiment') == 'value-consistency':
+        return [[(config, agent, seed) for agent in plan['agents'] for seed in plan['seeds']]
+                for config in plan['configurations']]
     if plan['stage'] == 'authorized_cost_pilot':
         return [[(config, agent, seed) for config in plan['configurations']
                  for agent in plan['agents'] for seed in plan['seeds']]]

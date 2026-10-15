@@ -1,12 +1,26 @@
 import copy
+import sys
 import unittest
 from unittest.mock import patch
 
 from execution import authorization_manifest
 from protocol import AGENTS, PRIORITIZED, PILOT_PARTS, candidates_from_priorities, configurations, forecast, pilot, select_temperature
+from protocol import ROOT
+
+sys.path.append(str(ROOT / 'experiments/grid'))
+from submit import run_batches
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_cost_pilot_reserves_each_maze_limit_instead_of_the_slowest_limit_for_every_job(self):
+        plan = pilot(PILOT_PARTS[0])
+        batches = run_batches(plan)
+        self.assertEqual(len(batches), 6)
+        self.assertEqual(sum(map(len, batches)), 24)
+        reservation = sum(max(config['limits_minutes'][agent] for config, agent, _ in batch) * 60 * len(batch) for batch in batches)
+        self.assertEqual(reservation, 4 * 3600)
+        self.assertTrue(all(len({config['id'] for config, _, _ in batch}) == 1 for batch in batches))
+
     def test_pilot_scope_has_all_mazes_heads_temperatures_and_controls_with_a_shared_five_hour_limit(self):
         first, second, reduced = map(pilot, PILOT_PARTS)
         self.assertEqual(len(first['configurations']), 6)
