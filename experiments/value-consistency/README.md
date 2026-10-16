@@ -57,6 +57,13 @@ references. The study allocation total instead includes every new attempt and
 the pilot, including failed attempts; historical reference allocations are not
 charged to the new ceiling.
 
+`checkpoint-scores.csv` retains integer summed head successes, head/pair counts and
+exact test fractions. `validate_tables.py` independently reconstructs seed scores,
+primary summaries, paired intervals and first threshold crossings from these counts
+with rational arithmetic. It also checks table scope, zero-query controls and allocation
+scope. Tests deliberately substitute unpaired intervals, strict threshold crossing and
+charges for historical references. This checker does not reuse the analysis arithmetic.
+
 `plots.py` accepts only checksum-verified output declaring all 480 runs and 180
 pilot identity rows. It exports static SVG/PNG test curves, common head disagreement,
 exact-zero shares and both sets of nine paired comparisons. Matplotlib is a plotting
@@ -65,5 +72,6 @@ dependency only and is recorded beside the figures; it does not enter measuremen
 ```bash
 python3 -B -m unittest discover -s experiments/value-consistency -p 'test_*.py'
 python3 -B experiments/value-consistency/analyze.py --study STUDY --her HER_ARCHIVE --baseline PAIR_ARCHIVE --out NEW_ANALYSIS_DIRECTORY
+python3 -B experiments/value-consistency/validate_tables.py ANALYSIS_DIRECTORY
 python3 -B experiments/value-consistency/plots.py ANALYSIS_DIRECTORY NEW_FIGURE_DIRECTORY
 ```

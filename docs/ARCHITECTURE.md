@@ -3955,6 +3955,11 @@ exact rational thresholds, block curves, per-head diagnostics, distributions and
 separate process/allocation/wall costs. Seeds remain the statistical units. Evaluation
 quantiles are summarized across seeds; pooled histograms instead weight raw counts.
 An unmeasured control training variance stays absent.
+The exported integer head-success counts and exact checkpoint fractions support an
+independent rational reconstruction in `validate_tables.py`: seed scores, both sets of
+paired intervals, exact threshold crossings and allocation scope are checked without
+calling the analysis arithmetic. Synthetic export mutations using unpaired intervals,
+strict threshold crossing or charging historical references are all rejected.
 
 Complete episodes retain the registered overshoot below cap: nominally equal budgets
 can have slightly different actual_steps. Actual interactions are counted once and

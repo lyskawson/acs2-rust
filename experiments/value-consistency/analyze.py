@@ -152,7 +152,7 @@ def analyze(study, her, baseline, destination):
     plan = approved(study / 'approved-plan.json')
     entries.update(reused(plan, her, baseline))
     destination.mkdir(parents=True, exist_ok=False)
-    tables = {name: [] for name in ['primary', 'comparisons', 'seed-scores', 'thresholds', 'learning-curves',
+    tables = {name: [] for name in ['primary', 'comparisons', 'seed-scores', 'checkpoint-scores', 'thresholds', 'learning-curves',
                                    'diagnostics', 'distributions', 'run-costs', 'point-diagnostics']}
     results = []
     for config in plan['configurations']:
@@ -163,6 +163,16 @@ def analyze(study, her, baseline, destination):
                 entry = entries[identifier, name, seed]
                 rows = [json.loads(line) for line in (entry['path'] / 'rows.jsonl').read_text().splitlines()]
                 datasets[name].extend(rows)
+                for row in rows:
+                    block = row['evaluation_blocks']['test']
+                    heads = len(block.get('heads', [block]))
+                    exact = exact_success(block)
+                    count = exact * heads * block['evaluation_pairs']
+                    if count.denominator != 1:
+                        raise ValueError('head success total is not an integer')
+                    tables['checkpoint-scores'].append(dict(configuration=identifier, arm=name, seed=seed,
+                        nominal_step=row['nominal_step'], actual_steps=row['actual_steps'], heads=heads,
+                        evaluation_pairs=block['evaluation_pairs'], head_successes_sum=int(count), exact_test_success=str(exact)))
                 tables['run-costs'].append(dict(configuration=identifier, arm=name, seed=seed,
                     allocation_scope='new_selected_run' if name in plan['agents'] else 'reused_reference',
                     source_directory=str(entry['path']), **run_cost(entry, rows)))

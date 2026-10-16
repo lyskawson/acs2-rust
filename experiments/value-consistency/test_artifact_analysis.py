@@ -1,12 +1,16 @@
 import copy
 import csv
+import hashlib
 import json
 from pathlib import Path
 import tempfile
+import math
+import statistics
 import unittest
 from unittest.mock import patch
 
 from analyze import analyze, analyze_maze, metric_summaries, pooled_bins
+from validate_tables import validate
 
 
 def evaluation(counts):
@@ -16,8 +20,9 @@ def evaluation(counts):
 
 def fixture():
     registered = json.loads(Path(__file__).with_name('plan-draft.json').read_text())
-    config = dict(id='synthetic', targets=[100, 1000])
-    plan = dict(agents=registered['agents'], analysis=dict(comparisons=registered['analysis']['comparisons'],
+    config = dict(id='synthetic', targets=[100, 1000], cap=8,
+                  registration=dict(blocks=dict(test=dict(evaluation_pairs=10))))
+    plan = dict(agents=registered['agents'], seeds=list(range(42, 62)), analysis=dict(comparisons=registered['analysis']['comparisons'],
         thresholds=dict(synthetic=dict(acs2_final='1/2', acs2er_final='1/2')),
         baseline_threshold_crossing_checks=dict(synthetic=dict(acs2_final=dict(acs2=1000, acs2er=1000),
                                                                acs2er_final=dict(acs2=1000, acs2er=1000)))))
@@ -38,6 +43,7 @@ class ArtifactAnalysisTests(unittest.TestCase):
     def test_exported_tables_retain_both_views_exact_scores_and_separate_run_costs(self):
         plan, config, datasets = fixture()
         plan['configurations'] = [config]
+        plan['analysis']['thresholds']['synthetic']['acs2_final'] = '1'
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             entries = {}
@@ -48,6 +54,12 @@ class ArtifactAnalysisTests(unittest.TestCase):
                     selected = copy.deepcopy([row for row in rows if row['seed'] == seed])
                     for row in selected:
                         row.update(actual_steps=row['nominal_step'], wall_seconds_train=8., wall_seconds_eval=1., wall_seconds_total=9.)
+                        if name in plan['agents']:
+                            block = row['evaluation_blocks']['test']
+                            for head in block['heads']:
+                                head['success'] -= (seed % 2)/10
+                            block['success'] = sum(head['success'] for head in block['heads']) / len(block['heads'])
+                            row['replay_diagnostics']['priority']['value_queries'] = 0 if name.endswith('_uniform') else 10
                         row['evaluation_blocks'].update(training=copy.deepcopy(row['evaluation_blocks']['test']),
                                                          validation=copy.deepcopy(row['evaluation_blocks']['test']))
                     (path / 'rows.jsonl').write_text(''.join(json.dumps(row)+'\n' for row in selected))
@@ -57,7 +69,9 @@ class ArtifactAnalysisTests(unittest.TestCase):
                     entries[config['id'], name, seed] = dict(path=path, allocation_cpu_seconds=15)
             current = {key: value for key, value in entries.items() if key[1] in plan['agents']}
             references = {key: value for key, value in entries.items() if key not in current}
-            with patch('analyze.verify_study', return_value=(current, dict(pilot_identity_rows=180))):
+            verification = dict(pilot_identity_rows=180, runs=80, grid_allocated_cpu_seconds=1200,
+                                pilot_allocated_cpu_seconds=16041, allocated_cpu_seconds=17241, batches={})
+            with patch('analyze.verify_study', return_value=(current, verification)):
                 with patch('analyze.reused', return_value=references), patch('analyze.approved', return_value=plan):
                     destination = root / 'analysis'
                     analyze(root, root, root, destination)
@@ -68,6 +82,7 @@ class ArtifactAnalysisTests(unittest.TestCase):
             self.assertEqual(len(table('comparisons')), 18)
             self.assertEqual({row['view'] for row in table('comparisons')}, {'checkpoint_mean_within_seed', 'final_point'})
             self.assertEqual(len(table('seed-scores')), 320)
+            self.assertEqual(len(table('checkpoint-scores')), 320)
             self.assertEqual(len(table('thresholds')), 16)
             self.assertEqual(len(table('learning-curves')), 48)
             self.assertEqual(len(table('run-costs')), 160)
@@ -77,6 +92,45 @@ class ArtifactAnalysisTests(unittest.TestCase):
             self.assertEqual(float(table('run-costs')[0]['allocation_cpu_seconds']), 15.)
             self.assertEqual(float(table('run-costs')[0]['training_cpu_seconds_estimate']), 7.)
             self.assertTrue((destination / 'files.sha256.json').exists())
+            checked = validate(destination, plan)
+            self.assertEqual(checked['checkpoints'], 320)
+            self.assertEqual(checked['comparisons'], 18)
+            def mutate(name, change, message):
+                path = destination / (name+'.csv')
+                original = path.read_bytes()
+                rows = table(name)
+                change(rows)
+                with path.open('w', newline='') as stream:
+                    writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+                    writer.writeheader()
+                    writer.writerows(rows)
+                manifest = destination / 'files.sha256.json'
+                hashes = json.loads(manifest.read_text())
+                hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+                manifest.write_text(json.dumps(hashes))
+                try:
+                    with self.assertRaisesRegex(ValueError, message):
+                        validate(destination, plan)
+                finally:
+                    path.write_bytes(original)
+                    hashes[path.name] = hashlib.sha256(original).hexdigest()
+                    manifest.write_text(json.dumps(hashes))
+            def unpaired(rows):
+                row = rows[0]
+                scores = table('seed-scores')
+                values = [[float(item['score']) for item in scores if item['arm'] == row[side] and item['view'] == row['view']]
+                          for side in ['left', 'right']]
+                error = math.sqrt(sum(statistics.variance(group)/20 for group in values))
+                row.update(se=str(error), ci_low=str(float(row['mean'])-2.093024054408263*error),
+                           ci_high=str(float(row['mean'])+2.093024054408263*error))
+            mutate('comparisons', unpaired, 'statistic differs: se')
+            def strict_threshold(rows):
+                row = next(item for item in rows if item['arm'] == 'acs2' and item['threshold'] == 'acs2_final')
+                row['first_registered_nominal_step'] = ''
+            mutate('thresholds', strict_threshold, 'threshold crossing differs')
+            def charge_reference(rows):
+                next(row for row in rows if row['arm'] == 'acs2her')['allocation_scope'] = 'new_selected_run'
+            mutate('run-costs', charge_reference, 'reference cost was charged')
 
     def test_all_nine_comparisons_have_both_views_and_twenty_seed_units(self):
         plan, config, datasets = fixture()
