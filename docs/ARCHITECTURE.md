@@ -3970,6 +3970,351 @@ for tools, random policy, baseline pilot, grid, HER variants, maze baselines, co
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.
 
+### Held-pair success with fixed-temperature consistency selection
+
+The approved four-arm grid is complete: **480 selected runs, 487 attempts and 3920
+selected checkpoint rows**, with training, validation and test blocks in each row.
+All 180 overlapping seed-42 validation rows reproduce the pilot, subject only to the
+documented control-counter changes and additive diagnostics; Maze6 T=24 has no pilot
+oracle. All 49 interrupted-prefix rows reproduce their approved retries. No tuning or
+additional experimental arm was run. The analysis and independent table reconstruction
+use `6f9a9c3691dd96dd2fb4faf6d480697b989f929e`; the measurement source remains
+`82c08b5a89a63878fddfb76be8d5e25d0ae17a41`, with an empty source/Cargo diff.
+
+In the tables, V2/V4 mean `acs2vcp_k2`/`acs2vcp_k4` at T=24, and U2/U4 mean their
+`_uniform` controls at T=0. HER is `acs2her`; ER-E is `acs2er_episodic`.
+The approved historical HER and pair-baseline runs supply all four reference arms;
+their costs are not charged to this execution. Every cell uses seeds 42--61 (n=20).
+Success is the head mean within a seed. The primary view weights registered points
+equally within each seed, then reports the seed mean and SE; the other view uses the
+last point. These are proportions, not percentages or an area under the curve.
+The horizon is 2M interactions, except Woods14 at 4M. Nominal points retain the
+registered complete-episode overshoot; actual interactions are counted once.
+
+| Maze | Arm | Checkpoint mean ± SE | Final point ± SE |
+| --- | --- | --- | --- |
+| Maze4 | V2 | 0.166319 ± 0.002271 | 0.211420 ± 0.006386 |
+| Maze4 | V4 | 0.145747 ± 0.003231 | 0.193750 ± 0.005247 |
+| Maze4 | U2 | 0.181964 ± 0.003941 | 0.224228 ± 0.005697 |
+| Maze4 | U4 | 0.168113 ± 0.002532 | 0.234568 ± 0.004310 |
+| Maze4 | HER | 0.184722 ± 0.004090 | 0.225000 ± 0.009620 |
+| Maze4 | ER-E | 0.172608 ± 0.004452 | 0.227778 ± 0.008220 |
+| Maze4 | ACS2 | 0.193403 ± 0.003761 | 0.325309 ± 0.009405 |
+| Maze4 | ACS2ER | 0.166512 ± 0.004987 | 0.227160 ± 0.011862 |
+| Maze5 | V2 | 0.122579 ± 0.002429 | 0.165203 ± 0.005105 |
+| Maze5 | V4 | 0.103836 ± 0.001879 | 0.146171 ± 0.002908 |
+| Maze5 | U2 | 0.130152 ± 0.001622 | 0.183671 ± 0.003574 |
+| Maze5 | U4 | 0.124859 ± 0.001616 | 0.184516 ± 0.003482 |
+| Maze5 | HER | 0.140541 ± 0.002868 | 0.191892 ± 0.006951 |
+| Maze5 | ER-E | 0.111008 ± 0.003451 | 0.145721 ± 0.006571 |
+| Maze5 | ACS2 | 0.131306 ± 0.002771 | 0.235586 ± 0.008371 |
+| Maze5 | ACS2ER | 0.116104 ± 0.003337 | 0.160360 ± 0.009625 |
+| Maze6 | V2 | 0.134516 ± 0.002544 | 0.198761 ± 0.004942 |
+| Maze6 | V4 | 0.117244 ± 0.001747 | 0.177421 ± 0.004237 |
+| Maze6 | U2 | 0.146664 ± 0.002226 | 0.205856 ± 0.004337 |
+| Maze6 | U4 | 0.138725 ± 0.001911 | 0.223649 ± 0.003897 |
+| Maze6 | HER | 0.156503 ± 0.002389 | 0.209234 ± 0.004852 |
+| Maze6 | ER-E | 0.133615 ± 0.003676 | 0.181081 ± 0.011403 |
+| Maze6 | ACS2 | 0.156954 ± 0.003462 | 0.284910 ± 0.010457 |
+| Maze6 | ACS2ER | 0.128801 ± 0.003729 | 0.166441 ± 0.010022 |
+| Maze7 | V2 | 0.126591 ± 0.001814 | 0.175579 ± 0.003451 |
+| Maze7 | V4 | 0.116884 ± 0.001368 | 0.178646 ± 0.002054 |
+| Maze7 | U2 | 0.140177 ± 0.001742 | 0.197454 ± 0.003434 |
+| Maze7 | U4 | 0.128610 ± 0.002223 | 0.201678 ± 0.002658 |
+| Maze7 | HER | 0.157523 ± 0.003102 | 0.207639 ± 0.005377 |
+| Maze7 | ER-E | 0.138021 ± 0.003490 | 0.201157 ± 0.011896 |
+| Maze7 | ACS2 | 0.147656 ± 0.003611 | 0.266435 ± 0.011896 |
+| Maze7 | ACS2ER | 0.137124 ± 0.003336 | 0.179861 ± 0.010283 |
+| Woods14 | V2 | 0.154971 ± 0.002798 | 0.180702 ± 0.006313 |
+| Woods14 | V4 | 0.142325 ± 0.003824 | 0.169079 ± 0.005125 |
+| Woods14 | U2 | 0.150195 ± 0.003606 | 0.171053 ± 0.005815 |
+| Woods14 | U4 | 0.150146 ± 0.003098 | 0.171272 ± 0.003607 |
+| Woods14 | HER | 0.164912 ± 0.005264 | 0.183333 ± 0.008197 |
+| Woods14 | ER-E | 0.166862 ± 0.005303 | 0.200000 ± 0.018063 |
+| Woods14 | ACS2 | 0.184795 ± 0.006324 | 0.197368 ± 0.014336 |
+| Woods14 | ACS2ER | 0.172904 ± 0.008103 | 0.183333 ± 0.016471 |
+| MazeMA | V2 | 0.172431 ± 0.004844 | 0.203889 ± 0.008112 |
+| MazeMA | V4 | 0.178090 ± 0.003504 | 0.233611 ± 0.005735 |
+| MazeMA | U2 | 0.188125 ± 0.006367 | 0.223333 ± 0.010660 |
+| MazeMA | U4 | 0.183507 ± 0.004801 | 0.238889 ± 0.006474 |
+| MazeMA | HER | 0.199028 ± 0.008341 | 0.213333 ± 0.013527 |
+| MazeMA | ER-E | 0.197361 ± 0.007135 | 0.234444 ± 0.014552 |
+| MazeMA | ACS2 | 0.187361 ± 0.006450 | 0.272222 ± 0.017725 |
+| MazeMA | ACS2ER | 0.190972 ± 0.007079 | 0.214444 ± 0.018116 |
+
+Every registered contrast follows, as mean paired difference ± SE and marginal 95%
+t(19) interval (critical value 2.093024054408263). Heads are not extra statistical
+replicates. There is no multiplicity correction or pooled test across mazes.
+
+| Maze | Contrast | Checkpoint Δ ± SE [95% CI] | Final Δ ± SE [95% CI] |
+| --- | --- | --- | --- |
+| Maze4 | V2 − U2 | -0.015644 ± 0.003755 [-0.023503, -0.007785] | -0.012809 ± 0.007050 [-0.027564, +0.001947] |
+| Maze4 | V4 − U4 | -0.022367 ± 0.003744 [-0.030203, -0.014530] | -0.040818 ± 0.005642 [-0.052626, -0.029009] |
+| Maze4 | V2 − HER | -0.018403 ± 0.004229 [-0.027254, -0.009552] | -0.013580 ± 0.010772 [-0.036126, +0.008966] |
+| Maze4 | V4 − HER | -0.038976 ± 0.004553 [-0.048506, -0.029445] | -0.031250 ± 0.011765 [-0.055875, -0.006625] |
+| Maze4 | U2 − HER | -0.002758 ± 0.005657 [-0.014598, +0.009081] | -0.000772 ± 0.010404 [-0.022547, +0.021004] |
+| Maze4 | U4 − HER | -0.016609 ± 0.004666 [-0.026375, -0.006842] | +0.009568 ± 0.010410 [-0.012220, +0.031356] |
+| Maze4 | V2 − ER-E | -0.006289 ± 0.004758 [-0.016247, +0.003670] | -0.016358 ± 0.010146 [-0.037593, +0.004877] |
+| Maze4 | V4 − ER-E | -0.026861 ± 0.005582 [-0.038544, -0.015179] | -0.034028 ± 0.010043 [-0.055047, -0.013008] |
+| Maze4 | V4 − V2 | -0.020573 ± 0.003582 [-0.028071, -0.013075] | -0.017670 ± 0.009029 [-0.036567, +0.001227] |
+| Maze5 | V2 − U2 | -0.007573 ± 0.003058 [-0.013974, -0.001172] | -0.018468 ± 0.006150 [-0.031340, -0.005597] |
+| Maze5 | V4 − U4 | -0.021023 ± 0.001767 [-0.024722, -0.017325] | -0.038345 ± 0.004084 [-0.046893, -0.029796] |
+| Maze5 | V2 − HER | -0.017962 ± 0.003746 [-0.025803, -0.010121] | -0.026689 ± 0.007470 [-0.042325, -0.011054] |
+| Maze5 | V4 − HER | -0.036705 ± 0.002702 [-0.042360, -0.031049] | -0.045721 ± 0.005974 [-0.058225, -0.033217] |
+| Maze5 | U2 − HER | -0.010389 ± 0.003790 [-0.018320, -0.002457] | -0.008221 ± 0.008636 [-0.026295, +0.009854] |
+| Maze5 | U4 − HER | -0.015681 ± 0.003358 [-0.022710, -0.008653] | -0.007376 ± 0.006864 [-0.021743, +0.006991] |
+| Maze5 | V2 − ER-E | +0.011571 ± 0.004553 [+0.002042, +0.021100] | +0.019482 ± 0.009637 [-0.000688, +0.039652] |
+| Maze5 | V4 − ER-E | -0.007172 ± 0.004416 [-0.016416, +0.002072] | +0.000450 ± 0.008261 [-0.016841, +0.017742] |
+| Maze5 | V4 − V2 | -0.018743 ± 0.002718 [-0.024432, -0.013054] | -0.019032 ± 0.005466 [-0.030473, -0.007590] |
+| Maze6 | V2 − U2 | -0.012148 ± 0.003594 [-0.019670, -0.004627] | -0.007095 ± 0.007277 [-0.022325, +0.008136] |
+| Maze6 | V4 − U4 | -0.021481 ± 0.002244 [-0.026178, -0.016784] | -0.046227 ± 0.006104 [-0.059004, -0.033451] |
+| Maze6 | V2 − HER | -0.021988 ± 0.003529 [-0.029375, -0.014601] | -0.010473 ± 0.006095 [-0.023229, +0.002283] |
+| Maze6 | V4 − HER | -0.039260 ± 0.002998 [-0.045534, -0.032985] | -0.031813 ± 0.007032 [-0.046531, -0.017095] |
+| Maze6 | U2 − HER | -0.009840 ± 0.003435 [-0.017029, -0.002650] | -0.003378 ± 0.005913 [-0.015754, +0.008997] |
+| Maze6 | U4 − HER | -0.017779 ± 0.003164 [-0.024401, -0.011156] | +0.014414 ± 0.005959 [+0.001942, +0.026887] |
+| Maze6 | V2 − ER-E | +0.000901 ± 0.003472 [-0.006366, +0.008168] | +0.017680 ± 0.009849 [-0.002934, +0.038294] |
+| Maze6 | V4 − ER-E | -0.016371 ± 0.003869 [-0.024469, -0.008273] | -0.003660 ± 0.012584 [-0.029998, +0.022678] |
+| Maze6 | V4 − V2 | -0.017272 ± 0.002833 [-0.023202, -0.011342] | -0.021340 ± 0.006667 [-0.035295, -0.007385] |
+| Maze7 | V2 − U2 | -0.013585 ± 0.002381 [-0.018568, -0.008602] | -0.021875 ± 0.004895 [-0.032119, -0.011631] |
+| Maze7 | V4 − U4 | -0.011726 ± 0.002194 [-0.016319, -0.007133] | -0.023032 ± 0.003593 [-0.030552, -0.015512] |
+| Maze7 | V2 − HER | -0.030932 ± 0.003300 [-0.037839, -0.024025] | -0.032060 ± 0.007424 [-0.047599, -0.016522] |
+| Maze7 | V4 − HER | -0.040639 ± 0.002557 [-0.045992, -0.035287] | -0.028993 ± 0.005235 [-0.039949, -0.018037] |
+| Maze7 | U2 − HER | -0.017347 ± 0.003342 [-0.024341, -0.010352] | -0.010185 ± 0.007403 [-0.025680, +0.005310] |
+| Maze7 | U4 − HER | -0.028913 ± 0.003659 [-0.036572, -0.021255] | -0.005961 ± 0.006560 [-0.019690, +0.007769] |
+| Maze7 | V2 − ER-E | -0.011429 ± 0.004148 [-0.020111, -0.002748] | -0.025579 ± 0.012540 [-0.051824, +0.000667] |
+| Maze7 | V4 − ER-E | -0.021137 ± 0.003874 [-0.029245, -0.013029] | -0.022512 ± 0.011937 [-0.047496, +0.002473] |
+| Maze7 | V4 − V2 | -0.009708 ± 0.001895 [-0.013675, -0.005741] | +0.003067 ± 0.003309 [-0.003859, +0.009994] |
+| Woods14 | V2 − U2 | +0.004776 ± 0.004675 [-0.005009, +0.014560] | +0.009649 ± 0.009351 [-0.009922, +0.029220] |
+| Woods14 | V4 − U4 | -0.007822 ± 0.004437 [-0.017108, +0.001465] | -0.002193 ± 0.006431 [-0.015653, +0.011267] |
+| Woods14 | V2 − HER | -0.009942 ± 0.006468 [-0.023479, +0.003596] | -0.002632 ± 0.010517 [-0.024643, +0.019380] |
+| Woods14 | V4 − HER | -0.022588 ± 0.006423 [-0.036031, -0.009144] | -0.014254 ± 0.009216 [-0.033543, +0.005035] |
+| Woods14 | U2 − HER | -0.014717 ± 0.006019 [-0.027316, -0.002119] | -0.012281 ± 0.009275 [-0.031693, +0.007131] |
+| Woods14 | U4 − HER | -0.014766 ± 0.005663 [-0.026619, -0.002913] | -0.012061 ± 0.010072 [-0.033141, +0.009019] |
+| Woods14 | V2 − ER-E | -0.011891 ± 0.006610 [-0.025725, +0.001943] | -0.019298 ± 0.017973 [-0.056915, +0.018319] |
+| Woods14 | V4 − ER-E | -0.024537 ± 0.007320 [-0.039857, -0.009217] | -0.030921 ± 0.019593 [-0.071929, +0.010087] |
+| Woods14 | V4 − V2 | -0.012646 ± 0.003786 [-0.020570, -0.004723] | -0.011623 ± 0.006959 [-0.026188, +0.002942] |
+| MazeMA | V2 − U2 | -0.015694 ± 0.006753 [-0.029828, -0.001561] | -0.019444 ± 0.012248 [-0.045080, +0.006191] |
+| MazeMA | V4 − U4 | -0.005417 ± 0.006483 [-0.018985, +0.008151] | -0.005278 ± 0.007090 [-0.020118, +0.009562] |
+| MazeMA | V2 − HER | -0.026597 ± 0.010033 [-0.047596, -0.005598] | -0.009444 ± 0.012624 [-0.035867, +0.016979] |
+| MazeMA | V4 − HER | -0.020937 ± 0.010594 [-0.043112, +0.001237] | +0.020278 ± 0.015417 [-0.011991, +0.052547] |
+| MazeMA | U2 − HER | -0.010903 ± 0.010470 [-0.032816, +0.011010] | +0.010000 ± 0.016538 [-0.024613, +0.044613] |
+| MazeMA | U4 − HER | -0.015521 ± 0.009487 [-0.035378, +0.004336] | +0.025556 ± 0.014103 [-0.003962, +0.055074] |
+| MazeMA | V2 − ER-E | -0.024931 ± 0.009289 [-0.044373, -0.005488] | -0.030556 ± 0.017750 [-0.067706, +0.006595] |
+| MazeMA | V4 − ER-E | -0.019271 ± 0.006890 [-0.033692, -0.004850] | -0.000833 ± 0.016482 [-0.035330, +0.033663] |
+| MazeMA | V4 − V2 | +0.005660 ± 0.005659 [-0.006184, +0.017503] | +0.029722 ± 0.010388 [+0.007980, +0.051464] |
+
+For the primary VCP-minus-control comparison, intervals lie below zero on Maze4--7
+and MazeMA at K=2, and on Maze4--7 at K=4. The remaining intervals include zero.
+At the final point they lie below zero on Maze5/Maze7 at K=2 and Maze4--7 at K=4.
+No VCP-minus-control interval lies wholly above zero in either view. This does not
+imply that VCP loses every registered comparison: for example V2 minus episodic
+replay on Maze5 is positive in the primary view. The inference is limited to this
+fixed T, bound, hindsight configuration, pair protocol and interaction horizon.
+
+### Exact threshold crossings at registered interaction points
+
+Thresholds are the approved pair-baseline final mean test successes, represented
+exactly as rational numbers. A crossing is the first registered nominal point whose
+twenty-seed mean is greater than or equal to the threshold, with no interpolation.
+It need not remain above the threshold at the final point. The historical baseline
+crossing checks also pass. A dash means no crossing in the measured horizon.
+
+| Maze | ACS2 final threshold | ACS2ER final threshold |
+| --- | --- | --- |
+| Maze4 | 527/1620 | 92/405 |
+| Maze5 | 523/2220 | 89/555 |
+| Maze6 | 253/888 | 739/4440 |
+| Maze7 | 1151/4320 | 259/1440 |
+| Woods14 | 15/76 | 11/60 |
+| MazeMA | 49/180 | 193/900 |
+
+| Maze | Arm | Steps to ACS2 threshold | Steps to ACS2ER threshold |
+| --- | --- | --- | --- |
+| Maze4 | V2 | — | — |
+| Maze4 | V4 | — | — |
+| Maze4 | U2 | — | 100000 |
+| Maze4 | U4 | — | 100000 |
+| Maze5 | V2 | — | 100000 |
+| Maze5 | V4 | — | — |
+| Maze5 | U2 | — | 100000 |
+| Maze5 | U4 | — | 100000 |
+| Maze6 | V2 | — | 100000 |
+| Maze6 | V4 | — | 1000000 |
+| Maze6 | U2 | — | 100000 |
+| Maze6 | U4 | — | 100000 |
+| Maze7 | V2 | — | — |
+| Maze7 | V4 | — | — |
+| Maze7 | U2 | — | 100000 |
+| Maze7 | U4 | — | 300000 |
+| Woods14 | V2 | — | — |
+| Woods14 | V4 | — | — |
+| Woods14 | U2 | — | — |
+| Woods14 | U4 | — | — |
+| MazeMA | V2 | — | 100000 |
+| MazeMA | V4 | — | 100000 |
+| MazeMA | U2 | — | 30000 |
+| MazeMA | U4 | — | 100000 |
+
+None of the four new arms crosses the ACS2 threshold. Woods14 crosses neither
+threshold with any new arm. `thresholds.csv` also retains all four reused references.
+
+### Common head disagreement and replay selection cost
+
+These final-point cells are seed means ± SE. Knowledge uses the unchanged complete
+goal-conditioned non-identity universe. Test disagreement instead uses the fixed
+non-identity transitions from the test block's start-goal pairs. It is measured for
+every multi-head arm with training counters paused and no state or stream change.
+Total population counts every head; per-head populations and spread are retained in
+`diagnostics.csv` and `point-diagnostics.csv` in both registered views.
+
+| Maze | Arm | Knowledge ± SE | Test head variance ± SE | Exact-zero share ± SE | Total classifiers ± SE |
+| --- | --- | --- | --- | --- | --- |
+| Maze4 | V2 | 0.971586 ± 0.002363 | 12625.71 ± 894.80 | 0.007238 ± 0.000414 | 1900.35 ± 39.95 |
+| Maze4 | V4 | 0.953251 ± 0.002238 | 21271.80 ± 998.53 | 0.006942 ± 0.000305 | 3750.00 ± 47.55 |
+| Maze4 | U2 | 1.000000 ± 0.000000 | 38.76 ± 1.12 | 0.007459 ± 0.000273 | 2042.00 ± 29.47 |
+| Maze4 | U4 | 0.999996 ± 0.000004 | 60.92 ± 1.14 | 0.007312 ± 0.000312 | 4040.00 ± 56.22 |
+| Maze5 | V2 | 0.947776 ± 0.002815 | 24691.82 ± 1269.61 | 0.005326 ± 0.000279 | 2842.10 ± 42.19 |
+| Maze5 | V4 | 0.914609 ± 0.003161 | 35712.78 ± 939.79 | 0.004868 ± 0.000274 | 5724.75 ± 54.73 |
+| Maze5 | U2 | 0.999995 ± 0.000005 | 43.16 ± 1.49 | 0.005326 ± 0.000291 | 3130.10 ± 44.72 |
+| Maze5 | U4 | 0.999946 ± 0.000015 | 71.70 ± 3.19 | 0.005269 ± 0.000226 | 6849.20 ± 65.23 |
+| Maze6 | V2 | 0.946776 ± 0.002954 | 19713.55 ± 954.18 | 0.005746 ± 0.000276 | 3154.80 ± 41.61 |
+| Maze6 | V4 | 0.912410 ± 0.002422 | 29899.99 ± 1058.35 | 0.004858 ± 0.000284 | 6331.95 ± 68.67 |
+| Maze6 | U2 | 0.999995 ± 0.000005 | 49.01 ± 1.34 | 0.006102 ± 0.000276 | 3598.85 ± 50.21 |
+| Maze6 | U4 | 0.999917 ± 0.000026 | 86.99 ± 3.80 | 0.004917 ± 0.000262 | 7466.95 ± 61.93 |
+| Maze7 | V2 | 0.942476 ± 0.002049 | 30954.48 ± 1079.81 | 0.003388 ± 0.000327 | 3318.80 ± 48.24 |
+| Maze7 | V4 | 0.903466 ± 0.002851 | 44786.13 ± 1331.56 | 0.003388 ± 0.000223 | 6658.60 ± 85.56 |
+| Maze7 | U2 | 1.000000 ± 0.000000 | 47.51 ± 1.32 | 0.003738 ± 0.000313 | 3739.30 ± 43.86 |
+| Maze7 | U4 | 0.999932 ± 0.000012 | 99.29 ± 15.54 | 0.003329 ± 0.000153 | 7994.60 ± 77.51 |
+| Woods14 | V2 | 0.978318 ± 0.004325 | 13327.71 ± 1781.52 | 0.012255 ± 0.001996 | 606.25 ± 13.08 |
+| Woods14 | V4 | 0.952045 ± 0.006817 | 19818.84 ± 985.45 | 0.003922 ± 0.001102 | 1324.30 ± 26.26 |
+| Woods14 | U2 | 1.000000 ± 0.000000 | 87.52 ± 5.44 | 0.012255 ± 0.002119 | 605.25 ± 14.50 |
+| Woods14 | U4 | 1.000000 ± 0.000000 | 125.17 ± 5.20 | 0.006863 ± 0.001757 | 1279.85 ± 20.81 |
+| MazeMA | V2 | 0.969538 ± 0.005012 | 10349.70 ± 2055.32 | 0.001596 ± 0.000871 | 526.30 ± 11.36 |
+| MazeMA | V4 | 0.960215 ± 0.004433 | 17178.88 ± 1598.10 | 0.000532 ± 0.000532 | 1168.45 ± 21.12 |
+| MazeMA | U2 | 1.000000 ± 0.000000 | 64.37 ± 4.21 | 0.001596 ± 0.000871 | 545.95 ± 12.12 |
+| MazeMA | U4 | 1.000000 ± 0.000000 | 100.75 ± 3.54 | 0.000000 ± 0.000000 | 1128.80 ± 24.19 |
+
+The fixed-reference mean variance is much higher for prioritized arms than controls
+on every maze, while final knowledge is lower. This is an association, not a causal
+mediation test. Exact-zero shares and medians can be small even with a large upper
+tail; per-seed p25/p50/p75/p90/p99 and maxima are averaged across seeds, rather than
+called pooled quantiles. `distributions.csv` separately pools raw histogram counts,
+including exact zeros and both the original equal-width bins and logarithmic bins,
+for every point and all three blocks. Those distinguish the observed ranges that
+the old first equal-width bin combined.
+
+Training statistics below are cumulative through the final point, summarized per
+seed. They describe the proposed and accepted sampling distributions, not the fixed
+evaluation set. The bound B remains 250000 throughout. Uniform controls have exactly
+one proposal per draw, acceptance one, zero priority value queries, no acceptance
+coins and no measured training variance; missing variance is never replaced by zero.
+
+| Maze | Arm | Proposal variance ± SE | Accepted variance ± SE | Acceptance ± SE | Proposals/draw ± SE |
+| --- | --- | --- | --- | --- | --- |
+| Maze4 | V2 | 8486.56 ± 465.60 | 52.33 ± 0.82 | 0.947496 ± 0.002370 | 1.055539 ± 0.002644 |
+| Maze4 | V4 | 13528.71 ± 497.11 | 92.15 ± 1.10 | 0.903927 ± 0.002729 | 1.106476 ± 0.003334 |
+| Maze5 | V2 | 14000.50 ± 566.63 | 70.37 ± 0.91 | 0.918494 ± 0.002608 | 1.088905 ± 0.003089 |
+| Maze5 | V4 | 20753.24 ± 345.40 | 136.91 ± 1.54 | 0.853778 ± 0.001668 | 1.171350 ± 0.002280 |
+| Maze6 | V2 | 14688.48 ± 421.14 | 81.07 ± 1.40 | 0.911803 ± 0.002213 | 1.096851 ± 0.002671 |
+| Maze6 | V4 | 22548.43 ± 637.37 | 153.28 ± 3.03 | 0.840597 ± 0.003517 | 1.190027 ± 0.004993 |
+| Maze7 | V2 | 16192.17 ± 624.72 | 82.61 ± 1.95 | 0.903858 ± 0.002940 | 1.106593 ± 0.003639 |
+| Maze7 | V4 | 23212.43 ± 266.95 | 158.35 ± 3.49 | 0.833673 ± 0.001711 | 1.199607 ± 0.002464 |
+| Woods14 | V2 | 8420.90 ± 512.55 | 67.19 ± 4.28 | 0.940607 ± 0.003197 | 1.063380 ± 0.003674 |
+| Woods14 | V4 | 11366.45 ± 673.04 | 122.93 ± 4.06 | 0.898289 ± 0.005054 | 1.113922 ± 0.006499 |
+| MazeMA | V2 | 5046.62 ± 404.46 | 55.96 ± 3.54 | 0.958698 ± 0.002957 | 1.043271 ± 0.003232 |
+| MazeMA | V4 | 7353.04 ± 444.90 | 94.64 ± 3.77 | 0.933955 ± 0.003225 | 1.070960 ± 0.003734 |
+
+Every run has three full replay steps per actual interaction and zero values-only
+steps. The independent match identity remains `steps + 3*full + 2*values_only +
+priority_value_queries`, so controls have exactly `10*steps` formations. Prioritized
+arms add K queries per proposal. Objective scoring, selection and provenance calls,
+accepted/proposal route composition, realized relabeled share, full/value-only counts
+and classifier-perception tests are retained separately at every point. Selection
+objective calls, failed draws and fallback counts are zero for these future-goal
+arms. Prioritization is unweighted and changes the realized copy share; it does not
+increase the number of applied learning steps.
+
+### Completed allocations, population memory and elapsed time
+
+All allocations use one CPU on `lem-cpu-normal`. These CPUTimeRAW totals include
+every attempted grid run, including the seven initial incomplete attempts:
+
+| Maze | V2, CPU-s | V4, CPU-s | U2, CPU-s | U4, CPU-s |
+| --- | --- | --- | --- | --- |
+| Maze4 | 7881 | 10420 | 3731 | 4109 |
+| Maze5 | 9841 | 17198 | 5964 | 7179 |
+| Maze6 | 11620 | 20515 | 6713 | 7866 |
+| Maze7 | 11559 | 20726 | 7005 | 8241 |
+| Woods14 | 2836 | 5279 | 1683 | 1984 |
+| MazeMA | 1253 | 2259 | 880 | 1059 |
+
+The grid used **177801 CPU-seconds**; all pilot attempts used **16041**. The total
+is **193842 seconds = 53.845 CPU-hours**, within the approved 110, with no outstanding
+reservations. Selected grid trajectories account for 175735 seconds and incomplete
+attempts for 2066 seconds. The only recovery is the seven-seed exception described
+above; all other registered twenty-job batches completed without retries.
+The initial expected grid cost was 50.830212 hours; twice it plus the pilot was
+106.116258 hours, versus a first-attempt hard bound including the pilot of 108.1225.
+The approved recovery admission bound was 108.854167 hours. Forecasts and hard
+reservations are not reported as actual usage.
+
+The following are final-point or completed-process means ± SE for the twenty
+selected runs per cell. Process CPU (user plus system), training wall time and
+evaluation wall time are separate. The known agent/measurement memory lower bound
+counts all heads and the shared store once; it excludes unfilled capacities and
+allocator overhead. Peak RSS is a process measurement and includes other storage.
+Transient accepted-batch peaks, per-head known bytes and population/store payloads
+remain separate fields. Sampled training CPU in `run-costs.csv` is an estimate,
+distinct from the completed-process CPU and allocation accounting.
+
+| Maze | Arm | Process CPU s ± SE | Train wall s ± SE | Evaluation wall s ± SE | Known agent+measurement MiB ± SE | Peak RSS MiB ± SE |
+| --- | --- | --- | --- | --- | --- | --- |
+| Maze4 | V2 | 284.289 ± 8.635 | 288.471 ± 8.701 | 0.915 ± 0.021 | 1.090 ± 0.014 | 8.445 ± 0.069 |
+| Maze4 | V4 | 510.489 ± 7.356 | 517.976 ± 7.481 | 1.820 ± 0.032 | 1.741 ± 0.017 | 8.693 ± 0.049 |
+| Maze4 | U2 | 182.334 ± 5.101 | 184.320 ± 5.175 | 0.977 ± 0.018 | 1.140 ± 0.010 | 8.198 ± 0.014 |
+| Maze4 | U4 | 201.315 ± 5.742 | 202.652 ± 5.819 | 1.992 ± 0.049 | 1.842 ± 0.020 | 8.979 ± 0.047 |
+| Maze5 | V2 | 483.253 ± 8.007 | 487.848 ± 8.167 | 3.199 ± 0.054 | 1.378 ± 0.015 | 8.494 ± 0.009 |
+| Maze5 | V4 | 844.421 ± 13.073 | 852.952 ± 13.543 | 6.303 ± 0.104 | 2.394 ± 0.019 | 10.130 ± 0.046 |
+| Maze5 | U2 | 291.966 ± 11.124 | 293.172 ± 11.336 | 3.621 ± 0.087 | 1.479 ± 0.016 | 8.596 ± 0.025 |
+| Maze5 | U4 | 349.213 ± 6.054 | 349.153 ± 6.187 | 8.265 ± 0.122 | 2.786 ± 0.023 | 11.177 ± 0.045 |
+| Maze6 | V2 | 567.069 ± 11.025 | 575.536 ± 11.444 | 4.362 ± 0.081 | 1.475 ± 0.015 | 8.758 ± 0.035 |
+| Maze6 | V4 | 1000.682 ± 12.734 | 1014.159 ± 13.615 | 8.608 ± 0.124 | 2.594 ± 0.024 | 10.982 ± 0.077 |
+| Maze6 | U2 | 327.536 ± 7.877 | 329.546 ± 8.087 | 4.874 ± 0.082 | 1.630 ± 0.018 | 9.167 ± 0.045 |
+| Maze6 | U4 | 384.448 ± 9.996 | 382.373 ± 10.275 | 9.930 ± 0.163 | 2.989 ± 0.022 | 12.000 ± 0.053 |
+| Maze7 | V2 | 565.323 ± 9.796 | 572.623 ± 10.127 | 4.127 ± 0.082 | 1.533 ± 0.017 | 8.795 ± 0.045 |
+| Maze7 | V4 | 1014.432 ± 18.391 | 1027.233 ± 19.498 | 8.185 ± 0.156 | 2.710 ± 0.030 | 11.103 ± 0.076 |
+| Maze7 | U2 | 341.941 ± 7.799 | 344.394 ± 8.122 | 4.690 ± 0.085 | 1.679 ± 0.015 | 9.158 ± 0.050 |
+| Maze7 | U4 | 402.205 ± 7.604 | 400.550 ± 7.807 | 10.124 ± 0.147 | 3.174 ± 0.027 | 12.262 ± 0.041 |
+| Woods14 | V2 | 137.644 ± 3.743 | 140.095 ± 3.857 | 0.292 ± 0.007 | 0.555 ± 0.005 | 8.180 ± 0.008 |
+| Woods14 | V4 | 254.590 ± 8.316 | 258.694 ± 8.694 | 0.616 ± 0.016 | 0.808 ± 0.009 | 8.178 ± 0.008 |
+| Woods14 | U2 | 81.713 ± 2.043 | 82.914 ± 2.151 | 0.287 ± 0.007 | 0.554 ± 0.005 | 8.174 ± 0.007 |
+| Woods14 | U4 | 95.997 ± 1.680 | 97.096 ± 1.754 | 0.618 ± 0.010 | 0.791 ± 0.007 | 8.175 ± 0.008 |
+| MazeMA | V2 | 60.589 ± 1.245 | 61.623 ± 1.310 | 0.087 ± 0.002 | 0.560 ± 0.004 | 8.138 ± 0.012 |
+| MazeMA | V4 | 109.701 ± 2.362 | 111.458 ± 2.456 | 0.191 ± 0.004 | 0.786 ± 0.007 | 8.129 ± 0.016 |
+| MazeMA | U2 | 41.484 ± 1.085 | 42.333 ± 1.116 | 0.094 ± 0.002 | 0.566 ± 0.004 | 8.142 ± 0.013 |
+| MazeMA | U4 | 50.692 ± 1.268 | 51.660 ± 1.301 | 0.199 ± 0.004 | 0.771 ± 0.008 | 8.132 ± 0.013 |
+
+Raw data, binary, manifests, every allocation/attempt, failed prefixes, grant and
+test-only receipts, approvals and frozen verifier are retained in two verified copies:
+`~/tu_runs/7/approved-value-consistency-study/` on WCSS and the matching directory
+beneath `~/Desktop/tu-runs/7/` locally. The raw manifest lists **6254 files and
+530672932 bytes**, excluding itself; its SHA-256 is
+`861b6bce501ac4422bf5e69c6b5f8ad97960bb1911ccba6b0ce7b1567f439948`.
+Every listed hash and the inventory agree, and independent local and remote full
+audits return the same verification result. Frozen verification operations are from
+`6f9a9c3691dd96dd2fb4faf6d480697b989f929e`; node execution operations remain at
+`f293a07680044a9b6cb116c8cc5656d7b156233e`.
+
+Derived tables, figures, gate/mutation evidence and the Polish report are archived
+under `~/tu_runs/7/value-consistency-results/` and the corresponding local results
+directory beneath `~/Desktop/tu-runs/7/`. The analysis exports 96 primary summaries,
+108 paired comparisons, 96 exact crossings, 7840 checkpoint fractions and 1920 seed
+scores. `validate_tables.py` independently reconstructs their rational arithmetic and
+cost scope from integer head-success counts. Static SVG/PNG files show test curves,
+common disagreement, exact-zero shares and both sets of paired intervals; plotting
+software is recorded separately and does not enter measurement. No convergence,
+unregistered temperature optimum or superiority of all ensembles is claimed.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

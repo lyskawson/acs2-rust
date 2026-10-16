@@ -75,3 +75,28 @@ python3 -B experiments/value-consistency/analyze.py --study STUDY --her HER_ARCH
 python3 -B experiments/value-consistency/validate_tables.py ANALYSIS_DIRECTORY
 python3 -B experiments/value-consistency/plots.py ANALYSIS_DIRECTORY NEW_FIGURE_DIRECTORY
 ```
+
+The completed grid contains 480 selected runs and 3920 checkpoint rows. All 487
+attempts are accounted for, including the seven initial incomplete attempts and
+their approved retries. Every one of 180 overlapping pilot rows and 49 retry-prefix
+rows passes identity checks before analysis. Total allocation cost including every
+pilot attempt is 193842 CPU-seconds (53.845 hours), below the approved 110 hours.
+There is no outstanding reservation and no tuning run.
+
+In the primary view, VCP minus its uniform control has a marginal 95% paired
+interval below zero on five mazes at K=2 and four at K=4; the other intervals include
+zero. No such interval lies wholly above zero in either registered view. This result
+is limited to fixed T=24 and the approved interaction horizon. Full means, SEs, all
+nine contrasts in both views, exact crossings, common head disagreement, selection
+cost and population/memory/time are in the [architecture results](../../docs/ARCHITECTURE.md#held-pair-success-with-fixed-temperature-consistency-selection).
+
+The immutable raw archive is `~/tu_runs/7/approved-value-consistency-study/` on WCSS,
+with its verified local copy beneath `~/Desktop/tu-runs/7/`. Its manifest lists 6254
+files (530672932 bytes), excluding itself, and has SHA-256
+`861b6bce501ac4422bf5e69c6b5f8ad97960bb1911ccba6b0ce7b1567f439948`.
+Derived analysis, figures, preflight evidence and the Polish report have a separate
+verified backup at `~/tu_runs/7/value-consistency-results/`. Analysis operations use
+`6f9a9c3691dd96dd2fb4faf6d480697b989f929e`; node operations and the registered
+measurement source/binary remain frozen separately. The independent table checker
+passes 7840 checkpoint fractions, 1920 seed scores, 96 primary summaries, 108
+comparisons, 96 crossings and the allocation scope of 960 new/reference cost rows.
