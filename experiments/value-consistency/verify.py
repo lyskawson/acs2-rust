@@ -1,5 +1,6 @@
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 import sys
 
@@ -167,14 +168,41 @@ def verify_batch(root, study):
                          retry_prefix_identity_rows=retry_identities)
 
 
+def verify_admissions(root, scope):
+    root = Path(root)
+    admissions = [json.loads(line) for line in (root / 'admission-decisions.jsonl').read_text().splitlines()]
+    if Counter(item['root'] for item in admissions) != Counter(scope['batch_roots']):
+        raise ValueError('VCP admissions must name every registered batch root exactly once')
+    recovery = root / 'recovery'
+    proposal = approved_recovery(recovery / 'approved-recovery.json', recovery / 'approval.json')
+    resolution = json.loads((recovery / 'resolution.json').read_text())
+    ledger = json.loads((root / 'maze4_c5_pairs_acs2vcp_k2/ledger.json').read_text())
+    if len(ledger) != 2:
+        raise ValueError('VCP recovery must be the second Maze4 K2 allocation')
+    original, retry = ledger
+    if (resolution.get('event') != 'approved_timeout_resolution'
+            or resolution.get('recovery_sha256') != RECOVERY_SHA256
+            or retry.get('recovery_sha256') != RECOVERY_SHA256
+            or original['array_id'] != proposal['cause']['array_id']
+            or resolution['state']['array_ids'] != [original['array_id']]
+            or retry['array_id'] == original['array_id']
+            or str(retry['array_id']) != retry['submission_response'].split(';')[0]
+            or resolution['command'] != retry['command']
+            or resolution['new_limit_seconds'] != proposal['accounting']['new_retry_hard_seconds']
+            or resolution['whole_study_hard_bound_seconds'] != proposal['accounting']['whole_study_upper_bound_seconds']):
+        raise ValueError('VCP recovery resolution differs from the approved second allocation')
+
+
 def verify_study(root):
     root = Path(root)
     if (root / 'STOP.json').exists():
         raise ValueError('STOP blocks VCP analysis')
     plan = approved(root / 'approved-plan.json')
-    declared = Path(json.loads((root / 'scope.json').read_text())['batch_roots'][0]).parent
-    if json.loads((root / 'scope.json').read_text()) != study_scope(plan, declared):
+    scope = json.loads((root / 'scope.json').read_text())
+    declared = Path(scope['batch_roots'][0]).parent
+    if scope != study_scope(plan, declared):
         raise ValueError('VCP accounting scope differs')
+    verify_admissions(root, scope)
     entries, details = {}, {}
     for config, agent in batches(plan):
         name = config['id'] + '_' + agent

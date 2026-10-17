@@ -5,10 +5,29 @@ import tempfile
 import unittest
 
 from grid_identity import verify_references
-from grid_scope import SACCT_FIELDS, archived_snapshot, snapshot, stop_path, verify_operations
+from grid_scope import SACCT_FIELDS, archived_snapshot, require_batch_root, snapshot, stop_path, verify_operations
 
 
 class ScopeTests(unittest.TestCase):
+    def test_batch_root_membership_resolves_paths_and_verifies_the_scope_bytes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            registered = base / 'registered'
+            registered.mkdir()
+            alias = base / 'alias'
+            alias.symlink_to(registered, target_is_directory=True)
+            path = base / 'scope.json'
+            path.write_text(json.dumps(dict(batch_roots=[str(alias)])))
+            plan = dict(budget_scope=str(path), budget_scope_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+            require_batch_root(registered, plan)
+            require_batch_root(alias, plan)
+            with self.assertRaisesRegex(ValueError, 'batch root.*accounting scope'):
+                require_batch_root(base / 'sibling', plan)
+            path.write_text(path.read_text() + '\n')
+            with self.assertRaisesRegex(ValueError, 'checksum'):
+                require_batch_root(registered, plan)
+            require_batch_root(base / 'legacy', {})
+
     def test_archived_accounting_includes_unread_roots_and_explicit_zero_roots_with_registered_pilots(self):
         with tempfile.TemporaryDirectory() as temporary:
             base=Path(temporary)

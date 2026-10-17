@@ -48,6 +48,34 @@ def changed_manifests(plan):
 
 
 class AuthorizationTests(unittest.TestCase):
+    def test_scoped_her_and_vcp_pilot_submissions_refuse_sibling_roots_without_side_effects(self):
+        for experiment in ['her-variants', 'value-consistency']:
+            with self.subTest(experiment=experiment), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary)
+                if experiment == 'her-variants':
+                    plan = tuning_fixture(base)
+                    registered = base / 'tuning'
+                else:
+                    plan = derive_manifest(dict(experiment=experiment, stage='authorized_cost_pilot',
+                                                pilot_part='temperature1-and-controls'))
+                    registered = base / 'pilot'
+                    scope = base / 'scope.json'
+                    atomic_json(scope, dict(batch_roots=[str(registered)],
+                        pilot_allocation_cpu_seconds=0, authorization_sha256='pilot', accounting_since='2026-10-15'))
+                    plan.update(budget_scope=str(scope), budget_scope_sha256=hashlib.sha256(scope.read_bytes()).hexdigest(),
+                                authorization_sha256='pilot')
+                require_authorization(registered, plan, 'child', base / 'approval.json')
+                manifest = base / 'manifest.json'
+                atomic_json(manifest, plan)
+                sibling = base / 'sibling'
+                with patch('submit.execute') as execute:
+                    with self.assertRaisesRegex(ValueError, 'batch root.*accounting scope'):
+                        submit(sibling, manifest, base / 'clone', base / 'approval.json')
+                    execute.assert_not_called()
+                self.assertFalse(sibling.exists())
+                self.assertFalse(registered.exists())
+                self.assertFalse((base / 'admission-decisions.jsonl').exists())
+
     def test_substituted_measurement_commit_and_binary_are_refused_before_scheduler_access(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)

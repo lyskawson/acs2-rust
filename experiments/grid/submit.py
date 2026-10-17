@@ -8,7 +8,7 @@ import time
 from collect import outside_repository
 from grid_authorization import require_authorization
 from grid_protocol import accounting, allocation_rows, atomic_json, require_budget, seconds
-from grid_scope import SACCT_FIELDS, snapshot, stop_path, verify_operations
+from grid_scope import SACCT_FIELDS, require_batch_root, snapshot, stop_path, verify_operations
 
 
 def execute(command):
@@ -100,6 +100,7 @@ def submit(root, manifest, repo, approval=None):
     if root.exists():
         raise ValueError('batch already exists; reconcile instead of resubmitting')
     preview = json.loads(Path(manifest).read_text())
+    require_batch_root(root, preview)
     require_authorization(root, preview, hashlib.sha256(Path(manifest).read_bytes()).hexdigest(), approval)
     preview_batches = run_batches(preview)
     preview_limits = sum(max(config['limits_minutes'][agent] for config, agent, _ in batch) * 60 * len(batch)

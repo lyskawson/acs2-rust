@@ -4,7 +4,7 @@ import subprocess
 import time
 
 from grid_protocol import atomic_json, load_plan, require_budget
-from grid_scope import stop_path, verify_operations
+from grid_scope import require_batch_root, stop_path, verify_operations
 from submit import balance, require_authorization, run_batches, shared_reservation
 
 
@@ -12,6 +12,7 @@ def resume(root, execute, command_builder):
     root = Path(root)
     digest = (root / 'plan.sha256').read_text().strip()
     plan = load_plan(root / 'plan.json', digest)
+    require_batch_root(root, plan)
     if stop_path(root, plan).exists():
         raise ValueError('shared STOP prevents resumption')
     verify_operations(plan)

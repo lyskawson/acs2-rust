@@ -13,6 +13,19 @@ from test_authorization import changed_manifests, tuning_fixture
 
 
 class ResumeTests(unittest.TestCase):
+    def test_resumption_outside_the_scope_refuses_before_executor_or_file_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = self.fixture(base)
+            sibling = base / 'sibling'
+            root.rename(sibling)
+            before = {str(path.relative_to(base)): path.read_bytes() for path in base.rglob('*') if path.is_file()}
+            execute, commands = self.execute()
+            with self.assertRaisesRegex(ValueError, 'batch root.*accounting scope'):
+                resume(sibling, execute, submission_command)
+            self.assertEqual(commands, [])
+            self.assertEqual(before, {str(path.relative_to(base)): path.read_bytes() for path in base.rglob('*') if path.is_file()})
+
     def fixture(self,base):
         root=base/'tuning'
         root.mkdir()

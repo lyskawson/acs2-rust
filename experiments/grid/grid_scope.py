@@ -11,6 +11,15 @@ def stop_path(root, plan):
     return Path(plan.get('stop_path', Path(root) / 'STOP.json'))
 
 
+def require_batch_root(root, plan):
+    if 'budget_scope' not in plan:
+        return
+    scope = load_plan(plan['budget_scope'], plan['budget_scope_sha256'])
+    roots = {Path(name).resolve() for name in scope['batch_roots']}
+    if Path(root).resolve() not in roots:
+        raise ValueError('batch root is outside the registered accounting scope')
+
+
 def verify_operations(plan):
     if 'operations_manifest' not in plan:
         return
