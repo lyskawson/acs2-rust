@@ -3647,11 +3647,38 @@ distribution over retained transition, route and selected goal. The value of eac
 classifiers, or zero. The priority uses population variance v of these K values. Define
 B = reward_on_reach squared / 4 = 250000, epsilon=1e-6 and w(x)=(B-v(x)+epsilon)^T.
 Rejection sampling proposes x from q and accepts with a(x)=w(x)/(B+epsilon)^T.
-The accepted law is exactly q(x)w(x)/sum_y q(y)w(y): summing over the geometric number
+The accepted law is exactly q(x)w(x)/sum_y q(y)w(y) in real arithmetic: summing over the geometric number
 of preceding rejections cancels the common envelope. There is no finite materialized HER
 buffer, resampling approximation, stale priority or importance correction. Both routes
 are prioritized. The expected proposals per accepted draw are 1/E_q[a] at each frozen
 ensemble; cumulative realized proposals/draw and acceptance are reported separately.
+
+The machine implementation has two precision limits. Locked rand 0.8.6 implements a
+Bernoulli coin with an integer threshold `floor(a * 2^64)`. A positive acceptance below
+2^-64 therefore never accepts; at T=24 this starts above variance 210627.4672. At the
+other end, a positive variance no greater than half an ulp of B, 2^-36, can make `B-v`
+round to B. Acceptance then becomes exactly one and skips the coin. K=1 and T=0 are
+unaffected: their acceptance is analytically one, so their pinned identities remain exact.
+
+The final cumulative summaries of the 240 selected prioritized runs contain 1858105357
+proposals and 989836822 acceptance coins. Their measured breakdown is:
+
+| Proposal category | Count | Share of all proposals |
+| --- | ---: | ---: |
+| Exact zero variance | 863256317 | 46.458954211% |
+| Positive variance with acceptance rounded to one | 5012218 | 0.269748859% |
+| Variance at least 218750, certainly below the coin's probability resolution | at least 34223306 | at least 1.841838832% |
+
+Of the rounded-to-one proposals, 4573564 occupy the positive logarithmic bin through
+1e-12 and 438654 the bin through 1e-9. No accepted proposal occupies an equal-width
+bin above the eighth. Bin-count upper bounds on expected acceptance-decision
+discrepancies from real arithmetic are below 1.9e-12 for the probability floor,
+4.3e-8 for rounding to one and 5.4e-11 for integer-threshold truncation of the coins.
+The floor bound uses the three highest equal-width bins and, for each, the smaller
+of 2^-64 and acceptance at its lower edge; this gives the tighter bound 5.509e-13.
+The rounding bound is `24 * (4573564 * 1e-12 + 438654 * 1e-9) / (B+epsilon)`;
+the coin-truncation bound is `989836822 / 2^64`. These are bounds on machine effects,
+not evidence for a cause of the measured success or disagreement differences.
 
 The fixed B avoids a running maximum discovered only after earlier samples have already
 been accepted. Popoviciu's bound holds because qualities and value estimates stay in
@@ -3933,6 +3960,10 @@ the shared budget scope, and checks the grant and test-only schedule. Node-side
 guards compare clean source, binary, hardware, preset, rows and pilot identities;
 a real failure creates a shared STOP. No lease, host pinning, laptop automation or
 additional monitor is used.
+Shared submission and resumption also load the scope by its registered SHA-256 and
+require the resolved batch root to belong to its resolved `batch_roots`, before any
+budget query, directory creation or scheduler call. Plans without a shared scope keep
+their existing execution path.
 
 The first Maze4/K=2 array, 6109875, hit its registered process deadline at seed 44.
 Thirteen runs completed; shared STOP interrupted six others. Its twenty allocations
@@ -3948,6 +3979,9 @@ recovery admission, including the pilot, was 391875 seconds, below 110 hours.
 `verify.py` checks every raw artifact and allocation, exact attempt scopes, immutable
 operations and launch identities, and independently reproduces node-side pilot
 checks. Analysis requires all 480 completed cells and all 180 pilot-overlapping rows.
+It also requires exactly one admission event per declared cluster batch root, with no
+foreign or duplicate root. The only additional submission is the approved recovery:
+its resolution and submission receipt must match the second Maze4/K=2 ledger entry.
 The seven interrupted prefixes are also compared with their complete retries.
 `references.py` verifies the approved HER and pair-baseline archives without rerunning
 them. `analyze.py` exports both test-success views, all nine paired comparisons,
@@ -3965,7 +3999,7 @@ Complete episodes retain the registered overshoot below cap: nominally equal bud
 can have slightly different actual_steps. Actual interactions are counted once and
 updates equal three times that actual count; K never multiplies the budget.
 
-Implemented-contract gates pass 309 Rust tests; Python suites pass 47/7/20/37/37/14/13/37
+Implemented-contract gates pass 309 Rust tests; Python suites pass 47/7/20/40/37/14/13/41
 for tools, random policy, baseline pilot, grid, HER variants, maze baselines, composition
 and value consistency. P9 columns 1--7 are unchanged. Cleaning all six workspace packages
 before Clippy reproduces the same 22 older warnings, with none in the additions.
@@ -4257,6 +4291,18 @@ The initial expected grid cost was 50.830212 hours; twice it plus the pilot was
 106.116258 hours, versus a first-attempt hard bound including the pilot of 108.1225.
 The approved recovery admission bound was 108.854167 hours. Forecasts and hard
 reservations are not reported as actual usage.
+
+A read-only completeness query on 2026-10-17 listed all allocations of alelys2099
+since 2026-10-10 whose job names start with `tu-`, expanding array tasks. All 1655
+returned allocations across 99 arrays map to exactly one archived ledger entry;
+there are no unmapped allocations or unmapped CPU-seconds. The pair-baseline study
+accounts for 24735 seconds including both pilots, the hindsight study for 124605
+seconds (34.6125 hours), and this study for 193842 seconds (53.845 hours), comprising
+16041 pilot and 177801 grid seconds. Twenty pilot tasks cancelled before allocation
+are absent from the allocation-only query; their archived accounting records each
+confirm CANCELLED, zero allocated CPUs and zero CPUTimeRAW. The batch-root admission
+rule prevents new out-of-scope ledgers, the admission-log check audits the recorded
+submission scope, and this independent allocation inventory checks its completeness.
 
 The following are final-point or completed-process means ± SE for the twenty
 selected runs per cell. Process CPU (user plus system), training wall time and

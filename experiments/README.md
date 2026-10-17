@@ -16,6 +16,16 @@ remains in `acs2-bench`, `slurm/`, `tools/` and `reports/`; its live state is
 | [`grid/`](grid/) | How can later goal experiments reuse one execution path? | Manifest-driven submission, node guards, row adapters, attempt selection and allocation accounting. | One reusable copy of the original pilot tools; no lease, host pinning or laptop dependency. |
 | [`value-consistency/`](value-consistency/) | Does consistency prioritization improve hindsight replay beyond an unprioritized independent-head ensemble at equal interactions and draws? | Completed four-arm K=2/4 grid: fixed T=24, query-free T=0 controls, six mazes, seeds 42–61, 480 selected runs and 3,920 rows; no tuning. Full/future/every-transition copies at p=2/3. | [Results and provenance](../docs/ARCHITECTURE.md#held-pair-success-with-fixed-temperature-consistency-selection), [approved registration](value-consistency/plan-draft.json), [execution and analysis](value-consistency/README.md). 53.845 allocated CPU-hours including every pilot and failed attempt, within 110 approved; all 180 pilot identity rows pass, both raw copies verified. Primary VCP − control intervals are below zero on five mazes at K=2 and four at K=4; the others include zero. Verified HER and pair-baseline references are reused. |
 
+Shared scoped submission and resumption require the resolved batch root to belong to
+the checksum-verified accounting scope before any budget or scheduler call. VCP
+verification also requires exactly one admission per declared cluster root and ties
+the approved recovery to the second Maze4/K=2 ledger entry. A read-only allocation
+inventory on 2026-10-17 matched all 1655 `tu-` allocations since 2026-10-10 to exactly
+one archived ledger entry, with none unmapped. It reproduces 124605 CPU-seconds for
+the hindsight study and 193842 for VCP; twenty VCP pilot tasks cancelled before
+allocation have archived zero-CPU accounting records. These checks support the
+reported allocation totals without changing archived studies or their operations.
+
 ## Baseline pilot
 
 Under the supervisor's train/validation/test goal protocol, the maze results are a

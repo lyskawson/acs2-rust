@@ -13,6 +13,8 @@ registration, pilot rows and a scope covering all twenty-four batch roots.
 `execute_batch.py` derives one twenty-run manifest and refuses another batch
 while reservations remain outstanding. Shared grid tooling checks authorization,
 the grant, test-only scheduling and joint allocation admission before submission.
+Shared submission and resumption load the accounting scope by its SHA-256 and reject
+batch roots outside its resolved roots before any budget query or execution side effect.
 The dedicated clone stays clean at `82c08b5a89a63878fddfb76be8d5e25d0ae17a41`.
 Copy the approved static binary, SHA-256
 `0c8dcb9c539462f9b84800519237a24e34c49e4d81b70a79a17cae0d7a98816d`,
@@ -35,7 +37,9 @@ batches retain their registered sizes and limits.
 
 `verify.py` checks operations hashes, raw artifact hashes, every attempted
 allocation, selected complete rows, launch identities, exact attempt scope and
-node identity records. It maps declared remote references into the local copy
+node identity records. It requires exactly one admission event per declared cluster
+batch root. The approved recovery resolution must match the second Maze4/K=2 ledger
+allocation and its receipt. It maps declared remote references into the local copy
 without modifying archived data. STOP, incomplete runs, changed identities,
 unapproved attempts or a budget excess block analysis. `references.py` verifies
 the two approved reference registrations, raw hashes, all twenty seeds, all
