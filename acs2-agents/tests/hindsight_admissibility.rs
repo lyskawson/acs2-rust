@@ -160,7 +160,12 @@ fn wall_counters_use_relabeled_route_state_identity_and_goal_termination() {
     let mut expected = WallCounters::default();
     let mut original_walls = 0;
     for draw in &draws {
-        actual.observe(draw);
+        let episode = store.episode(draw.episode).unwrap();
+        actual.observe(
+            draw,
+            episode.achieved(draw.transition),
+            episode.achieved(draw.transition + 1),
+        );
         let unchanged = states[draw.transition] == states[draw.transition + 1];
         if draw.provenance.origin == SampleOrigin::Original {
             original_walls += u64::from(unchanged);
@@ -175,4 +180,49 @@ fn wall_counters_use_relabeled_route_state_identity_and_goal_termination() {
     assert!(expected.unchanged_state_terminal > 0);
     assert!(expected.unchanged_state > expected.unchanged_state_terminal);
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn perceptual_twins_are_not_wall_bumps_when_the_coordinate_changes() {
+    let mut episode = Episode::new(GoalStart {
+        observation: Perception {
+            symbols: [Symbol::Token(0)],
+        },
+        achieved: goal(0),
+        desired: goal(9),
+    });
+    episode.push(
+        0,
+        GoalStep {
+            observation: Perception {
+                symbols: [Symbol::Token(0)],
+            },
+            achieved: goal(1),
+            terminal_state: false,
+            time_limit_reached: true,
+        },
+    );
+    let mut store = TrajectoryStore::new(10);
+    store.insert(episode).unwrap();
+    let agent = agent(Preset::Acs2HerNontrivial);
+    let mut sampler = Sampler::new(
+        agent.learner().sampler().configuration(),
+        ChaChaRandomSource::from_seed_and_stream(42, 7),
+    );
+    let objective = ObjectiveEvaluator(&ExactMatch {
+        reward_on_reach: 1000.0,
+    });
+    let draws = sampler.draw::<1, 1, 2>(&store, 100, &objective).unwrap();
+    let mut walls = WallCounters::default();
+    for draw in &draws {
+        let episode = store.episode(draw.episode).unwrap();
+        walls.observe(
+            draw,
+            episode.achieved(draw.transition),
+            episode.achieved(draw.transition + 1),
+        );
+    }
+    assert!(walls.relabeled_draws > 0);
+    assert_eq!(walls.unchanged_state, 0);
+    assert_eq!(walls.unchanged_state_terminal, 0);
 }

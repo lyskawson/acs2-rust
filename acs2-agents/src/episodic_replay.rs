@@ -5,7 +5,7 @@ use acs2_core::learning::rl::{
     apply_reinforcement_learning, BootstrapEstimator, MaxFitnessBootstrap,
 };
 use acs2_core::ports::environment::Environment;
-use acs2_core::ports::goal::{GoalLayout, GoalStart, GoalStep};
+use acs2_core::ports::goal::{Goal, GoalLayout, GoalStart, GoalStep};
 use acs2_core::representation::perception::Perception;
 use acs2_core::representation::population::Population;
 use acs2_core::support::config::Configuration;
@@ -44,12 +44,19 @@ pub struct WallCounters {
 }
 
 impl WallCounters {
-    pub fn observe<const G: usize, const M: usize>(&mut self, drawn: &DrawnSample<G, M>) {
+    pub fn observe<const G: usize, const M: usize>(
+        &mut self,
+        drawn: &DrawnSample<G, M>,
+        achieved_before: &Goal<G>,
+        achieved_after: &Goal<G>,
+    ) {
         if drawn.provenance.origin != SampleOrigin::Relabeled {
             return;
         }
         self.relabeled_draws += 1;
-        if drawn.scored.sample.state == drawn.scored.sample.next_state {
+        if drawn.scored.sample.state == drawn.scored.sample.next_state
+            && achieved_before == achieved_after
+        {
             self.unchanged_state += 1;
             self.unchanged_state_terminal += u64::from(drawn.scored.outcome.terminated);
         }
@@ -221,12 +228,16 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             .draw(&self.store, count, env)
             .expect("valid task replay objective");
         for drawn in draws {
+            let first = self.store.episodes().next().expect("retained episode").id();
+            let index = usize::try_from(drawn.episode.0 - first.0).expect("retained episode index");
+            let episode = self.store.episodes().nth(index).expect("drawn episode retained");
+            assert_eq!(episode.id(), drawn.episode);
+            self.walls.observe(&drawn, episode.achieved(drawn.transition), episode.achieved(drawn.transition + 1));
             self.learn_draw(&drawn, time + steps as u64);
         }
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
-        self.walls.observe(drawn);
         if drawn.provenance.origin == SampleOrigin::Relabeled
             && self.copy_update == CopyUpdate::ValuesOnly
         {

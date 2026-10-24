@@ -3290,8 +3290,10 @@ are identical to `acs2her`.
 
 Only these two new row names add `replay_diagnostics.wall_bumps`: `relabeled_draws`,
 `unchanged_state` and `unchanged_state_terminal`. The observer compares the drawn
-sample's state and next state, whose identical goal suffix makes this exactly s'=s,
-then reads the already derived goal outcome's `terminated` flag. It makes no
+sample's state and next state and the stored achieved goals before and after it.
+In coordinate mazes the latter identify physical cells, so moves between perceptual
+twins cannot masquerade as wall bumps. It then reads the already derived goal
+outcome's `terminated` flag. It makes no
 objective or RNG calls. Original-route draws, including fallbacks, contribute none
 of these counters. `proposals_equal_draws=true` records that this sampler has no
 proposal rejection stage, so a separate proposal composition would be identical.

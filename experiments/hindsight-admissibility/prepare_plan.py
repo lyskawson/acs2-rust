@@ -39,6 +39,7 @@ def prepare(root, output, fixture):
     pin(summary, rows, fixture)
     evidence = dict(runs=12, rows=len(rows), allocations=summary['allocations'],
         allocation_cpu_seconds=summary['allocation_cpu_seconds'],
+        cells=[dict(configuration_id=config_id, agent=agent, **cost) for (config_id, agent), cost in cells.items()],
         rows_sha256=hashlib.sha256(rows_path.read_bytes()).hexdigest(),
         summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
         fixture_sha256=hashlib.sha256(Path(fixture).read_bytes()).hexdigest(),
