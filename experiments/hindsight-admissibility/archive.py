@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from protocol import AGENTS, pilot
+from execution import measurement_identity
 from grid_attempts import attempts, select_attempts
 from grid_protocol import allocation_rows, load_plan, require_budget
 from grid_scope import archived_snapshot
@@ -16,7 +17,7 @@ def audit(root):
     plan = load_plan(batch / 'plan.json', (batch / 'plan.sha256').read_text().strip())
     registration = load_plan(root / 'pilot-registration.json', plan['authorization_sha256'])
     expected = registration['manifest']
-    if any(expected[key] != value for key, value in pilot().items()) or any(plan.get(key) != value for key, value in expected.items()):
+    if expected != pilot() | measurement_identity() or any(plan.get(key) != value for key, value in expected.items()):
         raise ValueError('pilot execution differs from its fixed registration')
     operations = load_plan(root / 'operations/manifest.json', plan['operations_manifest_sha256'])
     for name, digest in operations['files'].items():
@@ -28,6 +29,8 @@ def audit(root):
     if state['reserved_seconds']:
         raise ValueError('pilot still has reservations')
     ledger = json.loads((batch / 'ledger.json').read_text())
+    if len(ledger) != 1 or any(run['limit_seconds'] != 600 for entry in ledger for run in entry['runs']):
+        raise ValueError('pilot must use its single registered ten-minute array')
     allocated = {row['JobID']: row for row in allocation_rows((batch / 'accounting.psv').read_text())}
     inventory = attempts(batch, ledger)
     registered_cells = {(config['id'], agent, 42) for config in plan['configurations'] for agent in AGENTS}

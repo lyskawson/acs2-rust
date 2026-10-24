@@ -1,0 +1,40 @@
+{
+  "measurement_commit": "3828e430b13138b7458d65a840c1c833382f6c4a",
+  "binary_sha256": "a7422da3904e9b0d1a5df2152c3508bda66f27f86651ee3af929e230e9391893",
+  "preset": {
+    "alp_gen_variant": "Pyalcs",
+    "beta": 0.05,
+    "bootstrap": "MaxFitnessBootstrap",
+    "chi": 0.8,
+    "do_action_planning": false,
+    "do_ga": false,
+    "do_pee": false,
+    "do_subsumption": true,
+    "epsilon": 0.8,
+    "exploration": "EpsilonGreedy",
+    "gamma": 0.95,
+    "initial_ir": 0.0,
+    "initial_q": 0.5,
+    "initial_r": 0.5,
+    "mu": 0.3,
+    "number_of_possible_actions": 8,
+    "random_streams": {
+      "agent": 1,
+      "environment": 2,
+      "evaluation": 3,
+      "evaluation_environment": 6,
+      "evaluation_sample": 5,
+      "restricted_pool": 4
+    },
+    "replay_capacity": 10000,
+    "replay_updates_per_step": 3,
+    "replay_warmup": 1,
+    "theta_as": 20,
+    "theta_exp": 20,
+    "theta_ga": 100,
+    "theta_i": 0.1,
+    "theta_r": 0.9,
+    "truncation": "Bootstrap",
+    "u_max": 100000
+  }
+}
