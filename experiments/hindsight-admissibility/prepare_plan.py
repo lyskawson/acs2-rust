@@ -44,7 +44,7 @@ def prepare(root, output, fixture):
         summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
         fixture_sha256=hashlib.sha256(Path(fixture).read_bytes()).hexdigest(),
         generator_sha256={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                          for name in ('protocol.py', 'archive.py', 'prepare_plan.py')})
+                          for name in ('protocol.py', 'archive.py', 'prepare_plan.py', 'diagnostics.py')})
     plan = study(cells, summary['allocation_cpu_seconds'], identity, evidence)
     atomic_json(output, plan)
     return dict(plan_sha256=hashlib.sha256(Path(output).read_bytes()).hexdigest(), forecast=plan['forecast'])

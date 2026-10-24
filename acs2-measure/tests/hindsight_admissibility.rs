@@ -115,3 +115,93 @@ fn restricted_hindsight_cli_rejects_proportion_tuning() {
         assert!(String::from_utf8_lossy(&output.stderr).contains("only values variants"));
     }
 }
+
+fn floating_bits(value: &serde_json::Value) -> serde_json::Value {
+    use serde_json::Value;
+    match value {
+        Value::Number(number) if number.is_f64() => {
+            Value::String(format!("f64:{:016x}", number.as_f64().unwrap().to_bits()))
+        }
+        Value::Array(values) => Value::Array(values.iter().map(floating_bits).collect()),
+        Value::Object(values) => Value::Object(
+            values
+                .iter()
+                .map(|(key, value)| (key.clone(), floating_bits(value)))
+                .collect(),
+        ),
+        _ => value.clone(),
+    }
+}
+
+#[test]
+fn both_admissibility_arms_reproduce_all_seed42_pilot_fields_bit_for_bit() {
+    use serde_json::Value;
+    use std::collections::BTreeSet;
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../fixtures/hindsight_admissibility_regression.json"
+    ))
+    .unwrap();
+    let configurations = fixture["configurations"].as_array().unwrap();
+    assert_eq!(configurations.len(), 12);
+    let expected: BTreeSet<_> = ["maze4", "maze5", "maze6", "maze7", "woods14", "mazema"]
+        .into_iter()
+        .flat_map(|task| ["acs2her_nontrivial", "acs2her_shortened"].map(|agent| (task, agent)))
+        .collect();
+    let actual: BTreeSet<_> = configurations
+        .iter()
+        .map(|config| {
+            (
+                config["task"].as_str().unwrap(),
+                config["agent"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(actual, expected);
+    for config in configurations {
+        let task = config["task"].as_str().unwrap();
+        let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
+            acs2_envs::roles::ResearchTask::named(task).unwrap()
+        else {
+            unreachable!()
+        };
+        let distributions = MazePairDistributions::<Coordinates, 2>::registered(
+            task,
+            geometry,
+            config["cap"].as_u64().unwrap() as u32,
+            "coordinates",
+        );
+        let kind = AgentKind::from_run_name(config["agent"].as_str().unwrap(), 2.0 / 3.0).unwrap();
+        let mut rows = Vec::new();
+        run_protocol_with_sink::<_, _, 8, 2, 10>(
+            &distributions.protocol(),
+            kind,
+            42,
+            &[1000, 3000],
+            &RunMetadata {
+                record_starts: false,
+                ..RunMetadata::test("test")
+            },
+            RunSettings {
+                evaluate_points: true,
+                capture_final_state: false,
+            },
+            &mut |row| rows.push(row),
+        );
+        let pinned = config["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(pinned.len(), 2);
+        for (mut row, reference) in rows.into_iter().zip(pinned) {
+            for field in fixture["excluded"].as_array().unwrap() {
+                row.as_object_mut().unwrap().remove(field.as_str().unwrap());
+            }
+            assert_eq!(
+                floating_bits(&row),
+                *reference,
+                "{} {} at {}",
+                task,
+                config["agent"],
+                row["nominal_step"]
+            );
+        }
+    }
+}

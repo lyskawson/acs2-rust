@@ -101,6 +101,7 @@ def study(cells, spent_seconds, identity, pilot_evidence):
                 'first-action value minus actual discounted return on test: all, successful and failed pairs',
                 'knowledge', 'population', 'memory', 'process and allocation time', 'objective calls by scoring, selection and provenance, including admissibility'],
             aggregation='Each cumulative route share divides summed counters within one row, then summarize equally across seeds in both views. Knowledge/population/memory/value diagnostics follow both views; time and cumulative cost also report final totals. Empty conditional groups remain null with contributing seed counts.',
+            failed_value_diagnostics='Existing rows store all and successful conditional means. Recover the failed group algebraically with the exhaustive integer success/pair counts; empty groups are null. This introduces only binary64 decomposition rounding and adds no evaluation calls or row fields.',
             proposals='HER has no rejection stage: proposals equal accepted draws. No separate proposal distribution exists.',
             post_hoc='Anything unregistered is labelled post hoc. acs2her_shortened versus acs2her_values_shortened is post hoc only: p differs.',
             interpretation='Removing inadmissible goals also increases original-goal fallbacks; comparisons estimate the whole registered rule, not a causal decomposition of overestimation.'),

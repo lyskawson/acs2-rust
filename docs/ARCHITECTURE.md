@@ -3309,6 +3309,39 @@ with the original budgets and points, at most two allocated CPU-hours. A separat
 contrasts and the two exact archived thresholds before any grid result. The grid
 requires explicit approval and its cumulative allocation limit.
 
+The completed admissibility pilot has twelve successful allocations and 98 rows:
+seed 42, both arms, all six mazes, all registered points and all three evaluation
+blocks. Allocation-level CPUTimeRAW totals **1723 seconds = 0.478611 CPU-hours**;
+there were no failed or repeated learning attempts. All 281 raw/operational files
+were independently checksum-verified on the cluster and locally. Measurement source
+is `3828e430b13138b7458d65a840c1c833382f6c4a`, musl binary SHA-256
+`a7422da3904e9b0d1a5df2152c3508bda66f27f86651ee3af929e230e9391893`.
+`fixtures/hindsight_admissibility_regression.json` pins the first two points of
+all twelve trajectories, all old and new portable fields in binary64 bits.
+The sequential local check used Maze4 and Woods14, both arms, validation only,
+1k/10k/20k points: four runs, twelve rows, 7.86 seconds, without ranking.
+
+The pending [240-run plan](../experiments/hindsight-admissibility/plan.json) has
+SHA-256 `f7dcf93ce08fa6eee9093736c5210e3c532cecfee5541e5f5475258aff91d2da`. Its expected grid cost is
+9.755585 hours; twice that plus the pilot is 19.989781 hours. Actual twenty-job
+batch reservations plus the pilot bound the first attempts at 25.811944 hours.
+The proposed cumulative limit is 30 hours, pending approval. Each hard run limit
+is `max(3, ceil((2 * pilot body seconds + 60) / 60))` minutes, with the shared
+30-second process watchdog margin. This is a sizing margin from one seed, not a
+runtime guarantee. The execution adapter currently refuses every grid stage.
+
+Existing rows retain their value fields. Failed-pair value diagnostics are derived
+algebraically from all-pair and successful-pair means and exhaustive integer pair
+counts; empty conditional groups stay null. `diagnostics.py` tests this decomposition
+and records its binary64 rounding limitation. The registration pins its source hash.
+The archived reference audit covers 480 existing trajectories and 3920 rows across
+HER, episodic replay, ACS2 and ACS2ER without rerunning them or charging their old
+allocations to this study. Seven deliberately applied Rust mutations fail targeted
+tests, including a perceptual-twin wall error. Full gates pass 317 Rust tests and
+17 experiment-specific Python tests; all earlier suites and fixtures pass, P9
+columns 1--7 agree, and cleaning all workspace packages before Clippy retains the
+22 older warnings with none in the additions.
+
 ### Validation selections and control admission
 
 The two candidates were evaluated on five validation seeds at full registered budgets.
