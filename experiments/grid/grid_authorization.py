@@ -15,7 +15,7 @@ IDENTITY_FIELDS = {'measurement_commit', 'binary_sha256', 'preset'}
 
 def derive_manifest(manifest, registration_path=None):
     experiment = manifest.get('experiment')
-    if experiment not in ('her-variants', 'maze-baselines', 'value-consistency'):
+    if experiment not in ('her-variants', 'maze-baselines', 'value-consistency', 'hindsight-admissibility'):
         raise ValueError('experiment has no registered manifest derivation')
     script = Path(__file__).resolve().parents[1] / experiment / 'execution.py'
     payload = dict(manifest=manifest, registration_path=str(registration_path) if registration_path else None)

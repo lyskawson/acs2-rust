@@ -69,7 +69,8 @@ def validate_replay(row, config, agent):
     if agent.startswith('acs2vcp'):
         validate_vcp(row, config, agent)
         return
-    if agent not in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened', 'acs2er_one_update'):
+    restricted_full = agent in ('acs2her_nontrivial', 'acs2her_shortened')
+    if agent not in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened', 'acs2er_one_update') and not restricted_full:
         return
     updates = row['replay_updates']
     kinds = row.get('learning_update_counts', {})
@@ -117,6 +118,12 @@ def validate_replay(row, config, agent):
                     admissibility='CounterfactualEpisode' if agent == 'acs2her_values_shortened' else 'EveryTransition',
                     copy_update='Full' if agent in ('acs2er_episodic', 'acs2her') else 'ValuesOnly',
                     relabeled_proportion=0.0 if agent == 'acs2er_episodic' else agent_settings(config, agent).get('relabeled_proportion', 2 / 3))
+    if restricted_full:
+        expected.update(copy_update='Full', relabeled_proportion=2 / 3,
+                        admissibility='FromNonGoalState' if agent == 'acs2her_nontrivial' else 'CounterfactualEpisode')
+        if (set(parameters) != set(expected) or agent_settings(config, agent)
+                or any(type(parameters[key]) is not type(value) for key, value in expected.items())):
+            raise ValueError('restricted full hindsight presets have fixed parameters')
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('episodic agent rules differ from the registered settings')
     diagnostics = row['replay_diagnostics']
@@ -153,3 +160,16 @@ def validate_replay(row, config, agent):
             raise ValueError('objective purposes do not sum to the total')
     if any(value['objective_evaluations'] != value['reward_evaluations'] + value['reach_evaluations'] for value in purposes.values()):
         raise ValueError('objective cost decomposition differs')
+    if restricted_full:
+        copies = routes['relabeled']
+        if copies['already_reached'] or (agent == 'acs2her_shortened' and copies['after_counterfactual_end']):
+            raise ValueError('restricted hindsight retained an inadmissible copy')
+        walls = diagnostics.get('wall_bumps', {})
+        if set(walls) != {'relabeled_draws', 'unchanged_state', 'unchanged_state_terminal', 'proposals_equal_draws'}:
+            raise ValueError('missing restricted hindsight wall diagnostic')
+        if any(type(walls[key]) is not int or walls[key] < 0 for key in ('relabeled_draws', 'unchanged_state', 'unchanged_state_terminal')):
+            raise ValueError('invalid wall counters')
+        if (walls['relabeled_draws'] != relabeled or walls['proposals_equal_draws'] is not True
+                or not 0 <= walls['unchanged_state_terminal'] <= walls['unchanged_state'] <= relabeled
+                or walls['unchanged_state_terminal'] != 0):
+            raise ValueError('wall diagnostic differs from admissible relabeled draws')

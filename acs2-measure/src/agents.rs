@@ -147,6 +147,15 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
             json!((draws > 0).then(|| counters.relabeled.draws as f64 / draws as f64));
         diagnostics["stored_steps"] = json!(learner.store().len());
         diagnostics["stored_episodes"] = json!(learner.store().episodes().count());
+        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened") {
+            let walls = learner.wall_counters();
+            diagnostics["wall_bumps"] = json!({
+                "relabeled_draws": walls.relabeled_draws,
+                "unchanged_state": walls.unchanged_state,
+                "unchanged_state_terminal": walls.unchanged_state_terminal,
+                "proposals_equal_draws": true,
+            });
+        }
         Some(diagnostics)
     }
     fn agent_parameters(&self) -> Value {

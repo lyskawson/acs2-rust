@@ -3274,6 +3274,39 @@ records are recalculated independently after pulling, before analysis. Raw
 artifacts and the Polish report live outside Git under the approved study roots
 in `~/tu_runs/5/` and `~/Desktop/tu-runs/5/`.
 
+### Full hindsight copies with admissible goals
+
+`acs2her_nontrivial` and `acs2her_shortened` are named presets inside
+`acs2-agents/src/acs2her/`, with full copy updates, future goals and fixed p=2/3.
+The former uses `FromNonGoalState`: a copied goal must not be reached at s_t.
+The latter uses `CounterfactualEpisode`: it must not be reached at any of
+s_0 through s_t. The first transition arriving at the copied goal remains
+admissible. Neither preset accepts a proportion override. Parameters stay outside
+`Configuration`; the existing trajectory sampler supplies restricted distributions
+and original-goal fallbacks without redrawing the transition or dropping an update.
+Fallbacks always receive the full core replay step. Capacity, warmup, episode-end
+learning, three draws per interaction, real-goal acting, evaluation and streams
+are identical to `acs2her`.
+
+Only these two new row names add `replay_diagnostics.wall_bumps`: `relabeled_draws`,
+`unchanged_state` and `unchanged_state_terminal`. The observer compares the drawn
+sample's state and next state, whose identical goal suffix makes this exactly s'=s,
+then reads the already derived goal outcome's `terminated` flag. It makes no
+objective or RNG calls. Original-route draws, including fallbacks, contribute none
+of these counters. `proposals_equal_draws=true` records that this sampler has no
+proposal rejection stage, so a separate proposal composition would be identical.
+For these exact-match mazes, both rules force terminal wall copies to zero; wall
+copies with another, unreached goal can remain. Existing row names and fixtures
+retain all their fields and bytes.
+
+The registration and operational adapters live in
+[`experiments/hindsight-admissibility/`](../experiments/hindsight-admissibility/).
+Stage 1 authorizes only the seed-42 cost pilot on all six registered pair mazes,
+with the original budgets and points, at most two allocated CPU-hours. A separate
+240-run registration fixes seeds 42--61, both test-success views, five paired
+contrasts and the two exact archived thresholds before any grid result. The grid
+requires explicit approval and its cumulative allocation limit.
+
 ### Validation selections and control admission
 
 The two candidates were evaluated on five validation seeds at full registered budgets.

@@ -36,6 +36,26 @@ pub struct UpdateCounts {
     pub environment_steps: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WallCounters {
+    pub relabeled_draws: u64,
+    pub unchanged_state: u64,
+    pub unchanged_state_terminal: u64,
+}
+
+impl WallCounters {
+    pub fn observe<const G: usize, const M: usize>(&mut self, drawn: &DrawnSample<G, M>) {
+        if drawn.provenance.origin != SampleOrigin::Relabeled {
+            return;
+        }
+        self.relabeled_draws += 1;
+        if drawn.scored.sample.state == drawn.scored.sample.next_state {
+            self.unchanged_state += 1;
+            self.unchanged_state_terminal += u64::from(drawn.scored.outcome.terminated);
+        }
+    }
+}
+
 pub trait ReplayEnvironment<const S: usize, const G: usize, const M: usize>:
     Environment<M> + GoalEvaluator<S, G>
 {
@@ -52,6 +72,7 @@ pub struct EpisodicReplay<const S: usize, const G: usize, const M: usize, R, P> 
     rng: R,
     sampler: Sampler<P>,
     counts: UpdateCounts,
+    walls: WallCounters,
 }
 
 impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomSource>
@@ -80,6 +101,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             rng,
             sampler: Sampler::new(sampler, sampler_rng),
             counts: UpdateCounts::default(),
+            walls: WallCounters::default(),
         }
     }
 
@@ -117,14 +139,19 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         self.counts
     }
 
+    pub fn wall_counters(&self) -> WallCounters {
+        self.walls
+    }
+
     pub fn snapshot(&self) -> String {
         format!(
-            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+            "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
             self.population.classifiers(),
             self.config,
             self.replay,
             self.copy_update,
             self.store,
+            self.walls,
             self.rng.capture_state(),
             self.sampler.configuration(),
             self.sampler.random_source().capture_state(),
@@ -199,6 +226,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
+        self.walls.observe(drawn);
         if drawn.provenance.origin == SampleOrigin::Relabeled
             && self.copy_update == CopyUpdate::ValuesOnly
         {

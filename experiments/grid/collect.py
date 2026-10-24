@@ -61,7 +61,7 @@ def validate_row(row, config, agent, seed, commit, target):
         expected_updates = (steps, 0)
     elif agent == "acs2er_one_update":
         expected_updates = (0, steps)
-    elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened') or agent.startswith('acs2vcp'):
+    elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_nontrivial', 'acs2her_shortened', 'acs2her_values', 'acs2her_values_shortened') or agent.startswith('acs2vcp'):
         expected_updates = (0, 3 * steps)
     else:
         expected_updates = (0, sum(min(i, 3) for i in range(1, min(steps, 2) + 1)) + max(steps - 2, 0) * 3)
