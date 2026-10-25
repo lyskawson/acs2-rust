@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from execution import APPROVED_SHA256, BINARY_SHA256, approved, batches, grid_manifest, study_scope
-from grid_protocol import atomic_json, load_plan
+from grid_protocol import atomic_json
 from grid_scope import snapshot
 from submit import execute, submit
 
