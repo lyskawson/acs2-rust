@@ -3276,71 +3276,280 @@ in `~/tu_runs/5/` and `~/Desktop/tu-runs/5/`.
 
 ### Full hindsight copies with admissible goals
 
-`acs2her_nontrivial` and `acs2her_shortened` are named presets inside
-`acs2-agents/src/acs2her/`, with full copy updates, future goals and fixed p=2/3.
-The former uses `FromNonGoalState`: a copied goal must not be reached at s_t.
-The latter uses `CounterfactualEpisode`: it must not be reached at any of
-s_0 through s_t. The first transition arriving at the copied goal remains
-admissible. Neither preset accepts a proportion override. Parameters stay outside
-`Configuration`; the existing trajectory sampler supplies restricted distributions
-and original-goal fallbacks without redrawing the transition or dropping an update.
-Fallbacks always receive the full core replay step. Capacity, warmup, episode-end
-learning, three draws per interaction, real-goal acting, evaluation and streams
-are identical to `acs2her`.
+`acs2her_nontrivial` and `acs2her_shortened` are presets inside
+`acs2-agents/src/acs2her/`, with parameters outside `Configuration`,
+both with full copy updates, future goals and fixed p=2/3. The former applies
+`FromNonGoalState`: the copied goal must not be reached at s_t. The latter applies
+`CounterfactualEpisode`: it must not be reached at any of s_0 through s_t.
+First arrivals remain admissible. An empty admissible distribution retains the
+transition and falls back to its original goal with a full step. Capacity, warmup,
+three draws per interaction, episode-end learning, real-goal acting, evaluation
+and stream identities are unchanged. Proportion overrides are refused.
 
-Only these two new row names add `replay_diagnostics.wall_bumps`: `relabeled_draws`,
-`unchanged_state` and `unchanged_state_terminal`. The observer compares the drawn
-sample's state and next state and the stored achieved goals before and after it.
-In coordinate mazes the latter identify physical cells, so moves between perceptual
-twins cannot masquerade as wall bumps. It then reads the already derived goal
-outcome's `terminated` flag. It makes no
-objective or RNG calls. Original-route draws, including fallbacks, contribute none
-of these counters. `proposals_equal_draws=true` records that this sampler has no
-proposal rejection stage, so a separate proposal composition would be identical.
-For these exact-match mazes, both rules force terminal wall copies to zero; wall
-copies with another, unreached goal can remain. Existing row names and fixtures
-retain all their fields and bytes.
+Only these row names emit `replay_diagnostics.wall_bumps`: `relabeled_draws`,
+`unchanged_state`, `unchanged_state_terminal` and `proposals_equal_draws=true`.
+The observer reads the scored states, stored achieved coordinates and already
+derived termination; it makes no RNG or objective calls. Coordinate checks keep
+moves between perceptual twins out of the wall count. Original and fallback
+draws contribute none. This sampler has no proposal rejection distribution.
+Historical reference wall counters remain unmeasured, rather than zero.
 
-The registration and operational adapters live in
+The [approved registration](../experiments/hindsight-admissibility/plan.json),
+SHA-256 `f7dcf93ce08fa6eee9093736c5210e3c532cecfee5541e5f5475258aff91d2da`,
+fixes six pair-protocol mazes, seeds 42--61, 240 runs and no tuning. All eight
+registered points are retained, nine on Woods14; budgets are 2M interactions,
+4M on Woods14. HER and episodic ER reuse the approved hindsight archive; ACS2
+and ACS2ER reuse the pair-baseline archive through `grid/agent_names.json`.
+The unchanged `fixtures/hindsight_admissibility_regression.json` pins the first
+two points of all twelve pilot trajectories, including every portable old and
+new field in binary64 bits. Earlier row names and pinned fixtures retain their
+fields and bytes.
+
+### Held-pair success after excluding reached goals
+
+Each cell is test-success mean ± SE over twenty seeds, 42--61. The primary view
+averages registered points equally within each seed; the final view uses only
+the last point. Complete episodes retain the registered interaction overshoot.
+These finite horizons do not establish convergence.
+
+In the primary view, shortened HER exceeds episodic replay on all six mazes,
+with positive marginal intervals. Its intervals against the original HER are
+positive on Maze4--7 and Woods14; MazeMA includes zero. It also exceeds the
+nontrivial rule on all six mazes. Removing only trivial copies does not improve
+the original HER: its intervals are negative on Maze6, Maze7 and Woods14, and
+include zero elsewhere. In the final view, shortened HER retains positive
+intervals against episodic replay on Maze5--7 and Woods14, against original HER
+on Maze6 and Woods14, and against the nontrivial rule on Maze5--7 and Woods14.
+All remaining shortened-arm final contrasts include zero.
+
+**Checkpoint means, twenty seeds:**
+
+| Maze | Nontrivial | Shortened | HER | Episodic ER | ACS2 | ACS2ER |
+|---|---|---|---|---|---|---|
+| maze4 | 0.1760 ± 0.0035 | 0.2060 ± 0.0039 | 0.1847 ± 0.0041 | 0.1726 ± 0.0045 | 0.1934 ± 0.0038 | 0.1665 ± 0.0050 |
+| maze5 | 0.1308 ± 0.0035 | 0.1595 ± 0.0029 | 0.1405 ± 0.0029 | 0.1110 ± 0.0035 | 0.1313 ± 0.0028 | 0.1161 ± 0.0033 |
+| maze6 | 0.1398 ± 0.0032 | 0.1862 ± 0.0039 | 0.1565 ± 0.0024 | 0.1336 ± 0.0037 | 0.1570 ± 0.0035 | 0.1288 ± 0.0037 |
+| maze7 | 0.1372 ± 0.0025 | 0.1725 ± 0.0030 | 0.1575 ± 0.0031 | 0.1380 ± 0.0035 | 0.1477 ± 0.0036 | 0.1371 ± 0.0033 |
+| woods14 | 0.1516 ± 0.0036 | 0.2334 ± 0.0096 | 0.1649 ± 0.0053 | 0.1669 ± 0.0053 | 0.1848 ± 0.0063 | 0.1729 ± 0.0081 |
+| mazema | 0.1871 ± 0.0053 | 0.2236 ± 0.0081 | 0.1990 ± 0.0083 | 0.1974 ± 0.0071 | 0.1874 ± 0.0065 | 0.1910 ± 0.0071 |
+
+**Final registered points, twenty seeds:**
+
+| Maze | Nontrivial | Shortened | HER | Episodic ER | ACS2 | ACS2ER |
+|---|---|---|---|---|---|---|
+| maze4 | 0.2167 ± 0.0075 | 0.2377 ± 0.0098 | 0.2250 ± 0.0096 | 0.2278 ± 0.0082 | 0.3253 ± 0.0094 | 0.2272 ± 0.0119 |
+| maze5 | 0.1678 ± 0.0065 | 0.2056 ± 0.0052 | 0.1919 ± 0.0070 | 0.1457 ± 0.0066 | 0.2356 ± 0.0084 | 0.1604 ± 0.0096 |
+| maze6 | 0.1793 ± 0.0069 | 0.2453 ± 0.0055 | 0.2092 ± 0.0049 | 0.1811 ± 0.0114 | 0.2849 ± 0.0105 | 0.1664 ± 0.0100 |
+| maze7 | 0.1829 ± 0.0061 | 0.2269 ± 0.0063 | 0.2076 ± 0.0054 | 0.2012 ± 0.0119 | 0.2664 ± 0.0119 | 0.1799 ± 0.0103 |
+| woods14 | 0.1588 ± 0.0073 | 0.2579 ± 0.0142 | 0.1833 ± 0.0082 | 0.2000 ± 0.0181 | 0.1974 ± 0.0143 | 0.1833 ± 0.0165 |
+| mazema | 0.2167 ± 0.0092 | 0.2478 ± 0.0152 | 0.2133 ± 0.0135 | 0.2344 ± 0.0146 | 0.2722 ± 0.0177 | 0.2144 ± 0.0181 |
+
+All five registered contrasts appear in both views below. Differences pair the
+same twenty seed scores; intervals are marginal 95% Student t(19), critical
+value 2.093024054408263, without multiplicity correction.
+
+| Maze | View | Contrast | Paired mean ± SE | 95% interval |
+|---|---|---|---|---|
+| maze4 | checkpoint mean | Nontrivial − HER | -0.0087 ± 0.0044 | [-0.0178, 0.0005] |
+| maze4 | checkpoint mean | Nontrivial − Episodic ER | 0.0034 ± 0.0051 | [-0.0073, 0.0142] |
+| maze4 | checkpoint mean | Shortened − HER | 0.0213 ± 0.0053 | [0.0102, 0.0324] |
+| maze4 | checkpoint mean | Shortened − Episodic ER | 0.0334 ± 0.0055 | [0.0219, 0.0449] |
+| maze4 | checkpoint mean | Shortened − Nontrivial | 0.0299 ± 0.0053 | [0.0189, 0.0410] |
+| maze4 | final point | Nontrivial − HER | -0.0083 ± 0.0122 | [-0.0339, 0.0173] |
+| maze4 | final point | Nontrivial − Episodic ER | -0.0111 ± 0.0116 | [-0.0353, 0.0131] |
+| maze4 | final point | Shortened − HER | 0.0127 ± 0.0146 | [-0.0178, 0.0431] |
+| maze4 | final point | Shortened − Episodic ER | 0.0099 ± 0.0116 | [-0.0145, 0.0342] |
+| maze4 | final point | Shortened − Nontrivial | 0.0210 ± 0.0117 | [-0.0034, 0.0454] |
+| maze5 | checkpoint mean | Nontrivial − HER | -0.0098 ± 0.0047 | [-0.0196, 0.0001] |
+| maze5 | checkpoint mean | Nontrivial − Episodic ER | 0.0198 ± 0.0041 | [0.0112, 0.0283] |
+| maze5 | checkpoint mean | Shortened − HER | 0.0189 ± 0.0037 | [0.0111, 0.0268] |
+| maze5 | checkpoint mean | Shortened − Episodic ER | 0.0485 ± 0.0052 | [0.0377, 0.0593] |
+| maze5 | checkpoint mean | Shortened − Nontrivial | 0.0287 ± 0.0049 | [0.0184, 0.0391] |
+| maze5 | final point | Nontrivial − HER | -0.0241 ± 0.0090 | [-0.0429, -0.0053] |
+| maze5 | final point | Nontrivial − Episodic ER | 0.0221 ± 0.0110 | [-0.0009, 0.0451] |
+| maze5 | final point | Shortened − HER | 0.0137 ± 0.0087 | [-0.0044, 0.0319] |
+| maze5 | final point | Shortened − Episodic ER | 0.0599 ± 0.0099 | [0.0392, 0.0806] |
+| maze5 | final point | Shortened − Nontrivial | 0.0378 ± 0.0094 | [0.0181, 0.0575] |
+| maze6 | checkpoint mean | Nontrivial − HER | -0.0167 ± 0.0043 | [-0.0257, -0.0077] |
+| maze6 | checkpoint mean | Nontrivial − Episodic ER | 0.0062 ± 0.0054 | [-0.0050, 0.0174] |
+| maze6 | checkpoint mean | Shortened − HER | 0.0297 ± 0.0051 | [0.0190, 0.0404] |
+| maze6 | checkpoint mean | Shortened − Episodic ER | 0.0526 ± 0.0055 | [0.0412, 0.0641] |
+| maze6 | checkpoint mean | Shortened − Nontrivial | 0.0464 ± 0.0049 | [0.0362, 0.0567] |
+| maze6 | final point | Nontrivial − HER | -0.0300 ± 0.0086 | [-0.0480, -0.0120] |
+| maze6 | final point | Nontrivial − Episodic ER | -0.0018 ± 0.0141 | [-0.0313, 0.0277] |
+| maze6 | final point | Shortened − HER | 0.0360 ± 0.0064 | [0.0226, 0.0495] |
+| maze6 | final point | Shortened − Episodic ER | 0.0642 ± 0.0126 | [0.0379, 0.0905] |
+| maze6 | final point | Shortened − Nontrivial | 0.0660 ± 0.0102 | [0.0446, 0.0874] |
+| maze7 | checkpoint mean | Nontrivial − HER | -0.0204 ± 0.0040 | [-0.0288, -0.0119] |
+| maze7 | checkpoint mean | Nontrivial − Episodic ER | -0.0009 ± 0.0047 | [-0.0106, 0.0089] |
+| maze7 | checkpoint mean | Shortened − HER | 0.0150 ± 0.0046 | [0.0054, 0.0245] |
+| maze7 | checkpoint mean | Shortened − Episodic ER | 0.0345 ± 0.0040 | [0.0261, 0.0428] |
+| maze7 | checkpoint mean | Shortened − Nontrivial | 0.0353 ± 0.0041 | [0.0267, 0.0440] |
+| maze7 | final point | Nontrivial − HER | -0.0248 ± 0.0070 | [-0.0393, -0.0102] |
+| maze7 | final point | Nontrivial − Episodic ER | -0.0183 ± 0.0146 | [-0.0489, 0.0123] |
+| maze7 | final point | Shortened − HER | 0.0192 ± 0.0092 | [-0.0001, 0.0385] |
+| maze7 | final point | Shortened − Episodic ER | 0.0257 ± 0.0118 | [0.0010, 0.0504] |
+| maze7 | final point | Shortened − Nontrivial | 0.0440 ± 0.0098 | [0.0235, 0.0644] |
+| woods14 | checkpoint mean | Nontrivial − HER | -0.0134 ± 0.0058 | [-0.0254, -0.0013] |
+| woods14 | checkpoint mean | Nontrivial − Episodic ER | -0.0153 ± 0.0052 | [-0.0261, -0.0045] |
+| woods14 | checkpoint mean | Shortened − HER | 0.0685 ± 0.0117 | [0.0440, 0.0931] |
+| woods14 | checkpoint mean | Shortened − Episodic ER | 0.0666 ± 0.0122 | [0.0410, 0.0921] |
+| woods14 | checkpoint mean | Shortened − Nontrivial | 0.0819 ± 0.0110 | [0.0588, 0.1050] |
+| woods14 | final point | Nontrivial − HER | -0.0246 ± 0.0092 | [-0.0438, -0.0053] |
+| woods14 | final point | Nontrivial − Episodic ER | -0.0412 ± 0.0188 | [-0.0805, -0.0020] |
+| woods14 | final point | Shortened − HER | 0.0746 ± 0.0174 | [0.0382, 0.1109] |
+| woods14 | final point | Shortened − Episodic ER | 0.0579 ± 0.0215 | [0.0130, 0.1028] |
+| woods14 | final point | Shortened − Nontrivial | 0.0991 ± 0.0176 | [0.0622, 0.1361] |
+| mazema | checkpoint mean | Nontrivial − HER | -0.0119 ± 0.0107 | [-0.0344, 0.0105] |
+| mazema | checkpoint mean | Nontrivial − Episodic ER | -0.0103 ± 0.0092 | [-0.0295, 0.0089] |
+| mazema | checkpoint mean | Shortened − HER | 0.0246 ± 0.0132 | [-0.0031, 0.0522] |
+| mazema | checkpoint mean | Shortened − Episodic ER | 0.0262 ± 0.0113 | [0.0026, 0.0499] |
+| mazema | checkpoint mean | Shortened − Nontrivial | 0.0365 ± 0.0094 | [0.0168, 0.0563] |
+| mazema | final point | Nontrivial − HER | 0.0033 ± 0.0170 | [-0.0323, 0.0389] |
+| mazema | final point | Nontrivial − Episodic ER | -0.0178 ± 0.0158 | [-0.0508, 0.0152] |
+| mazema | final point | Shortened − HER | 0.0344 ± 0.0253 | [-0.0184, 0.0873] |
+| mazema | final point | Shortened − Episodic ER | 0.0133 ± 0.0153 | [-0.0187, 0.0454] |
+| mazema | final point | Shortened − Nontrivial | 0.0311 ± 0.0184 | [-0.0074, 0.0696] |
+
+### Exact crossings of archived success thresholds
+
+Integer exhaustive success counts and `Fraction` arithmetic recover each curve
+and both archived final-mean thresholds. A crossing is the first registered
+nominal point meeting >=, without interpolation; null means no crossing in the
+registered horizon. All 24 archived baseline crossings are reproduced.
+
+**Archived ACS2 final-mean threshold:**
+
+| Maze | Exact threshold | Nontrivial | Shortened | HER | Episodic ER | ACS2 | ACS2ER |
+|---|---|---|---|---|---|---|---|
+| maze4 | 527/1620 | null | null | null | null | 2000000 | null |
+| maze5 | 523/2220 | null | null | null | null | 1000000 | null |
+| maze6 | 253/888 | null | null | null | null | 1000000 | null |
+| maze7 | 1151/4320 | null | null | null | null | 2000000 | null |
+| woods14 | 15/76 | null | 3000 | null | 4000000 | 100000 | 30000 |
+| mazema | 49/180 | null | 100000 | null | null | 2000000 | null |
+
+**Archived ACS2ER final-mean threshold:**
+
+| Maze | Exact threshold | Nontrivial | Shortened | HER | Episodic ER | ACS2 | ACS2ER |
+|---|---|---|---|---|---|---|---|
+| maze4 | 92/405 | 30000 | 30000 | 30000 | 300000 | 300000 | 2000000 |
+| maze5 | 89/555 | 100000 | 30000 | 30000 | null | 300000 | 1000000 |
+| maze6 | 739/4440 | 30000 | 30000 | 30000 | 300000 | 300000 | 100000 |
+| maze7 | 259/1440 | 100000 | 30000 | 30000 | 300000 | 300000 | 100000 |
+| woods14 | 11/60 | null | 3000 | 300000 | 100000 | 100000 | 30000 |
+| mazema | 193/900 | 30000 | 10000 | 10000 | 30000 | 100000 | 30000 |
+
+### Copy composition and first-action values
+
+The following final-point shares are mean ± SE across twenty seeds. Trivial,
+post-goal, rewarded and wall shares condition on relabeled draws; fallbacks
+condition on all draws. The final column conditions on relabeled wall draws.
+The JSON exports both views, complete curves and the same diagnostics beside
+each contrast. Every new row has three full steps and ten training match
+formations per actual interaction. No values-only updates occur.
+
+| Maze | Arm | Trivial % | After goal % | Fallback % | Rewarded % | Wall % | Terminal given wall % |
+|---|---|---|---|---|---|---|---|
+| maze4 | Nontrivial | 0.000 ± 0.000 | 17.141 ± 0.046 | 8.068 ± 0.019 | 49.129 ± 0.014 | 26.858 ± 0.023 | 0.000 ± 0.000 |
+| maze4 | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 14.749 ± 0.036 | 44.352 ± 0.009 | 26.595 ± 0.028 | 0.000 ± 0.000 |
+| maze5 | Nontrivial | 0.000 ± 0.000 | 24.918 ± 0.047 | 5.907 ± 0.015 | 38.906 ± 0.011 | 34.608 ± 0.025 | 0.000 ± 0.000 |
+| maze5 | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 14.619 ± 0.042 | 32.400 ± 0.008 | 33.878 ± 0.018 | 0.000 ± 0.000 |
+| maze6 | Nontrivial | 0.000 ± 0.000 | 28.018 ± 0.060 | 4.624 ± 0.018 | 35.371 ± 0.012 | 33.937 ± 0.043 | 0.000 ± 0.000 |
+| maze6 | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 13.093 ± 0.040 | 28.307 ± 0.008 | 32.388 ± 0.029 | 0.000 ± 0.000 |
+| maze7 | Nontrivial | 0.000 ± 0.000 | 28.933 ± 0.097 | 4.737 ± 0.021 | 35.429 ± 0.017 | 35.201 ± 0.056 | 0.000 ± 0.000 |
+| maze7 | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 13.560 ± 0.044 | 28.316 ± 0.009 | 33.651 ± 0.028 | 0.000 ± 0.000 |
+| woods14 | Nontrivial | 0.000 ± 0.000 | 48.945 ± 0.211 | 5.537 ± 0.018 | 29.139 ± 0.048 | 57.529 ± 0.017 | 0.000 ± 0.000 |
+| woods14 | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 22.408 ± 0.246 | 18.113 ± 0.040 | 57.156 ± 0.013 | 0.000 ± 0.000 |
+| mazema | Nontrivial | 0.000 ± 0.000 | 32.487 ± 0.144 | 9.551 ± 0.020 | 36.843 ± 0.032 | 48.770 ± 0.021 | 0.000 ± 0.000 |
+| mazema | Shortened | 0.000 ± 0.000 | 0.000 ± 0.000 | 21.811 ± 0.093 | 29.508 ± 0.016 | 48.459 ± 0.021 | 0.000 ± 0.000 |
+
+Value gaps are first-action estimate minus actual discounted return on the
+test block, at the final point, mean ± SE over twenty seeds. Failed-pair means
+are decomposed algebraically from all/successful means and exhaustive integer
+pair counts, with binary64 rounding; empty conditional groups remain null.
+
+| Maze | Arm | All test pairs | Successful pairs | Failed pairs |
+|---|---|---|---|---|
+| maze4 | Nontrivial | 774.46 ± 6.79 | 42.48 ± 2.19 | 976.73 ± 0.30 |
+| maze4 | Shortened | 744.32 ± 8.71 | 37.33 ± 2.17 | 964.29 ± 0.36 |
+| maze4 | HER | 762.98 ± 8.66 | 41.68 ± 2.20 | 972.09 ± 0.42 |
+| maze4 | Episodic ER | 587.04 ± 7.10 | -111.07 ± 5.63 | 792.63 ± 4.78 |
+| maze5 | Nontrivial | 813.98 ± 5.53 | 46.93 ± 3.29 | 968.32 ± 0.32 |
+| maze5 | Shortened | 766.52 ± 4.27 | 55.70 ± 2.70 | 950.37 ± 0.55 |
+| maze5 | HER | 789.19 ± 5.99 | 52.61 ± 3.12 | 963.75 ± 0.29 |
+| maze5 | Episodic ER | 576.94 ± 6.82 | -183.46 ± 5.72 | 706.31 ± 4.48 |
+| maze6 | Nontrivial | 800.50 ± 6.00 | 41.25 ± 3.16 | 965.95 ± 0.38 |
+| maze6 | Shortened | 725.30 ± 4.81 | 49.33 ± 2.38 | 944.80 ± 0.54 |
+| maze6 | HER | 769.53 ± 3.94 | 49.00 ± 2.60 | 959.98 ± 0.29 |
+| maze6 | Episodic ER | 546.68 ± 8.97 | -176.30 ± 6.90 | 705.81 ± 4.51 |
+| maze7 | Nontrivial | 798.74 ± 5.06 | 43.94 ± 3.46 | 967.24 ± 0.22 |
+| maze7 | Shortened | 741.83 ± 5.43 | 41.46 ± 2.51 | 947.12 ± 0.51 |
+| maze7 | HER | 772.17 ± 4.67 | 44.80 ± 2.30 | 962.62 ± 0.39 |
+| maze7 | Episodic ER | 555.56 ± 8.52 | -147.85 ± 8.24 | 731.57 ± 4.29 |
+| woods14 | Nontrivial | 812.00 ± 6.75 | 1.00 ± 2.70 | 964.77 ± 0.68 |
+| woods14 | Shortened | 682.88 ± 8.57 | 32.52 ± 12.09 | 905.08 ± 1.77 |
+| woods14 | HER | 777.91 ± 7.25 | 4.31 ± 3.60 | 951.11 ± 0.91 |
+| woods14 | Episodic ER | 432.81 ± 14.59 | -308.44 ± 15.46 | 615.42 ± 8.97 |
+| mazema | Nontrivial | 765.78 ± 8.53 | 18.73 ± 2.16 | 972.19 ± 0.45 |
+| mazema | Shortened | 707.68 ± 13.02 | 6.33 ± 4.01 | 937.84 ± 1.29 |
+| mazema | HER | 761.59 ± 12.52 | 17.09 ± 2.67 | 963.33 ± 0.65 |
+| mazema | Episodic ER | 541.44 ± 12.22 | -171.28 ± 9.11 | 759.33 ± 6.62 |
+
+Both new rules eliminate trivial copies and rewarded wall copies; shortening
+also eliminates all post-goal copies. Under the nontrivial rule, final post-goal
+shares remain 17.1--48.9%. Shortening reduces the final mean value gap relative
+to original HER on every maze, but its 683--767 gap remains above episodic
+replay's 433--587. The nontrivial rule has larger mean gaps than original HER
+on every maze. These are registered descriptive diagnostics, without additional
+hypothesis tests.
+
+Changing admissibility also changes goal weights and the original-goal fallback
+share. The contrasts estimate the complete registered rule, without isolating
+a causal effect of trivial copies on value bias. Unrewarded wall copies remain
+admissible. No differently tuned values-only contrast is included.
+
+### Population, objective work and verified allocations
+
+Population, knowledge and logical memory are final-point mean ± SE across
+twenty seeds. Logical memory is a lower bound. Objective calls per draw separate
+scoring, admissibility selection and provenance; raw totals and both views remain
+in the exports. Allocation CPUTimeRAW, process CPU and training wall time are
+distinct measurements. Historical reference allocations are not charged again.
+
+| Maze | Arm | Knowledge | Population | Logical MiB | Allocated CPU-s / seed | Process CPU-s / seed | Scoring | Selection | Provenance |
+|---|---|---|---|---|---|---|---|---|---|
+| maze4 | Nontrivial | 1.0000 ± 0.0000 | 929.0 ± 19.4 | 0.746 ± 0.007 | 109.0 ± 2.4 | 104.7 ± 2.7 | 2.000 ± 0.000 | 1.389 ± 0.001 | 2.679 ± 0.001 |
+| maze4 | Shortened | 1.0000 ± 0.0000 | 947.6 ± 18.1 | 0.752 ± 0.006 | 109.1 ± 2.7 | 106.7 ± 2.7 | 2.000 ± 0.000 | 2.791 ± 0.003 | 1.592 ± 0.001 |
+| maze5 | Nontrivial | 1.0000 ± 0.0000 | 1365.8 ± 28.2 | 0.856 ± 0.010 | 185.5 ± 4.8 | 180.1 ± 4.4 | 2.000 ± 0.000 | 1.725 ± 0.001 | 4.756 ± 0.002 |
+| maze5 | Shortened | 1.0000 ± 0.0000 | 1447.5 ± 24.4 | 0.885 ± 0.009 | 190.6 ± 3.8 | 186.6 ± 3.7 | 2.000 ± 0.000 | 4.736 ± 0.005 | 2.428 ± 0.003 |
+| maze6 | Nontrivial | 1.0000 ± 0.0000 | 1613.2 ± 25.8 | 0.930 ± 0.009 | 219.7 ± 4.3 | 215.1 ± 4.3 | 2.000 ± 0.000 | 1.989 ± 0.002 | 6.513 ± 0.006 |
+| maze6 | Shortened | 1.0000 ± 0.0000 | 1680.0 ± 21.6 | 0.953 ± 0.008 | 228.6 ± 3.8 | 224.0 ± 3.7 | 2.000 ± 0.000 | 6.641 ± 0.007 | 2.861 ± 0.003 |
+| maze7 | Nontrivial | 1.0000 ± 0.0000 | 1727.5 ± 28.8 | 0.970 ± 0.010 | 236.1 ± 4.6 | 231.3 ± 4.5 | 2.000 ± 0.000 | 1.956 ± 0.003 | 6.384 ± 0.009 |
+| maze7 | Shortened | 1.0000 ± 0.0000 | 1717.5 ± 18.0 | 0.967 ± 0.006 | 229.1 ± 2.8 | 225.0 ± 2.8 | 2.000 ± 0.000 | 6.495 ± 0.009 | 2.892 ± 0.003 |
+| woods14 | Nontrivial | 1.0000 ± 0.0000 | 282.1 ± 10.2 | 0.437 ± 0.004 | 70.7 ± 1.9 | 68.5 ± 1.9 | 2.000 ± 0.000 | 1.738 ± 0.003 | 8.960 ± 0.022 |
+| woods14 | Shortened | 1.0000 ± 0.0000 | 281.1 ± 8.8 | 0.438 ± 0.003 | 71.0 ± 1.6 | 68.7 ± 1.6 | 2.000 ± 0.000 | 8.109 ± 0.070 | 6.003 ± 0.029 |
+| mazema | Nontrivial | 1.0000 ± 0.0000 | 247.8 ± 4.9 | 0.459 ± 0.002 | 35.8 ± 0.6 | 33.9 ± 0.6 | 2.000 ± 0.000 | 1.460 ± 0.001 | 4.528 ± 0.004 |
+| mazema | Shortened | 1.0000 ± 0.0000 | 250.2 ± 6.8 | 0.460 ± 0.002 | 35.6 ± 0.8 | 34.1 ± 0.8 | 2.000 ± 0.000 | 3.864 ± 0.009 | 3.096 ± 0.006 |
+
+All **240 runs and 1960 rows** completed in 240 attempts.
+The grid used **34414 allocated CPU-seconds**; including the
+1723-second pilot, the cumulative cost is **36137 seconds =
+10.038056 CPU-hours**, within thirty approved hours.
+All 98 seed-42 pilot-overlapping rows reproduce every point and all
+three blocks in binary64 bits, excluding only source/hardware identity and wall
+times. Both raw copies are independently checksum-verified. An independent
+reconstruction from exported integer pair counts verifies all sixty contrasts,
+both sets of seed summaries, seventy-two crossings and the allocation total.
+
+Measurement remains clean source `3828e430b13138b7458d65a840c1c833382f6c4a`,
+musl SHA-256 `a7422da3904e9b0d1a5df2152c3508bda66f27f86651ee3af929e230e9391893`,
+without rebuilding. The source/Cargo diff is empty. Full gates pass 317 Rust
+tests and 257 Python tests, including 38 admissibility tests. P9 columns 1--7
+are unchanged; cleaning all workspace packages before Clippy retains the 22
+older warnings with none in the additions. Both required negative-test mutations
+fail before submission. Reproduction commands and archive tools are in
 [`experiments/hindsight-admissibility/`](../experiments/hindsight-admissibility/).
-Stage 1 authorizes only the seed-42 cost pilot on all six registered pair mazes,
-with the original budgets and points, at most two allocated CPU-hours. A separate
-240-run registration fixes seeds 42--61, both test-success views, five paired
-contrasts and the two exact archived thresholds before any grid result. The grid
-requires explicit approval and its cumulative allocation limit.
-
-The completed admissibility pilot has twelve successful allocations and 98 rows:
-seed 42, both arms, all six mazes, all registered points and all three evaluation
-blocks. Allocation-level CPUTimeRAW totals **1723 seconds = 0.478611 CPU-hours**;
-there were no failed or repeated learning attempts. All 281 raw/operational files
-were independently checksum-verified on the cluster and locally. Measurement source
-is `3828e430b13138b7458d65a840c1c833382f6c4a`, musl binary SHA-256
-`a7422da3904e9b0d1a5df2152c3508bda66f27f86651ee3af929e230e9391893`.
-`fixtures/hindsight_admissibility_regression.json` pins the first two points of
-all twelve trajectories, all old and new portable fields in binary64 bits.
-The sequential local check used Maze4 and Woods14, both arms, validation only,
-1k/10k/20k points: four runs, twelve rows, 7.86 seconds, without ranking.
-
-The pending [240-run plan](../experiments/hindsight-admissibility/plan.json) has
-SHA-256 `f7dcf93ce08fa6eee9093736c5210e3c532cecfee5541e5f5475258aff91d2da`. Its expected grid cost is
-9.755585 hours; twice that plus the pilot is 19.989781 hours. Actual twenty-job
-batch reservations plus the pilot bound the first attempts at 25.811944 hours.
-The proposed cumulative limit is 30 hours, pending approval. Each hard run limit
-is `max(3, ceil((2 * pilot body seconds + 60) / 60))` minutes, with the shared
-30-second process watchdog margin. This is a sizing margin from one seed, not a
-runtime guarantee. The execution adapter currently refuses every grid stage.
-
-Existing rows retain their value fields. Failed-pair value diagnostics are derived
-algebraically from all-pair and successful-pair means and exhaustive integer pair
-counts; empty conditional groups stay null. `diagnostics.py` tests this decomposition
-and records its binary64 rounding limitation. The registration pins its source hash.
-The archived reference audit covers 480 existing trajectories and 3920 rows across
-HER, episodic replay, ACS2 and ACS2ER without rerunning them or charging their old
-allocations to this study. Seven deliberately applied Rust mutations fail targeted
-tests, including a perceptual-twin wall error. Full gates pass 317 Rust tests and
-17 experiment-specific Python tests; all earlier suites and fixtures pass, P9
-columns 1--7 agree, and cleaning all workspace packages before Clippy retains the
-22 older warnings with none in the additions.
 
 ### Validation selections and control admission
 

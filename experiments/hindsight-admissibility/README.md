@@ -59,6 +59,14 @@ and exercise the submission cap independently of manifest authorization. Removin
 either refusal makes its test fail. Existing registered plans and fixtures stay
 byte-identical; the source/Cargo diff from the measurement commit remains empty.
 
+The completed archive contains 240 successful first attempts and 1960 rows, with
+all 98 pilot identity rows passing. Allocation CPUTimeRAW is 34414 seconds for the
+grid and 36137 seconds including the pilot (10.038056 CPU-hours); no reservations
+remain. Both raw copies are checksum-verified. Data and analysis are siblings
+`stage2/study/` and `stage2/analysis/` under the external roots above. Results in
+both views, diagnostics and exact thresholds are recorded in
+[the HER architecture section](../../docs/ARCHITECTURE.md#held-pair-success-after-excluding-reached-goals).
+
 ## Reproduce the registered analysis
 
 Set `STUDY` to the verified local study root, `HER` to the approved hindsight

@@ -58,8 +58,8 @@ def plot(results, output):
         ax.set_ylabel('Held-pair test success, mean ± SE')
         ax.grid(alpha=0.2)
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    figure.legend(handles, labels, loc='lower center', ncol=3, bbox_to_anchor=(0.5, -0.025))
-    figure.tight_layout(h_pad=1.8)
+    figure.legend(handles, labels, loc='lower center', ncol=3, bbox_to_anchor=(0.5, 0))
+    figure.tight_layout(h_pad=1.8, rect=(0, 0.065, 1, 1))
     save(figure, output, 'test-success-curves')
     figure, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True)
     names = ['acs2her_nontrivial', 'acs2her_shortened', 'acs2her', 'acs2er_episodic']
