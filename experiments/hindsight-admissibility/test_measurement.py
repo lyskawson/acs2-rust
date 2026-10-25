@@ -65,6 +65,15 @@ class MeasurementTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_replay(row, self.config, agent)
 
+    def test_both_arms_refuse_a_trivial_copy_with_consistent_pooled_counters(self):
+        for agent, reference in self.rows.items():
+            row = copy.deepcopy(reference)
+            diagnostics = row['replay_diagnostics']
+            diagnostics['routes']['relabeled']['already_reached'] = 1
+            diagnostics['already_reached'] = 1
+            with self.subTest(agent=agent), self.assertRaisesRegex(ValueError, 'restricted hindsight retained an inadmissible copy'):
+                validate_replay(row, self.config, agent)
+
 
 if __name__ == '__main__':
     unittest.main()
