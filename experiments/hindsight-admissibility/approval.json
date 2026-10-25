@@ -1,0 +1,10 @@
+{
+  "approved": true,
+  "plan_sha256": "f7dcf93ce08fa6eee9093736c5210e3c532cecfee5541e5f5475258aff91d2da",
+  "confirmed_on": "2026-10-25",
+  "phase_cpu_hour_limit": 30,
+  "pilot_allocation_cpu_seconds": 1723,
+  "measurement_commit": "3828e430b13138b7458d65a840c1c833382f6c4a",
+  "binary_sha256": "a7422da3904e9b0d1a5df2152c3508bda66f27f86651ee3af929e230e9391893",
+  "scope": "fixed_admissibility_grid_only"
+}

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unittest
 
-from execution import measurement_identity
+from execution import approved, measurement_identity
 from protocol import AGENTS, configurations, study
 from submit import run_batches
 
@@ -49,7 +49,7 @@ class RegistrationTests(unittest.TestCase):
 
     def test_grid_is_pending_and_reuses_all_reference_arms_without_tuning(self):
         self.assertEqual(self.plan['stage'], 'grid_pending_approval')
-        self.assertFalse((self.directory / 'approval.json').exists())
+        self.assertEqual(approved(self.directory / 'plan.json'), self.plan)
         self.assertEqual(self.plan['agents'], AGENTS)
         self.assertEqual(self.plan['runs'], 240)
         self.assertEqual(self.plan['references']['agents'], ['acs2her', 'acs2er_episodic', 'acs2', 'acs2er'])
