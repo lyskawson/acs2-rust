@@ -1,0 +1,10 @@
+{
+  "approved": true,
+  "plan_sha256": "894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888",
+  "phase_cpu_hour_limit": 45,
+  "pilot_allocation_cpu_seconds": 4784,
+  "measurement_commit": "066e99fb954ae8d49c0b39e557b32a33c702a01d",
+  "binary_sha256": "f3e54a47fcd70229ebad65efc004b1ec9a58955901fc80fed16cf0deffb30d07",
+  "approved_date": "2026-10-28",
+  "authority": "Explicit user approval in this chat."
+}

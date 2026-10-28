@@ -20,7 +20,7 @@ CPU-seconds (1.328889 CPU-hours), with no reservations remaining. All 49 shorten
 24 new full-block trajectories (48 rows); every earlier fixture is unchanged.
 
 The pre-results [registration](plan.json), SHA-256
-`894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888`, includes four candidates and no stage-2 approval.
+`894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888`, includes four candidates. `approval.json` authorizes its exact bytes and 45 cumulative allocated CPU-hours, including the 4784-second pilot.
 With 4/5, the expected total is 17.8275 CPU-hours, the doubled forecast 34.326111,
 and the all-array hard bound 40.328889; the suggested cumulative approval is 45.
 Without 4/5, the corresponding values are 16.258056, 31.187222 and 37.995556,
@@ -62,10 +62,13 @@ descriptive across-maze means. At 2/3 all five seeds must reproduce the earlier
 validation and learning/knowledge fields before selection.
 
 `execution.py` derives tuning, independent HER@1/2 control and conditional test
-manifests. These are full scientific manifests. Stage 2 must add a lean dispatcher around
-the shared grid path: one array per stream at a time, at most two streams and
-forty running jobs, re-deriving before each submission. Do not send an entire
-multi-array tuning/control manifest to the current bulk submit command.
+manifests. These are full scientific manifests. `approved_execution.py` uses the shared
+`grid_dispatch.py` path to submit one array per invocation, at most two active
+streams and forty running jobs. Each invocation derives the manifest again,
+checks completed attempts and identities, and checks the grant and hard budget
+before test-only scheduling and submission. No process watches the laptop or
+renews a lease. Pilot accounting files remain immutable; the common scope
+writes refreshed allocation records to `shared-accounting.psv` and new roots.
 Test derivation recomputes the saved selection from tuning and repeats
 its identity checks. Where 2/3 wins, reuse the admissibility grid and run nothing.
 New test settings reproduce the five tuning seeds on validation and seed 42 on
@@ -89,4 +92,24 @@ python3 -B experiments/hindsight-proportion/local_check.py --out <new external d
 python3 -B experiments/hindsight-proportion/prepare_pilot.py --out <new external study root> --destination <cluster study root> --admissibility <verified admissibility study>
 python3 -B experiments/hindsight-proportion/archive.py <study root>
 python3 -B experiments/hindsight-proportion/prepare_plan.py <study root>
+```
+
+## Approved execution
+
+`prepare_execution.py` preserves the pilot and snapshots clean operations in
+`execution-operations/` beside the raw study. Source and musl binary remain at
+the pilot identity; do not rebuild the measurement clone. The approval and one
+scope include all thirteen roots with zero pilot offset, so the existing pilot
+ledgers charge every one of their 4784 CPU-seconds exactly once.
+
+Run each command from the immutable operation snapshot on WCSS. An invocation
+submits only the next registered array, or returns complete. Wait until its
+stream is terminal before invoking it again; tuning and control may be the two
+active streams. Save selection only after complete tuning and all five-seed
+2/3 identities. Test derivation recomputes it before every submission.
+
+```bash
+python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose tuning
+python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose control
+python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose test --configuration-id <selected non-reference maze>
 ```

@@ -66,7 +66,10 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(control['seeds'], list(range(42, 62)))
         self.assertTrue(all(config['evaluation_blocks'] == ['validation'] for config in tuning['configurations']))
         self.assertTrue(all(config['agent_settings'][HER]['relabeled_proportion'] == 0.5 for config in control['configurations']))
-        self.assertFalse((self.directory / 'approval.json').exists())
+        approval = json.loads((self.directory / 'approval.json').read_text())
+        self.assertTrue(approval['approved'])
+        self.assertEqual(approval['phase_cpu_hour_limit'], 45)
+        self.assertEqual(approval['pilot_allocation_cpu_seconds'], 4784)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,8 @@ def derive_manifest(manifest, registration_path=None):
     experiment = manifest.get('experiment')
     if experiment not in ('her-variants', 'maze-baselines', 'value-consistency', 'hindsight-admissibility', 'hindsight-proportion'):
         raise ValueError('experiment has no registered manifest derivation')
-    script = Path(__file__).resolve().parents[1] / experiment / 'execution.py'
+    filename = 'approved_execution.py' if experiment == 'hindsight-proportion' and manifest.get('stage') != 'authorized_cost_pilot' else 'execution.py'
+    script = Path(__file__).resolve().parents[1] / experiment / filename
     payload = dict(manifest=manifest, registration_path=str(registration_path) if registration_path else None)
     result = subprocess.run([sys.executable, '-B', str(script), '--derive-manifest'],
                             input=json.dumps(payload), text=True, capture_output=True)
