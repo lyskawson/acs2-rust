@@ -3338,15 +3338,19 @@ dose control. S@2/3 minus H@1/2 plus H@1/2 minus H@2/3 decomposes the previous
 contrast exactly in rational success arithmetic. Realized copy shares accompany
 this approximate dose match. The registration fixes both test views, paired marginal
 t(19) intervals, both exact baseline thresholds, diagnostics and a single allocation
-scope. Stage 1 authorizes only the thirty-run cost pilot, within five allocated
-CPU-hours including reservations; further runs require approval of the plan and limit.
+scope. The thirty-run cost pilot had a five allocated CPU-hour cap including
+reservations. The saved approval opens the registered tuning, dose control and
+conditional test grids within 45 cumulative allocated CPU-hours, including the pilot.
 
 The proportion cost pilot completed thirty seed-42 allocations and 245 rows for
 4784 CPU-seconds (1.328889 CPU-hours), within its five-hour cap. All 49 shortened
 2/3 validation, learning and knowledge rows reproduce the admissibility archive
 in binary64 bits. The new proportion fixture pins 48 rows at the first two points
 of the four new full-block settings on all six mazes. The pre-results proportion
-plan retains all four candidates; tuning and twenty-seed grids remain unapproved.
+plan retains all four candidates. The approved measurement source is `066e99f` and
+the musl binary SHA-256 is
+`f3e54a47fcd70229ebad65efc004b1ec9a58955901fc80fed16cf0deffb30d07`;
+the grids reuse that binary without rebuilding it.
 
 ### Held-pair success after excluding reached goals
 
