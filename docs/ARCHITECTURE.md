@@ -4122,6 +4122,81 @@ Completed new trajectories: 360; reused historical reference trajectories: 600. 
 
 The analysis lives in [`experiments/hindsight-proportion/`](../experiments/hindsight-proportion/README.md). Independent Fraction reconstruction checks the integer-count CSVs, paired errors and intervals, selection and exact thresholds. Raw artifacts, both verified copies, scientific figures and the Polish report live under `~/tu_runs/hindsight-proportion/` and `~/Desktop/tu-runs/hindsight-proportion/`, outside Git. No reference arm was rerun.
 
+## Replay schedules and episode pass order
+
+`acs2-agents::episodic_replay::ReplayPlan` adds `ReplaySchedule` and `ReplayOrder`
+outside `Configuration`, `ReplaySample`, FIFO replay parameters and checkpoint
+identity. The shared learner accepts it before the first interaction through
+`set_replay_plan` or `with_replay_plan`; episodic ER, every HER preset and later
+learners use that same mechanism. Constant schedule and independent draws are the
+defaults. Their original sampler call, RNG stream, snapshots and row shape remain
+unchanged. ACS2, FIFO ACS2ER, VCP and the multiplexer do not select these axes.
+
+`ThreeToOne` uses the environment clock at the complete episode's end. An episode
+ending exactly at T receives three draws per interaction; one ending after T receives
+one for its entire length, including a straddling episode. Learning still uses the
+end clock. The measurement CLI admits T=30000, 100000 and 300000. Switched rows add
+both axis parameters and `draw_schedule` counters for early/late interactions and
+the first late episode end. Interval rates are cumulative update differences divided
+by cumulative actual-interaction differences, including the initial interval.
+
+`Backward` selects a retained episode proportional to length, requests a single
+copy goal with probability p and uses the existing episode goal distribution at
+transition zero. Achieved-state duplicates retain their weights, and the preset's
+admissibility rule and candidate filter apply. Each transition is checked under that
+rule; the counterfactual rule keeps exactly the prefix ending at first arrival.
+An empty goal distribution falls back to the original goal. Each admitted transition
+is a full current-population learning step for the full-update presets; values presets
+retain their declared copy-update rule. A pass runs from its final admitted transition
+to its first. The last pass is a backward suffix if the remaining budget is shorter,
+so every completed real episode receives exactly 3L updates. The random-pass control
+shuffles that same selected suffix with injected ChaCha stream9, independently of
+sampler stream7. Per-pass requests/fallbacks/cuts and emitted/available transitions
+are reported separately from per-draw copy counts. Snapshot evaluation includes the
+new RNG and counters; evaluation remains read-only and greedy at preset epsilon0.8.
+
+`acs2-trajectory::Sampler::draw_pass` is additive. Episode-level goal selection and
+provenance/cost accounting belong beside the existing transition sampler, and its
+private route-counter recording cannot be reproduced faithfully by an agent-side
+relabeling loop. `draw` and its configuration are unchanged. Pass failures count all
+objective work but none of their samples; a final cut scores only emitted samples.
+Selection and provenance work for choosing the goal and admitted indices is attached
+once to the first emitted sample and included in cumulative purpose totals.
+
+Length-proportional episode selection followed by whole passes does **not** preserve
+uniform transition exposure: ignoring cuts, an original transition's exposure per
+pass is proportional to its episode length. Counterfactual prefixes add goal-dependent
+weighting. C therefore changes grouping, goals and exposure as well as order; its
+random-pass control shares all three. Identical stores and sampler states produce
+identical pass multisets and goals under either order, but policies and future
+collected episodes may diverge. This is a backward replay intervention inspired by
+[Lee, Choi and Chung (2019)](https://proceedings.neurips.cc/paper/2019/hash/e6d8545daa42d5ced125a4bf747b3688-Abstract.html);
+it retains ACS2's beta0.05 instead of importing the paper's temporary target table
+and diffusion construction. The two axes cannot be combined in this study.
+
+The [schedule and order study](../experiments/replay-schedule-and-order/README.md)
+uses shortened HER at the approved per-maze proportion selection and matched episodic
+ER controls. `agent` keeps its thesis name; an `arm` annotation records proportion
+and schedule/order. Default rows add no parameter or diagnostic fields. The shared
+`grid/replay_schema.py`, `row_schema.py` and `collect.py` require exact registered
+settings, axis parameter values and types, schedule counts, pass counts, full/values
+update counts and zero inadmissible shortened copies. Mechanical manifest derivation
+fixes the entire arm and point grid, and conditional test derivation recomputes the
+saved validation-only selection. Unregistered switches, orders, extra settings and
+combined axes are refused. The original plans and fixtures are unchanged.
+
+The sixty-run stage1 pilot has a twelve-hour allocation cap including reservations.
+It includes all B settings and backward passes for both agents, shortened random-pass
+and the default shortened identity setting, on six mazes at all registered points
+and blocks. Default seed42 fields must reproduce the selected-p proportion test
+archive in binary64 bits. That identity licenses reuse of five-seed validation-only
+base tuning. The pre-results plan fixes 120 new validation-only screening runs,
+independent per-axis choices with base-favoring ties, conditional twenty-seed tests,
+paired marginal t(19) contrasts and exact inclusive thresholds in both test views.
+All allocation roots share one scope; source, binary, operations, node, raw-artifact
+and identity guards use the existing grid execution path. Stage1 stops after
+registration and the external report; screening and test need explicit approval.
+
 ## Value consistency prioritization with independent hindsight heads
 
 `acs2-agents/src/acs2vcp/` owns ACS2VCP, its separate

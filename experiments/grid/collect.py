@@ -62,7 +62,8 @@ def validate_row(row, config, agent, seed, commit, target):
     elif agent == "acs2er_one_update":
         expected_updates = (0, steps)
     elif agent in ('acs2er_episodic', 'acs2her', 'acs2her_nontrivial', 'acs2her_shortened', 'acs2her_values', 'acs2her_values_shortened') or agent.startswith('acs2vcp'):
-        expected_updates = (0, 3 * steps)
+        from replay_schema import expected_draws
+        expected_updates = (0, expected_draws(row, config, agent))
     else:
         expected_updates = (0, sum(min(i, 3) for i in range(1, min(steps, 2) + 1)) + max(steps - 2, 0) * 3)
     if (row["online_updates"], row["replay_updates"]) != expected_updates:
@@ -142,6 +143,10 @@ def run(args):
         command.extend(['--relabel-proportion', str(agent_settings['relabeled_proportion'])])
     if 'temperature' in agent_settings:
         command.extend(['--vcp-temperature', str(agent_settings['temperature'])])
+    from replay_schema import registered_axes
+    axes = registered_axes(config, agent)
+    if axes is not None:
+        command.extend(['--replay-schedule', axes[0], '--replay-order', axes[1]])
     metadata = {"command": command, "commit": args.commit, "manifest": manifest,
                 "manifest_sha256": hashlib.sha256(Path(args.manifest).read_bytes()).hexdigest(),
                 "binary_sha256": hashlib.sha256(Path(args.binary).read_bytes()).hexdigest(),

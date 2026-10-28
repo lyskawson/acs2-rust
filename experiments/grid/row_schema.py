@@ -1,7 +1,9 @@
 import math
+import json
 
 from agent_names import agent_settings, canonical_run_name
 from vcp_schema import validate_vcp
+from replay_schema import AXES, parameters as replay_parameters, registered_axes, validate_passes
 
 EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachable_after_cap',
                      'unreachable_or_ambiguous', 'evaluation_pairs', 'evaluation_distribution',
@@ -119,21 +121,28 @@ def validate_replay(row, config, agent):
                     copy_update='Full' if agent in ('acs2er_episodic', 'acs2her') else 'ValuesOnly',
                     relabeled_proportion=0.0 if agent == 'acs2er_episodic' else agent_settings(config, agent).get('relabeled_proportion', 2 / 3))
     settings = agent_settings(config, agent)
+    axes = registered_axes(config, agent)
+    expected.update(replay_parameters(config, agent))
     if agent in ('acs2her', 'acs2her_shortened') and settings:
         proportion = settings.get('relabeled_proportion')
-        if (set(settings) != {'relabeled_proportion'} or type(proportion) is not float
+        if (set(settings) != ({'relabeled_proportion'} | (AXES if axes else set())) or type(proportion) is not float
                 or not math.isfinite(proportion) or not 0 <= proportion <= 1):
             raise ValueError('invalid full hindsight proportion settings')
     if restricted_full:
         expected.update(copy_update='Full', relabeled_proportion=settings.get('relabeled_proportion', 2 / 3),
                         admissibility='FromNonGoalState' if agent == 'acs2her_nontrivial' else 'CounterfactualEpisode')
-        if (set(parameters) != set(expected) or (agent == 'acs2her_nontrivial' and settings)
+        if (set(parameters) != set(expected) or (agent == 'acs2her_nontrivial' and set(settings) - AXES)
                 or any(type(parameters[key]) is not type(value) for key, value in expected.items())):
             raise ValueError('restricted full hindsight presets have fixed parameters')
     if agent in ('acs2her', 'acs2her_shortened') and type(parameters.get('relabeled_proportion')) is not float:
         raise ValueError('full hindsight row proportion must be a binary64 number')
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('episodic agent rules differ from the registered settings')
+    if axes and set(parameters) != set(expected):
+        raise ValueError('new replay settings have unregistered row parameters')
+    if axes and json.dumps(parameters, sort_keys=True, allow_nan=False) != json.dumps(expected, sort_keys=True, allow_nan=False):
+        raise ValueError('new replay parameter types or values differ from registration')
+    validate_passes(row, config, agent)
     diagnostics = row['replay_diagnostics']
     if diagnostics['draws'] != updates or diagnostics['failed_draws'] != 0:
         raise ValueError('sampler draw count differs from learning')

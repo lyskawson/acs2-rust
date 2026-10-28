@@ -15,8 +15,9 @@ use acs2_measure::goal_protocol::{
     registered_configuration, MazeGoalDistributions, TaskProtocol, MAZE_PROTOCOL_ID,
 };
 use acs2_measure::pair_protocol::{MazePairDistributions, MAZE_PAIR_PROTOCOL_ID};
-use acs2_measure::runner::run_protocol_with_sink;
-use acs2_measure::runner::{run_with_sink, AgentKind, RunMetadata, RunSettings};
+use acs2_measure::runner::run_protocol_with_replay_plan;
+use acs2_agents::episodic_replay::ReplayPlan;
+use acs2_measure::runner::{run_with_replay_plan, AgentKind, RunMetadata, RunSettings, ReplayRunSettings};
 use acs2_measure::task::{
     bit_goal, parse_cells, taxi_goal, BitTask, HandEyeTask, MazeTask, Task, TaxiTask,
 };
@@ -37,6 +38,7 @@ struct Options {
     record_starts: bool,
     protocol: Option<String>,
     evaluation_blocks: Option<String>,
+    replay_plan: ReplayPlan,
 }
 
 impl Options {
@@ -54,6 +56,8 @@ impl Options {
         let mut evaluation_blocks = None;
         let mut relabel_proportion: Option<f64> = None;
         let mut vcp_temperature: Option<u32> = None;
+        let mut replay_schedule = None;
+        let mut replay_order = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -97,6 +101,8 @@ impl Options {
                 "--relabel-proportion" => {
                     relabel_proportion = Some(value.parse().expect("relabel proportion"))
                 }
+                "--replay-schedule" => replay_schedule = Some(value),
+                "--replay-order" => replay_order = Some(value),
                 "--vcp-temperature" => vcp_temperature = Some(value.parse().expect("integer VCP temperature")),
                 _ => panic!("unknown option {flag}"),
             }
@@ -152,6 +158,15 @@ impl Options {
                 };
             }
         }
+        if replay_schedule.is_some() || replay_order.is_some() {
+            assert!(agents.iter().all(|agent| matches!(agent, AgentKind::Acs2ErEpisodic
+                | AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial
+                | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. }
+                | AgentKind::Acs2HerValuesShortened { .. })), "replay axes require an episodic learner");
+        }
+        let replay_plan = acs2_measure::replay_plan::parse(
+            replay_schedule.as_deref().unwrap_or("constant"),
+            replay_order.as_deref().unwrap_or("independent"));
         if let Some(blocks) = &evaluation_blocks {
             assert!(
                 protocol.is_some(),
@@ -174,6 +189,7 @@ impl Options {
             record_starts,
             protocol,
             evaluation_blocks,
+            replay_plan,
         }
     }
 }
@@ -188,15 +204,15 @@ fn execute<T, const S: usize, const G: usize, const M: usize>(
 {
     for &seed in &options.seeds {
         for &kind in &options.agents {
-            run_with_sink(
+            run_with_replay_plan(
                 task,
                 kind,
                 seed,
                 &options.targets,
                 metadata,
-                RunSettings {
-                    evaluate_points: true,
-                    capture_final_state: false,
+                ReplayRunSettings {
+                    measurement: RunSettings { evaluate_points: true, capture_final_state: false },
+                    replay: options.replay_plan,
                 },
                 &mut |row| {
                     writeln!(writer, "{}", row).expect("write result");
@@ -280,15 +296,15 @@ fn execute_protocol<T, const S: usize, const G: usize, const M: usize>(
     };
     for &seed in &options.seeds {
         for &kind in &options.agents {
-            run_protocol_with_sink::<_, _, S, G, M>(
+            run_protocol_with_replay_plan::<_, _, S, G, M>(
                 protocol,
                 kind,
                 seed,
                 &options.targets,
                 metadata,
-                RunSettings {
-                    evaluate_points: true,
-                    capture_final_state: false,
+                ReplayRunSettings {
+                    measurement: RunSettings { evaluate_points: true, capture_final_state: false },
+                    replay: options.replay_plan,
                 },
                 &mut |row| {
                     writeln!(writer, "{row}").expect("write result");

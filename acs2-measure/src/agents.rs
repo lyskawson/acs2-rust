@@ -147,6 +147,21 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
             json!((draws > 0).then(|| counters.relabeled.draws as f64 / draws as f64));
         diagnostics["stored_steps"] = json!(learner.store().len());
         diagnostics["stored_episodes"] = json!(learner.store().episodes().count());
+        if learner.replay_plan().schedule != acs2_agents::episodic_replay::ReplaySchedule::Constant {
+            let counts = learner.schedule_counts();
+            diagnostics["draw_schedule"] = json!({
+                "early_steps": counts.early_steps, "late_steps": counts.late_steps,
+                "first_late_episode_end": counts.first_late_episode_end,
+            });
+        }
+        if learner.replay_plan().order != acs2_agents::episodic_replay::ReplayOrder::Independent {
+            let counts = learner.pass_counts();
+            diagnostics["passes"] = json!({
+                "passes": counts.passes, "requested_relabel": counts.requested_relabel,
+                "fallbacks": counts.fallbacks, "cut_passes": counts.cut_passes,
+                "available_steps": counts.available_steps, "emitted_steps": counts.emitted_steps,
+            });
+        }
         if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened") {
             let walls = learner.wall_counters();
             diagnostics["wall_bumps"] = json!({
@@ -162,14 +177,16 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
         let learner = self.0.learner();
         let replay = learner.replay_configuration();
         let sampler = learner.sampler().configuration();
-        json!({"replay": true, "schedule": "after_complete_episode", "replay_capacity": replay.capacity,
+        let mut parameters = json!({"replay": true, "schedule": "after_complete_episode", "replay_capacity": replay.capacity,
             "replay_warmup": replay.warmup, "warmup_rule": "retained_steps_after_episode_insertion_at_least_warmup_no_backpay",
             "replay_updates_per_step": replay.updates_per_step, "draws": "uniform_transitions_with_replacement",
             "strategy": sampler.selection.strategy.name(), "admissibility": format!("{:?}", sampler.selection.admissibility),
             "candidate_filter": sampler.selection.candidate_filter, "relabeled_proportion": sampler.relabeled_proportion,
             "copy_update": format!("{:?}", learner.copy_update()), "truncation": format!("{:?}", replay.truncation),
             "sampler_truncation": format!("{:?}", sampler.truncation), "sampler_stream": acs2_trajectory::SAMPLER_STREAM,
-            "learning_clock": "episode_end_environment_steps"})
+            "learning_clock": "episode_end_environment_steps"});
+        crate::replay_plan::annotate(&mut parameters, learner.replay_plan());
+        parameters
     }
 }
 

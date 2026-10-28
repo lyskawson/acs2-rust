@@ -1,0 +1,89 @@
+# Replay schedules and episode pass order
+
+Two separate axes extend the shared episodic learner. Constant independent replay
+remains the default, with unchanged historical rows and RNG consumption. The B
+settings request three draws per interaction through the inclusive episode-end
+environment clock T, then one, for T=30000, 100000 or 300000. The C setting makes
+backward episode passes with one goal each and the same update budget as the default;
+its order control shuffles each pass with independent ChaCha stream 9. B and C cannot
+be combined. Acting, evaluation, stores, capacities, warmup and learning rules stay
+at the registered preset values.
+
+The base is `acs2her_shortened` at the approved proportion-study selection: Maze4
+1/2, Maze5--7 and Woods14 4/5, MazeMA 1/3. The `agent` field retains that name, or
+`acs2er_episodic` for controls. Arm labels append `_p1of2`, `_p4of5` or `_p1of3`
+for shortened HER, followed by `_replay3to1at30000`, `_replay3to1at100000`,
+`_replay3to1at300000`, `_backward` or `_pass_random`. The identity pilot's base
+has no replay suffix. ER labels have no proportion suffix.
+
+Passes select episodes proportional to retained length. A copy requests one goal
+from the existing episode strategy, retaining achieved-index multiplicities and
+applying admissibility at the pass start and at each transition. Empty choices fall
+back to the original goal. Counterfactual passes stop at first arrival; other rules
+keep their own admitted indices. The backward suffix of the last pass is selected
+before any shuffle, preserving both exact volume and the order control's transition
+set. The sampler stream remains 7; shuffle never consumes it. Counters distinguish
+per-pass requests from realized per-update copies.
+
+Length-proportional episode selection followed by whole passes changes transition
+frequencies: longer episodes receive more replay per transition. Counterfactual
+prefixes add goal-dependent weighting. This is part of the specified C intervention.
+The random-pass control shares this weighting and isolates within-pass order
+conditional on the same store and sampler state. Policies may diverge during training.
+This is backward ACS2 replay inspired by
+[Lee, Choi and Chung (2019)](https://proceedings.neurips.cc/paper/2019/hash/e6d8545daa42d5ced125a4bf747b3688-Abstract.html),
+not the paper's temporary-Q-table target construction or diffusion coefficient.
+
+`replay_schema.py` in the shared grid tooling admits complete explicit axis settings,
+refuses their combination and requires exact parameter values and types. Switched
+rows carry episode-end clock counts, from which their exact draw volume is checked.
+Pass rows carry exact emitted/available steps, request/fallback counts and cuts.
+Every shortened setting must have zero trivial and post-end copies. New fields are
+absent from default rows. `collect.py` passes both axes to the measurement CLI;
+the experiment authorizer mechanically derives each exact registered arm before
+submission. It also recomputes saved validation choices for conditional tests.
+
+Stage1 permits sixty seed42 pilot allocations, ten settings on six mazes, all three
+blocks, within twelve allocated CPU-hours including reservations. The default-setting
+pilot must reproduce all selected-p proportion test fields in binary64 bits, excluding
+only shared provenance/time exclusions. `prepare_pilot.py` verifies that approved
+archive before freezing six test references and thirty validation-only base
+trajectories. No new scientific reference arm is estimated. The local check is six
+sequential short runs on Maze4 and Woods14 and ranks nothing.
+
+After a verified pilot, `prepare_plan.py` pins the nine new settings and registers
+one plan. Screening is validation-only, five seeds, four settings, 120 new runs;
+the base reuses proportion tuning. Select independently per maze and axis using
+the within-seed checkpoint mean then the five-seed mean; base wins within 1e-12.
+Test only non-base selections on seeds42--61. B runs shortened HER and ER at the
+same schedule; C runs shortened backward, ER backward and shortened random-pass.
+Where base wins, that axis allocates nothing on that maze.
+
+The plan fixes both test views, four paired contrasts per tested axis, the C order
+contrast, marginal t(19) intervals and exact inclusive crossings of both archived
+thresholds. `diagnostics.py` reports realized update rates from every checkpoint
+interval, copy composition, value gaps and model/resource costs. All other success
+comparisons, including ACS2, are post hoc. Historical references use
+`grid/agent_names.json` and are reused without allocations.
+
+One accounting scope covers ten pilot roots, screening and thirty possible test-arm
+roots. The forecast doubles measured costs and reserves actual array maxima. Later
+execution uses `grid_dispatch.py`, at most two streams and forty running jobs,
+grant and scheduler test-only checks before each submission, immutable operations,
+node guards, shared STOP and every attempt charged. Stage1 ends after the plan and
+external Polish report. Stage2 requires explicit plan and CPU-limit approval.
+
+```bash
+python3 -B -m unittest discover -s experiments/replay-schedule-and-order -p 'test_*.py'
+python3 -B experiments/replay-schedule-and-order/local_check.py --out <new external directory>
+/usr/bin/python3 -B experiments/replay-schedule-and-order/prepare_pilot.py --out <new external study root> --destination <absolute cluster root> --proportion <verified proportion study>
+python3 -B experiments/replay-schedule-and-order/archive.py <pulled study root>
+python3 -B experiments/replay-schedule-and-order/prepare_plan.py <pulled study root>
+```
+
+Use matching CPython3.9 when recomputing saved choices from the earlier study.
+Raw rows, launch records, accounting, verified inventories and Polish reports live
+under `~/tu_runs/replay-schedule-and-order/` and
+`~/Desktop/tu-runs/replay-schedule-and-order/`, outside Git. Earlier registrations,
+fixtures and studies stay immutable; the proportion directory receives only tests
+for inclusive ties, failed-prefix identity and distinct dose-control crossings.

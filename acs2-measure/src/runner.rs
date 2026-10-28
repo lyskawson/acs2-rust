@@ -27,6 +27,13 @@ use crate::goal_protocol::TaskProtocol;
 use crate::reference::{reference, Reference};
 use crate::task::{Pair, Task};
 
+use acs2_agents::episodic_replay::ReplayPlan;
+
+pub struct ReplayRunSettings {
+    pub measurement: RunSettings,
+    pub replay: ReplayPlan,
+}
+
 pub const AGENT_STREAM: u64 = 1;
 pub const ENVIRONMENT_STREAM: u64 = 2;
 pub const EVALUATION_STREAM: u64 = 3;
@@ -652,7 +659,17 @@ where
     T: Task<S, G, M>,
     F: FnMut(Value),
 {
-    run_protocol_with_sink(
+    run_with_replay_plan(task, kind, seed, targets, metadata,
+        ReplayRunSettings { measurement: settings, replay: ReplayPlan::default() }, emit)
+}
+
+pub fn run_with_replay_plan<T, F, const S: usize, const G: usize, const M: usize>(
+    task: &T, kind: AgentKind, seed: u64, targets: &[u64],
+    metadata: &RunMetadata<'_>, settings: ReplayRunSettings, emit: &mut F,
+) -> Option<(String, String)>
+where T: Task<S, G, M>, F: FnMut(Value),
+{
+    run_protocol_with_replay_plan(
         &TaskProtocol::full_pool(task),
         kind,
         seed,
@@ -676,6 +693,24 @@ where
     T: Task<S, G, M>,
     F: FnMut(Value),
 {
+    run_protocol_with_replay_plan(protocol, kind, seed, targets, metadata,
+        ReplayRunSettings { measurement: settings, replay: ReplayPlan::default() }, emit)
+}
+
+pub fn run_protocol_with_replay_plan<T, F, const S: usize, const G: usize, const M: usize>(
+    protocol: &TaskProtocol<'_, T>, kind: AgentKind, seed: u64, targets: &[u64],
+    metadata: &RunMetadata<'_>, settings: ReplayRunSettings, emit: &mut F,
+) -> Option<(String, String)>
+where T: Task<S, G, M>, F: FnMut(Value),
+{
+    let ReplayRunSettings { measurement: settings, replay: replay_plan } = settings;
+    replay_plan.validate();
+    if replay_plan != ReplayPlan::default() {
+        assert!(matches!(kind, AgentKind::Acs2ErEpisodic | AgentKind::Acs2Her { .. }
+            | AgentKind::Acs2HerNontrivial | AgentKind::Acs2HerShortened { .. }
+            | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. }),
+            "replay axes require an episodic learner");
+    }
     let task = protocol.training;
     let preset = Preset::thesis();
     let config = preset.config(task.actions());
@@ -800,6 +835,7 @@ where
                 agent_rng,
                 ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
             ));
+            agent.0.learner_mut().set_replay_plan(replay_plan, crate::replay_plan::order_rng(replay_plan, seed));
             run_goal_agent_protocol_with_sink(
                 protocol,
                 &mut agent,
@@ -838,6 +874,7 @@ where
                     agent_rng,
                     ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
                 ));
+            agent.0.learner_mut().set_replay_plan(replay_plan, crate::replay_plan::order_rng(replay_plan, seed));
             run_goal_agent_protocol_with_sink(
                 protocol,
                 &mut agent,

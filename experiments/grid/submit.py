@@ -55,6 +55,8 @@ def prepare(root, manifest, repo, approval=None):
         maximum = 2 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
     if plan.get('experiment') == 'hindsight-proportion':
         maximum = 5 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
+    if plan.get('experiment') == 'replay-schedule-and-order':
+        maximum = 12 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
     if plan['partition'] != 'lem-cpu-normal' or not 20 <= plan['concurrency'] <= 40 or not 0 < plan['phase_cpu_hour_limit'] <= maximum:
         raise ValueError('wrong partition, concurrency or CPU-hour limit')
     root.mkdir(parents=True, exist_ok=False)

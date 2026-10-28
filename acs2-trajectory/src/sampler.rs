@@ -7,6 +7,9 @@ use crate::relabel::{build_sample, scoring_cost, GoalEvaluator, SampleError, Sco
 use crate::selection::{goal_distribution, goal_facts, GoalStrategy, Selection};
 use crate::store::{EpisodeId, TrajectoryStore};
 
+mod passes;
+pub use passes::EpisodePass;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SamplerConfiguration {
     pub selection: Selection,

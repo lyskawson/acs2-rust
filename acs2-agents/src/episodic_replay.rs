@@ -14,6 +14,12 @@ use acs2_trajectory::{
     DrawnSample, GoalEvaluator, SampleOrigin, Sampler, SamplerConfiguration, TrajectoryStore,
 };
 
+mod plan;
+pub use plan::{PassCounts, ReplayOrder, ReplayPlan, ReplaySchedule, ScheduleCounts, ORDER_STREAM};
+
+#[cfg(test)]
+mod tests;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EpisodicConfiguration {
     pub capacity: usize,
@@ -80,6 +86,10 @@ pub struct EpisodicReplay<const S: usize, const G: usize, const M: usize, R, P> 
     sampler: Sampler<P>,
     counts: UpdateCounts,
     walls: WallCounters,
+    plan: ReplayPlan,
+    order_rng: Option<P>,
+    passes: PassCounts,
+    schedule_counts: ScheduleCounts,
 }
 
 impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomSource>
@@ -109,6 +119,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             sampler: Sampler::new(sampler, sampler_rng),
             counts: UpdateCounts::default(),
             walls: WallCounters::default(),
+            plan: ReplayPlan::default(),
+            order_rng: None,
+            passes: PassCounts::default(),
+            schedule_counts: ScheduleCounts::default(),
         }
     }
 
@@ -116,6 +130,31 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         assert_eq!(self.counts.environment_steps, 0);
         self.population = population;
         self
+    }
+
+    pub fn with_replay_plan(mut self, plan: ReplayPlan, order_rng: Option<P>) -> Self {
+        self.set_replay_plan(plan, order_rng);
+        self
+    }
+
+    pub fn set_replay_plan(&mut self, plan: ReplayPlan, order_rng: Option<P>) {
+        assert_eq!(self.counts.environment_steps, 0);
+        plan.validate();
+        assert_eq!(plan.order == ReplayOrder::RandomPass, order_rng.is_some());
+        self.plan = plan;
+        self.order_rng = order_rng;
+    }
+
+    pub fn replay_plan(&self) -> ReplayPlan {
+        self.plan
+    }
+
+    pub fn pass_counts(&self) -> PassCounts {
+        self.passes
+    }
+
+    pub fn schedule_counts(&self) -> ScheduleCounts {
+        self.schedule_counts
     }
 
     pub fn population(&self) -> &Population<M> {
@@ -151,7 +190,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     }
 
     pub fn snapshot(&self) -> String {
-        format!(
+        let original = format!(
             "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
             self.population.classifiers(),
             self.config,
@@ -164,7 +203,13 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             self.sampler.random_source().capture_state(),
             self.sampler.counters(),
             self.counts
-        )
+        );
+        if self.plan == ReplayPlan::default() {
+            original
+        } else {
+            format!("{original}|{:?}|{:?}|{:?}|{:?}", self.plan,
+                self.order_rng.as_ref().and_then(RandomSource::capture_state), self.passes, self.schedule_counts)
+        }
     }
 
     pub fn explore_action(&mut self, state: &Perception<M>) -> usize {
@@ -220,21 +265,56 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             self.counts.skipped_warmup_steps += steps as u64;
             return;
         }
+        let episode_end = time + steps as u64;
+        if let ReplaySchedule::ThreeToOne { switch_steps } = self.plan.schedule {
+            if episode_end <= switch_steps {
+                self.schedule_counts.early_steps += steps as u64;
+            } else {
+                self.schedule_counts.late_steps += steps as u64;
+                self.schedule_counts.first_late_episode_end.get_or_insert(episode_end);
+            }
+        }
         let count = steps
-            .checked_mul(self.replay.updates_per_step)
+            .checked_mul(self.plan.schedule.rate(episode_end, self.replay.updates_per_step))
             .expect("replay draw count");
+        if self.plan.order != ReplayOrder::Independent {
+            let mut remaining = count;
+            while remaining > 0 {
+                let mut pass = self.sampler.draw_pass(&self.store, remaining, env)
+                    .expect("valid task replay objective");
+                self.passes.passes += 1;
+                self.passes.requested_relabel += u64::from(pass.requested_relabel);
+                self.passes.fallbacks += u64::from(pass.fallback);
+                self.passes.cut_passes += u64::from(pass.samples.len() < pass.available_steps);
+                self.passes.available_steps += pass.available_steps as u64;
+                self.passes.emitted_steps += pass.samples.len() as u64;
+                remaining -= pass.samples.len();
+                if self.plan.order == ReplayOrder::RandomPass {
+                    acs2_core::support::rng::shuffle(&mut pass.samples,
+                        self.order_rng.as_mut().expect("injected pass-order RNG"));
+                }
+                for drawn in pass.samples {
+                    self.observe_and_learn(&drawn, episode_end);
+                }
+            }
+            return;
+        }
         let draws = self
             .sampler
             .draw(&self.store, count, env)
             .expect("valid task replay objective");
         for drawn in draws {
+            self.observe_and_learn(&drawn, episode_end);
+        }
+    }
+
+    fn observe_and_learn(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
             let first = self.store.episodes().next().expect("retained episode").id();
             let index = usize::try_from(drawn.episode.0 - first.0).expect("retained episode index");
             let episode = self.store.episodes().nth(index).expect("drawn episode retained");
             assert_eq!(episode.id(), drawn.episode);
-            self.walls.observe(&drawn, episode.achieved(drawn.transition), episode.achieved(drawn.transition + 1));
-            self.learn_draw(&drawn, time + steps as u64);
-        }
+            self.walls.observe(drawn, episode.achieved(drawn.transition), episode.achieved(drawn.transition + 1));
+            self.learn_draw(drawn, time);
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
