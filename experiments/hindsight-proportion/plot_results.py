@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 from protocol import ROOT
 from collect import outside_repository
@@ -64,7 +65,7 @@ def plot(analysis, output):
         axis.set_ylabel('Test success')
         axis.set_ylim(0, 1)
         axis.grid(alpha=0.2)
-        axis.legend(fontsize=6.5, loc='lower right')
+        axis.legend(fontsize=6.5, loc='upper right')
     figure.suptitle('Registered held-pair trajectories: mean ± SE over seeds 42–61')
     save(figure, output, 'test-trajectories')
     figure, axes = plt.subplots(2, 3, figsize=(13, 8), constrained_layout=True)
@@ -82,6 +83,7 @@ def plot(analysis, output):
         axis.axvline(0, color='#777777', linewidth=0.8)
         axis.set_title(maze['task'])
         axis.set_xlabel('Paired test-success difference')
+        axis.xaxis.set_major_locator(MaxNLocator(4))
         axis.grid(axis='x', alpha=0.2)
     handles, labels = axes.flat[0].get_legend_handles_labels()
     figure.legend(handles, labels, loc='outside lower center', ncol=2)

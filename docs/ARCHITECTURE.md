@@ -3943,6 +3943,185 @@ module declarations, dependencies and imports while preserving the measured beha
 The fixed research horizon and marginal intervals support the stated comparisons;
 they do not establish convergence, a learning ceiling or performance on other tasks.
 
+### Validation choices for hindsight proportions and dose control
+
+The [approved proportion registration](../experiments/hindsight-proportion/plan.json), SHA-256 `894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888`, fixes four requested proportions and validation-only selection on seeds 42--46. Selection maximizes the within-seed mean over all registered points, then the mean over five seeds; scores within 1e-12 tie and smaller p wins. Each cell below is validation mean ± SE over those five seeds.
+
+| Maze | 1/3 | 1/2 | 2/3 | 4/5 | Selected p |
+| --- | --- | --- | --- | --- | --- |
+| maze4 | 0.1972 ± 0.0105 | 0.2256 ± 0.0203 | 0.1802 ± 0.0046 | 0.1755 ± 0.0075 | 1/2 |
+| maze5 | 0.1659 ± 0.0141 | 0.1735 ± 0.0080 | 0.1682 ± 0.0072 | 0.1775 ± 0.0060 | 4/5 |
+| maze6 | 0.1857 ± 0.0073 | 0.1836 ± 0.0088 | 0.1712 ± 0.0066 | 0.1985 ± 0.0043 | 4/5 |
+| maze7 | 0.1719 ± 0.0146 | 0.1704 ± 0.0063 | 0.1716 ± 0.0050 | 0.1725 ± 0.0107 | 4/5 |
+| woods14 | 0.2152 ± 0.0054 | 0.2000 ± 0.0042 | 0.2292 ± 0.0208 | 0.2487 ± 0.0080 | 4/5 |
+| mazema | 0.2789 ± 0.0114 | 0.2372 ± 0.0217 | 0.2172 ± 0.0215 | 0.2050 ± 0.0116 | 1/3 |
+
+Descriptive across-maze validation means: 1/3: 0.2025; 1/2: 0.1984; 2/3: 0.1896; 4/5: 0.1963. These are not a second selection rule.
+
+S denotes `acs2her_shortened`, H denotes `acs2her`, and E denotes `acs2er_episodic`. S@p* is the per-maze selection. Every following test estimate is mean ± SE over seeds 42--61. The primary view averages the registered points equally within seed; the final view uses only the last point. Budgets remain 2M interactions, 4M on Woods14, with complete-episode overshoot. These horizons do not establish convergence. Where p*=2/3, S@p* reuses S@2/3 and its selection contrast is omitted because the arms coincide.
+
+| Maze | Selected p | S@p* primary | S@p* final | H@1/2 primary | H@1/2 final |
+| --- | --- | --- | --- | --- | --- |
+| maze4 | 1/2 | 0.2187 ± 0.0055 | 0.2725 ± 0.0116 | 0.2069 ± 0.0040 | 0.2608 ± 0.0088 |
+| maze5 | 4/5 | 0.1643 ± 0.0029 | 0.2137 ± 0.0060 | 0.1368 ± 0.0035 | 0.1786 ± 0.0069 |
+| maze6 | 4/5 | 0.1858 ± 0.0038 | 0.2511 ± 0.0088 | 0.1685 ± 0.0039 | 0.2450 ± 0.0076 |
+| maze7 | 4/5 | 0.1740 ± 0.0033 | 0.2155 ± 0.0065 | 0.1583 ± 0.0031 | 0.2113 ± 0.0051 |
+| woods14 | 4/5 | 0.2386 ± 0.0073 | 0.2605 ± 0.0134 | 0.1573 ± 0.0049 | 0.1640 ± 0.0084 |
+| mazema | 1/3 | 0.2263 ± 0.0066 | 0.2644 ± 0.0116 | 0.1993 ± 0.0072 | 0.2489 ± 0.0145 |
+
+Choosing p, primary marginal intervals: includes zero on maze4, maze5, maze6, maze7, woods14, mazema.
+
+Selected shortened minus episodic replay, primary marginal intervals: positive on maze4, maze5, maze6, maze7, woods14, mazema.
+
+Selected shortened minus original HER, primary marginal intervals: positive on maze4, maze5, maze6, maze7, woods14, mazema.
+
+The shortened rule at an approximate dose match, primary marginal intervals: positive on maze5, maze6, maze7, woods14, mazema; includes zero on maze4.
+
+Reducing the requested dose within original HER, primary marginal intervals: positive on maze4, maze6; includes zero on maze5, maze7, woods14, mazema.
+
+Paired differences use the same twenty seeds, marginal 95% t(19) intervals with critical value 2.093024054408263, and no multiplicity correction. The following table contains every registered comparison in both views; it makes no success comparison with ACS2.
+
+| Maze | View | Contrast | Difference ± paired SE | Marginal 95% CI |
+| --- | --- | --- | --- | --- |
+| maze4 | checkpoint mean | S@p* − S@2/3 | 0.0127 ± 0.0064 | [-0.0008, 0.0262] |
+| maze4 | checkpoint mean | S@p* − E | 0.0461 ± 0.0078 | [0.0298, 0.0624] |
+| maze4 | checkpoint mean | S@p* − H@2/3 | 0.0340 ± 0.0059 | [0.0216, 0.0464] |
+| maze4 | checkpoint mean | S@2/3 − H@1/2 | -0.0009 ± 0.0063 | [-0.0140, 0.0122] |
+| maze4 | checkpoint mean | H@1/2 − H@2/3 | 0.0221 ± 0.0061 | [0.0093, 0.0350] |
+| maze4 | final point | S@p* − S@2/3 | 0.0349 ± 0.0162 | [0.0009, 0.0689] |
+| maze4 | final point | S@p* − E | 0.0448 ± 0.0156 | [0.0120, 0.0775] |
+| maze4 | final point | S@p* − H@2/3 | 0.0475 ± 0.0113 | [0.0238, 0.0712] |
+| maze4 | final point | S@2/3 − H@1/2 | -0.0231 ± 0.0129 | [-0.0501, 0.0039] |
+| maze4 | final point | H@1/2 − H@2/3 | 0.0358 ± 0.0139 | [0.0067, 0.0649] |
+| maze5 | checkpoint mean | S@p* − S@2/3 | 0.0048 ± 0.0043 | [-0.0041, 0.0138] |
+| maze5 | checkpoint mean | S@p* − E | 0.0533 ± 0.0050 | [0.0428, 0.0639] |
+| maze5 | checkpoint mean | S@p* − H@2/3 | 0.0238 ± 0.0041 | [0.0152, 0.0324] |
+| maze5 | checkpoint mean | S@2/3 − H@1/2 | 0.0227 ± 0.0042 | [0.0138, 0.0315] |
+| maze5 | checkpoint mean | H@1/2 − H@2/3 | -0.0037 ± 0.0046 | [-0.0133, 0.0058] |
+| maze5 | final point | S@p* − S@2/3 | 0.0081 ± 0.0068 | [-0.0062, 0.0224] |
+| maze5 | final point | S@p* − E | 0.0680 ± 0.0103 | [0.0465, 0.0895] |
+| maze5 | final point | S@p* − H@2/3 | 0.0218 ± 0.0080 | [0.0050, 0.0387] |
+| maze5 | final point | S@2/3 − H@1/2 | 0.0270 ± 0.0074 | [0.0116, 0.0424] |
+| maze5 | final point | H@1/2 − H@2/3 | -0.0133 ± 0.0088 | [-0.0317, 0.0052] |
+| maze6 | checkpoint mean | S@p* − S@2/3 | -0.0005 ± 0.0053 | [-0.0115, 0.0106] |
+| maze6 | checkpoint mean | S@p* − E | 0.0522 ± 0.0046 | [0.0424, 0.0619] |
+| maze6 | checkpoint mean | S@p* − H@2/3 | 0.0293 ± 0.0035 | [0.0221, 0.0365] |
+| maze6 | checkpoint mean | S@2/3 − H@1/2 | 0.0177 ± 0.0044 | [0.0086, 0.0269] |
+| maze6 | checkpoint mean | H@1/2 − H@2/3 | 0.0120 ± 0.0039 | [0.0039, 0.0201] |
+| maze6 | final point | S@p* − S@2/3 | 0.0059 ± 0.0105 | [-0.0161, 0.0278] |
+| maze6 | final point | S@p* − E | 0.0700 ± 0.0147 | [0.0393, 0.1008] |
+| maze6 | final point | S@p* − H@2/3 | 0.0419 ± 0.0099 | [0.0212, 0.0625] |
+| maze6 | final point | S@2/3 − H@1/2 | 0.0002 ± 0.0092 | [-0.0189, 0.0194] |
+| maze6 | final point | H@1/2 − H@2/3 | 0.0358 ± 0.0075 | [0.0201, 0.0515] |
+| maze7 | checkpoint mean | S@p* − S@2/3 | 0.0015 ± 0.0034 | [-0.0057, 0.0087] |
+| maze7 | checkpoint mean | S@p* − E | 0.0359 ± 0.0043 | [0.0269, 0.0450] |
+| maze7 | checkpoint mean | S@p* − H@2/3 | 0.0164 ± 0.0032 | [0.0097, 0.0232] |
+| maze7 | checkpoint mean | S@2/3 − H@1/2 | 0.0142 ± 0.0043 | [0.0051, 0.0232] |
+| maze7 | checkpoint mean | H@1/2 − H@2/3 | 0.0008 ± 0.0035 | [-0.0065, 0.0081] |
+| maze7 | final point | S@p* − S@2/3 | -0.0113 ± 0.0081 | [-0.0284, 0.0057] |
+| maze7 | final point | S@p* − E | 0.0144 ± 0.0133 | [-0.0135, 0.0422] |
+| maze7 | final point | S@p* − H@2/3 | 0.0079 ± 0.0082 | [-0.0092, 0.0249] |
+| maze7 | final point | S@2/3 − H@1/2 | 0.0155 ± 0.0081 | [-0.0014, 0.0324] |
+| maze7 | final point | H@1/2 − H@2/3 | 0.0037 ± 0.0067 | [-0.0102, 0.0176] |
+| woods14 | checkpoint mean | S@p* − S@2/3 | 0.0052 ± 0.0130 | [-0.0221, 0.0324] |
+| woods14 | checkpoint mean | S@p* − E | 0.0717 ± 0.0072 | [0.0566, 0.0868] |
+| woods14 | checkpoint mean | S@p* − H@2/3 | 0.0737 ± 0.0080 | [0.0570, 0.0904] |
+| woods14 | checkpoint mean | S@2/3 − H@1/2 | 0.0761 ± 0.0100 | [0.0552, 0.0971] |
+| woods14 | checkpoint mean | H@1/2 − H@2/3 | -0.0076 ± 0.0050 | [-0.0181, 0.0029] |
+| woods14 | final point | S@p* − S@2/3 | 0.0026 ± 0.0228 | [-0.0450, 0.0503] |
+| woods14 | final point | S@p* − E | 0.0605 ± 0.0191 | [0.0205, 0.1005] |
+| woods14 | final point | S@p* − H@2/3 | 0.0772 ± 0.0148 | [0.0463, 0.1081] |
+| woods14 | final point | S@2/3 − H@1/2 | 0.0939 ± 0.0157 | [0.0611, 0.1266] |
+| woods14 | final point | H@1/2 − H@2/3 | -0.0193 ± 0.0079 | [-0.0359, -0.0027] |
+| mazema | checkpoint mean | S@p* − S@2/3 | 0.0026 ± 0.0110 | [-0.0204, 0.0257] |
+| mazema | checkpoint mean | S@p* − E | 0.0289 ± 0.0086 | [0.0108, 0.0470] |
+| mazema | checkpoint mean | S@p* − H@2/3 | 0.0272 ± 0.0104 | [0.0054, 0.0490] |
+| mazema | checkpoint mean | S@2/3 − H@1/2 | 0.0243 ± 0.0102 | [0.0029, 0.0457] |
+| mazema | checkpoint mean | H@1/2 − H@2/3 | 0.0003 ± 0.0102 | [-0.0210, 0.0216] |
+| mazema | final point | S@p* − S@2/3 | 0.0167 ± 0.0175 | [-0.0200, 0.0533] |
+| mazema | final point | S@p* − E | 0.0300 ± 0.0164 | [-0.0043, 0.0643] |
+| mazema | final point | S@p* − H@2/3 | 0.0511 ± 0.0188 | [0.0117, 0.0905] |
+| mazema | final point | S@2/3 − H@1/2 | -0.0011 ± 0.0239 | [-0.0511, 0.0489] |
+| mazema | final point | H@1/2 − H@2/3 | 0.0356 ± 0.0177 | [-0.0015, 0.0726] |
+
+The rule contrast S@2/3 − H@1/2 and dose contrast H@1/2 − H@2/3 add exactly to S@2/3 − H@2/3 for every seed and point, and for both reported means, in rational success arithmetic. The dose match is approximate; residual differences in realized copy shares remain part of the rule contrast. The intervals condition on the selected p and do not include selection uncertainty.
+
+### Interaction thresholds and diagnostics at selected proportions
+
+Threshold crossings use exact integer exhaustive success counts and rational means. A crossing is the first registered nominal point satisfying >= the archived baseline final mean, without interpolation. Null means that the threshold was not reached in this horizon. Both archived baseline means and all 24 registered baseline crossing checks reproduce exactly.
+
+| Maze | ACS2 exact threshold | S@p* | H@1/2 | ACS2ER exact threshold | S@p* | H@1/2 |
+| --- | --- | --- | --- | --- | --- | --- |
+| maze4 | 527/1620 | null | null | 92/405 | 30000 | 30000 |
+| maze5 | 523/2220 | null | null | 89/555 | 30000 | 100000 |
+| maze6 | 253/888 | null | null | 739/4440 | 30000 | 30000 |
+| maze7 | 1151/4320 | null | null | 259/1440 | 30000 | 100000 |
+| woods14 | 15/76 | 10000 | null | 11/60 | 3000 | null |
+| mazema | 49/180 | 30000 | null | 193/900 | 10000 | 30000 |
+
+The next table reports final cumulative route shares, mean ± SE over twenty seeds. Copies and fallbacks divide by all draws; trivial, post-end, rewarded and wall shares divide by copies. All new and reused settings, tuning settings and pilot settings have both diagnostic views in the analysis exports. Historical unmeasured wall counters remain null.
+
+| Maze | Arm | Copies | Fallbacks | Trivial | After end | Rewarded | Wall |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| maze4 | S@p* | 0.3917 ± 0.0004 | 0.1084 ± 0.0004 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.4431 ± 0.0001 | 0.2634 ± 0.0003 |
+| maze4 | S@2/3 | 0.5192 ± 0.0004 | 0.1475 ± 0.0004 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.4435 ± 0.0001 | 0.2660 ± 0.0003 |
+| maze4 | H@1/2 | 0.5001 ± 0.0001 | 0.0000 ± 0.0000 | 0.2662 ± 0.0006 | 0.3872 ± 0.0008 | 0.6167 ± 0.0004 | — ± — |
+| maze4 | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.2707 ± 0.0004 | 0.3931 ± 0.0005 | 0.6193 ± 0.0003 | — ± — |
+| maze5 | S@p* | 0.6239 ± 0.0006 | 0.1761 ± 0.0006 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.3244 ± 0.0001 | 0.3393 ± 0.0002 |
+| maze5 | S@2/3 | 0.5205 ± 0.0004 | 0.1462 ± 0.0004 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.3240 ± 0.0001 | 0.3388 ± 0.0002 |
+| maze5 | H@1/2 | 0.5000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2679 ± 0.0005 | 0.4388 ± 0.0009 | 0.5269 ± 0.0003 | — ± — |
+| maze5 | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.2717 ± 0.0004 | 0.4443 ± 0.0006 | 0.5293 ± 0.0003 | — ± — |
+| maze6 | S@p* | 0.6395 ± 0.0005 | 0.1605 ± 0.0005 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2832 ± 0.0001 | 0.3253 ± 0.0002 |
+| maze6 | S@2/3 | 0.5358 ± 0.0004 | 0.1309 ± 0.0004 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2831 ± 0.0001 | 0.3239 ± 0.0003 |
+| maze6 | H@1/2 | 0.5000 ± 0.0001 | 0.0000 ± 0.0000 | 0.2368 ± 0.0006 | 0.4314 ± 0.0008 | 0.4707 ± 0.0005 | — ± — |
+| maze6 | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.2433 ± 0.0005 | 0.4391 ± 0.0007 | 0.4754 ± 0.0004 | — ± — |
+| maze7 | S@p* | 0.6367 ± 0.0006 | 0.1633 ± 0.0006 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2831 ± 0.0001 | 0.3376 ± 0.0004 |
+| maze7 | S@2/3 | 0.5312 ± 0.0004 | 0.1356 ± 0.0004 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2832 ± 0.0001 | 0.3365 ± 0.0003 |
+| maze7 | H@1/2 | 0.5001 ± 0.0001 | 0.0000 ± 0.0000 | 0.2448 ± 0.0007 | 0.4415 ± 0.0010 | 0.4767 ± 0.0005 | — ± — |
+| maze7 | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.2512 ± 0.0005 | 0.4504 ± 0.0007 | 0.4811 ± 0.0004 | — ± — |
+| woods14 | S@p* | 0.5324 ± 0.0027 | 0.2676 ± 0.0027 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.1810 ± 0.0003 | 0.5718 ± 0.0001 |
+| woods14 | S@2/3 | 0.4426 ± 0.0025 | 0.2241 ± 0.0025 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.1811 ± 0.0004 | 0.5716 ± 0.0001 |
+| woods14 | H@1/2 | 0.5000 ± 0.0000 | 0.0000 ± 0.0000 | 0.3846 ± 0.0009 | 0.6572 ± 0.0016 | 0.5102 ± 0.0007 | — ± — |
+| woods14 | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.3831 ± 0.0011 | 0.6540 ± 0.0023 | 0.5089 ± 0.0009 | — ± — |
+| mazema | S@p* | 0.2259 ± 0.0005 | 0.1075 ± 0.0005 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2947 ± 0.0002 | 0.4836 ± 0.0003 |
+| mazema | S@2/3 | 0.4486 ± 0.0009 | 0.2181 ± 0.0009 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.2951 ± 0.0002 | 0.4846 ± 0.0002 |
+| mazema | H@1/2 | 0.5001 ± 0.0001 | 0.0000 ± 0.0000 | 0.3882 ± 0.0007 | 0.5704 ± 0.0015 | 0.5943 ± 0.0004 | — ± — |
+| mazema | H@2/3 | 0.6667 ± 0.0000 | 0.0000 ± 0.0000 | 0.3914 ± 0.0005 | 0.5754 ± 0.0010 | 0.5960 ± 0.0003 | — ± — |
+
+First-action estimate minus discounted actual return on the test block is reported separately for all, successful and failed pairs. Failed-pair means are recovered algebraically from all and successful pairs; an empty group remains unmeasured. These are descriptive diagnostics.
+
+| Maze | Arm | All pairs | Successful pairs | Failed pairs | Knowledge | Classifiers |
+| --- | --- | --- | --- | --- | --- | --- |
+| maze4 | S@p* | 702.34 ± 10.36 | 33.75 ± 1.87 | 952.49 ± 0.56 | 1.0000 ± 0.0000 | 1016.3 ± 22.1 |
+| maze4 | H@1/2 | 720.42 ± 7.81 | 37.45 ± 1.83 | 961.15 ± 0.51 | 1.0000 ± 0.0000 | 985.9 ± 18.8 |
+| maze5 | S@p* | 769.58 ± 5.16 | 66.44 ± 2.31 | 960.53 ± 0.35 | 1.0000 ± 0.0000 | 1408.9 ± 23.3 |
+| maze5 | H@1/2 | 788.33 ± 5.86 | 43.95 ± 3.38 | 949.81 ± 0.39 | 1.0000 ± 0.0000 | 1518.7 ± 22.1 |
+| maze6 | S@p* | 728.08 ± 7.66 | 53.37 ± 1.99 | 954.11 ± 0.40 | 1.0000 ± 0.0000 | 1608.8 ± 19.1 |
+| maze6 | H@1/2 | 726.16 ± 6.45 | 48.39 ± 2.85 | 945.71 ± 0.50 | 1.0000 ± 0.0000 | 1685.5 ± 25.0 |
+| maze7 | S@p* | 760.83 ± 5.51 | 48.40 ± 3.46 | 956.20 ± 0.50 | 1.0000 ± 0.0000 | 1677.2 ± 30.1 |
+| maze7 | H@1/2 | 755.85 ± 4.59 | 35.91 ± 2.42 | 948.67 ± 0.52 | 1.0000 ± 0.0000 | 1802.7 ± 29.3 |
+| woods14 | S@p* | 690.89 ± 9.94 | 46.21 ± 9.92 | 916.05 ± 1.45 | 1.0000 ± 0.0000 | 267.9 ± 9.9 |
+| woods14 | H@1/2 | 779.08 ± 7.32 | -2.43 ± 3.68 | 931.91 ± 1.37 | 1.0000 ± 0.0000 | 282.0 ± 8.9 |
+| mazema | S@p* | 659.37 ± 9.82 | -15.47 ± 5.05 | 901.17 ± 1.09 | 1.0000 ± 0.0000 | 270.7 ± 7.8 |
+| mazema | H@1/2 | 713.55 ± 13.22 | 7.43 ± 2.95 | 947.06 ± 0.83 | 1.0000 ± 0.0000 | 251.1 ± 4.9 |
+
+Population numerosity, lower-bound logical bytes, process peak RSS, training/evaluation wall times and CPU time accompany every physical arm in the CSV/JSON exports. Objective calls are separated into scoring, selection and provenance, including admissibility work. Every hindsight setting in this proportion study performs three full learning steps per interaction; p changes the distribution of learned goals.
+
+### Verified proportion allocations and reproducibility
+
+| Purpose | Attempts | Allocated CPU seconds | Allocated CPU hours |
+| --- | --- | --- | --- |
+| pilot | 30 | 4784 | 1.328889 |
+| tuning | 140 | 18864 | 5.240000 |
+| control | 160 | 20721 | 5.755833 |
+| test | 120 | 18080 | 5.022222 |
+
+The single thirteen-root scope totals 62449 allocated CPU-seconds (17.346944 CPU-hours), including the 4784-second pilot and every failed attempt, within the approved 45-hour limit; no reservations remain. A transient SLURM allocation-metadata socket timeout stopped both Maze6 arrays; another stopped the MazeMA control before measurement. Together they cost 2165 CPU-seconds across 60 failed attempts. Their artifacts remain in the ledgers; retries use new attempt directories. All 90 saved partial scientific rows reproduce the successful retries bit for bit.
+
+Completed new trajectories: 360; reused historical reference trajectories: 600. Conditional test manifests were derived from a saved selection recomputed from complete validation-only tuning. All 245 tuning 2/3 validation, learning and knowledge rows reproduce the admissibility archive before selection; seed-42 new settings reproduce the pilot, and test seeds 42--46 reproduce tuning on shared fields. The approved source and static musl binary stay at the pilot identities. The CLI integration test also asserts both agent name and admissibility and rejects a shortened-to-HER mutation.
+
+The analysis lives in [`experiments/hindsight-proportion/`](../experiments/hindsight-proportion/README.md). Independent Fraction reconstruction checks the integer-count CSVs, paired errors and intervals, selection and exact thresholds. Raw artifacts, both verified copies, scientific figures and the Polish report live under `~/tu_runs/hindsight-proportion/` and `~/Desktop/tu-runs/hindsight-proportion/`, outside Git. No reference arm was rerun.
+
 ## Value consistency prioritization with independent hindsight heads
 
 `acs2-agents/src/acs2vcp/` owns ACS2VCP, its separate

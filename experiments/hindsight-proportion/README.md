@@ -142,8 +142,43 @@ runtime rather than relaxing it. The results record the analysis Python version.
 
 ```bash
 python3 -B <operations>/experiments/hindsight-proportion/save_selection.py --root <study>
-python3 -B experiments/hindsight-proportion/verify.py --root <local study>
-python3 -B experiments/hindsight-proportion/analyze.py --root <local study> --admissibility-root <admissibility study> --her-root <HER study> --baseline-root <pair baseline> --out <external analysis>
+/usr/bin/python3 -B experiments/hindsight-proportion/verify.py --root <local study>
+/usr/bin/python3 -B experiments/hindsight-proportion/analyze.py --root <local study> --admissibility-root <admissibility study> --her-root <HER study> --baseline-root <pair baseline> --out <external analysis>
 python3 -B experiments/hindsight-proportion/validate_tables.py --analysis <external analysis>
 python3 -B experiments/hindsight-proportion/plot_results.py --analysis <external analysis> --out <external figures>
 ```
+
+## Completed validation choices and dose comparison
+
+All 120 tuning, 120 HER@1/2 control and 120 selected-proportion test runs completed.
+The choices are 1/2 on Maze4, 4/5 on Maze5--7 and Woods14, and 1/3 on MazeMA; none
+coincides with 2/3. All 245 two-thirds tuning identities pass before selection,
+as do all pilot and shared tuning/test identities. The unchanged approved musl
+binary was used throughout.
+
+Choosing p has no positive marginal interval against S@2/3 in the primary view
+on any maze. At the final point only Maze4 has a positive interval (+0.0349 ±
+paired SE 0.0162). S@p* exceeds episodic replay and H@2/3 in the primary view on
+all six mazes. S@2/3 minus H@1/2 is positive on Maze5--7, Woods14 and MazeMA,
+and includes zero on Maze4; H@1/2 minus H@2/3 is positive on Maze4 and Maze6.
+The exact rational decomposition passes at every seed/point and in both views.
+These are marginal t(19) intervals without multiplicity correction; matching
+realized doses remains approximate. Four choices lie at the upper candidate,
+so selection establishes an optimum only within the registered set.
+
+The single scope used 62449 allocated CPU-seconds (17.346944 CPU-hours),
+including the 4784-second pilot and 2165 seconds from 60 failed attempts. Two
+SLURM allocation-metadata socket timeouts triggered shared STOP before
+measurement or during other attempts; all artifacts remain, and all 90 partial
+scientific rows reproduce retries bit for bit. There are 450 total allocations
+and no outstanding reservations. Each admission retains its grant and test-only
+evidence; no reference arm was rerun.
+
+Both raw copies match the completed inventory of 6226 files. The 600 reused
+reference trajectories also match across the original archives, including 3392
+verified files. Independent reconstruction validates 6860 integer test-success
+counts, 1680 per-seed scores, all 60 paired comparisons, both thresholds on each
+maze and the complete tuning table. CSV/JSON exports, figures and the Polish
+report remain under `~/Desktop/tu-runs/hindsight-proportion/stage2/`, with a
+verified WCSS copy. Full estimates and diagnostics are recorded in
+[ARCHITECTURE.md](../../docs/ARCHITECTURE.md#validation-choices-for-hindsight-proportions-and-dose-control).
