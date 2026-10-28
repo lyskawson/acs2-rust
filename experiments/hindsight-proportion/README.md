@@ -133,6 +133,13 @@ selection, exact decomposition and threshold crossings from integer success
 counts and exact per-seed scores. `plot_results.py` exports scientific PNG/PDF
 figures beside the external analysis.
 
+Use CPython 3.9 for archive verification, saved-selection rederivation and the
+numerical analysis, matching WCSS. On this laptop it is `/usr/bin/python3`.
+CPython 3.14 rounds four tuning SE values differently by one or two binary64
+bits; means, selected proportions and measurement identities agree. The strict
+saved-selection comparison retains all score and SE bits, so use the matching
+runtime rather than relaxing it. The results record the analysis Python version.
+
 ```bash
 python3 -B <operations>/experiments/hindsight-proportion/save_selection.py --root <study>
 python3 -B experiments/hindsight-proportion/verify.py --root <local study>

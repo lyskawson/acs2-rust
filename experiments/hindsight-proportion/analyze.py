@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import statistics
+import sys
 
 from analysis import SEEDS, VIEWS, analyze_maze, diagnostic_summaries, metrics, success, summary
 from approved_execution import APPROVED_SHA256, approved
@@ -101,6 +102,7 @@ def analyze(root, admissibility, her, baseline, output):
     entries = new_entries | archived
     output.mkdir(parents=True, exist_ok=True)
     results = dict(plan_sha256=APPROVED_SHA256, seeds=list(SEEDS), views=list(VIEWS), analysis_rules=plan['analysis'],
+                   analysis_runtime=dict(python=sys.version, selection_statistics='CPython 3.9 as on WCSS; saved scores and SE compared bit for bit'),
                    execution=execution, selections=selection, mazes=[], input_checksums={},
                    reference_reuse=dict(runs=len(archived), rerun=False, charged_to_this_study=False,
                        selected_reference_allocation_cpu_seconds=sum(value['allocation_cpu_seconds'] for value in archived.values())))
