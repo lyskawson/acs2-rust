@@ -96,7 +96,10 @@ fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
         random(7),
     ));
     for variant in [
-        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2Her { proportion: 0.5 },
+        acs2her::Preset::Acs2HerShortened { proportion: 1.0 / 3.0 },
+        acs2her::Preset::Acs2HerShortened { proportion: 0.5 },
+        acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 },
         acs2her::Preset::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
@@ -152,7 +155,7 @@ fn acs2her_factory_uses_sampler_stream_seven_independently_of_agent_stream() {
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     for kind in [
         AgentKind::Acs2ErEpisodic,
-        AgentKind::Acs2Her,
+        AgentKind::Acs2Her { proportion: 2.0 / 3.0 },
         AgentKind::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
@@ -201,7 +204,7 @@ fn all_episodic_agents_preserve_population_store_sampler_rng_and_counters_under_
         |agent| agent.0.learner().snapshot(),
     );
     for variant in [
-        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 },
         acs2her::Preset::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
@@ -274,7 +277,7 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     for kind in [
         AgentKind::Acs2ErEpisodic,
-        AgentKind::Acs2Her,
+        AgentKind::Acs2Her { proportion: 2.0 / 3.0 },
         AgentKind::Acs2HerValues {
             proportion: 2.0 / 3.0,
         },
@@ -356,7 +359,7 @@ fn replay_rows_report_realized_routes_cost_memory_and_counts_by_update_kind() {
                     assert_eq!(relabeled, 0);
                     assert_eq!(row["learning_update_counts"]["full"], updates);
                 }
-                AgentKind::Acs2Her => {
+                AgentKind::Acs2Her { .. } => {
                     assert!(relabeled > 0);
                     assert_eq!(row["learning_update_counts"]["full"], updates);
                 }
@@ -510,7 +513,7 @@ fn acs2_replay_arms_reproduce_pinned_seed42_pilot_fields_bit_for_bit() {
 }
 
 #[test]
-fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
+fn cli_can_measure_validation_only_and_refuses_tuning_nontrivial_hindsight() {
     let path = std::env::temp_dir().join(format!("acs2her-cli-{}.jsonl", std::process::id()));
     let args = [
         "--task",
@@ -552,14 +555,14 @@ fn cli_can_measure_validation_only_and_refuses_tuning_the_full_reference() {
     );
     assert_eq!(row["agent_parameters"]["relabeled_proportion"], 0.9);
     let mut invalid = args;
-    invalid[7] = "acs2her";
+    invalid[7] = "acs2her_nontrivial";
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
         .args(invalid)
         .arg(&path)
         .output()
         .unwrap();
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("only values variants"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("proportion override is unavailable"));
     std::fs::remove_file(path).unwrap();
 }
 

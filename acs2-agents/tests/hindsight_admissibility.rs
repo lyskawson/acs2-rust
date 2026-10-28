@@ -69,7 +69,7 @@ fn restricted_full_presets_fix_every_configuration_axis() {
             Admissibility::FromNonGoalState,
         ),
         (
-            Preset::Acs2HerShortened,
+            Preset::Acs2HerShortened { proportion: 2.0 / 3.0 },
             "acs2her_shortened",
             Admissibility::CounterfactualEpisode,
         ),
@@ -105,7 +105,7 @@ fn admissible_copies_keep_first_arrival_and_fallbacks_take_full_steps() {
     let objective = ObjectiveEvaluator(&ExactMatch {
         reward_on_reach: 1000.0,
     });
-    for preset in [Preset::Acs2HerNontrivial, Preset::Acs2HerShortened] {
+    for preset in [Preset::Acs2HerNontrivial, Preset::Acs2HerShortened { proportion: 2.0 / 3.0 }] {
         let mut agent = agent(preset);
         let mut sampler = Sampler::new(
             agent.learner().sampler().configuration(),
@@ -115,7 +115,7 @@ fn admissible_copies_keep_first_arrival_and_fallbacks_take_full_steps() {
         let counters = sampler.counters();
         assert!(counters.relabeled.draws > 0);
         assert_eq!(counters.relabeled.already_reached, 0);
-        if preset == Preset::Acs2HerShortened {
+        if matches!(preset, Preset::Acs2HerShortened { .. }) {
             assert_eq!(counters.relabeled.after_counterfactual_end, 0);
         } else {
             assert!(counters.relabeled.after_counterfactual_end > 0);
@@ -150,7 +150,7 @@ fn wall_counters_use_relabeled_route_state_identity_and_goal_termination() {
     let objective = ObjectiveEvaluator(&ExactMatch {
         reward_on_reach: 1000.0,
     });
-    let agent = agent(Preset::Acs2Her);
+    let agent = agent(Preset::Acs2Her { proportion: 2.0 / 3.0 });
     let mut sampler = Sampler::new(
         agent.learner().sampler().configuration(),
         ChaChaRandomSource::from_seed_and_stream(42, 7),

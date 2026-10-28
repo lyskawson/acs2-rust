@@ -3278,13 +3278,13 @@ in `~/tu_runs/5/` and `~/Desktop/tu-runs/5/`.
 
 `acs2her_nontrivial` and `acs2her_shortened` are presets inside
 `acs2-agents/src/acs2her/`, with parameters outside `Configuration`,
-both with full copy updates, future goals and fixed p=2/3. The former applies
+both with full copy updates and future goals, measured at p=2/3 in the admissibility study. The former applies
 `FromNonGoalState`: the copied goal must not be reached at s_t. The latter applies
 `CounterfactualEpisode`: it must not be reached at any of s_0 through s_t.
 First arrivals remain admissible. An empty admissible distribution retains the
 transition and falls back to its original goal with a full step. Capacity, warmup,
 three draws per interaction, episode-end learning, real-goal acting, evaluation
-and stream identities are unchanged. Proportion overrides are refused.
+and stream identities are unchanged. Proportion overrides remain refused for `acs2her_nontrivial`.
 
 Only these row names emit `replay_diagnostics.wall_bumps`: `relabeled_draws`,
 `unchanged_state`, `unchanged_state_terminal` and `proposals_equal_draws=true`.
@@ -3304,6 +3304,41 @@ The unchanged `fixtures/hindsight_admissibility_regression.json` pins the first
 two points of all twelve pilot trajectories, including every portable old and
 new field in binary64 bits. Earlier row names and pinned fixtures retain their
 fields and bytes.
+
+### Requested hindsight proportion and arm identity
+
+`Preset::Acs2Her { proportion }` and `Preset::Acs2HerShortened { proportion }`
+carry the requested relabeled proportion outside `Configuration`. The measurement
+factory and `--relabel-proportion` forward any finite p in [0, 1]; omission keeps
+exactly binary64 2/3. Copy updates remain full, future selection retains each
+preset's own admissibility, and the store, warmup, schedule, acting, evaluation and
+random streams are unchanged. All draws, including original-goal fallbacks, get
+full steps. Existing 2/3 rows and every earlier pinned regression remain unchanged.
+VCP explicitly constructs its old 2/3 configuration and exposes no new parameter.
+The values presets retain their existing interfaces.
+
+The `agent` field keeps the thesis name. The proportion study's manifest and
+annotated row add a `row_arm` / `arm` label such as `acs2her_shortened_p1of2` or
+`acs2her_p1of2`; the original binary rows are retained with independent hashes.
+Shared collection requires the row proportion to equal its manifest setting and
+keeps the fixed update/admissibility checks. Mechanical manifest derivation admits
+only candidates registered for shortened tuning, only H@1/2 for the dose control,
+and only the recomputed saved per-maze selection for a conditional test grid.
+The nontrivial preset still refuses every override, including 2/3.
+
+[`experiments/hindsight-proportion/`](../experiments/hindsight-proportion/README.md)
+contains the cost pilot and pre-results registration. Tuning is validation-only on
+seeds 42--46; every registered point and candidate is required, with the earlier
+within-seed checkpoint mean and smaller-p tie rule at tolerance 1e-12. Before
+selection, shortened tuning at 2/3 must reproduce the admissibility validation,
+learning and knowledge fields in binary64 bits on all five seeds. Its twenty-seed
+test runs are conditional on selection differing from 2/3. H@1/2 is an independent
+dose control. S@2/3 minus H@1/2 plus H@1/2 minus H@2/3 decomposes the previous
+contrast exactly in rational success arithmetic. Realized copy shares accompany
+this approximate dose match. The registration fixes both test views, paired marginal
+t(19) intervals, both exact baseline thresholds, diagnostics and a single allocation
+scope. Stage 1 authorizes only the thirty-run cost pilot, within five allocated
+CPU-hours including reservations; further runs require approval of the plan and limit.
 
 ### Held-pair success after excluding reached goals
 

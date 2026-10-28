@@ -122,12 +122,14 @@ impl Options {
             assert!(
                 agents.iter().all(|agent| matches!(
                     agent,
-                    AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. }
+                    AgentKind::Acs2Her { .. } | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. }
                 )),
-                "only values variants accept a tuned relabel proportion"
+                "proportion override is unavailable for this agent"
             );
             for agent in &mut agents {
                 *agent = match agent {
+                    AgentKind::Acs2Her { .. } => AgentKind::Acs2Her { proportion },
+                    AgentKind::Acs2HerShortened { .. } => AgentKind::Acs2HerShortened { proportion },
                     AgentKind::Acs2HerValues { .. } => AgentKind::Acs2HerValues { proportion },
                     AgentKind::Acs2HerValuesShortened { .. } => {
                         AgentKind::Acs2HerValuesShortened { proportion }

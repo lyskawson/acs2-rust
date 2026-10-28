@@ -211,7 +211,7 @@ fn acs2er_episodic_never_relabels_and_replays_with_replacement_below_draw_count(
 #[test]
 fn acs2her_presets_pin_copy_updates_goal_admissibility_and_proportions() {
     for variant in [
-        acs2her::Preset::Acs2Her,
+        acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 },
         acs2her::Preset::Acs2HerValues { proportion: 0.9 },
         acs2her::Preset::Acs2HerValuesShortened {
             proportion: 1.0 / 3.0,
@@ -223,7 +223,9 @@ fn acs2her_presets_pin_copy_updates_goal_admissibility_and_proportions() {
         assert_eq!(
             sampler.relabeled_proportion.to_bits(),
             match variant {
-                acs2her::Preset::Acs2Her | acs2her::Preset::Acs2HerNontrivial | acs2her::Preset::Acs2HerShortened => (2.0_f64 / 3.0).to_bits(),
+                acs2her::Preset::Acs2HerNontrivial => (2.0_f64 / 3.0).to_bits(),
+                acs2her::Preset::Acs2Her { proportion }
+                | acs2her::Preset::Acs2HerShortened { proportion } => proportion.to_bits(),
                 acs2her::Preset::Acs2HerValues { proportion }
                 | acs2her::Preset::Acs2HerValuesShortened { proportion } => proportion.to_bits(),
             }
@@ -242,7 +244,7 @@ fn acs2her_presets_pin_copy_updates_goal_admissibility_and_proportions() {
         );
         assert_eq!(
             learner.copy_update(),
-            if variant == acs2her::Preset::Acs2Her {
+            if matches!(variant, acs2her::Preset::Acs2Her { .. }) {
                 CopyUpdate::Full
             } else {
                 CopyUpdate::ValuesOnly
@@ -360,7 +362,7 @@ fn values_step_preserves_all_model_fields_and_randomness_but_full_step_can_creat
         rng(7),
     );
     let mut full =
-        acs2her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), acs2her::Preset::Acs2Her, rng(1), rng(7));
+        acs2her::Agent::<1, 1, 2, _, _>::new(config(), replay(1), acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 }, rng(1), rng(7));
     values.learner_mut().learn_draw(&draw, 2);
     full.learner_mut().learn_draw(&draw, 2);
     assert!(values.learner().population().is_empty());

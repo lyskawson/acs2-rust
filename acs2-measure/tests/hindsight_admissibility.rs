@@ -18,7 +18,7 @@ fn restricted_hindsight_rows_record_fixed_full_updates_and_zero_trivial_copies()
         ("acs2her_nontrivial", "FromNonGoalState"),
         ("acs2her_shortened", "CounterfactualEpisode"),
     ] {
-        let kind = AgentKind::from_run_name(name, 0.9).unwrap();
+        let kind = AgentKind::from_run_name(name, 2.0 / 3.0).unwrap();
         assert_eq!(kind.name(), name);
         run_protocol_with_sink::<_, _, 8, 2, 10>(
             &distributions.protocol(),
@@ -73,7 +73,7 @@ fn restricted_hindsight_evaluation_preserves_counters_store_and_both_random_stre
     let preset = Preset::thesis();
     for variant in [
         acs2her::Preset::Acs2HerNontrivial,
-        acs2her::Preset::Acs2HerShortened,
+        acs2her::Preset::Acs2HerShortened { proportion: 2.0 / 3.0 },
     ] {
         assert_protocol_evaluation_read_only(
             &distributions.protocol(),
@@ -95,25 +95,24 @@ fn restricted_hindsight_evaluation_preserves_counters_store_and_both_random_stre
 
 #[test]
 fn restricted_hindsight_cli_rejects_proportion_tuning() {
-    for name in ["acs2her_nontrivial", "acs2her_shortened"] {
-        let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
-            .args([
-                "--task",
-                "maze4",
-                "--cap",
-                "5",
-                "--agents",
-                name,
-                "--relabel-proportion",
-                "0.3333333333333333",
-                "--out",
-                "/tmp/unused-admissibility.jsonl",
-            ])
-            .output()
-            .unwrap();
-        assert!(!output.status.success());
-        assert!(String::from_utf8_lossy(&output.stderr).contains("only values variants"));
-    }
+    let name = "acs2her_nontrivial";
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args([
+            "--task",
+            "maze4",
+            "--cap",
+            "5",
+            "--agents",
+            name,
+            "--relabel-proportion",
+            "0.3333333333333333",
+            "--out",
+            "/tmp/unused-admissibility.jsonl",
+        ])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("proportion override is unavailable"));
 }
 
 fn floating_bits(value: &serde_json::Value) -> serde_json::Value {

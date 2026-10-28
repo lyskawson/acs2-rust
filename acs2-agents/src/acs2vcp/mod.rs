@@ -61,7 +61,7 @@ impl Preset {
         ConsistencyConfiguration {
             heads,
             temperature,
-            hindsight: crate::acs2her::Preset::Acs2Her.configuration(),
+            hindsight: crate::acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 }.configuration(),
             reward_on_reach: 1000.0,
         }
     }

@@ -58,9 +58,9 @@ fn one_head_at_zero_and_positive_temperature_reproduces_every_pinned_hindsight_f
         let hindsight = match archived {
             "er_episodic" => acs2her::HindsightConfiguration {
                 relabeled_proportion: 0.0,
-                ..acs2her::Preset::Acs2Her.configuration()
+                ..acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 }.configuration()
             },
-            "her_full" => acs2her::Preset::Acs2Her.configuration(),
+            "her_full" => acs2her::Preset::Acs2Her { proportion: 2.0 / 3.0 }.configuration(),
             "her_values" => acs2her::Preset::Acs2HerValues {
                 proportion: 2.0 / 3.0,
             }
@@ -179,7 +179,7 @@ fn ensemble_rows_count_joint_interactions_updates_queries_routes_and_total_memor
         );
         steps
     };
-    let reference = baseline_steps(AgentKind::Acs2Her);
+    let reference = baseline_steps(AgentKind::Acs2Her { proportion: 2.0 / 3.0 });
     for preset in [
         acs2vcp::Preset::PrioritizedTwo { temperature: 4 },
         acs2vcp::Preset::PrioritizedFour { temperature: 4 },

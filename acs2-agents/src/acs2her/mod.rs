@@ -9,9 +9,9 @@ mod pyalcs_differential;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Preset {
-    Acs2Her,
+    Acs2Her { proportion: f64 },
     Acs2HerNontrivial,
-    Acs2HerShortened,
+    Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
 }
@@ -26,29 +26,29 @@ pub struct HindsightConfiguration {
 impl Preset {
     pub fn name(self) -> &'static str {
         match self {
-            Self::Acs2Her => "acs2her",
+            Self::Acs2Her { .. } => "acs2her",
             Self::Acs2HerNontrivial => "acs2her_nontrivial",
-            Self::Acs2HerShortened => "acs2her_shortened",
+            Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
         }
     }
     pub fn configuration(self) -> HindsightConfiguration {
         match self {
-            Self::Acs2Her => HindsightConfiguration {
+            Self::Acs2Her { proportion } => HindsightConfiguration {
                 copy_update: CopyUpdate::Full,
                 admissibility: Admissibility::EveryTransition,
-                relabeled_proportion: 2.0 / 3.0,
+                relabeled_proportion: proportion,
             },
             Self::Acs2HerNontrivial => HindsightConfiguration {
                 copy_update: CopyUpdate::Full,
                 admissibility: Admissibility::FromNonGoalState,
                 relabeled_proportion: 2.0 / 3.0,
             },
-            Self::Acs2HerShortened => HindsightConfiguration {
+            Self::Acs2HerShortened { proportion } => HindsightConfiguration {
                 copy_update: CopyUpdate::Full,
                 admissibility: Admissibility::CounterfactualEpisode,
-                relabeled_proportion: 2.0 / 3.0,
+                relabeled_proportion: proportion,
             },
             Self::Acs2HerValues { proportion } => HindsightConfiguration {
                 copy_update: CopyUpdate::ValuesOnly,

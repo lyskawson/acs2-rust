@@ -118,10 +118,16 @@ def validate_replay(row, config, agent):
                     admissibility='CounterfactualEpisode' if agent == 'acs2her_values_shortened' else 'EveryTransition',
                     copy_update='Full' if agent in ('acs2er_episodic', 'acs2her') else 'ValuesOnly',
                     relabeled_proportion=0.0 if agent == 'acs2er_episodic' else agent_settings(config, agent).get('relabeled_proportion', 2 / 3))
+    settings = agent_settings(config, agent)
+    if agent in ('acs2her', 'acs2her_shortened') and settings:
+        proportion = settings.get('relabeled_proportion')
+        if (set(settings) != {'relabeled_proportion'} or type(proportion) is not float
+                or not math.isfinite(proportion) or not 0 <= proportion <= 1):
+            raise ValueError('invalid full hindsight proportion settings')
     if restricted_full:
-        expected.update(copy_update='Full', relabeled_proportion=2 / 3,
+        expected.update(copy_update='Full', relabeled_proportion=settings.get('relabeled_proportion', 2 / 3),
                         admissibility='FromNonGoalState' if agent == 'acs2her_nontrivial' else 'CounterfactualEpisode')
-        if (set(parameters) != set(expected) or agent_settings(config, agent)
+        if (set(parameters) != set(expected) or (agent == 'acs2her_nontrivial' and settings)
                 or any(type(parameters[key]) is not type(value) for key, value in expected.items())):
             raise ValueError('restricted full hindsight presets have fixed parameters')
     if any(parameters.get(key) != value for key, value in expected.items()):
