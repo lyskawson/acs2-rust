@@ -163,6 +163,15 @@ fn cli_accepts_free_proportions_and_refuses_other_agents_and_invalid_values() {
         if accepted {
             let row: serde_json::Value =
                 serde_json::from_str(std::fs::read_to_string(&out).unwrap().trim()).unwrap();
+            assert_eq!(row["agent"], name);
+            assert_eq!(
+                row["agent_parameters"]["admissibility"],
+                match name {
+                    "acs2her" => "EveryTransition",
+                    "acs2her_shortened" => "CounterfactualEpisode",
+                    _ => unreachable!(),
+                }
+            );
             assert_eq!(
                 row["agent_parameters"]["relabeled_proportion"]
                     .as_f64()
