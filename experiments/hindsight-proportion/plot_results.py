@@ -9,7 +9,9 @@ matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 
+from protocol import ROOT
 from collect import outside_repository
+from grid_protocol import load_plan
 
 COLORS = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#555555']
 
@@ -23,6 +25,7 @@ def save(figure, output, name):
 def plot(analysis, output):
     analysis, output = Path(analysis), outside_repository(output)
     result = json.loads((analysis / 'results.json').read_text())
+    load_plan(ROOT / 'experiments/hindsight-proportion/plan.json', result['plan_sha256'])
     output.mkdir(parents=True, exist_ok=True)
     plt.rcParams.update({'font.size': 9, 'axes.spines.top': False, 'axes.spines.right': False})
     figure, axes = plt.subplots(2, 3, figsize=(12, 6.8), constrained_layout=True)
