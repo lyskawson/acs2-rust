@@ -47,14 +47,14 @@ def manifest(root, purpose, configuration_id=None):
         operations_manifest_sha256=hashlib.sha256(operations.read_bytes()).hexdigest())
 
 
-def execute(root, repository, purpose, configuration_id=None):
+def execute(root, repository, purpose, configuration_id=None, recovery=None):
     root = Path(root)
     resolved = manifest(root, purpose, configuration_id)
     name = 'test-' + configuration_id if purpose == 'test' else purpose
     path = root / 'manifests' / (name + '.json')
     path.parent.mkdir(exist_ok=True)
     atomic_json(path, resolved)
-    return dispatch(root / name, path, repository, root / 'approval.json')
+    return dispatch(root / name, path, repository, root / 'approval.json', recovery=recovery)
 
 
 if __name__ == '__main__':
@@ -66,5 +66,6 @@ if __name__ == '__main__':
         parser.add_argument('--repo', required=True, type=Path)
         parser.add_argument('--purpose', required=True, choices=['tuning', 'control', 'test'])
         parser.add_argument('--configuration-id')
+        parser.add_argument('--recovery', type=Path)
         args = parser.parse_args()
-        print(json.dumps(execute(args.root, args.repo, args.purpose, args.configuration_id)))
+        print(json.dumps(execute(args.root, args.repo, args.purpose, args.configuration_id, args.recovery)))
