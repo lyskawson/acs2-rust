@@ -87,7 +87,7 @@ def prepare(output, destination, proportion):
             operations_manifest=str(destination / 'operations/manifest.json'),
             operations_manifest_sha256=hashlib.sha256((operations / 'manifest.json').read_bytes()).hexdigest())
         atomic_json(output / f'pilot-manifest-{index}.json', manifest)
-    return dict(operations_commit=commit, registration_sha256=digest, reference_cells=len(index))
+    return dict(operations_commit=commit, registration_sha256=digest, reference_cells=len(sources))
 
 
 if __name__ == '__main__':
