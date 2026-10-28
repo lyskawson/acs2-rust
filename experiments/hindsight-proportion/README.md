@@ -82,9 +82,9 @@ post hoc. Tuning rows have no test value diagnostics; those remain unmeasured un
 a three-block run. Historical missing wall counts remain null. The dose match is
 approximate and its actual realized shares must be reported.
 
-Stage 1 ends with registration and the external Polish report. No tuning, control
-grid or test grid may run until the user approves the exact plan bytes and a
-cumulative allocated CPU-hour limit.
+The pilot ends with registration and the external Polish report. The saved
+approval opens tuning, control and conditional testing under the cumulative
+45-hour limit; the measurement source and binary stay at the pilot identities.
 
 ```bash
 python3 -B -m unittest discover -s experiments/hindsight-proportion -p 'test_*.py'
@@ -112,4 +112,31 @@ active streams. Save selection only after complete tuning and all five-seed
 python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose tuning
 python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose control
 python3 -B <operations>/experiments/hindsight-proportion/approved_execution.py --root <study> --repo <own pinned clone> --purpose test --configuration-id <selected non-reference maze>
+```
+
+A diagnosed infrastructure failure preserves its STOP record, every attempt and
+all allocations. An explicit recovery record binds the archived STOP hash, failed
+array IDs, approval and unchanged measurement binary. Pass it with `--recovery`;
+the dispatcher repeats the first incomplete registered assignment in new attempt
+directories. Completed prefixes from failed attempts must reproduce the retry in
+binary64 bits. Neither a retry nor an operations update changes the full saved
+scientific manifest or the node operation snapshot.
+
+`save_selection.py` writes the exact selection only after the complete tuning
+catalog and all 245 earlier 2/3 validation/learning/knowledge identities pass.
+`verify.py` recomputes that selection, every manifest and reference identity,
+the append-only pilot admission prefix, the failed-attempt inventory and the
+single allocation scope. `analyze.py` exports results and diagnostics; allocated
+CPU includes failed attempts, while historical reference cost is reported
+separately. `validate_tables.py` independently reconstructs paired statistics,
+selection, exact decomposition and threshold crossings from integer success
+counts and exact per-seed scores. `plot_results.py` exports scientific PNG/PDF
+figures beside the external analysis.
+
+```bash
+python3 -B <operations>/experiments/hindsight-proportion/save_selection.py --root <study>
+python3 -B experiments/hindsight-proportion/verify.py --root <local study>
+python3 -B experiments/hindsight-proportion/analyze.py --root <local study> --admissibility-root <admissibility study> --her-root <HER study> --baseline-root <pair baseline> --out <external analysis>
+python3 -B experiments/hindsight-proportion/validate_tables.py --analysis <external analysis>
+python3 -B experiments/hindsight-proportion/plot_results.py --analysis <external analysis> --out <external figures>
 ```
