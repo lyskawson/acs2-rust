@@ -13,6 +13,23 @@ every shared learning, knowledge and validation field of the admissibility archi
 at every registered point. Thirty ten-minute allocations reserve five CPU-hours.
 The shared grid authorization and node identity guards stop on a real mismatch.
 
+The completed pilot has 30 successful first attempts, 245 rows and 4784 allocated
+CPU-seconds (1.328889 CPU-hours), with no reservations remaining. All 49 shortened
+2/3 validation/learning/knowledge identity rows pass in binary64 bits. The new
+`fixtures/hindsight_proportion_regression.json` pins the first two points of all
+24 new full-block trajectories (48 rows); every earlier fixture is unchanged.
+
+The pre-results [registration](plan.json), SHA-256
+`894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888`, includes four candidates and no stage-2 approval.
+With 4/5, the expected total is 17.8275 CPU-hours, the doubled forecast 34.326111,
+and the all-array hard bound 40.328889; the suggested cumulative approval is 45.
+Without 4/5, the corresponding values are 16.258056, 31.187222 and 37.995556,
+with suggested approval 40. Forecasts include the complete pilot and the worst
+conditional test scope, one selected non-reference setting on every maze. A cut
+requires regenerating the registration before approval; no further pilot is needed.
+`prepare_plan.py --proportions` accepts any registered finite candidates in [0, 1],
+including the mandatory 2/3 identity setting.
+
 The measurement `agent` remains its thesis name. Manifests and annotated rows use
 explicit proportion labels such as `acs2her_shortened_p1of3`,
 `acs2her_shortened_p1of2`, `acs2her_shortened_p4of5`,
@@ -45,7 +62,11 @@ descriptive across-maze means. At 2/3 all five seeds must reproduce the earlier
 validation and learning/knowledge fields before selection.
 
 `execution.py` derives tuning, independent HER@1/2 control and conditional test
-manifests. Test derivation recomputes the saved selection from tuning and repeats
+manifests. These are full scientific manifests. Stage 2 must add a lean dispatcher around
+the shared grid path: one array per stream at a time, at most two streams and
+forty running jobs, re-deriving before each submission. Do not send an entire
+multi-array tuning/control manifest to the current bulk submit command.
+Test derivation recomputes the saved selection from tuning and repeats
 its identity checks. Where 2/3 wins, reuse the admissibility grid and run nothing.
 New test settings reproduce the five tuning seeds on validation and seed 42 on
 all pilot blocks. The control also reproduces its seed-42 pilot.

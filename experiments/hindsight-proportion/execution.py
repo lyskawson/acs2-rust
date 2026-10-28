@@ -41,13 +41,20 @@ def scope(digest, root):
 def derive(plan, purpose, selection=None, configuration_id=None):
     forecast = plan['forecasts']['with_four_fifths']
     if purpose == 'tuning':
-        configs = [setting(config, SHORTENED, p, ['validation'], forecast['tuning_limit_minutes'])
-                   for config in plan['configurations'] for p in plan['candidates']]
+        configs = []
+        for config in plan['configurations']:
+            for p in plan['candidates']:
+                cell = next(cell for cell in forecast['cells'] if (cell['purpose'], cell['configuration_id'], cell['proportion']) == ('tuning', config['id'], p))
+                item = setting(config, SHORTENED, p, ['validation'], cell['limit_minutes'])
+                configs.append(dict(item, batch_group=cell['batch_group']))
         return dict(stage='tuning_pending_approval', purpose=purpose, configurations=configs,
-                    agents=[SHORTENED], seeds=list(plan['tuning']['seeds']), batch_size=20)
+                    agents=[SHORTENED], seeds=list(plan['tuning']['seeds']), batch_by='group')
     if purpose == 'control':
-        return dict(stage='approved_grid', purpose=purpose,
-                    configurations=[setting(config, HER, 0.5, BLOCKS, forecast['control_limit_minutes']) for config in plan['configurations']],
+        configs = []
+        for config in plan['configurations']:
+            cell = next(cell for cell in forecast['cells'] if (cell['purpose'], cell['configuration_id']) == ('control', config['id']))
+            configs.append(setting(config, HER, 0.5, BLOCKS, cell['limit_minutes']))
+        return dict(stage='approved_grid', purpose=purpose, configurations=configs,
                     agents=[HER], seeds=list(plan['control']['seeds']), batch_size=20)
     if purpose != 'test' or selection is None:
         raise ValueError('test manifests require the saved validation selection')
@@ -76,9 +83,16 @@ def choose(plan, entries, references):
                 rule=plan['tuning']['selection'], evaluation_blocks=['validation'], test_access='none')
 
 
+def registered_references(plan, root):
+    data = (Path(root) / 'reference-index.json').read_bytes()
+    if hashlib.sha256(data).hexdigest() != plan['cost_pilot']['references_sha256']:
+        raise ValueError('references differ from the registered pilot archive')
+    return read_index(root)
+
+
 def study_references(plan, manifest, root, declared):
     from archive import catalog
-    references = read_index(root)
+    references = registered_references(plan, root)
     pilot_entries = {}
     for name in pilot_roots():
         entries, _ = catalog(Path(root) / name)
@@ -156,7 +170,7 @@ def authorization_manifest(manifest, registration_path=None):
         require_derivation(tuning_manifest, authorization_manifest(tuning_manifest, registration_path))
         entries = catalog(root / 'tuning')[0]
         selection = json.loads((root / 'selections.json').read_text())
-        if field_bits(selection) != field_bits(choose(plan, entries, read_index(root))):
+        if field_bits(selection) != field_bits(choose(plan, entries, registered_references(plan, root))):
             raise ValueError('saved selection differs from complete validation tuning and identity')
     result = derive(plan, manifest.get('purpose'), selection, manifest.get('configuration_id'))
     scope_path = root / 'scope.json'

@@ -15,7 +15,7 @@ class MeasurementTests(unittest.TestCase):
     def setUpClass(cls):
         cls.rows = {}
         with tempfile.TemporaryDirectory() as temporary:
-            for agent, p in [(SHORTENED, 1 / 3), (SHORTENED, 0.5), (HER, 0.5)]:
+            for agent, p in [(SHORTENED, 1 / 3), (SHORTENED, 0.5), (HER, 0.5), (HER, 0.0), (HER, 1.0)]:
                 path = Path(temporary) / f'{agent}-{p}.jsonl'
                 subprocess.run([str(ROOT / 'target/release/acs2-measure'), '--task', 'maze4', '--cap', '5',
                     '--protocol', 'maze-pairs-v1', '--agents', agent, '--relabel-proportion', str(p), '--seeds', '42',
@@ -37,6 +37,14 @@ class MeasurementTests(unittest.TestCase):
             row['agent_parameters']['relabeled_proportion'] = 0.8
             with self.assertRaises(ValueError):
                 validate_replay(row, config, agent)
+
+    def test_endpoint_proportions_refuse_boolean_row_values(self):
+        for p in (0.0, 1.0):
+            config, reference = self.rows[HER, p]
+            row = copy.deepcopy(reference)
+            row['agent_parameters']['relabeled_proportion'] = bool(p)
+            with self.assertRaisesRegex(ValueError, 'binary64'):
+                validate_replay(row, config, HER)
 
     def test_other_preset_fields_and_goal_rule_are_still_fixed(self):
         for (agent, p), (config, reference) in self.rows.items():

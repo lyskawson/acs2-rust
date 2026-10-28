@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from execution import authorization_manifest, scope
+from execution import authorization_manifest, registered_references, scope
 from protocol import pilot, scope_roots
 from submit import prepare
 
@@ -32,6 +32,13 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual([Path(name).name for name in value['batch_roots']], scope_roots())
         self.assertEqual(value['pilot_allocation_cpu_seconds'], 0)
         self.assertEqual(len(scope_roots()), 13)
+
+    def test_tuning_reference_index_is_bound_to_the_registered_pilot_hash(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / 'reference-index.json').write_text('changed reference index')
+            with self.assertRaisesRegex(ValueError, 'references differ'):
+                registered_references(dict(cost_pilot=dict(references_sha256='a' * 64)), root)
 
     def test_stage_one_cannot_authorize_tuning_control_or_test(self):
         for purpose in ('tuning', 'control', 'test'):

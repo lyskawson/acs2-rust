@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from archive import audit
-from protocol import ROOT, BLOCKS, study, configurations, label, PILOT_SETTINGS
+from protocol import ROOT, BLOCKS, CANDIDATES, study, configurations, label, PILOT_SETTINGS
 from execution import measurement_identity
 from grid_identity import OMIT, field_bits
 from grid_protocol import atomic_json
@@ -30,7 +30,7 @@ def pin(summary, rows, output):
     atomic_json(output, result)
 
 
-def prepare(root, output, fixture):
+def prepare(root, output, fixture, proportions=CANDIDATES):
     root = Path(root)
     summary, rows, cells = audit(root)
     identity = measurement_identity()
@@ -49,7 +49,7 @@ def prepare(root, output, fixture):
         references_sha256=hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest(),
         generators={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() for name in
                     ('protocol.py', 'archive.py', 'prepare_plan.py', 'execution.py', 'tuning.py')})
-    plan = study(cells, summary['allocation_cpu_seconds'], identity, evidence)
+    plan = study(cells, summary['allocation_cpu_seconds'], identity, evidence, proportions)
     atomic_json(output, plan)
     return dict(plan_sha256=hashlib.sha256(Path(output).read_bytes()).hexdigest(), forecasts=plan['forecasts'])
 
@@ -57,7 +57,8 @@ def prepare(root, output, fixture):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('root', type=Path)
+    parser.add_argument('--proportions', type=lambda value: [float(item) for item in value.split(',')], default=CANDIDATES)
     parser.add_argument('--out', type=Path, default=Path(__file__).with_name('plan.json'))
     parser.add_argument('--fixture', type=Path, default=ROOT / 'fixtures/hindsight_proportion_regression.json')
     args = parser.parse_args()
-    print(json.dumps(prepare(args.root, args.out, args.fixture)))
+    print(json.dumps(prepare(args.root, args.out, args.fixture, args.proportions)))

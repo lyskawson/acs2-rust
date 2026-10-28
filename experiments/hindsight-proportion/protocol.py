@@ -84,6 +84,15 @@ def pilot(index):
                 registration_sha256=PAIR_SHA256)
 
 
+def tuning_groups(items):
+    groups = [items[index:index + 4] for index in range(0, len(items), 4)]
+    if len(groups) > 1 and len(groups[-1]) < 4:
+        groups[-2].extend(groups.pop())
+    if any(not 4 <= len(group) <= 8 for group in groups):
+        raise ValueError('tuning must partition into groups of 20--40 jobs')
+    return groups
+
+
 def forecast(cells, pilot_seconds, proportions=CANDIDATES):
     proportions = candidates(proportions)
     if not 0 < pilot_seconds <= 5 * 3600:
@@ -125,12 +134,17 @@ def forecast(cells, pilot_seconds, proportions=CANDIDATES):
                     rule='Worst selected non-reference candidate; only one candidate runs per maze.'))
             else:
                 estimates.extend(purpose_cells)
-    tuning_limit = max(cell['limit_minutes'] for cell in estimates if cell['purpose'] == 'tuning')
-    control_limit = max(cell['limit_minutes'] for cell in estimates if cell['purpose'] == 'control')
+    arrays = []
+    for group in tuning_groups([cell for cell in estimates if cell['purpose'] == 'tuning']):
+        limit = max(cell['limit_minutes'] for cell in group)
+        group_id = group[0]['configuration_id'] + '_' + label(SHORTENED, group[0]['proportion'])
+        for cell in group:
+            cell.update(limit_minutes=limit, reservation_cpu_seconds=cell['runs'] * limit * 60, batch_group=group_id)
+        arrays.append(dict(purpose='tuning', batch_group=group_id, runs=sum(cell['runs'] for cell in group),
+                           limit_minutes=limit, reservation_cpu_seconds=sum(cell['reservation_cpu_seconds'] for cell in group)))
     for cell in estimates:
-        if cell['purpose'] in ('tuning', 'control'):
-            cell['limit_minutes'] = tuning_limit if cell['purpose'] == 'tuning' else control_limit
-            cell['reservation_cpu_seconds'] = cell['runs'] * cell['limit_minutes'] * 60
+        if cell['purpose'] != 'tuning':
+            arrays.append({key: cell[key] for key in ('purpose', 'configuration_id', 'runs', 'limit_minutes', 'reservation_cpu_seconds')})
     expected = sum(cell['expected_cpu_seconds'] for cell in estimates)
     reserved = sum(cell['reservation_cpu_seconds'] for cell in estimates)
     doubled, hard = pilot_seconds + 2 * expected, pilot_seconds + reserved
@@ -138,8 +152,8 @@ def forecast(cells, pilot_seconds, proportions=CANDIDATES):
         expected_total_cpu_hours=(pilot_seconds + expected) / 3600,
         doubled_forecast_cpu_hours=doubled / 3600, hard_reservations_cpu_hours=hard / 3600,
         requested_cpu_hour_limit=5 * math.ceil(max(doubled, hard) / 3600 / 5),
-        tuning_limit_minutes=tuning_limit, control_limit_minutes=control_limit, memory_mib=memory,
-        reservation_rule='Uniform maximum pilot-derived limit across tuning/control arrays of twenty; worst candidate limit per conditional twenty-seed test maze.',
+        array_reservations=arrays, memory_mib=memory,
+        reservation_rule='Actual tuning groups of 20--40 jobs use their own maximum limit; control and conditional test use twenty-seed per-maze arrays. Test reserves the worst candidate per maze.',
         estimate_rule='Allocation CPUTimeRAW at seed 42; full-block cost conservatively proxies validation-only cost when unmeasured. Unpiloted candidates use the most expensive pilot setting of that agent on that maze.',
         limit_rule='max(3, ceil((2 * body wall seconds + 60) / 60)) minutes; shared node watchdog keeps 30 seconds.',
         limitation='One-seed forecast, no guarantee about new seeds. Every attempt and outstanding hard limit remains charged.')
@@ -164,6 +178,7 @@ def study(cells, pilot_seconds, identity, evidence, proportions=CANDIDATES):
             policy='Reuse verified archived rows and registrations; never rerun a reference arm.'),
         cost_pilot=evidence, forecasts=forecasts,
         analysis=dict(block='test', views=['checkpoint_mean', 'final_point'], seeds=list(range(42, 62)),
+            aliases=dict(S=SHORTENED, H=HER, E='acs2er_episodic'),
             primary='Mean over registered points within each seed, then mean and SE over twenty seeds.',
             final='Final registered point per seed, then mean and SE over twenty seeds.',
             comparisons=[['S@selected', 'S@2/3'], ['S@selected', 'E'], ['S@selected', 'H@2/3'], ['S@2/3', 'H@1/2'], ['H@1/2', 'H@2/3']],
@@ -178,6 +193,8 @@ def study(cells, pilot_seconds, identity, evidence, proportions=CANDIDATES):
                 'wall bumps / copies where measured; historical missing values remain null', 'first-action value minus actual return on test: all, successful and failed pairs',
                 'knowledge', 'population', 'memory', 'time', 'allocation CPUTimeRAW for every attempt', 'objective calls by scoring, admissibility selection and provenance'],
             diagnostic_scope='Every new/reused arm and tuning setting in both registered views; tuning has validation-only value diagnostics, test value diagnostics are unmeasured until a three-block run. Empty conditional groups stay null with contributing seed counts.',
+            diagnostic_aggregation='Compute route shares from counters within each row. In checkpoint_mean average rows equally within seed, then report mean/SE across seeds; final_point uses the last row. Values, knowledge, population and memory follow the same views. Also report cumulative final cost totals. Empty groups are null with contributing seed counts.',
+            failed_value_groups='Recover failed-pair conditional means from exhaustive integer success counts and the archived all/successful means by algebraic decomposition; empty groups null, binary64 rounding remains. No extra evaluation calls.',
             costs='Report pilot, tuning, conditional test and control separately; process CPU=user+system, allocated CPU from sacct. Reused historical costs separate, never charged again.',
             post_hoc='Every unregistered comparison, including all success comparisons against ACS2, is labelled post hoc.'),
         identity_checks=dict(reference_two_thirds='Pilot seed42 and all tuning seeds42--46 at p=2/3 reproduce every admissibility validation, learning and knowledge field in IEEE754 binary64 bits at every point. STOP before selection on mismatch.',
@@ -186,6 +203,7 @@ def study(cells, pilot_seconds, identity, evidence, proportions=CANDIDATES):
             exclusions='Only grid_identity.OMIT: source/host/time provenance and arm annotation; no learning or knowledge field excluded.'),
         execution=dict(partition='lem-cpu-normal', cpu_model='AMD EPYC 9554 64-Core Processor', concurrency=20, batch_size=20,
             tooling='experiments/grid/', clone='~/acs2-tu', target='x86_64-unknown-linux-musl',
+            dispatch='Lean stage-2 dispatcher: one registered 20--40-job array per active stream, at most two streams and forty running jobs. Wait for a stream to become terminal before its next array; do not enqueue the entire multi-array manifest. Re-derive and check admission before each sbatch.',
             scope_roots=scope_roots(), accounting='One scope containing all pilot, tuning, test and control roots; pilot offset zero to avoid double charging.',
             admission='Before each sbatch mechanically rederive approved manifest; check grant, sbatch --test-only and pilot + used + reserved + new hard limits <= approved CPU-hours.',
             guards='Immutable clean source/binary/operations, hardware/preset/row/identity guards, shared STOP on real failure; 20--40 jobs at a time.',

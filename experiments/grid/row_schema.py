@@ -130,6 +130,8 @@ def validate_replay(row, config, agent):
         if (set(parameters) != set(expected) or (agent == 'acs2her_nontrivial' and settings)
                 or any(type(parameters[key]) is not type(value) for key, value in expected.items())):
             raise ValueError('restricted full hindsight presets have fixed parameters')
+    if agent in ('acs2her', 'acs2her_shortened') and type(parameters.get('relabeled_proportion')) is not float:
+        raise ValueError('full hindsight row proportion must be a binary64 number')
     if any(parameters.get(key) != value for key, value in expected.items()):
         raise ValueError('episodic agent rules differ from the registered settings')
     diagnostics = row['replay_diagnostics']

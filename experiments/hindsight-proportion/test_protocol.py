@@ -73,6 +73,12 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(sum(cell['runs'] for cell in cut['cells'] if cell['purpose'] == 'tuning'), 90)
         self.assertEqual(sum(cell['runs'] for cell in full['cells'] if cell['purpose'] == 'test'), 120)
         self.assertGreater(full['doubled_forecast_cpu_hours'], cut['doubled_forecast_cpu_hours'])
+        cut_plan = study(self.cells(), 1000, {}, {}, CANDIDATES[:-1])
+        tuning_batches = run_batches(derive(cut_plan, 'tuning'))
+        self.assertEqual(sum(map(len, tuning_batches)), 90)
+        self.assertTrue(all(20 <= len(batch) <= 40 for batch in tuning_batches))
+        actual = sum(len(batch) * 60 * max(config['limits_minutes'][agent] for config, agent, _ in batch) for batch in tuning_batches)
+        self.assertEqual(actual, sum(cell['reservation_cpu_seconds'] for cell in cut['cells'] if cell['purpose'] == 'tuning'))
         reserved = sum(cell['reservation_cpu_seconds'] for cell in full['cells'])
         self.assertAlmostEqual(full['hard_reservations_cpu_hours'], (1000 + reserved) / 3600)
         for cell in full['cells']:

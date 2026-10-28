@@ -3187,14 +3187,15 @@ the action-set RL application. Admissibility uses the existing trajectory enum.
 
 The parameter type can express other combinations, which keeps the two choices usable
 for trajectory utility. `acs2her::Agent::new` accepts only a named `Preset`, and the
-measurement factory/CLI exposes only the three measured combinations below. Other
-parameter combinations have no run name and are not measured. Keeping that boundary
+measurement factory/CLI exposes only named presets with their declared proportion
+interfaces, described below. Other update/admissibility combinations have no run name
+and are not measured. Keeping that boundary
 prevents an unregistered combination from being written under a measured arm's name.
 
 | Arm | Relabeling | Update of an original or fallback | Update of a relabeled copy |
 |---|---|---|---|
 | `acs2er_episodic` | p=0, same episodic path | Core ACS2ER replay step: ALP, RL, optional GA | None |
-| `acs2her` | Future, every transition, fixed p=2/3 | Full step | Full step |
+| `acs2her` | Future, every transition, p=2/3 in this registration | Full step | Full step |
 | `acs2her_values` | Future, every transition, selected p | Full step | Action-set RL only, changing r and ir |
 | `acs2her_values_shortened` | Future, counterfactual episode admissibility, selected p | Full step | Action-set RL only |
 | `her_values_p2of3` | Future, every transition, fixed p=2/3 | Full step | Action-set RL only |
@@ -3241,7 +3242,7 @@ Tuning uses validation only, seeds 42--46 and the registered 2M/4M budgets and
 points. For each values variant and maze separately, maximize checkpoint-mean
 validation success within a seed, then the mean over five seeds. Scores within
 1e-12 tie in favor of smaller p. The candidates are 1/3 and 2/3; 0.9 was removed
-before tuning by the registered cost rule. The full variant is fixed at 2/3.
+before tuning by the registered cost rule. In that registration the full variant is fixed at 2/3.
 The main grid contains five arms, six mazes and seeds 42--61. If the selected
 values p differs from 2/3, twenty additional fixed-p values runs provide the
 update-rule ablation. Otherwise that ablation reuses twenty-seed, three-block
@@ -3339,6 +3340,13 @@ this approximate dose match. The registration fixes both test views, paired marg
 t(19) intervals, both exact baseline thresholds, diagnostics and a single allocation
 scope. Stage 1 authorizes only the thirty-run cost pilot, within five allocated
 CPU-hours including reservations; further runs require approval of the plan and limit.
+
+The proportion cost pilot completed thirty seed-42 allocations and 245 rows for
+4784 CPU-seconds (1.328889 CPU-hours), within its five-hour cap. All 49 shortened
+2/3 validation, learning and knowledge rows reproduce the admissibility archive
+in binary64 bits. The new proportion fixture pins 48 rows at the first two points
+of the four new full-block settings on all six mazes. The pre-results proportion
+plan retains all four candidates; tuning and twenty-seed grids remain unapproved.
 
 ### Held-pair success after excluding reached goals
 
