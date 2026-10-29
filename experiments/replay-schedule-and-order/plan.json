@@ -1,8 +1,8 @@
 {
   "stage": "grid_pending_approval",
   "experiment": "replay-schedule-and-order",
-  "measurement_commit": "0a19f8e8a0d213fc0eb11b17efcce32dd0ee2eec",
-  "binary_sha256": "0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e",
+  "measurement_commit": "416637251460b91c771ffe9d8c3c503776c13986",
+  "binary_sha256": "ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275",
   "preset": {
     "alp_gen_variant": "Pyalcs",
     "beta": 0.05,
@@ -25378,10 +25378,58 @@
   "proportion_plan_sha256": "894596d2f792a2327ff5fd061c4344a17bcb96b01b9a96dd4f58a61a1e3a2888",
   "cost_pilot": {
     "runs": 60,
-    "allocations": 60,
+    "allocations": 90,
     "rows": 490,
     "identity_rows": 49,
-    "allocation_cpu_seconds": 5035,
+    "allocation_cpu_seconds": 8147,
+    "previous_pilot_root": "/home/alelys2099/tu_runs/replay-schedule-and-order",
+    "previous_pilot": {
+      "registration_sha256": "8b685b272cf130a05a6a605336f64ade3dda04b33847bf129d0188004b0a2cec",
+      "inventory_sha256": "3169245e165ba1eb183a9c6d79404e13a6e9b9182478c69839d76a4f1937b360",
+      "measurement_commit": "0a19f8e8a0d213fc0eb11b17efcce32dd0ee2eec",
+      "binary_sha256": "0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e",
+      "allocations": 60,
+      "rows": 490,
+      "identity_rows": 49,
+      "allocation_cpu_seconds": 5035,
+      "root": "/home/alelys2099/tu_runs/replay-schedule-and-order",
+      "mirror_relative": "../study"
+    },
+    "rounds": [
+      {
+        "round": "length_weighted",
+        "registration_sha256": "8b685b272cf130a05a6a605336f64ade3dda04b33847bf129d0188004b0a2cec",
+        "inventory_sha256": "3169245e165ba1eb183a9c6d79404e13a6e9b9182478c69839d76a4f1937b360",
+        "measurement_commit": "0a19f8e8a0d213fc0eb11b17efcce32dd0ee2eec",
+        "binary_sha256": "0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e",
+        "allocations": 60,
+        "rows": 490,
+        "identity_rows": 49,
+        "allocation_cpu_seconds": 5035
+      },
+      {
+        "round": "uniform_episode",
+        "runs": 24,
+        "rows": 196,
+        "allocations": 30,
+        "failed_allocations": 6,
+        "failed_allocation_cpu_seconds": 222,
+        "allocation_cpu_seconds": 3112,
+        "identity_rows": 49
+      }
+    ],
+    "failed_pilot_root": "/home/alelys2099/tu_runs/replay-schedule-and-order/uniform-episode-pilot",
+    "failed_pilot": {
+      "allocations": 6,
+      "allocation_cpu_seconds": 222,
+      "partial_rows": 37,
+      "inventory_sha256": "fedf39f4d98e81c1af7517b762ec1816706e185dabedd1353fff9cdaf1ffe77c",
+      "registration_sha256": "50638a57c02d7ed1f582668ee592a1c68787509fd7a6391e461e6f43fd9bfda8",
+      "root": "/home/alelys2099/tu_runs/replay-schedule-and-order/uniform-episode-pilot",
+      "mirror_relative": "../uniform-episode-pilot"
+    },
+    "retry_identity_rows": 37,
+    "schedule_binary_fixture_rows": 72,
     "cells": [
       {
         "configuration_id": "maze4_c5_pairs",
@@ -25529,102 +25577,6 @@
       },
       {
         "configuration_id": "maze4_c5_pairs",
-        "arm": "acs2her_shortened_p1of2_backward",
-        "body_wall_seconds": 77.32452739900327,
-        "process_cpu_seconds": 76.126524,
-        "allocation_cpu_seconds": 78,
-        "peak_rss_kib": 9252
-      },
-      {
-        "configuration_id": "maze5_c8_pairs",
-        "arm": "acs2her_shortened_p4of5_backward",
-        "body_wall_seconds": 166.2437951460015,
-        "process_cpu_seconds": 163.741499,
-        "allocation_cpu_seconds": 167,
-        "peak_rss_kib": 9332
-      },
-      {
-        "configuration_id": "maze6_c10_pairs",
-        "arm": "acs2her_shortened_p4of5_backward",
-        "body_wall_seconds": 195.47562246999587,
-        "process_cpu_seconds": 192.510053,
-        "allocation_cpu_seconds": 196,
-        "peak_rss_kib": 9332
-      },
-      {
-        "configuration_id": "maze7_c10_pairs",
-        "arm": "acs2her_shortened_p4of5_backward",
-        "body_wall_seconds": 222.71395177900558,
-        "process_cpu_seconds": 219.354474,
-        "allocation_cpu_seconds": 224,
-        "peak_rss_kib": 9316
-      },
-      {
-        "configuration_id": "woods14_c18_pairs",
-        "arm": "acs2her_shortened_p4of5_backward",
-        "body_wall_seconds": 49.503061618015636,
-        "process_cpu_seconds": 48.757646,
-        "allocation_cpu_seconds": 51,
-        "peak_rss_kib": 9200
-      },
-      {
-        "configuration_id": "mazema_c9_pairs",
-        "arm": "acs2her_shortened_p1of3_backward",
-        "body_wall_seconds": 28.170062989986036,
-        "process_cpu_seconds": 27.700938,
-        "allocation_cpu_seconds": 29,
-        "peak_rss_kib": 9192
-      },
-      {
-        "configuration_id": "maze4_c5_pairs",
-        "arm": "acs2her_shortened_p1of2_pass_random",
-        "body_wall_seconds": 87.87329339800635,
-        "process_cpu_seconds": 86.51406899999999,
-        "allocation_cpu_seconds": 89,
-        "peak_rss_kib": 9256
-      },
-      {
-        "configuration_id": "maze5_c8_pairs",
-        "arm": "acs2her_shortened_p4of5_pass_random",
-        "body_wall_seconds": 174.4088594619825,
-        "process_cpu_seconds": 171.820111,
-        "allocation_cpu_seconds": 175,
-        "peak_rss_kib": 9340
-      },
-      {
-        "configuration_id": "maze6_c10_pairs",
-        "arm": "acs2her_shortened_p4of5_pass_random",
-        "body_wall_seconds": 203.2948772799864,
-        "process_cpu_seconds": 200.17807,
-        "allocation_cpu_seconds": 204,
-        "peak_rss_kib": 9336
-      },
-      {
-        "configuration_id": "maze7_c10_pairs",
-        "arm": "acs2her_shortened_p4of5_pass_random",
-        "body_wall_seconds": 170.97616989398375,
-        "process_cpu_seconds": 168.37592800000002,
-        "allocation_cpu_seconds": 172,
-        "peak_rss_kib": 9320
-      },
-      {
-        "configuration_id": "woods14_c18_pairs",
-        "arm": "acs2her_shortened_p4of5_pass_random",
-        "body_wall_seconds": 46.52392024197616,
-        "process_cpu_seconds": 45.815369000000004,
-        "allocation_cpu_seconds": 47,
-        "peak_rss_kib": 9196
-      },
-      {
-        "configuration_id": "mazema_c9_pairs",
-        "arm": "acs2her_shortened_p1of3_pass_random",
-        "body_wall_seconds": 26.304349194979295,
-        "process_cpu_seconds": 25.891681,
-        "allocation_cpu_seconds": 27,
-        "peak_rss_kib": 9196
-      },
-      {
-        "configuration_id": "maze4_c5_pairs",
         "arm": "acs2er_episodic_replay3to1at30000",
         "body_wall_seconds": 42.40399607800646,
         "process_cpu_seconds": 41.765397,
@@ -25769,112 +25721,210 @@
       },
       {
         "configuration_id": "maze4_c5_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 99.92890434598667,
-        "process_cpu_seconds": 98.416261,
-        "allocation_cpu_seconds": 100,
-        "peak_rss_kib": 9252
+        "arm": "acs2her_shortened_p1of2_backward",
+        "body_wall_seconds": 74.924485040945,
+        "process_cpu_seconds": 73.532346,
+        "allocation_cpu_seconds": 76,
+        "peak_rss_kib": 9272
       },
       {
         "configuration_id": "maze5_c8_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 160.09625350302667,
-        "process_cpu_seconds": 157.765641,
-        "allocation_cpu_seconds": 160,
+        "arm": "acs2her_shortened_p4of5_backward",
+        "body_wall_seconds": 165.8108190279454,
+        "process_cpu_seconds": 162.761798,
+        "allocation_cpu_seconds": 167,
         "peak_rss_kib": 9340
       },
       {
         "configuration_id": "maze6_c10_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 152.08267003600486,
-        "process_cpu_seconds": 149.85547,
-        "allocation_cpu_seconds": 153,
-        "peak_rss_kib": 9336
+        "arm": "acs2her_shortened_p4of5_backward",
+        "body_wall_seconds": 185.87924585898872,
+        "process_cpu_seconds": 182.43275400000002,
+        "allocation_cpu_seconds": 187,
+        "peak_rss_kib": 9348
       },
       {
         "configuration_id": "maze7_c10_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 140.33517532699625,
-        "process_cpu_seconds": 138.23068800000001,
-        "allocation_cpu_seconds": 141,
-        "peak_rss_kib": 9320
+        "arm": "acs2her_shortened_p4of5_backward",
+        "body_wall_seconds": 207.32713656697888,
+        "process_cpu_seconds": 203.825478,
+        "allocation_cpu_seconds": 208,
+        "peak_rss_kib": 9332
       },
       {
         "configuration_id": "woods14_c18_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 49.7178055330005,
-        "process_cpu_seconds": 48.982363,
+        "arm": "acs2her_shortened_p4of5_backward",
+        "body_wall_seconds": 50.27031298703514,
+        "process_cpu_seconds": 49.248658999999996,
         "allocation_cpu_seconds": 51,
-        "peak_rss_kib": 9204
+        "peak_rss_kib": 9132
       },
       {
         "configuration_id": "mazema_c9_pairs",
-        "arm": "acs2er_episodic_backward",
-        "body_wall_seconds": 19.839233772014268,
-        "process_cpu_seconds": 19.526889,
-        "allocation_cpu_seconds": 21,
-        "peak_rss_kib": 9188
+        "arm": "acs2her_shortened_p1of3_backward",
+        "body_wall_seconds": 24.050699823070318,
+        "process_cpu_seconds": 23.564964999999997,
+        "allocation_cpu_seconds": 25,
+        "peak_rss_kib": 9204
       },
       {
         "configuration_id": "maze4_c5_pairs",
-        "arm": "acs2her_shortened_p1of2",
-        "body_wall_seconds": 85.61864016001346,
-        "process_cpu_seconds": 84.324849,
-        "allocation_cpu_seconds": 86,
-        "peak_rss_kib": 9260
+        "arm": "acs2her_shortened_p1of2_pass_random",
+        "body_wall_seconds": 88.64795857202262,
+        "process_cpu_seconds": 86.80434,
+        "allocation_cpu_seconds": 90,
+        "peak_rss_kib": 9132
       },
       {
         "configuration_id": "maze5_c8_pairs",
-        "arm": "acs2her_shortened_p4of5",
-        "body_wall_seconds": 171.67698905602447,
-        "process_cpu_seconds": 169.14205099999998,
-        "allocation_cpu_seconds": 172,
+        "arm": "acs2her_shortened_p4of5_pass_random",
+        "body_wall_seconds": 166.4747318099835,
+        "process_cpu_seconds": 163.917122,
+        "allocation_cpu_seconds": 167,
+        "peak_rss_kib": 9224
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "arm": "acs2her_shortened_p4of5_pass_random",
+        "body_wall_seconds": 209.32505317000323,
+        "process_cpu_seconds": 206.123371,
+        "allocation_cpu_seconds": 210,
+        "peak_rss_kib": 9160
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "arm": "acs2her_shortened_p4of5_pass_random",
+        "body_wall_seconds": 198.31239210499916,
+        "process_cpu_seconds": 195.37498,
+        "allocation_cpu_seconds": 199,
+        "peak_rss_kib": 9340
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "arm": "acs2her_shortened_p4of5_pass_random",
+        "body_wall_seconds": 46.13904969103169,
+        "process_cpu_seconds": 45.188588,
+        "allocation_cpu_seconds": 47,
+        "peak_rss_kib": 8992
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "arm": "acs2her_shortened_p1of3_pass_random",
+        "body_wall_seconds": 31.38307869702112,
+        "process_cpu_seconds": 30.770929000000002,
+        "allocation_cpu_seconds": 32,
+        "peak_rss_kib": 9212
+      },
+      {
+        "configuration_id": "maze4_c5_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 86.76705998904072,
+        "process_cpu_seconds": 85.230054,
+        "allocation_cpu_seconds": 89,
+        "peak_rss_kib": 9268
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 151.78558365500066,
+        "process_cpu_seconds": 149.107795,
+        "allocation_cpu_seconds": 153,
         "peak_rss_kib": 9348
       },
       {
         "configuration_id": "maze6_c10_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 147.20978913700674,
+        "process_cpu_seconds": 144.50995899999998,
+        "allocation_cpu_seconds": 148,
+        "peak_rss_kib": 9348
+      },
+      {
+        "configuration_id": "maze7_c10_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 152.33152265299577,
+        "process_cpu_seconds": 149.829345,
+        "allocation_cpu_seconds": 153,
+        "peak_rss_kib": 9328
+      },
+      {
+        "configuration_id": "woods14_c18_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 48.4603835119633,
+        "process_cpu_seconds": 47.394424,
+        "allocation_cpu_seconds": 50,
+        "peak_rss_kib": 9216
+      },
+      {
+        "configuration_id": "mazema_c9_pairs",
+        "arm": "acs2er_episodic_backward",
+        "body_wall_seconds": 20.027362292981707,
+        "process_cpu_seconds": 19.582856,
+        "allocation_cpu_seconds": 22,
+        "peak_rss_kib": 9020
+      },
+      {
+        "configuration_id": "maze4_c5_pairs",
+        "arm": "acs2her_shortened_p1of2",
+        "body_wall_seconds": 86.12599080696236,
+        "process_cpu_seconds": 84.563619,
+        "allocation_cpu_seconds": 89,
+        "peak_rss_kib": 9268
+      },
+      {
+        "configuration_id": "maze5_c8_pairs",
         "arm": "acs2her_shortened_p4of5",
-        "body_wall_seconds": 226.98341284599155,
-        "process_cpu_seconds": 223.556959,
-        "allocation_cpu_seconds": 228,
-        "peak_rss_kib": 9336
+        "body_wall_seconds": 175.0466726560844,
+        "process_cpu_seconds": 171.583058,
+        "allocation_cpu_seconds": 180,
+        "peak_rss_kib": 9344
+      },
+      {
+        "configuration_id": "maze6_c10_pairs",
+        "arm": "acs2her_shortened_p4of5",
+        "body_wall_seconds": 228.32028870400973,
+        "process_cpu_seconds": 224.168454,
+        "allocation_cpu_seconds": 235,
+        "peak_rss_kib": 9348
       },
       {
         "configuration_id": "maze7_c10_pairs",
         "arm": "acs2her_shortened_p4of5",
-        "body_wall_seconds": 202.75569408599404,
-        "process_cpu_seconds": 199.70774,
-        "allocation_cpu_seconds": 204,
-        "peak_rss_kib": 9324
+        "body_wall_seconds": 204.6701816529967,
+        "process_cpu_seconds": 201.116621,
+        "allocation_cpu_seconds": 210,
+        "peak_rss_kib": 9328
       },
       {
         "configuration_id": "woods14_c18_pairs",
         "arm": "acs2her_shortened_p4of5",
-        "body_wall_seconds": 61.407142386975465,
-        "process_cpu_seconds": 60.456268,
-        "allocation_cpu_seconds": 62,
-        "peak_rss_kib": 9208
+        "body_wall_seconds": 63.25990981596988,
+        "process_cpu_seconds": 61.907471,
+        "allocation_cpu_seconds": 65,
+        "peak_rss_kib": 9216
       },
       {
         "configuration_id": "mazema_c9_pairs",
         "arm": "acs2her_shortened_p1of3",
-        "body_wall_seconds": 34.68707955701393,
-        "process_cpu_seconds": 34.142931,
-        "allocation_cpu_seconds": 35,
-        "peak_rss_kib": 9192
+        "body_wall_seconds": 35.51362773007713,
+        "process_cpu_seconds": 34.743553,
+        "allocation_cpu_seconds": 37,
+        "peak_rss_kib": 9204
       }
     ],
     "references_sha256": "f5647a56d4e2728010e57470f7cc4a26d195da8d339a5eb63021aca936718144",
     "base_selection_sha256": "bc1389e3d6f627759246a944c86a312a045b093752ccca1363a33a89526ee96a",
-    "rows_sha256": "c4035366346fa92ae6398194d24ca5adb5b2accd96a4ec90fe54b58550d32eb8",
-    "summary_sha256": "14d42033737d39a0103b81b61e269e702ceba4ae337524a38b9b9244ae6694f3",
-    "fixture_sha256": "7420200f6680fbed7fa51f7760968a8720f185d2c9d3ef2591cfcb783c1043cd",
+    "rows_sha256": "e073d811136b038d3ba9dd3a0df777b6fb713c5aceae8a2ec9f4d6ef3c554580",
+    "summary_sha256": "58027074e60956b11eb7b71d8239e9b6dd18489966bd378a7365b31e468fe4b6",
+    "fixture_sha256": "177104c7570f58f87e630310d6f769055c2376c3faf5d5ae6cf0997ca4699443",
     "generators": {
-      "protocol.py": "1ebeb252fc0739e41253cc0b83624665634a3dbb9064d251c6b0edad29496f7d",
-      "execution.py": "63c5be5ddb392b2f31f5a1fc9a74e53da0ec32952830603b2534385ecd4fbb54",
-      "archive.py": "0edb7d2b842996b461db99210653c8f7b8ae988761c00405567dcc71fb5dd6b2",
-      "prepare_plan.py": "2208514743109648157007a39c35525ea29e399f835b6b4954468c0b47a1fd51",
-      "tuning.py": "a097847173b42947ea5722f2687f5bb8c6923e5a92b9aa916a3c668aa2746cc3"
+      "protocol.py": "ee38c1fe3fd4dfd9b6f5fc57e7d8ff6ae94cb9fe4d7d2317097feaabab6f0231",
+      "execution.py": "bb29d1a6af5de49699318bd44087049c59560ac4d3057f8e6c7f5080daa55160",
+      "archive.py": "8a41be4bc96549f6cfe556e6bb238c1deb2f0ea059f639da34605e4f28ecae13",
+      "prepare_plan.py": "b32c02b7e25dd6112cf2097f42aa10ca9ecc71a30822af5d1439ef0b3ac08c4a",
+      "tuning.py": "a097847173b42947ea5722f2687f5bb8c6923e5a92b9aa916a3c668aa2746cc3",
+      "previous_pilot.py": "4b58858ff2444ea8d24296b2b57e470197466828aa1dcb5b68002351c3506bf7",
+      "failed_pilot.py": "240aaa3b8632960f45c0d9efd3d8b88b950d52c4c9a89c0f6b2e05b43861e517"
     }
   },
   "screening": {
@@ -25974,7 +26024,7 @@
         "expected_cpu_seconds": 195,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -25995,7 +26045,7 @@
         "expected_cpu_seconds": 205,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26016,7 +26066,7 @@
         "expected_cpu_seconds": 220,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26034,7 +26084,7 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 5,
-        "expected_cpu_seconds": 390,
+        "expected_cpu_seconds": 380,
         "limit_minutes": 4,
         "reservation_cpu_seconds": 1200,
         "batch_group": "screening-woods14_c18_pairs-backward"
@@ -26045,7 +26095,7 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 1560,
+        "expected_cpu_seconds": 1520,
         "limit_minutes": 4,
         "reservation_cpu_seconds": 4800
       },
@@ -26055,7 +26105,7 @@
         "agent": "acs2her_shortened",
         "mode": "random-pass",
         "runs": 20,
-        "expected_cpu_seconds": 1780,
+        "expected_cpu_seconds": 1800,
         "limit_minutes": 4,
         "reservation_cpu_seconds": 4800
       },
@@ -26095,9 +26145,9 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 2000,
-        "limit_minutes": 5,
-        "reservation_cpu_seconds": 6000
+        "expected_cpu_seconds": 1780,
+        "limit_minutes": 4,
+        "reservation_cpu_seconds": 4800
       },
       {
         "purpose": "screening",
@@ -26169,8 +26219,8 @@
         "mode": "backward",
         "runs": 5,
         "expected_cpu_seconds": 835,
-        "limit_minutes": 9,
-        "reservation_cpu_seconds": 2700,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 2400,
         "batch_group": "screening-maze6_c10_pairs-3to1at300000"
       },
       {
@@ -26189,7 +26239,7 @@
         "agent": "acs2her_shortened",
         "mode": "random-pass",
         "runs": 20,
-        "expected_cpu_seconds": 3500,
+        "expected_cpu_seconds": 3340,
         "limit_minutes": 7,
         "reservation_cpu_seconds": 8400
       },
@@ -26229,7 +26279,7 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 3200,
+        "expected_cpu_seconds": 3060,
         "limit_minutes": 7,
         "reservation_cpu_seconds": 8400
       },
@@ -26282,8 +26332,8 @@
         "mode": "3to1at300000",
         "runs": 5,
         "expected_cpu_seconds": 610,
-        "limit_minutes": 9,
-        "reservation_cpu_seconds": 2700,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 2400,
         "batch_group": "screening-maze6_c10_pairs-3to1at300000"
       },
       {
@@ -26302,9 +26352,9 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 5,
-        "expected_cpu_seconds": 980,
-        "limit_minutes": 9,
-        "reservation_cpu_seconds": 2700,
+        "expected_cpu_seconds": 935,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 2400,
         "batch_group": "screening-maze6_c10_pairs-3to1at300000"
       },
       {
@@ -26313,7 +26363,7 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 3920,
+        "expected_cpu_seconds": 3740,
         "limit_minutes": 8,
         "reservation_cpu_seconds": 9600
       },
@@ -26323,7 +26373,7 @@
         "agent": "acs2her_shortened",
         "mode": "random-pass",
         "runs": 20,
-        "expected_cpu_seconds": 4080,
+        "expected_cpu_seconds": 4200,
         "limit_minutes": 8,
         "reservation_cpu_seconds": 9600
       },
@@ -26363,9 +26413,9 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 3060,
-        "limit_minutes": 7,
-        "reservation_cpu_seconds": 8400
+        "expected_cpu_seconds": 2960,
+        "limit_minutes": 6,
+        "reservation_cpu_seconds": 7200
       },
       {
         "purpose": "screening",
@@ -26436,9 +26486,9 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 5,
-        "expected_cpu_seconds": 1120,
-        "limit_minutes": 9,
-        "reservation_cpu_seconds": 2700,
+        "expected_cpu_seconds": 1040,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 2400,
         "batch_group": "screening-maze6_c10_pairs-3to1at300000"
       },
       {
@@ -26447,9 +26497,9 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 4480,
-        "limit_minutes": 9,
-        "reservation_cpu_seconds": 10800
+        "expected_cpu_seconds": 4160,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 9600
       },
       {
         "purpose": "test",
@@ -26457,9 +26507,9 @@
         "agent": "acs2her_shortened",
         "mode": "random-pass",
         "runs": 20,
-        "expected_cpu_seconds": 3440,
-        "limit_minutes": 7,
-        "reservation_cpu_seconds": 8400
+        "expected_cpu_seconds": 3980,
+        "limit_minutes": 8,
+        "reservation_cpu_seconds": 9600
       },
       {
         "purpose": "test",
@@ -26497,9 +26547,9 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 2820,
-        "limit_minutes": 6,
-        "reservation_cpu_seconds": 7200
+        "expected_cpu_seconds": 3060,
+        "limit_minutes": 7,
+        "reservation_cpu_seconds": 8400
       },
       {
         "purpose": "screening",
@@ -26510,7 +26560,7 @@
         "expected_cpu_seconds": 125,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-mazema_c9_pairs-3to1at30000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26531,7 +26581,7 @@
         "expected_cpu_seconds": 135,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26552,7 +26602,7 @@
         "expected_cpu_seconds": 140,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-woods14_c18_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26631,7 +26681,7 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 1020,
+        "expected_cpu_seconds": 1000,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 3600
       },
@@ -26704,10 +26754,10 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 5,
-        "expected_cpu_seconds": 145,
+        "expected_cpu_seconds": 125,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 900,
-        "batch_group": "screening-woods14_c18_pairs-3to1at100000"
+        "batch_group": "screening-mazema_c9_pairs-3to1at30000"
       },
       {
         "purpose": "test",
@@ -26715,7 +26765,7 @@
         "agent": "acs2her_shortened",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 580,
+        "expected_cpu_seconds": 500,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 3600
       },
@@ -26725,7 +26775,7 @@
         "agent": "acs2her_shortened",
         "mode": "random-pass",
         "runs": 20,
-        "expected_cpu_seconds": 540,
+        "expected_cpu_seconds": 640,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 3600
       },
@@ -26765,7 +26815,7 @@
         "agent": "acs2er_episodic",
         "mode": "backward",
         "runs": 20,
-        "expected_cpu_seconds": 420,
+        "expected_cpu_seconds": 440,
         "limit_minutes": 3,
         "reservation_cpu_seconds": 3600
       }
@@ -26797,13 +26847,13 @@
       {
         "configuration_id": "maze4_c5_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 5340,
-        "reservation_cpu_seconds": 15600,
+        "expected_cpu_seconds": 5100,
+        "reservation_cpu_seconds": 14400,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 5340,
-            "reservation_cpu_seconds": 15600
+            "expected_cpu_seconds": 5100,
+            "reservation_cpu_seconds": 14400
           }
         ]
       },
@@ -26833,12 +26883,12 @@
       {
         "configuration_id": "maze5_c8_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 10040,
+        "expected_cpu_seconds": 9740,
         "reservation_cpu_seconds": 25200,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 10040,
+            "expected_cpu_seconds": 9740,
             "reservation_cpu_seconds": 25200
           }
         ]
@@ -26869,13 +26919,13 @@
       {
         "configuration_id": "maze6_c10_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 11060,
-        "reservation_cpu_seconds": 27600,
+        "expected_cpu_seconds": 10900,
+        "reservation_cpu_seconds": 26400,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 11060,
-            "reservation_cpu_seconds": 27600
+            "expected_cpu_seconds": 10900,
+            "reservation_cpu_seconds": 26400
           }
         ]
       },
@@ -26905,13 +26955,13 @@
       {
         "configuration_id": "maze7_c10_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 10740,
-        "reservation_cpu_seconds": 26400,
+        "expected_cpu_seconds": 11200,
+        "reservation_cpu_seconds": 27600,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 10740,
-            "reservation_cpu_seconds": 26400
+            "expected_cpu_seconds": 11200,
+            "reservation_cpu_seconds": 27600
           }
         ]
       },
@@ -26941,12 +26991,12 @@
       {
         "configuration_id": "woods14_c18_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 2980,
+        "expected_cpu_seconds": 2960,
         "reservation_cpu_seconds": 10800,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 2980,
+            "expected_cpu_seconds": 2960,
             "reservation_cpu_seconds": 10800
           }
         ]
@@ -26977,21 +27027,21 @@
       {
         "configuration_id": "mazema_c9_pairs",
         "axis": "C",
-        "expected_cpu_seconds": 1540,
+        "expected_cpu_seconds": 1580,
         "reservation_cpu_seconds": 10800,
         "alternatives": [
           {
             "mode": "backward",
-            "expected_cpu_seconds": 1540,
+            "expected_cpu_seconds": 1580,
             "reservation_cpu_seconds": 10800
           }
         ]
       }
     ],
     "memory_mib": 512,
-    "expected_total_cpu_hours": 19.931944444444444,
-    "doubled_forecast_cpu_hours": 38.46527777777778,
-    "hard_reservations_cpu_hours": 59.06527777777778,
+    "expected_total_cpu_hours": 20.692222222222224,
+    "doubled_forecast_cpu_hours": 39.12138888888889,
+    "hard_reservations_cpu_hours": 59.26305555555555,
     "requested_cpu_hour_limit": 60,
     "screening_runs": 120,
     "maximum_test_runs": 600,
@@ -27151,7 +27201,7 @@
     "diagnostic_aggregation": "Within each row use appropriate route denominators; checkpoint_mean averages equally within seed; final_point uses only last row; then mean/SE over seeds. Empty groups stay null with counts.",
     "interpretation": "B deliberately changes update volume. Same settings equalize the rule and prescribed volume between S_X and E_X; realized totals may differ with episode overshoot and episode-end switch rounding. C compares full passes against independent sampling; random-pass control isolates within-pass order.",
     "limitations": [
-      "Length-proportional episode selection followed by whole passes does not preserve uniform transition replay frequencies. For original full passes, expected exposure per transition grows with episode length; counterfactual prefixes add goal-dependent weighting.",
+      "Uniform retained-episode selection gives equal expected exposure per retained transition for complete original-goal passes. Counterfactual prefixes and the final budget cut add goal- and position-dependent weighting.",
       "One-goal passes change copy weighting: p is per pass, realized per-update share need not equal p. Report pass and draw counts separately.",
       "Backward and random control share pass samples and goals conditional on identical stores and sampler state; learned policies and subsequent real trajectories can diverge.",
       "Intervals condition on selected settings and do not include selection uncertainty. Finite training horizons do not establish convergence."
@@ -27171,16 +27221,21 @@
     "target": "x86_64-unknown-linux-musl",
     "tooling": "experiments/grid/",
     "scope_roots": [
-      "pilot-acs2her_shortened-3to1at30000",
-      "pilot-acs2her_shortened-3to1at100000",
-      "pilot-acs2her_shortened-3to1at300000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-3to1at30000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-3to1at100000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-3to1at300000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-backward",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-random-pass",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2er_episodic-3to1at30000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2er_episodic-3to1at100000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2er_episodic-3to1at300000",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2er_episodic-backward",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/pilot-acs2her_shortened-base",
       "pilot-acs2her_shortened-backward",
       "pilot-acs2her_shortened-random-pass",
-      "pilot-acs2er_episodic-3to1at30000",
-      "pilot-acs2er_episodic-3to1at100000",
-      "pilot-acs2er_episodic-3to1at300000",
       "pilot-acs2er_episodic-backward",
       "pilot-acs2her_shortened-base",
+      "/home/alelys2099/tu_runs/replay-schedule-and-order/uniform-episode-pilot/pilot-acs2her_shortened-base",
       "screening",
       "test-B-maze4_c5_pairs-shortened",
       "test-B-maze4_c5_pairs-er",
@@ -27219,5 +27274,5 @@
     "guards": "Pinned clean source, static binary and immutable operations; node guards; shared STOP on real failure; diagnosed recovery and bitwise partial-prefix equality before retry acceptance.",
     "archive": "~/tu_runs/replay-schedule-and-order/ and ~/Desktop/tu-runs/replay-schedule-and-order/; independently verify both copies."
   },
-  "authorization": "Stage1 only: sixty seed42 pilot allocations within twelve CPU-hours including reservations. Screening and test require explicit approval of this plan and a cumulative CPU-hour limit; stop after registration."
+  "authorization": "Stage1 only: the original sixty and corrected twenty-four seed42 pilot allocations share twelve CPU-hours including reservations. Screening and test require explicit approval of this plan and a cumulative CPU-hour limit; stop after registration."
 }

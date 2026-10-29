@@ -92,8 +92,8 @@ python3 -B experiments/replay-schedule-and-order/prepare_plan.py <pulled study r
 Use matching CPython3.9 when recomputing saved choices from the earlier study.
 Raw rows, launch records, accounting, verified inventories and Polish reports live
 under `~/tu_runs/replay-schedule-and-order/` and
-`~/Desktop/tu-runs/replay-schedule-and-order/`, outside Git. Earlier registrations,
-fixtures and studies stay immutable; the proportion directory receives only tests
+`~/Desktop/tu-runs/replay-schedule-and-order/`, outside Git. Registrations and fixtures
+of preceding studies stay immutable; the proportion directory receives only tests
 for inclusive ties, failed-prefix identity and distinct dose-control crossings.
 
 ## Original pilot allocation and superseded forecast
@@ -113,7 +113,7 @@ its Rust test reconstructs them through the measurement factory. Earlier fixture
 remain unchanged. Measurement source is `0a19f8e`, musl binary SHA-256
 `0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e`.
 
-The [registered plan](plan.json), SHA-256
+The [superseded registration](https://github.com/lyskawson/acs2-rust/blob/d4011fcb79effaa972598ce5b6cb33470233ceea/experiments/replay-schedule-and-order/plan.json), SHA-256
 `3de02461064593d2d99ad98c3dcf95ad91f11ed2c7191f3c7bb369e49619f4e6`,
 expects 19.931944 cumulative CPU-hours when both axes are tested everywhere. Its
 doubled future-cost forecast including the measured pilot is 38.465278 hours;
@@ -130,3 +130,32 @@ hard bound. The completed pilot's maximum admission bound was 9505 CPU-seconds.
 The source, static binary and preset are part of the approval identity; a changed
 measurement identity or a changed screening manifest cannot authorize tests.
 Screening and test remain pending explicit approval of this plan and its CPU limit.
+
+## Uniform episode pilot and revised registration
+
+The corrected pilot source is `416637251460b91c771ffe9d8c3c503776c13986`, static musl binary
+SHA-256 `ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275`.
+All twenty-four corrected trajectories completed. Default identity passes 49/49
+rows across all blocks and learning/knowledge fields; the same binary passes all
+72 unchanged B fixture rows in short checks within the default allocations.
+Only 36 C fixture rows and the fixture header provenance change. The 31 other
+fixture files retain their bytes. The exact-cycle transition exposure test rejects
+a length-proportional mutation; other C tests remain in place.
+
+The first fixture gate used an unsupported full-block CLI argument and triggered
+shared STOP before C. Six failed allocations cost 222 CPU-seconds; all 37 available
+rows reproduce the reference and the completed retry. The original failed root
+remains sealed. `failed_pilot.py` checks its terminal accounting and retry identity.
+Both rounds total ninety allocations and 8147 CPU-seconds (2.263056 hours), zero
+reservations, within the cumulative twelve-hour cap. The 46-root accounting scope
+includes original, failed and corrected allocations exactly once, with zero offset;
+its immutable roots preserve earlier accounting files. All fifteen admissions passed
+the grant and scheduler test-only checks, with at most two streams and twelve jobs.
+
+The [revised plan](plan.json) SHA-256 is
+`01d93796e56efeea2dc2b85e0264bc98dfaec4a16fe7cb08052fd0515f7b1f71`. Scientific screening,
+selection, conditional tests, references and analysis are unchanged apart from the
+uniform-episode limitation. Expected cumulative cost is 20.692222
+CPU-hours; doubled future cost plus pilot is 39.121389; hard
+reservations plus pilot total 59.263056. The proposed
+cumulative approval remains sixty CPU-hours. Screening and test have not started.

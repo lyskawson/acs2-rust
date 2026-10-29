@@ -4183,7 +4183,7 @@ settings, axis parameter values and types, schedule counts, pass counts, full/va
 update counts and zero inadmissible shortened copies. Mechanical manifest derivation
 fixes the entire arm and point grid, and conditional test derivation recomputes the
 saved validation-only selection. Unregistered switches, orders, extra settings and
-combined axes are refused. The original plans and fixtures are unchanged.
+combined axes are refused. The plans and fixtures of preceding studies remain unchanged.
 
 The original sixty-run stage1 pilot and the corrected twenty-four-run pilot share
 a twelve-hour allocation cap including reservations.
@@ -4218,7 +4218,7 @@ first two points of all fifty-four new setting/maze combinations. Earlier fixtur
 retain their bytes. Proportion-study additions are test-only: inclusive exact
 threshold ties, failed-attempt prefix identity and distinct dose-control crossings.
 
-The pre-screening [registration](../experiments/replay-schedule-and-order/plan.json),
+The superseded pre-screening [registration](https://github.com/lyskawson/acs2-rust/blob/d4011fcb79effaa972598ce5b6cb33470233ceea/experiments/replay-schedule-and-order/plan.json),
 SHA-256 `3de02461064593d2d99ad98c3dcf95ad91f11ed2c7191f3c7bb369e49619f4e6`,
 retains all three switch points and backward replay. Screening groups use pilot
 costs only: sorted hard limits are partitioned into four to eight five-seed cells,
@@ -4244,6 +4244,58 @@ scheduler test-only evidence; their maximum bound was 9505 CPU-seconds, with at 
 two active streams and a twelve-running-job hard bound. Screening and testing remain
 pending explicit approval. The external report and per-maze/arm diagnostics include
 all 490 checkpoint-interval update rates; no pilot success ranking selects settings.
+
+### Uniform episode choice and corrected pilot
+
+Episode passes now pick each retained episode uniformly; the row rule is
+`uniform_episode_passes`. Full original-goal passes give every retained transition
+the same expected exposure. Counterfactual prefixes and the final budget cut retain
+their goal- and position-dependent weighting. The exact-cycle test with lengths one
+and three gives six updates to each transition; restoring length-proportional choice
+gives three and nine and fails the test. Other pass, goal, direction, volume and
+shuffle-stream tests remain in place. The shared row validator rejects the old rule.
+
+The corrected measurement source is `416637251460b91c771ffe9d8c3c503776c13986`;
+the static x86_64 musl binary SHA-256 is
+`ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275`.
+All twenty-four corrected pilot trajectories completed on seed42, six mazes and
+all registered points and blocks. The six default trajectories reproduce 49/49
+selected-proportion test rows in binary64 bits, including all learning and knowledge
+fields. In those same allocations, the new measurement binary independently
+reconstructed 72/72 original B fixture rows. No full B pilot was repeated.
+The replay fixture replaces only its 36 C rows and updates header provenance;
+all 72 B rows and their configuration metadata stay identical, as do the 31 other
+fixture files. Its Rust tests separate unchanged B from corrected C.
+
+An initial post-collection fixture check passed an unsupported full-block CLI
+argument; full evaluation requires omitting the validation-only option. The shared
+STOP ended six allocations before any C run. They cost 222 CPU-seconds. Their
+37 available rows match both the proportion reference and the completed retry in
+binary64 bits. The failed operation snapshot, registration, STOP, rows and accounting
+remain sealed in their original directory; the corrected retry uses a new directory
+and unchanged measurement binary. No learning identity mismatch occurred.
+
+Both pilot rounds cost 8147 allocated CPU-seconds (2.263056 CPU-hours) in ninety
+allocations: sixty original, six failed gate attempts and twenty-four completed
+corrected trajectories. Outstanding reservations are zero. All fifteen admissions
+retained grant and scheduler test-only evidence; the maximum admission bound was
+13273 CPU-seconds, at most two streams and twelve running jobs. The original
+1106-file inventory remains unchanged. Shared accounting accepts an explicit common
+`accounting_root` and `immutable_batch_roots`: all original and failed allocations
+stay charged without rewriting their sealed accounting. The exact revised scope
+has 46 roots, a zero pilot offset, and mechanically derived future manifests.
+
+The corrected [registration](../experiments/replay-schedule-and-order/plan.json),
+SHA-256 `01d93796e56efeea2dc2b85e0264bc98dfaec4a16fe7cb08052fd0515f7b1f71`,
+keeps screening, selection, conditional tests, references, contrasts, thresholds and
+intervals unchanged. Only C's episode-choice description, measurement provenance,
+its measured costs and cumulative accounting change. The expected cumulative cost
+is 20.692222 CPU-hours; doubled future cost plus measured
+pilot is 39.121389; hard reservations plus measured pilot
+are 59.263056. The proposed cumulative limit remains
+sixty CPU-hours, including both rounds and the failed attempts. Independent cost
+reconstruction exhaustively checks the screening group optimum. Screening and test
+have not started and require explicit approval of these revised plan bytes and limit.
 
 ## Value consistency prioritization with independent hindsight heads
 
