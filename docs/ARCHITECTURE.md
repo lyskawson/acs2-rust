@@ -4297,6 +4297,128 @@ sixty CPU-hours, including both rounds and the failed attempts. Independent cost
 reconstruction exhaustively checks the screening group optimum. Screening and test
 have not started and require explicit approval of these revised plan bytes and limit.
 
+## Validation choices and paired results for replay schedules and episode order
+
+The user approved the exact [replay registration](../experiments/replay-schedule-and-order/plan.json),
+SHA-256 `01d93796e56efeea2dc2b85e0264bc98dfaec4a16fe7cb08052fd0515f7b1f71`,
+with sixty cumulative allocated CPU-hours including both pilots. All new rows use
+measurement source `416637251460b91c771ffe9d8c3c503776c13986` and static musl binary
+SHA-256 `ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275`.
+The binary was verified before and after execution and was not rebuilt.
+
+All 120 validation-only screening runs completed on seeds42--46. The base candidate
+reuses the proportion study's validation-only tuning at the saved per-maze p.
+Selection averages registered checkpoints within seed, then five seeds. Candidates
+within 1e-12 of the maximum tie; base wins such ties, otherwise the earlier
+registered setting wins. MazeMA's two highest schedules tie exactly.
+
+| Maze | Saved p | Selected B switch | Selected C |
+|---|---:|---:|---|
+| Maze4 | 1/2 | 30000 | Base |
+| Maze5 | 4/5 | Base | Base |
+| Maze6 | 4/5 | Base | Base |
+| Maze7 | 4/5 | Base | Base |
+| Woods14 | 4/5 | 30000 | Base |
+| MazeMA | 1/3 | 100000 | Base |
+
+The saved choices were re-derived from complete screening rows before conditional
+manifests were admitted. Six twenty-seed B arms then completed: shortened HER and
+episodic ER with the same selected schedule on Maze4, Woods14 and MazeMA, all three
+blocks. No C tests or B tests on Maze5--7 were allocated. Backward order did not win
+this five-seed validation choice; no twenty-seed inference about its effect or its
+random-pass control follows. The intervention remains the registered ACS2 variant
+inspired by EBU, without temporary targets or a diffusion coefficient.
+
+Let S be shortened HER at the saved p, E episodic ER, and X the selected schedule.
+The primary view is each seed's mean test success over registered checkpoints; the
+second view is its final test point. The following paired differences use seeds42--61
+and marginal 95% t(19) intervals with critical value 2.093024054408263 and no
+multiplicity correction. Intervals condition on the saved validation selection.
+Values are success fractions; brackets give the interval. Full SE and exact seed
+scores are exported beside the report.
+
+| Maze | View | S_X - S | E_X - E | (S_X - S) - (E_X - E) | S_X - E_X |
+|---|---|---:|---:|---:|---:|
+| Maze4 | Primary | +0.001003 [-0.005057, +0.007063] | -0.003858 [-0.008960, +0.001244] | +0.004861 [-0.003422, +0.013144] | +0.050965 [+0.036188, +0.065741] |
+| Maze4 | Final | -0.001543 [-0.026883, +0.023797] | +0.007716 [-0.011513, +0.026945] | -0.009259 [-0.036173, +0.017655] | +0.035494 [+0.010768, +0.060219] |
+| Woods14 | Primary | +0.001949 [-0.010737, +0.014636] | +0.006920 [-0.000156, +0.013996] | -0.004971 [-0.018745, +0.008803] | +0.066764 [+0.049495, +0.084033] |
+| Woods14 | Final | +0.020175 [-0.013760, +0.054110] | -0.004386 [-0.041953, +0.033182] | +0.024561 [-0.021993, +0.071115] | +0.085088 [+0.042110, +0.128065] |
+| MazeMA | Primary | +0.004028 [-0.002499, +0.010555] | +0.000556 [-0.008146, +0.009257] | +0.003472 [-0.008109, +0.015053] | +0.032361 [+0.014228, +0.050494] |
+| MazeMA | Final | +0.004444 [-0.030394, +0.039283] | -0.006667 [-0.034512, +0.021179] | +0.011111 [-0.026236, +0.048458] | +0.041111 [-0.003049, +0.085271] |
+
+Every S_X - S, E_X - E and interaction interval contains zero in both views.
+The data therefore do not confirm a schedule gain or a gain specific to hindsight.
+The positive primary S_X - E_X intervals on all three tested mazes describe the
+remaining hindsight advantage under matched schedules; they do not attribute that
+advantage to the schedule. Final S_X - E_X intervals exclude zero on Maze4 and
+Woods14, while MazeMA includes zero. These tests do not establish equivalence.
+
+Threshold crossing uses the exact rational mean over twenty test seeds, inclusive
+at equality, at the first registered checkpoint and without interpolation. Thresholds
+are the registered archived final ACS2 and ACS2ER means, not newly estimated arms.
+
+| Maze | S_X reaches ACS2 final threshold | S_X reaches ACS2ER final threshold |
+|---|---:|---:|
+| Maze4 | Not reached within budget | 30000 |
+| Woods14 | 10000 | 3000 |
+| MazeMA | 30000 | 10000 |
+
+The MazeMA ACS2 crossing is an exact tie. Every other success comparison with ACS2
+would be post hoc; none is used as a registered performance contrast here.
+
+The realized final update rates for shortened HER are 1.029998, 1.014995 and
+1.099997 on Maze4, Woods14 and MazeMA, versus 3 for the base. Matched ER rates differ
+only through real episode boundaries. These schedules reduce cumulative update
+volume by about 65.67%, 66.17% and 63.33%, respectively. Every checkpoint interval
+is exported from differences of actual counters, including episodes straddling T.
+The realized shortened copy shares are 0.391800, 0.534259 and 0.225931, respectively;
+zero trivial or post-counterfactual-end copies are observed. ER has zero copies.
+C screening reports per-pass requests, fallbacks, available/emitted steps and cuts
+separately from update-level shares; its approximately p-valued pass coin does not
+imply an update-level copy share of p.
+
+At the final point, selected shortened populations average 1017.75, 268.25 and
+270.70 classifiers, with known logical memory lower bounds of about 0.815, 0.454
+and 0.489 MB. Test first-action estimate minus return averages 703.12, 677.93 and
+653.44 for all pairs; successful and failed pair groups are exported separately.
+These descriptive diagnostics do not show removal of value overestimation and are
+not registered inferential contrasts. Knowledge is one at these points; that finite
+measurement is not a claim of value convergence. RSS, train/evaluation wall time,
+process CPU time and allocated time are separate measurements.
+
+| Allocation purpose | Allocations | Allocated CPU-s | Failures |
+|---|---:|---:|---:|
+| Both pilots, including stopped identity-gate attempts | 90 | 8147 | 6 |
+| Validation screening | 120 | 9930 | 0 |
+| Conditional B tests | 120 | 3812 | 0 |
+| Total | 330 | 21889 | 6 |
+
+Total allocated cost is 6.080278 of 60 CPU-hours, with zero reservations and no new
+failures or retries. All 26 admissions retain grant and scheduler test-only proof;
+one accounting scope charges all roots exactly once. Execution used at most two
+streams and a forty-running-job hard bound, without background orchestration,
+leases or host pinning. The measurement clone and binary remained frozen.
+
+All identity gates pass in binary64 bits: 196 seed42 screening rows against the
+appropriate pilots, 50 seed42 test rows against the first B pilot and 125 validation
+rows for shortened test seeds42--46 against screening. The corrected default pilot
+retains its 49-row proportion identity and the new binary's 72-row B fixture check.
+The 480 full historical reference trajectories and thirty validation-only base
+trajectories are reused without allocations. Archived names resolve through
+`experiments/grid/agent_names.json`. Original pilot inventories, both failed and
+completed attempts, and the corrected pilot's frozen snapshot remain intact.
+
+Shared paired-statistics helpers and the study's analysis/verification modules
+export integer counts, exact seed scores, all 24 paired comparisons, six crossings,
+30 screening cells with SE, 6623 checkpoint intervals and population/copy/value/cost
+diagnostics. An independent export validator reconstructs the results from counts
+and checkpoint metrics. Tests cover exact ties, paired covariance, conditional C
+contrasts, final-only diagnostics and online updates in interval rates. Five applied
+analysis mutations are rejected. Gates pass with 339 Rust tests, 348 Python tests,
+unchanged P9 columns1--7 and 22 existing clippy warnings with none added.
+Raw rows, two verified archive copies, thirteen CSV exports, PNG/PDF figures and
+the Polish report remain outside Git under the registered replay study roots.
+
 ## Value consistency prioritization with independent hindsight heads
 
 `acs2-agents/src/acs2vcp/` owns ACS2VCP, its separate
