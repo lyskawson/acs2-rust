@@ -38,6 +38,8 @@ def prepare(root, output, fixture):
     evidence = dict(runs=60, allocations=summary['allocations'], rows=len(rows), identity_rows=summary['identity_rows'],
         allocation_cpu_seconds=summary['allocation_cpu_seconds'],
         previous_pilot_root=summary['previous_pilot']['root'], previous_pilot=summary['previous_pilot'], rounds=summary['rounds'],
+        failed_pilot_root=summary['failed_pilot']['root'] if summary['failed_pilot'] else None,
+        failed_pilot=summary['failed_pilot'], retry_identity_rows=summary['retry_identity_rows'],
         schedule_binary_fixture_rows=summary['schedule_binary_fixture_rows'],
         cells=[dict(configuration_id=key[0], arm=key[1], **cost) for key, cost in cells.items()],
         references_sha256=hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest(),
@@ -46,7 +48,7 @@ def prepare(root, output, fixture):
         summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
         fixture_sha256=hashlib.sha256(Path(fixture).read_bytes()).hexdigest(),
         generators={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-            for name in ('protocol.py', 'execution.py', 'archive.py', 'prepare_plan.py', 'tuning.py', 'previous_pilot.py')})
+            for name in ('protocol.py', 'execution.py', 'archive.py', 'prepare_plan.py', 'tuning.py', 'previous_pilot.py', 'failed_pilot.py')})
     plan = study(cells, summary['allocation_cpu_seconds'], identity, evidence)
     atomic_json(output, plan)
     return dict(plan_sha256=hashlib.sha256(Path(output).read_bytes()).hexdigest(), forecast=plan['forecast'])

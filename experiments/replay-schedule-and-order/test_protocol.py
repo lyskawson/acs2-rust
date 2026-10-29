@@ -55,6 +55,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(corrected['accounting_root'], '/study')
         self.assertEqual(corrected['pilot_allocation_cpu_seconds'], 0)
         require_budget(0, dict(spent_seconds=5035, reserved_seconds=24 * 600), 0, 12)
+        recovered = scope('c' * 64, '/study/retry', '/study', '/study/failed')
+        self.assertEqual(len(recovered['batch_roots']), 46)
+        self.assertEqual(len(recovered['immutable_batch_roots']), 11)
 
     def test_screening_contains_only_registered_shortened_settings_and_validation(self):
         manifest = derive(plan(), 'screening')

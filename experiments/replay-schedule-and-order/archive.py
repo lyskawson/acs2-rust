@@ -5,6 +5,7 @@ from pathlib import Path
 
 from protocol import CORRECTED_PILOT_INDICES, SCHEDULES, configurations, pilot_roots, PILOT_SETTINGS
 from previous_pilot import local_reference, previous_path, verify_previous
+from failed_pilot import compare_retry, failed_path, verify_failed
 from execution import measurement_identity, pilot_manifest, scope
 from grid_attempts import attempts, select_attempts, inspect_attempt
 from grid_identity import compare, field_bits, verify_references
@@ -111,7 +112,10 @@ def audit(root):
     checked_previous = verify_previous(previous)
     if any(registration['previous_pilot'].get(key) != value for key, value in checked_previous.items()):
         raise ValueError('previous pilot differs from the pinned first round')
-    if frozen_scope != scope(digest, declared, registration['previous_pilot']['root']):
+    failed = verify_failed(failed_path(root)) if 'failed_pilot' in registration else dict(allocations=0, allocation_cpu_seconds=0)
+    if any(registration.get('failed_pilot', {}).get(key) != value for key, value in failed.items()) and 'failed_pilot' in registration:
+        raise ValueError('failed pilot differs from its frozen recovery evidence')
+    if frozen_scope != scope(digest, declared, registration['previous_pilot']['root'], registration.get('failed_pilot', {}).get('root')):
         raise ValueError('pilot accounting scope changed')
     if registration['pilot_indices'] != CORRECTED_PILOT_INDICES or any(
             registration['manifests'][index] is not None for index in range(10) if index not in CORRECTED_PILOT_INDICES):
@@ -125,10 +129,14 @@ def audit(root):
     rows = [json.loads(line) for line in (previous / 'pilot-rows.jsonl').read_text().splitlines()
             if json.loads(line)['arm'] in arms]
     cells = {(run['configuration_id'], run['arm']): run['cost'] for run in runs}
-    spent, attempts_count = checked_previous['allocation_cpu_seconds'], checked_previous['allocations']
-    identity_count = new_rows = 0
+    spent = checked_previous['allocation_cpu_seconds'] + failed['allocation_cpu_seconds']
+    attempts_count = checked_previous['allocations'] + failed['allocations']
+    identity_count = new_rows = retry_identity_rows = 0
     arrays = {allocation['array_id'] for name in pilot_roots()
               for allocation in json.loads((previous / name / 'ledger.json').read_text())}
+    if 'failed_pilot' in registration:
+        arrays.update(allocation['array_id'] for allocation in json.loads(
+            (failed_path(root) / pilot_roots()[-1] / 'ledger.json').read_text()))
     for index in CORRECTED_PILOT_INDICES:
         name = pilot_roots()[index]
         batch = root / name
@@ -163,6 +171,8 @@ def audit(root):
             new_rows += len(entry['rows'])
             if PILOT_SETTINGS[index][1] == 'base':
                 identity_count += len(entry['rows'])
+        if PILOT_SETTINGS[index][1] == 'base' and 'failed_pilot' in registration:
+            retry_identity_rows = compare_retry(root, entries)
         for attempt in attempts(batch, ledger):
             config = next(config for config in manifest['configurations'] if config['id'] == attempt['configuration_id'])
             status, partial = inspect_attempt(attempt, config)
@@ -174,10 +184,12 @@ def audit(root):
         raise ValueError('pilot is incomplete')
     return dict(runs=runs, rows=len(rows), allocations=attempts_count, allocation_cpu_seconds=int(spent),
                 identity_rows=identity_count, previous_pilot=registration['previous_pilot'],
+                failed_pilot=registration.get('failed_pilot'), retry_identity_rows=retry_identity_rows,
                 schedule_binary_fixture_rows=binary_fixture_audit(root, previous),
                 rounds=[dict(round='length_weighted', **checked_previous),
                         dict(round='uniform_episode', runs=24, rows=new_rows,
                              allocations=attempts_count - checked_previous['allocations'],
+                             failed_allocations=failed['allocations'], failed_allocation_cpu_seconds=failed['allocation_cpu_seconds'],
                              allocation_cpu_seconds=int(spent) - checked_previous['allocation_cpu_seconds'],
                              identity_rows=identity_count)], **measurement_identity()), rows, cells
 

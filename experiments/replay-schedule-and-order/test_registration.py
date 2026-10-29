@@ -31,8 +31,9 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(evidence['rows'], 490)
         self.assertEqual(evidence['identity_rows'], 49)
         self.assertEqual(evidence['schedule_binary_fixture_rows'], 72)
-        self.assertEqual(evidence['allocations'], 84)
-        self.assertEqual([item['allocations'] for item in evidence['rounds']], [60, 24])
+        self.assertEqual(evidence['allocations'], 90)
+        self.assertEqual([item['allocations'] for item in evidence['rounds']], [60, 30])
+        self.assertEqual(evidence['rounds'][1]['failed_allocations'], 6)
         self.assertEqual(sum(item['allocation_cpu_seconds'] for item in evidence['rounds']), evidence['allocation_cpu_seconds'])
         self.assertLessEqual(evidence['allocation_cpu_seconds'], 12 * 3600)
         for name, digest in evidence['generators'].items():

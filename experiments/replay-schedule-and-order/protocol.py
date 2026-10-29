@@ -53,8 +53,10 @@ def pilot_roots():
     return ['pilot-' + agent + '-' + mode for agent, mode in PILOT_SETTINGS]
 
 
-def scope_roots(previous=None):
+def scope_roots(previous=None, failed=None):
     pilots = pilot_roots() if previous is None else [str(Path(previous) / name) for name in pilot_roots()] + [pilot_roots()[index] for index in CORRECTED_PILOT_INDICES]
+    if failed is not None:
+        pilots.append(str(Path(failed) / pilot_roots()[-1]))
     return pilots + ['screening'] + ['test-' + axis + '-' + config['id'] + '-' + slot
         for axis in ('B', 'C') for config in configurations()
         for slot in (['shortened', 'er'] if axis == 'B' else ['shortened', 'er', 'order-control'])]
@@ -187,7 +189,7 @@ def study(cells, pilot_seconds, identity, evidence):
             test='Seed42 all blocks reproduce pilot; seeds42--46 reproduce screening on validation and every learning/knowledge field for S_X.',
             exclusions='Only grid_identity.OMIT: source/hardware/time provenance and arm annotation.'),
         execution=dict(partition='lem-cpu-normal', cpu_model='AMD EPYC 9554 64-Core Processor', clone='~/acs2-tu',
-            target='x86_64-unknown-linux-musl', tooling='experiments/grid/', scope_roots=scope_roots(evidence.get('previous_pilot_root')),
+            target='x86_64-unknown-linux-musl', tooling='experiments/grid/', scope_roots=scope_roots(evidence.get('previous_pilot_root'), evidence.get('failed_pilot_root')),
             dispatch='One-shot dispatcher, one registered 20--40-job array per invocation; at most two active streams and forty running jobs. No dependent queue of future arrays.',
             admission='Re-derive each manifest from exact approved bytes and recomputed saved selection before every sbatch; grant and sbatch --test-only; pilot + used + reserved + new hard limits within approved cap.',
             accounting='One scope over every root; zero pilot offset; all allocations and failed attempts included exactly once; hard reservations include whole array maxima.',

@@ -73,8 +73,8 @@ interval, copy composition, value gaps and model/resource costs. All other succe
 comparisons, including ACS2, are post hoc. Historical references use
 `grid/agent_names.json` and are reused without allocations.
 
-One accounting scope covers fourteen pilot roots across the two rounds, screening
-and thirty possible test-arm roots. First-round accounting stays immutable while
+One accounting scope covers fourteen completed pilot roots across the two rounds,
+the failed default identity attempt root, screening and thirty possible test-arm roots. First-round accounting stays immutable while
 its allocations remain charged, with zero pilot offset. The forecast doubles measured costs and reserves actual array maxima. Later
 execution uses `grid_dispatch.py`, at most two streams and forty running jobs,
 grant and scheduler test-only checks before each submission, immutable operations,
@@ -84,7 +84,7 @@ external Polish report. Stage2 requires explicit plan and CPU-limit approval.
 ```bash
 python3 -B -m unittest discover -s experiments/replay-schedule-and-order -p 'test_*.py'
 python3 -B experiments/replay-schedule-and-order/local_check.py --out <new external directory>
-/usr/bin/python3 -B experiments/replay-schedule-and-order/prepare_pilot.py --out <new external study root> --destination <absolute cluster root> --proportion <verified proportion study> --previous <verified first-round root>
+/usr/bin/python3 -B experiments/replay-schedule-and-order/prepare_pilot.py --out <new external study root> --destination <absolute cluster root> --proportion <verified proportion study> --previous <verified first-round root> [--failed <sealed failed-pilot root>]
 python3 -B experiments/replay-schedule-and-order/archive.py <pulled study root>
 python3 -B experiments/replay-schedule-and-order/prepare_plan.py <pulled study root>
 ```

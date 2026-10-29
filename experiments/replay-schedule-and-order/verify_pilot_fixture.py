@@ -21,7 +21,7 @@ def verify(binary, fixture, task, output):
         path = output / f'{index}.jsonl'
         command = [str(binary), '--task', task, '--cap', str(config['cap']), '--protocol', 'maze-pairs-v1',
             '--agents', config['agent'], '--seeds', '42', '--targets', '1000,3000',
-            '--evaluation-blocks', 'training,validation,test', '--replay-schedule', config['mode'],
+            '--replay-schedule', config['mode'],
             '--replay-order', 'independent', '--out', str(path)]
         if config['agent'] == 'acs2her_shortened':
             command.extend(['--relabel-proportion', str(config['proportion'])])

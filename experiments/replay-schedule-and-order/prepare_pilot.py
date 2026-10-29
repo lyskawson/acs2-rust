@@ -8,6 +8,7 @@ import sys
 
 from protocol import ROOT, PROPORTION_SHA256, SHORTENED, BASE_PROPORTIONS, CORRECTED_PILOT_INDICES, configurations
 from previous_pilot import verify_previous
+from failed_pilot import verify_failed
 from execution import pilot_manifest, scope
 from grid_attempts import select_attempts
 from grid_protocol import atomic_json, load_plan
@@ -47,7 +48,7 @@ def reference_rows(archive):
     return result
 
 
-def prepare(output, destination, proportion, previous):
+def prepare(output, destination, proportion, previous, failed=None):
     output, destination = outside_repository(output), Path(destination)
     if not destination.is_absolute():
         raise ValueError('destination must be the absolute cluster study root')
@@ -58,6 +59,12 @@ def prepare(output, destination, proportion, previous):
     prior = verify_previous(previous)
     previous_declared = Path(json.loads((previous / 'pilot-scope.json').read_text())['batch_roots'][0]).parent
     prior.update(root=str(previous_declared), mirror_relative=os.path.relpath(previous, output))
+    recovery = {}
+    if failed is not None:
+        failed = Path(failed).resolve()
+        checked = verify_failed(failed)
+        declared = json.loads((failed / 'pilot-registration.json').read_text())['destination']
+        recovery = dict(failed_pilot=dict(checked, root=declared, mirror_relative=os.path.relpath(failed, output)))
     sources = reference_rows(proportion)
     output.mkdir(parents=True, exist_ok=False)
     index = []
@@ -81,12 +88,12 @@ def prepare(output, destination, proportion, previous):
     atomic_json(operations / 'manifest.json', dict(commit=commit, files=hashes))
     manifests = [pilot_manifest(index, output, destination) if index in CORRECTED_PILOT_INDICES else None for index in range(10)]
     atomic_json(output / 'pilot-registration.json', dict(manifests=manifests, pilot_indices=CORRECTED_PILOT_INDICES,
-        destination=str(destination), previous_pilot=prior,
+        destination=str(destination), previous_pilot=prior, **recovery,
         reference_index_sha256=hashlib.sha256((output / 'reference-index.json').read_bytes()).hexdigest(),
         base_selection_sha256=hashlib.sha256(selection_bytes).hexdigest(),
         authorization='Stage1 correction: twenty-four seed42 allocations, six mazes, shortened backward and random-pass, episodic ER backward, shortened default identity; all registered blocks and points. Both pilot rounds and reservations share twelve CPU-hours. No screening or test approval.'))
     digest = hashlib.sha256((output / 'pilot-registration.json').read_bytes()).hexdigest()
-    atomic_json(output / 'pilot-scope.json', scope(digest, destination, previous_declared))
+    atomic_json(output / 'pilot-scope.json', scope(digest, destination, previous_declared, recovery.get('failed_pilot', {}).get('root')))
     for index, manifest in enumerate(manifests):
         if manifest is None:
             continue
@@ -105,5 +112,6 @@ if __name__ == '__main__':
     parser.add_argument('--destination', required=True)
     parser.add_argument('--proportion', required=True)
     parser.add_argument('--previous', required=True)
+    parser.add_argument('--failed')
     args = parser.parse_args()
-    print(json.dumps(prepare(args.out, args.destination, args.proportion, args.previous)))
+    print(json.dumps(prepare(args.out, args.destination, args.proportion, args.previous, args.failed)))

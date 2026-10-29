@@ -38,15 +38,19 @@ def read_index(root):
     return result
 
 
-def scope(digest, root, previous=None):
+def scope(digest, root, previous=None, failed=None):
     registration = Path(root) / 'pilot-registration.json'
-    if previous is None and registration.is_file():
-        previous = json.loads(registration.read_text()).get('previous_pilot', {}).get('root')
+    if registration.is_file():
+        value = json.loads(registration.read_text())
+        previous = previous or value.get('previous_pilot', {}).get('root')
+        failed = failed or value.get('failed_pilot', {}).get('root')
     result = dict(authorization_sha256=digest, pilot_allocation_cpu_seconds=0, accounting_since='2026-10-28',
-                  batch_roots=[str(Path(root) / name) for name in scope_roots(previous)])
+                  batch_roots=[str(Path(root) / name) for name in scope_roots(previous, failed)])
     if previous is not None:
         result.update(accounting_root=os.path.commonpath([str(root), str(previous)]),
                       immutable_batch_roots=[str(Path(previous) / name) for name in pilot_roots()])
+    if failed is not None:
+        result['immutable_batch_roots'].append(str(Path(failed) / pilot_roots()[-1]))
     return result
 
 

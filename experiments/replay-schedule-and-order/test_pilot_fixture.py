@@ -28,6 +28,7 @@ class PilotFixtureTests(unittest.TestCase):
                 result = verify(binary, fixture, 'maze4', root / 'complete')
                 self.assertEqual((result['settings'], result['rows'], result['verified']), (6, 12, True))
                 self.assertEqual(sum('--relabel-proportion' in command for command in commands), 3)
+                self.assertTrue(all('--evaluation-blocks' not in command for command in commands))
                 rows[0]['value'] = 0.5000000000000001
                 with self.assertRaisesRegex(ValueError, 'differs from the original schedule fixture'):
                     verify(binary, fixture, 'maze4', root / 'changed')
