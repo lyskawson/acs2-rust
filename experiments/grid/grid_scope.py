@@ -36,7 +36,9 @@ def verify_operations(plan):
 def snapshot(plan, execute, preserve_roots=()):
     path = Path(plan['budget_scope'])
     scope = load_plan(path, plan['budget_scope_sha256'])
-    base = path.parent.resolve()
+    base = Path(scope.get('accounting_root', path.parent)).resolve()
+    if not path.parent.resolve().is_relative_to(base):
+        raise ValueError('accounting scope is outside its registered common root')
     roots = [Path(name).resolve() for name in scope['batch_roots']]
     if len(roots) != len(set(roots)) or not all(root.is_relative_to(base) for root in roots):
         raise ValueError('invalid accounting scope roots')
@@ -59,12 +61,14 @@ def snapshot(plan, execute, preserve_roots=()):
                    ','.join(map(str, sorted(arrays))), '-P', '--format=' + SACCT_FIELDS]) if arrays else SACCT_FIELDS.replace(',', '|') + '|\n'
     records = allocation_rows(raw)
     states = {str(root): accounting(ledger, records) for root, ledger in ledgers.items()}
-    frozen = {Path(name).resolve() for name in preserve_roots}
+    frozen = {Path(name).resolve() for name in list(preserve_roots) + scope.get('immutable_batch_roots', [])}
+    if not frozen.issubset(set(roots)):
+        raise ValueError('immutable accounting roots must belong to the registered scope')
     for root in ledgers:
         if root not in frozen:
             (root / 'accounting.psv').write_text(raw)
     if frozen:
-        (base / 'shared-accounting.psv').write_text(raw)
+        (path.parent / 'shared-accounting.psv').write_text(raw)
     return dict(spent_seconds=sum(state['spent_seconds'] for state in states.values()),
                 reserved_seconds=sum(state['reserved_seconds'] for state in states.values()),
                 batch_states=states, array_ids=sorted(arrays), pilot_allocation_cpu_seconds=scope['pilot_allocation_cpu_seconds'])

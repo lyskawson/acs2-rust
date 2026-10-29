@@ -23,8 +23,7 @@ fn floating_bits(value: &Value) -> Value {
     }
 }
 
-#[test]
-fn all_nine_new_settings_reproduce_the_six_maze_seed42_pilot_bit_for_bit() {
+fn reproduce_pilot_fixture(passes: bool) {
     let fixture: Value = serde_json::from_str(include_str!(
         "../../fixtures/replay_schedule_and_order_regression.json"
     ))
@@ -59,7 +58,9 @@ fn all_nine_new_settings_reproduce_the_six_maze_seed42_pilot_bit_for_bit() {
         .collect();
     assert_eq!(configurations.len(), 54);
     assert_eq!(actual, expected);
-    for config in configurations {
+    for config in configurations.iter().filter(|config| {
+        config["mode"].as_str().unwrap().starts_with("3to1") != passes
+    }) {
         let task = config["task"].as_str().unwrap();
         let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
             acs2_envs::roles::ResearchTask::named(task).unwrap()
@@ -126,4 +127,14 @@ fn all_nine_new_settings_reproduce_the_six_maze_seed42_pilot_bit_for_bit() {
             );
         }
     }
+}
+
+#[test]
+fn schedule_settings_reproduce_the_original_six_maze_seed42_pilot_bit_for_bit() {
+    reproduce_pilot_fixture(false);
+}
+
+#[test]
+fn episode_pass_settings_reproduce_the_corrected_six_maze_seed42_pilot_bit_for_bit() {
+    reproduce_pilot_fixture(true);
 }

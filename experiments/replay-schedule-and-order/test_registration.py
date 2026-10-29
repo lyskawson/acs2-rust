@@ -30,6 +30,9 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(evidence['runs'], 60)
         self.assertEqual(evidence['rows'], 490)
         self.assertEqual(evidence['identity_rows'], 49)
+        self.assertEqual(evidence['allocations'], 84)
+        self.assertEqual([item['allocations'] for item in evidence['rounds']], [60, 24])
+        self.assertEqual(sum(item['allocation_cpu_seconds'] for item in evidence['rounds']), evidence['allocation_cpu_seconds'])
         self.assertLessEqual(evidence['allocation_cpu_seconds'], 12 * 3600)
         for name, digest in evidence['generators'].items():
             self.assertEqual(hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest(), digest)
@@ -42,6 +45,9 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(set(fixture['excluded']), OMIT)
         self.assertEqual(len(fixture['configurations']), 54)
         self.assertEqual(sum(len(config['rows']) for config in fixture['configurations']), 108)
+        schedules = [config for config in fixture['configurations'] if config['mode'].startswith('3to1')]
+        digest = hashlib.sha256(json.dumps(schedules, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        self.assertEqual(digest, '49e0e0def3609801a5246adf9e502ffddfb2c85617e98944298351dcc4d9942e')
         for config in fixture['configurations']:
             self.assertNotEqual(config['mode'], 'base')
             self.assertEqual([row['nominal_step'] for row in config['rows']], [1000, 3000])

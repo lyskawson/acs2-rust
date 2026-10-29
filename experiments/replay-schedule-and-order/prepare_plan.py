@@ -37,6 +37,7 @@ def prepare(root, output, fixture):
     atomic_json(root / 'pilot-summary.json', summary)
     evidence = dict(runs=60, allocations=summary['allocations'], rows=len(rows), identity_rows=summary['identity_rows'],
         allocation_cpu_seconds=summary['allocation_cpu_seconds'],
+        previous_pilot_root=summary['previous_pilot']['root'], previous_pilot=summary['previous_pilot'], rounds=summary['rounds'],
         cells=[dict(configuration_id=key[0], arm=key[1], **cost) for key, cost in cells.items()],
         references_sha256=hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest(),
         base_selection_sha256=hashlib.sha256((root / 'base-selections.json').read_bytes()).hexdigest(),
@@ -44,7 +45,7 @@ def prepare(root, output, fixture):
         summary_sha256=hashlib.sha256((root / 'pilot-summary.json').read_bytes()).hexdigest(),
         fixture_sha256=hashlib.sha256(Path(fixture).read_bytes()).hexdigest(),
         generators={name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-            for name in ('protocol.py', 'execution.py', 'archive.py', 'prepare_plan.py', 'tuning.py')})
+            for name in ('protocol.py', 'execution.py', 'archive.py', 'prepare_plan.py', 'tuning.py', 'previous_pilot.py')})
     plan = study(cells, summary['allocation_cpu_seconds'], identity, evidence)
     atomic_json(output, plan)
     return dict(plan_sha256=hashlib.sha256(Path(output).read_bytes()).hexdigest(), forecast=plan['forecast'])

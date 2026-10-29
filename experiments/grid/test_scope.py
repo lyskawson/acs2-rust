@@ -9,6 +9,31 @@ from grid_scope import SACCT_FIELDS, archived_snapshot, require_batch_root, snap
 
 
 class ScopeTests(unittest.TestCase):
+    def test_new_round_counts_immutable_previous_allocations_without_rewriting_them(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            previous, current = base / 'pilot', base / 'uniform/pilot'
+            for root, array in [(previous, 10), (current, 20)]:
+                root.mkdir(parents=True)
+                (root / 'ledger.json').write_text(json.dumps([dict(array_id=array, runs=[dict(limit_seconds=600)])]))
+            (previous / 'accounting.psv').write_text('immutable first-round accounting\n')
+            scope = dict(batch_roots=[str(previous), str(current)], accounting_root=str(base),
+                immutable_batch_roots=[str(previous)], pilot_allocation_cpu_seconds=0,
+                authorization_sha256='approved', accounting_since='2026-10-28')
+            path = base / 'uniform/scope.json'
+            path.write_text(json.dumps(scope))
+            plan = dict(budget_scope=str(path), budget_scope_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                pilot_allocation_cpu_seconds=0, authorization_sha256='approved')
+            raw = SACCT_FIELDS.replace(',', '|') + '|\n'
+            raw += '10_0|10_0|30|00:00:25|1|30|0|COMPLETED|0:0|node|lem-cpu-normal|a|b|\n'
+            raw += '20_0|20_0|20|00:00:15|1|20|0|RUNNING|0:0|node|lem-cpu-normal|a|b|\n'
+            result = snapshot(plan, lambda _: raw)
+            self.assertEqual((result['spent_seconds'], result['reserved_seconds']), (50, 580))
+            self.assertEqual(result['array_ids'], [10, 20])
+            self.assertEqual((previous / 'accounting.psv').read_text(), 'immutable first-round accounting\n')
+            self.assertEqual((current / 'accounting.psv').read_text(), raw)
+            self.assertEqual((path.parent / 'shared-accounting.psv').read_text(), raw)
+
     def test_batch_root_membership_resolves_paths_and_verifies_the_scope_bytes(self):
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)

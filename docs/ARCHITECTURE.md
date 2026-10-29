@@ -4140,7 +4140,7 @@ both axis parameters and `draw_schedule` counters for early/late interactions an
 the first late episode end. Interval rates are cumulative update differences divided
 by cumulative actual-interaction differences, including the initial interval.
 
-`Backward` selects a retained episode proportional to length, requests a single
+`Backward` selects each retained episode with equal probability, requests a single
 copy goal with probability p and uses the existing episode goal distribution at
 transition zero. Achieved-state duplicates retain their weights, and the preset's
 admissibility rule and candidate filter apply. Each transition is checked under that
@@ -4163,11 +4163,11 @@ objective work but none of their samples; a final cut scores only emitted sample
 Selection and provenance work for choosing the goal and admitted indices is attached
 once to the first emitted sample and included in cumulative purpose totals.
 
-Length-proportional episode selection followed by whole passes does **not** preserve
-uniform transition exposure: ignoring cuts, an original transition's exposure per
-pass is proportional to its episode length. Counterfactual prefixes add goal-dependent
-weighting. C therefore changes grouping, goals and exposure as well as order; its
-random-pass control shares all three. Identical stores and sampler states produce
+Uniform episode choice gives equal expected exposure per retained transition for
+complete original-goal passes. Rows identify the rule as `uniform_episode_passes`;
+the shared validator rejects the earlier length-weighted rule. Counterfactual
+prefixes and the final budget cut still add goal- and position-dependent weighting.
+C changes grouping and goals as well as order; its random-pass control shares them. Identical stores and sampler states produce
 identical pass multisets and goals under either order, but policies and future
 collected episodes may diverge. This is a backward replay intervention inspired by
 [Lee, Choi and Chung (2019)](https://papers.nips.cc/paper_files/paper/2019/file/e6d8545daa42d5ced125a4bf747b3688-Paper.pdf);
@@ -4185,7 +4185,8 @@ fixes the entire arm and point grid, and conditional test derivation recomputes 
 saved validation-only selection. Unregistered switches, orders, extra settings and
 combined axes are refused. The original plans and fixtures are unchanged.
 
-The sixty-run stage1 pilot has a twelve-hour allocation cap including reservations.
+The original sixty-run stage1 pilot and the corrected twenty-four-run pilot share
+a twelve-hour allocation cap including reservations.
 It includes all B settings and backward passes for both agents, shortened random-pass
 and the default shortened identity setting, on six mazes at all registered points
 and blocks. Default seed42 fields must reproduce the selected-p proportion test
@@ -4197,7 +4198,12 @@ All allocation roots share one scope; source, binary, operations, node, raw-arti
 and identity guards use the existing grid execution path. Stage1 stops after
 registration and the external report; screening and test need explicit approval.
 
-### Replay pilot identity and allocation forecast
+### Original replay pilot identity and superseded allocation forecast
+
+These first-round measurements precede the uniform-episode correction. Its C
+rows and forecast are superseded before screening; B remains the pilot identity
+reference. The first-round archive and accounting remain unchanged.
+
 
 The seed42 cost pilot completed all sixty trajectories in sixty first attempts,
 with 490 rows, no failures and no outstanding reservations. Allocations used

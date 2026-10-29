@@ -44,7 +44,8 @@ class MeasurementTests(unittest.TestCase):
             if mode == 'base':
                 continue
             for key, value in [('replay_order', 'forward'), ('replay_schedule', dict(kind='constant', extra=True)),
-                               ('copy_update', 'ValuesOnly'), ('strategy', 'final'), ('extra', True)]:
+                               ('copy_update', 'ValuesOnly'), ('strategy', 'final'), ('extra', True),
+                               ('draws', 'length_weighted_episode_passes')]:
                 row = copy.deepcopy(rows[-1])
                 row['agent_parameters'][key] = value
                 with self.subTest(agent=agent, mode=mode, key=key), self.assertRaises(ValueError):

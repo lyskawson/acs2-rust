@@ -1,11 +1,13 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 
-from protocol import ROOT, PROPORTION_SHA256, SHORTENED, BASE_PROPORTIONS, PILOT_SETTINGS, configurations
+from protocol import ROOT, PROPORTION_SHA256, SHORTENED, BASE_PROPORTIONS, CORRECTED_PILOT_INDICES, configurations
+from previous_pilot import verify_previous
 from execution import pilot_manifest, scope
 from grid_attempts import select_attempts
 from grid_protocol import atomic_json, load_plan
@@ -45,13 +47,17 @@ def reference_rows(archive):
     return result
 
 
-def prepare(output, destination, proportion):
+def prepare(output, destination, proportion, previous):
     output, destination = outside_repository(output), Path(destination)
     if not destination.is_absolute():
         raise ValueError('destination must be the absolute cluster study root')
     if subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'status', '--porcelain'], text=True).strip():
         raise ValueError('freeze clean operations before the pilot')
     commit = subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+    previous = Path(previous).resolve()
+    prior = verify_previous(previous)
+    previous_declared = Path(json.loads((previous / 'pilot-scope.json').read_text())['batch_roots'][0]).parent
+    prior.update(root=str(previous_declared), mirror_relative=os.path.relpath(previous, output))
     sources = reference_rows(proportion)
     output.mkdir(parents=True, exist_ok=False)
     index = []
@@ -73,14 +79,17 @@ def prepare(output, destination, proportion):
         target.chmod(source.stat().st_mode & 0o777)
         hashes[name] = hashlib.sha256(target.read_bytes()).hexdigest()
     atomic_json(operations / 'manifest.json', dict(commit=commit, files=hashes))
-    manifests = [pilot_manifest(index, output, destination) for index in range(len(PILOT_SETTINGS))]
-    atomic_json(output / 'pilot-registration.json', dict(manifests=manifests,
+    manifests = [pilot_manifest(index, output, destination) if index in CORRECTED_PILOT_INDICES else None for index in range(10)]
+    atomic_json(output / 'pilot-registration.json', dict(manifests=manifests, pilot_indices=CORRECTED_PILOT_INDICES,
+        destination=str(destination), previous_pilot=prior,
         reference_index_sha256=hashlib.sha256((output / 'reference-index.json').read_bytes()).hexdigest(),
         base_selection_sha256=hashlib.sha256(selection_bytes).hexdigest(),
-        authorization='Stage1 user instruction: sixty seed42 allocations, six mazes, ten settings, all registered blocks and points; twelve CPU-hours including all reservations. No screening or test approval.'))
+        authorization='Stage1 correction: twenty-four seed42 allocations, six mazes, shortened backward and random-pass, episodic ER backward, shortened default identity; all registered blocks and points. Both pilot rounds and reservations share twelve CPU-hours. No screening or test approval.'))
     digest = hashlib.sha256((output / 'pilot-registration.json').read_bytes()).hexdigest()
-    atomic_json(output / 'pilot-scope.json', scope(digest, destination))
+    atomic_json(output / 'pilot-scope.json', scope(digest, destination, previous_declared))
     for index, manifest in enumerate(manifests):
+        if manifest is None:
+            continue
         manifest.update(authorization_plan=str(destination / 'pilot-registration.json'), authorization_sha256=digest,
             budget_scope=str(destination / 'pilot-scope.json'), budget_scope_sha256=hashlib.sha256((output / 'pilot-scope.json').read_bytes()).hexdigest(),
             stop_path=str(destination / 'STOP.json'), job_name='tu-replay-pilot', operations_commit=commit,
@@ -95,5 +104,6 @@ if __name__ == '__main__':
     parser.add_argument('--out', required=True)
     parser.add_argument('--destination', required=True)
     parser.add_argument('--proportion', required=True)
+    parser.add_argument('--previous', required=True)
     args = parser.parse_args()
-    print(json.dumps(prepare(args.out, args.destination, args.proportion)))
+    print(json.dumps(prepare(args.out, args.destination, args.proportion, args.previous)))

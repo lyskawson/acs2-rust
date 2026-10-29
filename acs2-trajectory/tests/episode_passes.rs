@@ -45,7 +45,7 @@ fn configuration(rule: Admissibility, p: f64) -> SamplerConfiguration {
 }
 
 #[test]
-fn passes_pick_episodes_by_retained_length_and_reverse_every_transition() {
+fn passes_pick_retained_episodes_uniformly_and_reverse_every_transition() {
     let store = store(&[&[0, 1], &[0, 2, 3, 4]]);
     let evaluator = ObjectiveEvaluator(&ExactMatch {
         reward_on_reach: 1000.0,
@@ -71,7 +71,45 @@ fn passes_pick_episodes_by_retained_length_and_reverse_every_transition() {
         );
         assert!(pass.samples.iter().all(|draw| draw.goal == goal(9)));
     }
-    assert!((selections[1] as f64 / 12_000.0 - 0.75).abs() < 0.02);
+    assert!((selections[1] as f64 / 12_000.0 - 0.5).abs() < 0.02);
+}
+
+#[test]
+fn original_passes_give_every_retained_transition_equal_expected_updates() {
+    struct Enumerated(usize);
+    impl RandomSource for Enumerated {
+        fn gen_range(&mut self, high: usize) -> usize {
+            let selected = self.0 % high;
+            self.0 += 1;
+            selected
+        }
+        fn gen_bool(&mut self, _: f64) -> bool {
+            panic!("original-goal passes do not draw a goal coin")
+        }
+        fn gen_unit(&mut self) -> f64 {
+            panic!("original-goal passes only select an episode")
+        }
+    }
+    let store = store(&[&[0, 1], &[0, 2, 3, 4]]);
+    let evaluator = ObjectiveEvaluator(&ExactMatch {
+        reward_on_reach: 1000.0,
+    });
+    let mut sampler = Sampler::new(
+        configuration(Admissibility::EveryTransition, 0.0),
+        Enumerated(0),
+    );
+    let mut updates = [[0; 3]; 2];
+    for _ in 0..12 {
+        let pass = sampler
+            .draw_pass::<_, _, 2>(&store, 100, &evaluator)
+            .unwrap();
+        for sample in pass.samples {
+            assert_eq!(sample.goal, goal(9));
+            updates[sample.episode.0 as usize][sample.transition] += 1;
+        }
+    }
+    assert_eq!(updates, [[6, 0, 0], [6, 6, 6]]);
+    assert_eq!(sampler.counters().pooled().draws, 24);
 }
 
 struct Fixed;

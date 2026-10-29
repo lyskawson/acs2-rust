@@ -3,7 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from protocol import pilot_roots, PILOT_SETTINGS
+from protocol import CORRECTED_PILOT_INDICES, SCHEDULES, pilot_roots, PILOT_SETTINGS
+from previous_pilot import previous_path, verify_previous
 from execution import measurement_identity, pilot_manifest, scope
 from grid_attempts import attempts, select_attempts, inspect_attempt
 from grid_identity import compare, field_bits, verify_references
@@ -87,16 +88,31 @@ def audit(root):
     registration = json.loads((root / 'pilot-registration.json').read_text())
     digest = hashlib.sha256((root / 'pilot-registration.json').read_bytes()).hexdigest()
     frozen_scope = json.loads((root / 'pilot-scope.json').read_text())
-    declared = Path(frozen_scope['batch_roots'][0]).parent
-    if frozen_scope != scope(digest, declared):
+    declared = Path(registration['destination'])
+    previous = previous_path(root)
+    checked_previous = verify_previous(previous)
+    if any(registration['previous_pilot'].get(key) != value for key, value in checked_previous.items()):
+        raise ValueError('previous pilot differs from the pinned first round')
+    if frozen_scope != scope(digest, declared, registration['previous_pilot']['root']):
         raise ValueError('pilot accounting scope changed')
+    if registration['pilot_indices'] != CORRECTED_PILOT_INDICES or any(
+            registration['manifests'][index] is not None for index in range(10) if index not in CORRECTED_PILOT_INDICES):
+        raise ValueError('the corrected round must contain exactly twenty-four runs')
     for name, key in [('reference-index.json', 'reference_index_sha256'), ('base-selections.json', 'base_selection_sha256')]:
         if hashlib.sha256((root / name).read_bytes()).hexdigest() != registration[key]:
             raise ValueError('pilot reference or base selection changed')
-    cells, runs, rows = {}, [], []
-    spent = attempts_count = identity_count = 0
-    arrays = set()
-    for index, name in enumerate(pilot_roots()):
+    old_summary = json.loads((previous / 'pilot-summary.json').read_text())
+    runs = [run for run in old_summary['runs'] if run['mode'] in SCHEDULES]
+    arms = {run['arm'] for run in runs}
+    rows = [json.loads(line) for line in (previous / 'pilot-rows.jsonl').read_text().splitlines()
+            if json.loads(line)['arm'] in arms]
+    cells = {(run['configuration_id'], run['arm']): run['cost'] for run in runs}
+    spent, attempts_count = checked_previous['allocation_cpu_seconds'], checked_previous['allocations']
+    identity_count = new_rows = 0
+    arrays = {allocation['array_id'] for name in pilot_roots()
+              for allocation in json.loads((previous / name / 'ledger.json').read_text())}
+    for index in CORRECTED_PILOT_INDICES:
+        name = pilot_roots()[index]
         batch = root / name
         manifest = load_plan(batch / 'plan.json', (batch / 'plan.sha256').read_text().strip())
         expected = pilot_manifest(index, root, declared)
@@ -126,6 +142,7 @@ def audit(root):
                 mode=PILOT_SETTINGS[index][1], arm=config['row_arm'], source_rows_sha256=entry['sha256'],
                 cost=entry['cost'], final=entry['rows'][-1]))
             rows.extend(entry['rows'])
+            new_rows += len(entry['rows'])
             if PILOT_SETTINGS[index][1] == 'base':
                 identity_count += len(entry['rows'])
         for attempt in attempts(batch, ledger):
@@ -135,10 +152,15 @@ def audit(root):
                 current = entries[config['id'], attempt['agent'], attempt['seed']]['rows']
                 compare(current, partial, [attempt['seed']], [row['nominal_step'] for row in partial], config['evaluation_blocks'])
     require_budget(0, dict(spent_seconds=spent, reserved_seconds=0), 0, 12)
-    if len(runs) != 60 or attempts_count < 60:
+    if len(runs) != 60 or new_rows != 196 or attempts_count < 84:
         raise ValueError('pilot is incomplete')
     return dict(runs=runs, rows=len(rows), allocations=attempts_count, allocation_cpu_seconds=int(spent),
-                identity_rows=identity_count, **measurement_identity()), rows, cells
+                identity_rows=identity_count, previous_pilot=registration['previous_pilot'],
+                rounds=[dict(round='length_weighted', **checked_previous),
+                        dict(round='uniform_episode', runs=24, rows=new_rows,
+                             allocations=attempts_count - checked_previous['allocations'],
+                             allocation_cpu_seconds=int(spent) - checked_previous['allocation_cpu_seconds'],
+                             identity_rows=identity_count)], **measurement_identity()), rows, cells
 
 
 if __name__ == '__main__':

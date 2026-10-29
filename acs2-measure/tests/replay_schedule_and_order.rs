@@ -114,6 +114,9 @@ fn all_episodic_presets_accept_both_axes_without_changing_their_copy_rules() {
                             p.get("replay_order").is_some() && p.get("replay_schedule").is_some()
                         );
                     }
+                    if plan.order != ReplayOrder::Independent {
+                        assert_eq!(p["draws"], "uniform_episode_passes");
+                    }
                     assert_eq!(
                         p["copy_update"],
                         if name.contains("values") {

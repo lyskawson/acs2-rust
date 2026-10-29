@@ -48,6 +48,13 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(value['pilot_allocation_cpu_seconds'], 0)
         self.assertEqual(sum(6 * 10 * 60 for _ in PILOT_SETTINGS), 36000)
         require_budget(0, dict(spent_seconds=0, reserved_seconds=36000), 0, 12)
+        corrected = scope('b' * 64, '/study/uniform-episode-pilot', '/study')
+        self.assertEqual(len(corrected['batch_roots']), 45)
+        self.assertEqual(len(set(corrected['batch_roots'])), 45)
+        self.assertEqual(len(corrected['immutable_batch_roots']), 10)
+        self.assertEqual(corrected['accounting_root'], '/study')
+        self.assertEqual(corrected['pilot_allocation_cpu_seconds'], 0)
+        require_budget(0, dict(spent_seconds=5035, reserved_seconds=24 * 600), 0, 12)
 
     def test_screening_contains_only_registered_shortened_settings_and_validation(self):
         manifest = derive(plan(), 'screening')

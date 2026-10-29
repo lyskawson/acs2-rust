@@ -17,6 +17,7 @@ BLOCKS = ['training', 'validation', 'test']
 SCHEDULES = ['3to1at30000', '3to1at100000', '3to1at300000']
 SCREEN_SETTINGS = SCHEDULES + ['backward']
 PILOT_SETTINGS = [(SHORTENED, mode) for mode in SCREEN_SETTINGS + ['random-pass']] + [(ER, mode) for mode in SCREEN_SETTINGS] + [(SHORTENED, 'base')]
+CORRECTED_PILOT_INDICES = [3, 4, 8, 9]
 BASE_PROPORTIONS = dict(maze4=0.5, maze5=0.8, maze6=0.8, maze7=0.8, woods14=0.8, mazema=1 / 3)
 
 
@@ -52,8 +53,9 @@ def pilot_roots():
     return ['pilot-' + agent + '-' + mode for agent, mode in PILOT_SETTINGS]
 
 
-def scope_roots():
-    return pilot_roots() + ['screening'] + ['test-' + axis + '-' + config['id'] + '-' + slot
+def scope_roots(previous=None):
+    pilots = pilot_roots() if previous is None else [str(Path(previous) / name) for name in pilot_roots()] + [pilot_roots()[index] for index in CORRECTED_PILOT_INDICES]
+    return pilots + ['screening'] + ['test-' + axis + '-' + config['id'] + '-' + slot
         for axis in ('B', 'C') for config in configurations()
         for slot in (['shortened', 'er'] if axis == 'B' else ['shortened', 'er', 'order-control'])]
 
@@ -175,7 +177,7 @@ def study(cells, pilot_seconds, identity, evidence):
                 'allocated CPUTimeRAW, process user+system CPU and cost by pilot, screening, test and reused historical purpose'],
             diagnostic_aggregation='Within each row use appropriate route denominators; checkpoint_mean averages equally within seed; final_point uses only last row; then mean/SE over seeds. Empty groups stay null with counts.',
             interpretation='B deliberately changes update volume. Same settings equalize the rule and prescribed volume between S_X and E_X; realized totals may differ with episode overshoot and episode-end switch rounding. C compares full passes against independent sampling; random-pass control isolates within-pass order.',
-            limitations=['Length-proportional episode selection followed by whole passes does not preserve uniform transition replay frequencies. For original full passes, expected exposure per transition grows with episode length; counterfactual prefixes add goal-dependent weighting.',
+            limitations=['Uniform retained-episode selection gives equal expected exposure per retained transition for complete original-goal passes. Counterfactual prefixes and the final budget cut add goal- and position-dependent weighting.',
                 'One-goal passes change copy weighting: p is per pass, realized per-update share need not equal p. Report pass and draw counts separately.',
                 'Backward and random control share pass samples and goals conditional on identical stores and sampler state; learned policies and subsequent real trajectories can diverge.',
                 'Intervals condition on selected settings and do not include selection uncertainty. Finite training horizons do not establish convergence.'],
@@ -185,10 +187,10 @@ def study(cells, pilot_seconds, identity, evidence):
             test='Seed42 all blocks reproduce pilot; seeds42--46 reproduce screening on validation and every learning/knowledge field for S_X.',
             exclusions='Only grid_identity.OMIT: source/hardware/time provenance and arm annotation.'),
         execution=dict(partition='lem-cpu-normal', cpu_model='AMD EPYC 9554 64-Core Processor', clone='~/acs2-tu',
-            target='x86_64-unknown-linux-musl', tooling='experiments/grid/', scope_roots=scope_roots(),
+            target='x86_64-unknown-linux-musl', tooling='experiments/grid/', scope_roots=scope_roots(evidence.get('previous_pilot_root')),
             dispatch='One-shot dispatcher, one registered 20--40-job array per invocation; at most two active streams and forty running jobs. No dependent queue of future arrays.',
             admission='Re-derive each manifest from exact approved bytes and recomputed saved selection before every sbatch; grant and sbatch --test-only; pilot + used + reserved + new hard limits within approved cap.',
             accounting='One scope over every root; zero pilot offset; all allocations and failed attempts included exactly once; hard reservations include whole array maxima.',
             guards='Pinned clean source, static binary and immutable operations; node guards; shared STOP on real failure; diagnosed recovery and bitwise partial-prefix equality before retry acceptance.',
             archive='~/tu_runs/replay-schedule-and-order/ and ~/Desktop/tu-runs/replay-schedule-and-order/; independently verify both copies.'),
-        authorization='Stage1 only: sixty seed42 pilot allocations within twelve CPU-hours including reservations. Screening and test require explicit approval of this plan and a cumulative CPU-hour limit; stop after registration.')
+        authorization='Stage1 only: the original sixty and corrected twenty-four seed42 pilot allocations share twelve CPU-hours including reservations. Screening and test require explicit approval of this plan and a cumulative CPU-hour limit; stop after registration.')

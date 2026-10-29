@@ -50,7 +50,7 @@ pub fn annotate(parameters: &mut Value, plan: ReplayPlan) {
         ReplayOrder::RandomPass => "random_pass",
     });
     if plan.order != ReplayOrder::Independent {
-        parameters["draws"] = json!("length_weighted_episode_passes");
+        parameters["draws"] = json!("uniform_episode_passes");
         parameters["strategy"] = json!("episode");
         parameters["pass_goal"] = json!("one_goal_per_pass_admitted_at_start_then_per_transition");
         parameters["pass_cut"] = json!("backward_suffix_before_ordering_exact_episode_budget");

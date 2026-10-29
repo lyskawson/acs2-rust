@@ -5,7 +5,7 @@ ORDERS = ('independent', 'backward', 'random-pass')
 EPISODIC = ('acs2er_episodic', 'acs2her', 'acs2her_nontrivial', 'acs2her_shortened',
             'acs2her_values', 'acs2her_values_shortened')
 AXES = {'replay_schedule', 'replay_order'}
-PASS_PARAMETERS = dict(draws='length_weighted_episode_passes', strategy='episode',
+PASS_PARAMETERS = dict(draws='uniform_episode_passes', strategy='episode',
     pass_goal='one_goal_per_pass_admitted_at_start_then_per_transition',
     pass_cut='backward_suffix_before_ordering_exact_episode_budget')
 

@@ -44,7 +44,10 @@ impl<R: RandomSource> Sampler<R> {
         evaluator: &impl GoalEvaluator<S, G>,
         cost: &mut CostByPurpose,
     ) -> Result<EpisodePass<G, M>, SampleError> {
-        let (episode, _) = store.transition(self.rng.gen_range(store.len()));
+        let episode = store
+            .episodes()
+            .nth(self.rng.gen_range(store.episodes().count()))
+            .expect("a nonempty store retains an episode");
         let config = self.configuration;
         let requested_relabel = config.selection.strategy != GoalStrategy::Original
             && (config.relabeled_proportion == 1.0

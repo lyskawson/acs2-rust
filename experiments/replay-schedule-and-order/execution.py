@@ -1,11 +1,13 @@
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import sys
 
-from protocol import (BLOCKS, ER, EXPERIMENT, PILOT_SETTINGS, SCHEDULES, SCREEN_SETTINGS, SHORTENED,
+from protocol import (BLOCKS, CORRECTED_PILOT_INDICES, ER, EXPERIMENT, PILOT_SETTINGS, SCHEDULES, SCREEN_SETTINGS, SHORTENED,
                       configurations, pilot, pilot_roots, scope_roots, setting)
+from previous_pilot import pilot_batch, reference_path
 from tuning import select
 from grid_protocol import load_plan
 from grid_identity import compare, field_bits
@@ -36,9 +38,16 @@ def read_index(root):
     return result
 
 
-def scope(digest, root):
-    return dict(authorization_sha256=digest, pilot_allocation_cpu_seconds=0, accounting_since='2026-10-28',
-                batch_roots=[str(Path(root) / name) for name in scope_roots()])
+def scope(digest, root, previous=None):
+    registration = Path(root) / 'pilot-registration.json'
+    if previous is None and registration.is_file():
+        previous = json.loads(registration.read_text()).get('previous_pilot', {}).get('root')
+    result = dict(authorization_sha256=digest, pilot_allocation_cpu_seconds=0, accounting_since='2026-10-28',
+                  batch_roots=[str(Path(root) / name) for name in scope_roots(previous)])
+    if previous is not None:
+        result.update(accounting_root=os.path.commonpath([str(root), str(previous)]),
+                      immutable_batch_roots=[str(Path(previous) / name) for name in pilot_roots()])
+    return result
 
 
 def pilot_manifest(index, root, declared):
@@ -133,12 +142,12 @@ def study_references(manifest, root, declared):
         settings = config['agent_settings'][agent]
         mode = settings['replay_schedule'] if settings['replay_schedule'] != 'constant' else settings['replay_order']
         pilot_index = PILOT_SETTINGS.index((agent, mode))
-        pilot_entries = catalog(Path(root) / pilot_roots()[pilot_index])[0]
+        pilot_entries = catalog(pilot_batch(root, pilot_index))[0]
         for seed in manifest['seeds']:
             refs = []
             if seed == 42:
                 source = pilot_entries[config['id'], agent, 42]
-                refs.append(dict(path=str(Path(declared) / Path(source['file']).relative_to(root)), sha256=source['sha256'],
+                refs.append(dict(path=str(reference_path(root, declared, source['file'])), sha256=source['sha256'],
                     targets=config['targets'], blocks=config['evaluation_blocks']))
             if manifest['purpose'] == 'test' and manifest['slot'] == 'shortened' and seed in range(42, 47):
                 base = next(base for base in configurations() if base['id'] == config['registered_id'])
@@ -155,6 +164,8 @@ def authorization_manifest(manifest, registration_path=None):
     root = Path(manifest['authorization_plan']).parent
     if manifest['stage'] == 'authorized_cost_pilot':
         registration = load_plan(root / 'pilot-registration.json', manifest['authorization_sha256'])
+        if manifest['pilot_index'] not in CORRECTED_PILOT_INDICES or registration['pilot_indices'] != CORRECTED_PILOT_INDICES:
+            raise ValueError('the corrected pilot permits only C and default identity allocations')
         if hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest() != registration['reference_index_sha256']:
             raise ValueError('pilot reference index changed')
         result = pilot_manifest(manifest['pilot_index'], root, root)
