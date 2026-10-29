@@ -2,8 +2,7 @@ from agent_names import agent_settings, canonical_run_name
 
 SCHEDULES = ('constant', '3to1at30000', '3to1at100000', '3to1at300000')
 ORDERS = ('independent', 'backward', 'random-pass')
-EPISODIC = ('acs2er_episodic', 'acs2her', 'acs2her_nontrivial', 'acs2her_shortened',
-            'acs2her_values', 'acs2her_values_shortened')
+REPLAY_AGENTS = ('acs2her_shortened', 'acs2er_episodic')
 AXES = {'replay_schedule', 'replay_order'}
 PASS_PARAMETERS = dict(draws='uniform_episode_passes', strategy='episode',
     pass_goal='one_goal_per_pass_admitted_at_start_then_per_transition',
@@ -15,8 +14,9 @@ def registered_axes(config, agent):
     present = set(settings) & AXES
     if not present:
         return None
-    if (canonical_run_name(agent) not in EPISODIC or present != AXES
-            or set(settings) - AXES - {'relabeled_proportion'}):
+    if canonical_run_name(agent) not in REPLAY_AGENTS:
+        raise ValueError('replay axes are supported only for acs2her_shortened and acs2er_episodic')
+    if present != AXES or set(settings) - AXES - {'relabeled_proportion'}:
         raise ValueError('replay axes require complete explicit episodic settings')
     schedule, order = settings['replay_schedule'], settings['replay_order']
     if (schedule not in SCHEDULES or order not in ORDERS

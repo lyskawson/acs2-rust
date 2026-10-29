@@ -9,6 +9,12 @@ its order control shuffles each pass with independent ChaCha stream 9. B and C c
 be combined. Acting, evaluation, stores, capacities, warmup and learning rules stay
 at the registered preset values.
 
+The measurement CLI and shared grid validators accept either explicit replay axis
+only for `acs2her_shortened` and `acs2er_episodic`, the agents measured with these
+settings. Every other agent is refused, including `acs2her_nontrivial` with either
+pass order and `acs2her` with a schedule. Explicit default axis values are subject
+to the same restriction; runs without these options retain their default path.
+
 The base is `acs2her_shortened` at the approved proportion-study selection: Maze4
 1/2, Maze5--7 and Woods14 4/5, MazeMA 1/3. The `agent` field retains that name, or
 `acs2er_episodic` for controls. Arm labels append `_p1of2`, `_p4of5` or `_p1of3`
@@ -20,11 +26,23 @@ Passes select each retained episode with equal probability. Rows name this rule
 `uniform_episode_passes`. A copy requests one goal
 from the existing episode strategy, retaining achieved-index multiplicities and
 applying admissibility at the pass start and at each transition. Empty choices fall
-back to the original goal. Counterfactual passes stop at first arrival; other rules
-keep their own admitted indices. The backward suffix of the last pass is selected
+back to the original goal. At the library boundary, passes support only
+`EveryTransition` (every transition) and `CounterfactualEpisode` (counterfactual
+episode). The former keeps every transition; the latter stops at first arrival.
+Shortened HER uses the counterfactual rule and episodic ER uses every transition
+with original goals only. The backward suffix of the last pass is selected
 before any shuffle, preserving both exact volume and the order control's transition
 set. The sampler stream remains 7; shuffle never consumes it. Counters distinguish
 per-pass requests from realized per-update copies.
+
+`Sampler::draw_pass` explicitly refuses `FromNonGoalState` with an error naming
+the supported rules. Applying that rule at transition zero excludes every goal
+equal to the start state: A → B → A cannot select goal A, although B → A is an
+admissible non-trivial copy kept by `relabel_episode`. Independent transition draws
+and episode relabeling retain their existing behavior. The library, CLI and grid
+guards were added after the completed measurements; no measured arm uses this
+combination and no measured behavior changes. The corrected study's recorded
+measurement source stays `4166372`, and all pinned fixtures retain their bytes.
 
 For complete original-goal passes, uniform episode choice gives every retained
 transition the same expected update count. Counterfactual prefixes and the final

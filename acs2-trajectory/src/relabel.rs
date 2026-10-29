@@ -29,7 +29,23 @@ pub enum SampleError {
     EmptyStore,
     NegativeReward,
     NonFiniteReward,
+    UnsupportedPassAdmissibility,
 }
+
+impl std::fmt::Display for SampleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::EmptyStore => "cannot sample an empty trajectory store",
+            Self::NegativeReward => "sample reward must be nonnegative",
+            Self::NonFiniteReward => "sample reward must be finite",
+            Self::UnsupportedPassAdmissibility => {
+                "episode passes support only EveryTransition (every transition) and CounterfactualEpisode (counterfactual episode); FromNonGoalState is unsupported"
+            }
+        })
+    }
+}
+
+impl std::error::Error for SampleError {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScoredSample<const M: usize> {

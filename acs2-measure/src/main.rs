@@ -159,10 +159,9 @@ impl Options {
             }
         }
         if replay_schedule.is_some() || replay_order.is_some() {
-            assert!(agents.iter().all(|agent| matches!(agent, AgentKind::Acs2ErEpisodic
-                | AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial
-                | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. }
-                | AgentKind::Acs2HerValuesShortened { .. })), "replay axes require an episodic learner");
+            assert!(agents.iter().all(|agent| matches!(agent,
+                AgentKind::Acs2ErEpisodic | AgentKind::Acs2HerShortened { .. })),
+                "--replay-schedule and --replay-order are supported only for acs2her_shortened and acs2er_episodic");
         }
         let replay_plan = acs2_measure::replay_plan::parse(
             replay_schedule.as_deref().unwrap_or("constant"),

@@ -4127,10 +4127,13 @@ The analysis lives in [`experiments/hindsight-proportion/`](../experiments/hinds
 `acs2-agents::episodic_replay::ReplayPlan` adds `ReplaySchedule` and `ReplayOrder`
 outside `Configuration`, `ReplaySample`, FIFO replay parameters and checkpoint
 identity. The shared learner accepts it before the first interaction through
-`set_replay_plan` or `with_replay_plan`; episodic ER, every HER preset and later
-learners use that same mechanism. Constant schedule and independent draws are the
-defaults. Their original sampler call, RNG stream, snapshots and row shape remain
-unchanged. ACS2, FIFO ACS2ER, VCP and the multiplexer do not select these axes.
+`set_replay_plan` or `with_replay_plan`. The measurement CLI and grid validators
+accept explicit replay schedule or order settings only for `acs2her_shortened`
+and `acs2er_episodic`, the agents measured with these axes. Every other agent is
+refused during parsing or manifest validation, including explicit default values.
+Constant schedule and independent draws are the defaults. Their original sampler
+call, RNG stream, snapshots and row shape remain unchanged. ACS2, FIFO ACS2ER, VCP
+and the multiplexer do not select these axes.
 
 `ThreeToOne` uses the environment clock at the complete episode's end. An episode
 ending exactly at T receives three draws per interaction; one ending after T receives
@@ -4146,14 +4149,27 @@ transition zero. Achieved-state duplicates retain their weights, and the preset'
 admissibility rule and candidate filter apply. Each transition is checked under that
 rule; the counterfactual rule keeps exactly the prefix ending at first arrival.
 An empty goal distribution falls back to the original goal. Each admitted transition
-is a full current-population learning step for the full-update presets; values presets
-retain their declared copy-update rule. A pass runs from its final admitted transition
-to its first. The last pass is a backward suffix if the remaining budget is shorter,
-so every completed real episode receives exactly 3L updates. The random-pass control
+is a full current-population learning step for the measured agents. A pass runs
+from its final admitted transition to its first. The last pass is a backward suffix
+if the remaining budget is shorter, so every completed real episode receives exactly
+3L updates. The random-pass control
 shuffles that same selected suffix with injected ChaCha stream9, independently of
 sampler stream7. Per-pass requests/fallbacks/cuts and emitted/available transitions
 are reported separately from per-draw copy counts. Snapshot evaluation includes the
 new RNG and counters; evaluation remains read-only and greedy at preset epsilon0.8.
+
+At the library boundary, episode passes support only `EveryTransition` (every
+transition) and `CounterfactualEpisode` (counterfactual episode).
+`Sampler::draw_pass` returns `SampleError::UnsupportedPassAdmissibility` with a
+message naming these rules for `FromNonGoalState`, before sampling or accounting.
+Pass goal selection applies admissibility at transition zero: on A → B → A,
+`FromNonGoalState` excludes goal A because A is the start state, even though B → A
+is a non-trivial copy retained by `relabel_episode`. The refusal leaves that
+episode relabeler and independent transition draws unchanged. Shortened HER uses
+`CounterfactualEpisode`; episodic ER uses `EveryTransition` with original goals only.
+This guard was added after the measurements. No measured arm uses
+`FromNonGoalState` passes, no measured behavior changes, and the corrected study's
+measurement source remains `4166372` in its records.
 
 `acs2-trajectory::Sampler::draw_pass` is additive. Episode-level goal selection and
 provenance/cost accounting belong beside the existing transition sampler, and its
@@ -4182,8 +4198,9 @@ and schedule/order. Default rows add no parameter or diagnostic fields. The shar
 settings, axis parameter values and types, schedule counts, pass counts, full/values
 update counts and zero inadmissible shortened copies. Mechanical manifest derivation
 fixes the entire arm and point grid, and conditional test derivation recomputes the
-saved validation-only selection. Unregistered switches, orders, extra settings and
-combined axes are refused. The plans and fixtures of preceding studies remain unchanged.
+saved validation-only selection. Unsupported agents, unregistered switches, orders,
+extra settings and combined axes are refused. The plans and fixtures of preceding
+studies remain unchanged.
 
 The original sixty-run stage1 pilot and the corrected twenty-four-run pilot share
 a twelve-hour allocation cap including reservations.

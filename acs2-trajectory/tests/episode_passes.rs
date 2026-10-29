@@ -45,6 +45,76 @@ fn configuration(rule: Admissibility, p: f64) -> SamplerConfiguration {
 }
 
 #[test]
+fn episode_passes_refuse_from_non_goal_state_before_sampling() {
+    let store = store(&[&[0, 1, 0]]);
+    let evaluator = ObjectiveEvaluator(&ExactMatch {
+        reward_on_reach: 1000.0,
+    });
+    let relabeled = relabel_episode::<_, _, 2>(
+        store.episodes().next().unwrap(),
+        &goal(0),
+        Admissibility::FromNonGoalState,
+        &evaluator,
+        TruncationMode::Bootstrap,
+    )
+    .unwrap();
+    assert_eq!(
+        relabeled
+            .samples
+            .iter()
+            .map(|sample| sample.transition)
+            .collect::<Vec<_>>(),
+        vec![1]
+    );
+    for strategy in [
+        GoalStrategy::Original,
+        GoalStrategy::Future,
+        GoalStrategy::Episode,
+    ] {
+        for proportion in [0.0, 2.0 / 3.0, 1.0] {
+            let mut config = configuration(Admissibility::FromNonGoalState, proportion);
+            config.selection.strategy = strategy;
+            let mut sampler = Sampler::new(config, ChaChaRandomSource::from_seed(42));
+            let rng_before = sampler.random_source().capture_state();
+            let error = match sampler.draw_pass::<_, _, 2>(&store, 100, &evaluator) {
+                Err(error) => error,
+                Ok(_) => panic!("FromNonGoalState episode passes must be refused"),
+            };
+            assert_eq!(error, SampleError::UnsupportedPassAdmissibility);
+            assert_eq!(error.to_string(), "episode passes support only EveryTransition (every transition) and CounterfactualEpisode (counterfactual episode); FromNonGoalState is unsupported");
+            assert_eq!(sampler.random_source().capture_state(), rng_before);
+            assert_eq!(sampler.counters(), &ReplayCounters::default());
+        }
+    }
+}
+
+#[test]
+fn every_transition_passes_keep_start_goals_and_return_transitions() {
+    let store = store(&[&[0, 1, 0]]);
+    let evaluator = ObjectiveEvaluator(&ExactMatch {
+        reward_on_reach: 1000.0,
+    });
+    let mut sampler = Sampler::new(configuration(Admissibility::EveryTransition, 1.0), Fixed);
+    let pass = sampler
+        .draw_pass::<_, _, 2>(&store, 100, &evaluator)
+        .unwrap();
+    assert_eq!(pass.available_steps, 2);
+    assert_eq!(
+        pass.samples
+            .iter()
+            .map(|sample| sample.transition)
+            .collect::<Vec<_>>(),
+        vec![1, 0]
+    );
+    assert!(pass.samples.iter().all(
+        |sample| sample.goal == goal(0) && sample.provenance.origin == SampleOrigin::Relabeled
+    ));
+    assert_eq!(sampler.counters().relabeled.draws, 2);
+    assert_eq!(sampler.counters().relabeled.already_reached, 1);
+    assert_eq!(sampler.counters().relabeled.after_counterfactual_end, 2);
+}
+
+#[test]
 fn passes_pick_retained_episodes_uniformly_and_reverse_every_transition() {
     let store = store(&[&[0, 1], &[0, 2, 3, 4]]);
     let evaluator = ObjectiveEvaluator(&ExactMatch {

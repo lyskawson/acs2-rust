@@ -16,6 +16,9 @@ impl<R: RandomSource> Sampler<R> {
         evaluator: &impl GoalEvaluator<S, G>,
     ) -> Result<EpisodePass<G, M>, SampleError> {
         assert!(limit > 0);
+        if self.configuration.selection.admissibility == Admissibility::FromNonGoalState {
+            return Err(SampleError::UnsupportedPassAdmissibility);
+        }
         if store.is_empty() {
             return Err(SampleError::EmptyStore);
         }

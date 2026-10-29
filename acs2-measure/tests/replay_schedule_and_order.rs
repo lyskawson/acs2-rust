@@ -74,7 +74,7 @@ fn every_cli_setting_maps_to_exact_axes_and_unregistered_or_combined_settings_fa
 }
 
 #[test]
-fn all_episodic_presets_accept_both_axes_without_changing_their_copy_rules() {
+fn library_replay_plans_preserve_copy_rules_for_supported_pass_admissibility() {
     let distributions =
         MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
     for name in [
@@ -86,6 +86,9 @@ fn all_episodic_presets_accept_both_axes_without_changing_their_copy_rules() {
         "acs2her_values_shortened",
     ] {
         for plan in plans() {
+            if name == "acs2her_nontrivial" && plan.order != ReplayOrder::Independent {
+                continue;
+            }
             run_protocol_with_replay_plan::<_, _, 8, 2, 10>(
                 &distributions.protocol(),
                 AgentKind::from_run_name(name, 0.5).unwrap(),
@@ -341,6 +344,81 @@ fn cli_records_the_exact_axis_and_rejects_unsupported_agents_and_combinations() 
             std::fs::remove_file(out).unwrap();
         } else {
             assert!(!out.exists());
+        }
+    }
+}
+
+const UNMEASURED_AGENTS: &[&str] = &[
+    "acs2",
+    "acs2er",
+    "acs2er_one_update",
+    "acs2her",
+    "acs2her_nontrivial",
+    "acs2her_values",
+    "acs2her_values_shortened",
+    "acs2vcp_k2",
+    "acs2vcp_k4",
+    "acs2vcp_k2_uniform",
+    "acs2vcp_k4_uniform",
+    "acs2her_shortened,acs2her",
+    "acs2er_episodic,acs2her_nontrivial",
+];
+
+fn assert_cli_refuses_replay_axis(agent: &str, flag: &str, value: &str) {
+    let out = std::env::temp_dir().join(format!(
+        "replay-agent-refusal-{}-{agent}-{flag}-{value}.jsonl",
+        std::process::id()
+    ));
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_acs2-measure"))
+        .args([
+            "--task",
+            "maze4",
+            "--cap",
+            "5",
+            "--protocol",
+            "maze-pairs-v1",
+            "--agents",
+            agent,
+            "--seeds",
+            "42",
+            "--targets",
+            "20",
+            "--evaluation-blocks",
+            "validation",
+            flag,
+            value,
+            "--out",
+        ])
+        .arg(&out)
+        .output()
+        .unwrap();
+    let created_output = out.exists();
+    if created_output {
+        std::fs::remove_file(&out).unwrap();
+    }
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "accepted {agent} {flag} {value}");
+    assert!(
+        message.contains("--replay-schedule and --replay-order are supported only for acs2her_shortened and acs2er_episodic"),
+        "{agent} {flag} {value}: {message}"
+    );
+    assert!(!created_output, "refused axes must not create a row file");
+}
+
+#[test]
+fn cli_refuses_unmeasured_agents_with_replay_schedules() {
+    for agent in UNMEASURED_AGENTS {
+        for schedule in ["constant", "3to1at30000", "3to1at100000", "3to1at300000"] {
+            assert_cli_refuses_replay_axis(agent, "--replay-schedule", schedule);
+        }
+    }
+}
+
+#[test]
+fn cli_refuses_unmeasured_agents_with_each_replay_order() {
+    for agent in UNMEASURED_AGENTS {
+        for order in ["independent", "backward", "random-pass"] {
+            assert_cli_refuses_replay_axis(agent, "--replay-order", order);
         }
     }
 }
