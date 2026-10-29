@@ -48,7 +48,10 @@ Stage1 retains the original sixty seed42 pilot allocations and adds twenty-four
 with uniform episode choice: shortened backward, shortened random-pass, episodic ER
 backward and shortened default on six mazes, all three blocks. Both rounds share
 twelve allocated CPU-hours including reservations. The first round remains immutable;
-its B rows remain the schedule identity reference. The default-setting
+its B rows remain the schedule identity reference. The six new default allocations
+also reconstruct all seventy-two B fixture rows with the frozen measurement binary,
+then record a separate bitwise gate result. These short checks share those
+allocations and the cumulative pilot cap. The default-setting
 pilot must reproduce all selected-p proportion test fields in binary64 bits, excluding
 only shared provenance/time exclusions. `prepare_pilot.py` verifies that approved
 archive before freezing six test references and thirty validation-only base

@@ -38,6 +38,7 @@ def prepare(root, output, fixture):
     evidence = dict(runs=60, allocations=summary['allocations'], rows=len(rows), identity_rows=summary['identity_rows'],
         allocation_cpu_seconds=summary['allocation_cpu_seconds'],
         previous_pilot_root=summary['previous_pilot']['root'], previous_pilot=summary['previous_pilot'], rounds=summary['rounds'],
+        schedule_binary_fixture_rows=summary['schedule_binary_fixture_rows'],
         cells=[dict(configuration_id=key[0], arm=key[1], **cost) for key, cost in cells.items()],
         references_sha256=hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest(),
         base_selection_sha256=hashlib.sha256((root / 'base-selections.json').read_bytes()).hexdigest(),

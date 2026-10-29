@@ -58,9 +58,10 @@ fn reproduce_pilot_fixture(passes: bool) {
         .collect();
     assert_eq!(configurations.len(), 54);
     assert_eq!(actual, expected);
-    for config in configurations.iter().filter(|config| {
-        config["mode"].as_str().unwrap().starts_with("3to1") != passes
-    }) {
+    for config in configurations
+        .iter()
+        .filter(|config| config["mode"].as_str().unwrap().starts_with("3to1") != passes)
+    {
         let task = config["task"].as_str().unwrap();
         let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
             acs2_envs::roles::ResearchTask::named(task).unwrap()

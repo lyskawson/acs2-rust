@@ -1,6 +1,6 @@
 {
-  "measurement_commit": "0a19f8e8a0d213fc0eb11b17efcce32dd0ee2eec",
-  "binary_sha256": "0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e",
+  "measurement_commit": "416637251460b91c771ffe9d8c3c503776c13986",
+  "binary_sha256": "ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275",
   "preset": {
     "alp_gen_variant": "Pyalcs",
     "beta": 0.05,

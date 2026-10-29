@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from previous_pilot import pilot_batch, previous_path, reference_path, verify_previous
+from previous_pilot import local_reference, pilot_batch, previous_path, reference_path, verify_previous
 from protocol import pilot_roots
 
 
@@ -49,6 +49,8 @@ class PreviousPilotTests(unittest.TestCase):
             declared = registration['destination']
             self.assertEqual(reference_path(root, declared, old / 'b/rows.jsonl'), Path('/cluster/study/b/rows.jsonl'))
             self.assertEqual(reference_path(root, declared, root / 'c/rows.jsonl'), Path(declared) / 'c/rows.jsonl')
+            self.assertEqual(local_reference(root, declared, '/cluster/study/b/rows.jsonl'), old / 'b/rows.jsonl')
+            self.assertEqual(local_reference(root, declared, Path(declared) / 'c/rows.jsonl'), root / 'c/rows.jsonl')
             with self.assertRaisesRegex(ValueError, 'outside the two registered rounds'):
                 reference_path(root, declared, base / 'unregistered/rows.jsonl')
 

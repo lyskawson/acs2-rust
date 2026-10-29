@@ -30,6 +30,7 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(evidence['runs'], 60)
         self.assertEqual(evidence['rows'], 490)
         self.assertEqual(evidence['identity_rows'], 49)
+        self.assertEqual(evidence['schedule_binary_fixture_rows'], 72)
         self.assertEqual(evidence['allocations'], 84)
         self.assertEqual([item['allocations'] for item in evidence['rounds']], [60, 24])
         self.assertEqual(sum(item['allocation_cpu_seconds'] for item in evidence['rounds']), evidence['allocation_cpu_seconds'])

@@ -52,3 +52,14 @@ def reference_path(root, declared, source):
         raise ValueError('pilot identity reference is outside the two registered rounds')
     registration = json.loads((root / 'pilot-registration.json').read_text())
     return Path(registration['previous_pilot']['root']) / source.relative_to(previous)
+
+
+def local_reference(root, declared, candidate):
+    root, declared, candidate = Path(root), Path(declared), Path(candidate)
+    if candidate.is_relative_to(declared):
+        return root / candidate.relative_to(declared)
+    registration = json.loads((root / 'pilot-registration.json').read_text())
+    previous = Path(registration['previous_pilot']['root'])
+    if not candidate.is_relative_to(previous):
+        raise ValueError('identity reference is outside the two registered rounds')
+    return previous_path(root) / candidate.relative_to(previous)

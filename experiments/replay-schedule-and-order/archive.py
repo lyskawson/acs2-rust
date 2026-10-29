@@ -3,8 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 
-from protocol import CORRECTED_PILOT_INDICES, SCHEDULES, pilot_roots, PILOT_SETTINGS
-from previous_pilot import previous_path, verify_previous
+from protocol import CORRECTED_PILOT_INDICES, SCHEDULES, configurations, pilot_roots, PILOT_SETTINGS
+from previous_pilot import local_reference, previous_path, verify_previous
 from execution import measurement_identity, pilot_manifest, scope
 from grid_attempts import attempts, select_attempts, inspect_attempt
 from grid_identity import compare, field_bits, verify_references
@@ -60,10 +60,7 @@ def catalog(batch):
                     raise ValueError('preset, hardware or full-update matching volume changed')
             declared = Path(plan['authorization_plan']).parent
             def resolve(value):
-                candidate = Path(value)
-                if not candidate.is_relative_to(declared):
-                    raise ValueError('identity reference outside study')
-                return batch.parent / candidate.relative_to(declared)
+                return local_reference(batch.parent, declared, value)
             identities = verify_references(plan, attempt, rows, resolve)
             if field_json(json.loads((path / 'identity-checks.json').read_text())) != field_json(identities):
                 raise ValueError('node identity records differ from independent comparison')
@@ -81,6 +78,27 @@ def catalog(batch):
 
 def field_json(value):
     return json.dumps(field_bits(value), sort_keys=True, allow_nan=False)
+
+
+def binary_fixture_audit(root, previous):
+    fixture = json.loads((previous / 'registration/replay_schedule_and_order_regression.json').read_text())
+    checked = 0
+    for base in configurations():
+        directory = root / pilot_roots()[-1] / 'binary-fixture' / base['task']
+        proof = json.loads((directory / 'verification.json').read_text())
+        if proof != dict(task=base['task'], settings=6, rows=12, verified=True,
+                         binary_sha256=measurement_identity()['binary_sha256']):
+            raise ValueError('new binary schedule fixture gate is incomplete')
+        selected = [config for config in fixture['configurations'] if config['task'] == base['task'] and config['mode'] in SCHEDULES]
+        for index, config in enumerate(selected):
+            rows = [json.loads(line) for line in (directory / f'{index}.jsonl').read_text().splitlines()]
+            actual = [field_bits({key: value for key, value in row.items() if key not in fixture['excluded']}) for row in rows]
+            if actual != config['rows']:
+                raise ValueError('new binary differs from an unchanged schedule fixture row')
+            checked += len(rows)
+    if checked != 72:
+        raise ValueError('schedule binary identity requires seventy-two fixture rows')
+    return checked
 
 
 def audit(root):
@@ -156,6 +174,7 @@ def audit(root):
         raise ValueError('pilot is incomplete')
     return dict(runs=runs, rows=len(rows), allocations=attempts_count, allocation_cpu_seconds=int(spent),
                 identity_rows=identity_count, previous_pilot=registration['previous_pilot'],
+                schedule_binary_fixture_rows=binary_fixture_audit(root, previous),
                 rounds=[dict(round='length_weighted', **checked_previous),
                         dict(round='uniform_episode', runs=24, rows=new_rows,
                              allocations=attempts_count - checked_previous['allocations'],
