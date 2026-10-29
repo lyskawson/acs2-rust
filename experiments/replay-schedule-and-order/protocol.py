@@ -70,10 +70,21 @@ def pilot(index):
 
 
 def grouped(cells):
-    groups = [cells[index:index + 4] for index in range(0, len(cells), 4)]
-    if any(not 4 <= len(group) <= 8 for group in groups):
+    ordered = sorted(cells, key=lambda cell: (cell['limit_minutes'], cell['expected_cpu_seconds'],
+                                             cell['configuration_id'], cell['mode']))
+    best = {0: (0, [])}
+    for end in range(4, len(ordered) + 1):
+        choices = []
+        for size in range(4, 9):
+            begin = end - size
+            if begin in best:
+                cost, spans = best[begin]
+                choices.append((cost + size * ordered[end - 1]['limit_minutes'], spans + [(begin, end)]))
+        if choices:
+            best[end] = min(choices, key=lambda choice: (choice[0], len(choice[1]), choice[1]))
+    if len(ordered) not in best or not ordered:
         raise ValueError('screening must group twenty to forty jobs')
-    return groups
+    return [ordered[begin:end] for begin, end in best[len(ordered)][1]]
 
 
 def forecast(cells, pilot_seconds):
@@ -98,10 +109,11 @@ def forecast(cells, pilot_seconds):
                     runs=seeds, expected_cpu_seconds=seeds * cost['allocation_cpu_seconds'],
                     limit_minutes=limit, reservation_cpu_seconds=seeds * limit * 60))
     screening = [cell for cell in estimates if cell['purpose'] == 'screening']
-    for index, group in enumerate(grouped(screening)):
+    for group in grouped(screening):
         limit = max(cell['limit_minutes'] for cell in group)
+        group_id = 'screening-' + group[0]['configuration_id'] + '-' + group[0]['mode']
         for cell in group:
-            cell.update(batch_group='screening-' + str(index), limit_minutes=limit,
+            cell.update(batch_group=group_id, limit_minutes=limit,
                         reservation_cpu_seconds=cell['runs'] * limit * 60)
     worst = []
     for config in configurations():
@@ -124,6 +136,7 @@ def forecast(cells, pilot_seconds):
         hard_reservations_cpu_hours=hard / 3600, requested_cpu_hour_limit=5 * math.ceil(max(doubled, hard) / 18000),
         screening_runs=120, maximum_test_runs=600,
         estimate_rule='Seed42 allocation CPUTimeRAW; three-block pilots conservatively proxy validation-only screening. Worst selected B schedule and all three C arms per maze, both axes tested everywhere.',
+        screening_group_rule='Sort cells by hard limit and pilot allocation cost, then choose contiguous groups of four to eight five-seed cells minimizing total hard reservations; ties use fewer arrays, then earlier boundaries. No success values enter grouping.',
         limit_rule='max(3, ceil((2 * body wall seconds + 60) / 60)) minutes, common maximum within each screening array; one twenty-seed array per test arm.',
         limitation='One seed measures cost, not seed variability or scientific benefit. Every attempt and outstanding reservation remains charged.')
 

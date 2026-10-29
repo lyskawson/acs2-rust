@@ -94,10 +94,24 @@ class ProtocolTests(unittest.TestCase):
         for group in {cell['batch_group'] for cell in value['cells'] if cell['purpose'] == 'screening'}:
             members = [cell for cell in value['cells'] if cell.get('batch_group') == group]
             self.assertEqual(len({cell['limit_minutes'] for cell in members}), 1)
-            self.assertEqual(sum(cell['runs'] for cell in members), 20)
+            self.assertTrue(20 <= sum(cell['runs'] for cell in members) <= 40)
         for invalid in (0, 43201):
             with self.assertRaises(ValueError):
                 forecast(costs(), invalid)
+
+    def test_screening_groups_similar_costs_without_charging_fast_schedules_for_pass_limits(self):
+        observed = costs()
+        for config in configurations():
+            for mode in SCREEN_SETTINGS:
+                heavy = mode == 'backward'
+                observed[config['id'], label(config, SHORTENED, mode)].update(
+                    body_wall_seconds=400 if heavy else 10,
+                    allocation_cpu_seconds=410 if heavy else 20,
+                    process_cpu_seconds=395 if heavy else 9)
+        value = forecast(observed, 6600)
+        screening = [cell for cell in value['cells'] if cell['purpose'] == 'screening']
+        self.assertEqual(sum(cell['reservation_cpu_seconds'] for cell in screening), (18 * 3 + 6 * 15) * 5 * 60)
+        self.assertEqual(sum(cell['runs'] for cell in screening), 120)
 
 
 if __name__ == '__main__':

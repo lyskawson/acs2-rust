@@ -101,9 +101,18 @@ def choose(plan, entries, references, default_rows):
                 rule=plan['screening']['selection'], test_access='none')
 
 
+def verified_screening(root):
+    from grid_authorization import require_derivation
+    root = Path(root)
+    manifest = load_plan(root / 'screening/plan.json', (root / 'screening/plan.sha256').read_text().strip())
+    require_derivation(manifest, authorization_manifest(manifest, root / 'approved-plan.json'))
+    return manifest
+
+
 def saved_selection(root, plan):
     from archive import catalog
     root = Path(root)
+    verified_screening(root)
     references = read_index(root)
     if hashlib.sha256((root / 'reference-index.json').read_bytes()).hexdigest() != plan['cost_pilot']['references_sha256']:
         raise ValueError('reference index differs from registered pilot')
@@ -158,6 +167,8 @@ def authorization_manifest(manifest, registration_path=None):
         registered_bytes = Path(__file__).with_name('plan.json').read_bytes()
         digest = hashlib.sha256(registered_bytes).hexdigest()
         plan = load_plan(registration_path, digest)
+        if any(plan.get(key) != value for key, value in measurement_identity().items()):
+            raise ValueError('registered measurement identity differs from the frozen pilot')
         approval = json.loads(Path(registration_path).with_name('approval.json').read_text())
         limit = approval.get('phase_cpu_hour_limit')
         if (approval.get('approved') is not True or approval.get('plan_sha256') != digest

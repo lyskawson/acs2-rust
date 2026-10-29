@@ -31,7 +31,7 @@ prefixes add goal-dependent weighting. This is part of the specified C intervent
 The random-pass control shares this weighting and isolates within-pass order
 conditional on the same store and sampler state. Policies may diverge during training.
 This is backward ACS2 replay inspired by
-[Lee, Choi and Chung (2019)](https://proceedings.neurips.cc/paper/2019/hash/e6d8545daa42d5ced125a4bf747b3688-Abstract.html),
+[Lee, Choi and Chung (2019)](https://papers.nips.cc/paper_files/paper/2019/file/e6d8545daa42d5ced125a4bf747b3688-Paper.pdf),
 not the paper's temporary-Q-table target construction or diffusion coefficient.
 
 `replay_schema.py` in the shared grid tooling admits complete explicit axis settings,
@@ -87,3 +87,32 @@ under `~/tu_runs/replay-schedule-and-order/` and
 `~/Desktop/tu-runs/replay-schedule-and-order/`, outside Git. Earlier registrations,
 fixtures and studies stay immutable; the proportion directory receives only tests
 for inclusive ties, failed-prefix identity and distinct dose-control crossings.
+
+## Pilot allocation and registered forecast
+
+All sixty seed42 trajectories completed in sixty first attempts, with 490 rows and
+5035 allocated CPU-seconds (1.398611 CPU-hours), no failures and no reservations.
+All 49 default-setting rows reproduce the selected-proportion test archive on all
+three blocks and every shared learning/knowledge field in binary64 bits. The
+108-row new fixture pins the first two points of all fifty-four new combinations;
+its Rust test reconstructs them through the measurement factory. Earlier fixtures
+remain unchanged. Measurement source is `0a19f8e`, musl binary SHA-256
+`0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e`.
+
+The [registered plan](plan.json), SHA-256
+`3de02461064593d2d99ad98c3dcf95ad91f11ed2c7191f3c7bb369e49619f4e6`,
+expects 19.931944 cumulative CPU-hours when both axes are tested everywhere. Its
+doubled future-cost forecast including the measured pilot is 38.465278 hours;
+actual array hard limits total 59.065278 hours. The proposed approval is sixty
+cumulative CPU-hours. Screening arrays group similar measured hard limits into
+20--40 jobs, minimizing reservations without using success values. Five arrays
+cover all 120 screening runs. Every conditional test arm uses its own twenty-seed
+array. Where base wins, that axis runs nothing on that maze.
+
+Every one of ten pilot admissions retained the grant, shared queue and scheduler
+test-only evidence. Independent reconstruction checks all sixty allocation records,
+5035 CPU-seconds, all hard bounds, at most two active streams and a twelve-running-job
+hard bound. The completed pilot's maximum admission bound was 9505 CPU-seconds.
+The source, static binary and preset are part of the approval identity; a changed
+measurement identity or a changed screening manifest cannot authorize tests.
+Screening and test remain pending explicit approval of this plan and its CPU limit.

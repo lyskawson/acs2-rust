@@ -4170,7 +4170,7 @@ weighting. C therefore changes grouping, goals and exposure as well as order; it
 random-pass control shares all three. Identical stores and sampler states produce
 identical pass multisets and goals under either order, but policies and future
 collected episodes may diverge. This is a backward replay intervention inspired by
-[Lee, Choi and Chung (2019)](https://proceedings.neurips.cc/paper/2019/hash/e6d8545daa42d5ced125a4bf747b3688-Abstract.html);
+[Lee, Choi and Chung (2019)](https://papers.nips.cc/paper_files/paper/2019/file/e6d8545daa42d5ced125a4bf747b3688-Paper.pdf);
 it retains ACS2's beta0.05 instead of importing the paper's temporary target table
 and diffusion construction. The two axes cannot be combined in this study.
 
@@ -4196,6 +4196,48 @@ paired marginal t(19) contrasts and exact inclusive thresholds in both test view
 All allocation roots share one scope; source, binary, operations, node, raw-artifact
 and identity guards use the existing grid execution path. Stage1 stops after
 registration and the external report; screening and test need explicit approval.
+
+### Replay pilot identity and allocation forecast
+
+The seed42 cost pilot completed all sixty trajectories in sixty first attempts,
+with 490 rows, no failures and no outstanding reservations. Allocations used
+5035 CPU-seconds (1.398611 CPU-hours) within the twelve-hour cap. All 49 default
+shortened rows reproduce the approved selected-proportion test archive in binary64
+bits across training, validation, test, learning and knowledge fields. Independent
+node and pulled-archive checks agree. The measurement source remains `0a19f8e`;
+the static musl binary SHA-256 is
+`0d0f4d368668acf7943262d1c8298db0489cff40c6eefd70ad0252a63474cb9e`.
+The new `fixtures/replay_schedule_and_order_regression.json` pins 108 rows: the
+first two points of all fifty-four new setting/maze combinations. Earlier fixtures
+retain their bytes. Proportion-study additions are test-only: inclusive exact
+threshold ties, failed-attempt prefix identity and distinct dose-control crossings.
+
+The pre-screening [registration](../experiments/replay-schedule-and-order/plan.json),
+SHA-256 `3de02461064593d2d99ad98c3dcf95ad91f11ed2c7191f3c7bb369e49619f4e6`,
+retains all three switch points and backward replay. Screening groups use pilot
+costs only: sorted hard limits are partitioned into four to eight five-seed cells,
+minimizing total reservations and favoring fewer arrays on equal costs. The five
+resulting arrays contain 20, 30, 20, 30 and 20 jobs. Every scientific arm, seed,
+point and block stays in the registered grid. Conditional tests use twenty-seed
+arrays per arm; their saved selection must originate from a mechanically verified
+screening manifest. Approval cannot replace the registered source, binary or preset.
+
+| Purpose | Expected allocated CPU-h | Hard reservation CPU-h |
+|---|---:|---:|
+| Completed pilot | 1.398611 | 1.398611 |
+| Validation screening | 2.638889 | 9.333333 |
+| Conditional schedule tests, worst selection on every maze | 4.311111 | 16.000000 |
+| Conditional order tests and controls on every maze | 11.583333 | 32.333333 |
+| Total | 19.931944 | 59.065278 |
+
+Doubling future expected cost while retaining the measured pilot gives 38.465278
+CPU-hours. The proposed cumulative approval is sixty CPU-hours, covering the larger
+hard bound. This is a one-seed cost forecast; every attempt and reservation still
+faces the live admission check. The pilot's ten admissions all retained grant and
+scheduler test-only evidence; their maximum bound was 9505 CPU-seconds, with at most
+two active streams and a twelve-running-job hard bound. Screening and testing remain
+pending explicit approval. The external report and per-maze/arm diagnostics include
+all 490 checkpoint-interval update rates; no pilot success ranking selects settings.
 
 ## Value consistency prioritization with independent hindsight heads
 
