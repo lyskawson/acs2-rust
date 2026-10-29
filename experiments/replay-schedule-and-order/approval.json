@@ -1,0 +1,9 @@
+{
+  "approved": true,
+  "plan_sha256": "01d93796e56efeea2dc2b85e0264bc98dfaec4a16fe7cb08052fd0515f7b1f71",
+  "phase_cpu_hour_limit": 60,
+  "pilot_allocation_cpu_seconds": 8147,
+  "measurement_commit": "416637251460b91c771ffe9d8c3c503776c13986",
+  "binary_sha256": "ec99ead899f523e7e157e505b160a520f650ae439bee47e5cddeb7edb9ad4275",
+  "authorization": "Explicit user approval of the registered screening, conditional tests, reference reuse and analysis, with sixty cumulative allocated CPU-hours including both pilot rounds and every failed attempt."
+}
