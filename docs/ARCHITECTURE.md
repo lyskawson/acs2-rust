@@ -4680,3 +4680,36 @@ added by the goal line:
 
 All 22 stay on this branch because fixing them edits the measured path. Code added by the goal
 line is held to zero.
+
+## Rule compaction (CRACS)
+
+`acs2-core/src/compaction/` implements CRACS (Orhand, Collet, Parrend, Jeannin-Girardon,
+GECCO '23 Companion, doi 10.1145/3583133.3596352): a one-shot, rule-driven reduction of a
+trained population. The paper is the only definition followed. A 2024 pyALCS master's thesis
+on the same algorithm diverges from it: it treats `#` in the effect as an inclusion wildcard,
+where in an effect `#` means "no change". Do not port from it.
+
+- **Non-destructive.** `compact_population` returns a new population and a `CompactionOutcome`
+  with one `Decision` per input index; the input stays as the control the paper compares
+  against. Numerosity and reward are not transferred to the subsumer; the paper leaves that open.
+- **Sequential order.** Candidates are visited in index order and compared with every other
+  classifier still kept, processed or not. A discarded classifier never subsumes. Of two
+  identical classifiers the later one survives; without this rule they would remove each other.
+- **Inclusion, not compatibility.** The condition test is `Condition::includes`, true when every
+  position of the subsumer is a wildcard or equal. `Condition::subsumes` checks symmetric
+  compatibility (`1##` vs `#00` is true) and feeds ALP/GA subsumption, so it stays unchanged
+  for P8/P9. The effect test for ACS2 is equality (`Effect::subsumes`), since a deterministic
+  effect predicts a single set of changes.
+- **Parameters** live in `CompactionConfiguration { theta_exp, theta_r }`, never in
+  `Configuration`. `from_learning` copies both thresholds.
+- **The behavioural-sequence filter is inert for ACS2.** `CompactableRule::action_sequence_len`
+  is 1 for `Classifier<N>`. The trait exists so a BACS- or PEP-style representation plugs in;
+  the filter is exercised in tests through a test double.
+- **Knowledge is preserved exactly.** If a reliable `cl1` is removed by `cl2`, then
+  `q2 > theta_r` or `q2 >= q1 > theta_r`, so `cl2` is reliable, matches every state `cl1`
+  matches, has the same action and the same effect. Every chain of `Subsumed { by }` ends at a
+  kept classifier: a target with a lower index was already kept for good, and a target with a
+  higher index is decided later. `anticipation_fraction` therefore cannot drop. The unit tests
+  check this on random populations, and `acs2-agents/tests/rule_compaction.rs` checks it on a
+  trained Maze4 population.
+- Nothing on an existing path calls this module, so the MPX line and P8/P9 are untouched.

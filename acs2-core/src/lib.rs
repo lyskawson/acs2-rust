@@ -1,4 +1,5 @@
 pub mod checkpoint;
+pub mod compaction;
 pub mod learning;
 pub mod ports;
 pub mod representation;

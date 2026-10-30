@@ -26,6 +26,10 @@ impl<const N: usize> Condition<N> {
         (0..N).all(|index| symbols_compatible(self.symbols[index], other.symbols[index]))
     }
 
+    pub fn includes(&self, other: &Condition<N>) -> bool {
+        (0..N).all(|index| self.symbols[index].is_wildcard() || self.symbols[index] == other.symbols[index])
+    }
+
     pub fn specificity(&self) -> usize {
         self.symbols.iter().filter(|symbol| !symbol.is_wildcard()).count()
     }
@@ -58,5 +62,39 @@ impl<const N: usize> Condition<N> {
 
     pub fn set(&mut self, index: usize, symbol: Symbol) {
         self.symbols[index] = symbol;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn condition(text: &[u8; 3]) -> Condition<3> {
+        Condition {
+            symbols: text.map(|byte| {
+                if byte == b'#' {
+                    Symbol::Wildcard
+                } else {
+                    Symbol::Token(byte)
+                }
+            }),
+        }
+    }
+
+    #[test]
+    fn includes_is_set_inclusion() {
+        assert!(condition(b"1##").includes(&condition(b"10#")));
+        assert!(condition(b"###").includes(&condition(b"101")));
+        assert!(condition(b"101").includes(&condition(b"101")));
+        assert!(!condition(b"10#").includes(&condition(b"1##")));
+        assert!(!condition(b"0##").includes(&condition(b"1##")));
+    }
+
+    #[test]
+    fn includes_rejects_compatible_but_unordered_conditions() {
+        let general = condition(b"1##");
+        let other = condition(b"#00");
+        assert!(general.subsumes(&other));
+        assert!(!general.includes(&other));
     }
 }
