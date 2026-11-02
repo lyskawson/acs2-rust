@@ -92,5 +92,18 @@ class SchemaIdentityTests(unittest.TestCase):
             compare_per_pair([changed], [reference], [42], [1000], BLOCKS)
 
 
+    def test_different_winner_selection_scores_are_rejected_even_with_valid_individual_scores(self):
+        row, config = sample()
+        winner = dict(specified_state_attributes=1, specified_goal_attributes=1, q=.5, r=20.0,
+                      fitness=10.0, experience=4, numerosity=2, selection_score=20.0)
+        other = dict(winner, r=40.0, fitness=20.0, selection_score=40.0)
+        record = row['evaluation_blocks']['test']['starts'][0]
+        record['first_decision'] = dict(random_fallback=False, winners=[winner, dict(winner)])
+        validate_blocks(row, config)
+        record['first_decision']['winners'][1] = other
+        with self.assertRaisesRegex(ValueError, 'non-tied'):
+            validate_blocks(row, config)
+
+
 if __name__ == '__main__':
     unittest.main()

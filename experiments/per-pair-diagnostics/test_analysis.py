@@ -2,7 +2,7 @@ import copy
 import random
 import unittest
 
-from analysis import attach, ceiling, consistency, paired, statistics_for, truth_index
+from analysis import attach, ceiling, consistency, paired, pool_blocks, statistics_for, summarize, truth_index, weighted_mean
 
 
 def record(start, goal, optimal, action, fallback=False, weight=1.0):
@@ -104,6 +104,50 @@ class AnalysisTests(unittest.TestCase):
         model['pairs'][0]['value'] = 951
         with self.assertRaises(ValueError):
             attach([row], truth_index(model))
+
+
+    def test_attach_uses_suboptimal_first_action_value_instead_of_state_value(self):
+        model = dict(gamma=.95, reward=1000, actions=8, cap=3, pairs=[dict(start=[1, 1], goal=[1, 3],
+            shortest_distance=2, value=950.0, action_values=[950.0, 902.5] + [0.0] * 6, optimal_actions=[0])])
+        raw = dict(start='(1, 1)', goal='Goal { symbols: [Token(1), Token(3)] }', shortest_distance=2,
+                   first_action=1, first_decision=dict(random_fallback=False, winners=[]))
+        measured = attach([raw], truth_index(model))[0]
+        self.assertEqual(measured['q_star'], 902.5)
+        self.assertEqual(measured['v_star'], 950.0)
+        self.assertNotIn(measured['first_action'], measured['optimal'])
+
+    def test_nonzero_spread_uses_sample_deviation_and_t4_interval(self):
+        measured = summarize([1.0, 2.0, 3.0, 4.0, 5.0])
+        se = 1 / 2**.5
+        margin = 2.7764451051977987 / 2**.5
+        self.assertEqual(measured['n'], 5)
+        self.assertEqual(measured['mean'], 3)
+        self.assertAlmostEqual(measured['se'], se, places=14)
+        self.assertAlmostEqual(measured['ci_low'], 3 - margin, places=14)
+        self.assertAlmostEqual(measured['ci_high'], 3 + margin, places=14)
+
+    def test_full_set_ceiling_and_random_reference_keep_goal_selective_fallback(self):
+        records = [record(0, 0, [0], 0), record(0, 1, [0], 0),
+                   record(0, 2, [1, 2, 3, 4], 7, True, 5)]
+        measured = statistics_for(records)
+        self.assertEqual(measured['C'], 5 / 7)
+        self.assertEqual(measured['C_eligible'], 1)
+        self.assertEqual(measured['random_reference'], 11 / 28)
+        self.assertEqual(measured['random_reference_eligible'], 1 / 8)
+        self.assertEqual(measured['F'], 1)
+
+    def test_primary_pool_concatenates_three_blocks_without_changing_record_weights(self):
+        blocks = dict(training=[record(0, 0, [0], 0, weight=.5), record(0, 1, [0], 0, weight=.5)],
+                      validation=[record(0, 2, [1], 0, weight=1)], test=[record(0, 3, [1], 0, weight=1)])
+        original = copy.deepcopy(blocks)
+        pooled = pool_blocks(blocks)
+        self.assertEqual(len(pooled), 4)
+        self.assertEqual([item['goal'] for item in pooled], [0, 1, 2, 3])
+        self.assertEqual([item['weight'] for item in pooled], [.5, .5, 1, 1])
+        self.assertEqual(weighted_mean(pooled, lambda item: item['success']), 1 / 3)
+        self.assertEqual(blocks, original)
+        with self.assertRaises(ValueError):
+            pool_blocks(dict(test=blocks['test']))
 
 
 if __name__ == '__main__':

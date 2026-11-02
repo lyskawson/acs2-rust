@@ -11,7 +11,7 @@ class ComparisonTests(unittest.TestCase):
             for seed in range(42, 47):
                 for point in (30000, 100000, 2000000):
                     metrics['maze4', arm, seed, point, 'pooled'] = dict(F=.5 + index * .05 + point * 1e-9,
-                        C=.4, M=.6 + index * .01, D=.3 + index * .02,
+                        C=.4 + point * 2e-9, M=.6 + index * .01, D=.3 + index * .02,
                         values=dict(all=dict(estimate_minus_q=index * 10 + seed, winner_goal_share=.2 + index * .1, winner_goal_mass=.1 + index * .05),
                                     failed=dict(estimate_minus_q=-9999)))
         rows = registered_results(metrics, [dict(task='maze4', targets=[30000, 100000, 2000000])])
@@ -21,7 +21,11 @@ class ComparisonTests(unittest.TestCase):
         self.assertLess(policy['se'], 1e-14)
         self.assertEqual(policy['nominal_step'], 2000000)
         first = next(row for row in rows if row['comparison'] == 'acs2: F - C' and row['nominal_step'] == 30000)
-        self.assertAlmostEqual(first['mean'], .10003)
+        self.assertAlmostEqual(first['mean'], .09997)
+        for index, arm in enumerate(ARMS):
+            for point in (30000, 100000, 2000000):
+                contrast = next(row for row in rows if row['comparison'] == arm + ': F - C' and row['nominal_step'] == point)
+                self.assertAlmostEqual(contrast['mean'], .1 + index * .05 - point * 1e-9, places=14)
         value = next(row for row in rows if row['comparison'] == 'acs2her - acs2er_episodic' and row['metric'] == 'estimate_minus_Q*')
         self.assertEqual(value['mean'], 10)
         winner = next(row for row in rows if row['comparison'] == 'acs2' and row['metric'] == 'winner_goal_mass')

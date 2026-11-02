@@ -36,6 +36,12 @@ def attach(records, model):
     return result
 
 
+def pool_blocks(blocks):
+    if set(blocks) != {'training', 'validation', 'test'}:
+        raise ValueError('primary pooling requires all three evaluation blocks')
+    return [record for records in blocks.values() for record in records]
+
+
 def weighted_mean(records, value):
     denominator = math.fsum(record['weight'] for record in records)
     return math.fsum(record['weight'] * value(record) for record in records) / denominator if denominator else None

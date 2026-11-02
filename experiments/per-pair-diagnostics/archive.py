@@ -30,7 +30,7 @@ def models(root):
     return result
 
 
-def catalog(batch, root):
+def catalog(batch, root, retain_rows=True):
     batch, root = Path(batch), Path(root)
     plan = load_plan(batch / 'plan.json', (batch / 'plan.sha256').read_text().strip())
     ledger = json.loads((batch / 'ledger.json').read_text())
@@ -83,14 +83,18 @@ def catalog(batch, root):
                     or record['Partition'] != 'lem-cpu-normal'):
                 raise ValueError('selected allocation did not complete on one Lem CPU')
             completion = json.loads((path / 'completion.json').read_text())
-            entries[config['id'], arm, seed] = dict(rows=rows, path=path, sha256=hashlib.sha256((path / 'rows.jsonl').read_bytes()).hexdigest(),
+            entries[config['id'], arm, seed] = dict(rows=rows if retain_rows else None, row_count=len(rows), pair_records=sum(sum(block['evaluation_pairs'] for block in row['evaluation_blocks'].values()) for row in rows), path=path, sha256=hashlib.sha256((path / 'rows.jsonl').read_bytes()).hexdigest(),
                 cost=dict(body_wall_seconds=completion['elapsed_seconds'], process_cpu_seconds=completion['user_cpu_seconds'] + completion['system_cpu_seconds'],
                           allocation_cpu_seconds=int(record['CPUTimeRAW']), peak_rss_kib=completion['peak_rss_kib']),
                 row_file_bytes=(path / 'rows.jsonl').stat().st_size, identity_rows=sum(item['rows'] for item in identities))
     return entries, dict(state, attempts=len(inventory), allocations=len(inventory), arrays=[entry['array_id'] for entry in ledger])
 
 
-def audit(root):
+def admissions_for(events, declared):
+    return [event for event in events if Path(event['root']) == Path(declared) / 'pilot']
+
+
+def audit(root, retain_rows=True):
     root = Path(root)
     registration = json.loads((root / 'pilot-registration.json').read_text())
     digest = hashlib.sha256((root / 'pilot-registration.json').read_bytes()).hexdigest()
@@ -114,10 +118,10 @@ def audit(root):
         path = root / 'operations' / name
         if not path.resolve().is_relative_to((root / 'operations').resolve()) or hashlib.sha256(path.read_bytes()).hexdigest() != checksum:
             raise ValueError('immutable operations changed')
-    entries, state = catalog(root / 'pilot', root)
+    entries, state = catalog(root / 'pilot', root, retain_rows=retain_rows)
     if state['spent_seconds'] > 4 * 3600 or state['reserved_seconds']:
         raise ValueError('pilot exceeds four allocated CPU-hours')
-    admissions = [json.loads(line) for line in (root / 'admission-decisions.jsonl').read_text().splitlines()]
+    admissions = admissions_for([json.loads(line) for line in (root / 'admission-decisions.jsonl').read_text().splitlines()], declared)
     ledger = json.loads((root / 'pilot/ledger.json').read_text())
     if len(admissions) != len(ledger):
         raise ValueError('every submission needs an admission record')
@@ -129,12 +133,11 @@ def audit(root):
             raise ValueError('pilot admission lacks scheduler, grant or budget evidence')
     runs = [dict(configuration_id=config, agent=arm, seed=seed, cost=entry['cost'], row_file_bytes=entry['row_file_bytes'],
                  row_bytes=[len(line) + 1 for line in (entry['path'] / 'rows.jsonl').read_bytes().splitlines()],
-                 rows=len(entry['rows']), identity_rows=entry['identity_rows'], source_rows_sha256=entry['sha256'])
+                 rows=entry['row_count'], identity_rows=entry['identity_rows'], source_rows_sha256=entry['sha256'])
             for (config, arm, seed), entry in sorted(entries.items())]
     summary = dict(verified=True, runs=runs, allocation_cpu_seconds=state['spent_seconds'], allocations=state['allocations'],
                    reserved_seconds=0, rows=sum(item['rows'] for item in runs), identity_rows=sum(item['identity_rows'] for item in runs),
-                   reference_runs=150, pairs_checked=sum(sum(block['evaluation_pairs'] for block in row['evaluation_blocks'].values())
-                       for entry in entries.values() for row in entry['rows']))
+                   reference_runs=150, pairs_checked=sum(entry['pair_records'] for entry in entries.values()))
     return entries, summary
 
 

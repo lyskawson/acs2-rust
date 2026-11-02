@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from analysis import attach, consistency, statistics_for
+from analysis import attach, consistency, pool_blocks, statistics_for
 from archive import audit, catalog, models
 from comparisons import registered_results
 from execution import replication
@@ -39,7 +39,7 @@ def analyze(root, output):
                 for row in entry['rows']:
                     point = row['nominal_step']
                     views = {name: attach(block['starts'], truth[config['task']]) for name, block in row['evaluation_blocks'].items()}
-                    views['pooled'] = [record for records in views.values() for record in records]
+                    views['pooled'] = pool_blocks(views)
                     for view, records in views.items():
                         measured = statistics_for(records)
                         metrics[config['task'], arm, seed, point, view] = measured
