@@ -1,6 +1,7 @@
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from protocol import ARMS, BLOCKS, configurations
@@ -28,6 +29,18 @@ def models(root):
     if set(result) != {config['task'] for config in configurations()}:
         raise ValueError('six environment models required')
     return result
+
+
+def validate_pair_aggregates(block):
+    records = block['starts']
+    totals = dict(success=math.fsum(record['weight'] * record['success'] for record in records),
+        mean_first_action_estimate=math.fsum(record['weight'] * record['estimated_first_action_value'] for record in records),
+        mean_discounted_return=math.fsum(record['weight'] * record['discounted_return'] for record in records))
+    expected = dict(success=block['success'], **{key: block['value_diagnostics']['all'][key]
+                    for key in ('mean_first_action_estimate', 'mean_discounted_return')})
+    for name, value in totals.items():
+        if not math.isclose(value, expected[name], rel_tol=2e-12, abs_tol=1e-12):
+            raise ValueError('pair records disagree with their block aggregate: ' + name)
 
 
 def catalog(batch, root, retain_rows=True):
@@ -73,6 +86,7 @@ def catalog(batch, root, retain_rows=True):
                 if row['preset'] != plan['preset'] or row['cpu_model'] != plan['cpu_model']:
                     raise ValueError('preset or hardware differs')
                 for block in row['evaluation_blocks'].values():
+                    validate_pair_aggregates(block)
                     attach(block['starts'], ground_truth[config['task']])
             declared = Path(plan['authorization_plan']).parent
             identities = verify_references(plan, entry, rows, lambda value: root / Path(value).relative_to(declared))

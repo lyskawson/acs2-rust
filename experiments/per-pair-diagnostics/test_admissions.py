@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from archive import admissions_for
+from archive import admissions_for, validate_pair_aggregates
 from verify import verify_admissions
 
 
@@ -28,6 +28,18 @@ class AdmissionTests(unittest.TestCase):
             verify_admissions(changed, ledgers, accounts, '/study')
         with self.assertRaises(ValueError):
             verify_admissions(events, ledgers, accounts, '/study', limit=.1)
+
+
+    def test_pair_success_and_value_records_must_reproduce_their_block_aggregates(self):
+        block = dict(starts=[dict(weight=.25, success=True, estimated_first_action_value=200.0, discounted_return=1000.0),
+                             dict(weight=.75, success=False, estimated_first_action_value=600.0, discounted_return=0.0)],
+                     success=.25, value_diagnostics=dict(all=dict(mean_first_action_estimate=500.0, mean_discounted_return=250.0)))
+        validate_pair_aggregates(block)
+        for key, value in [('success', False), ('estimated_first_action_value', 201.0), ('discounted_return', 0.0)]:
+            changed = copy.deepcopy(block)
+            changed['starts'][0][key] = value
+            with self.assertRaisesRegex(ValueError, 'aggregate'):
+                validate_pair_aggregates(changed)
 
 
 if __name__ == '__main__':
