@@ -48,7 +48,7 @@ def verify(root):
         if name == 'admission-decisions.jsonl':
             if not active.read_bytes().startswith((frozen / name).read_bytes()):
                 raise ValueError('shared admissions lost the original pilot prefix')
-        elif hashlib.sha256(active.read_bytes()).hexdigest() != digest:
+        elif name != 'shared-accounting.psv' and hashlib.sha256(active.read_bytes()).hexdigest() != digest:
             raise ValueError('active pilot file changed: ' + name)
     pilot, pilot_summary = audit(frozen, retain_rows=False)
     if pilot_summary != json.loads((frozen / 'pilot-summary.json').read_text()):
@@ -85,6 +85,8 @@ def verify(root):
     require_prefix(root / 'replication', manifest, ledgers['replication'])
     if len(ledgers['replication']) != 6 or len(more) != 120:
         raise ValueError('exactly six registered arrays and 120 replications required')
+    if (root / 'shared-accounting.psv').read_bytes() != (root / 'replication/accounting.psv').read_bytes():
+        raise ValueError('shared final accounting differs from the active scope')
     records = allocation_rows((root / 'replication/accounting.psv').read_text())
     accounts = {record['JobID']: record for record in records}
     required = {f"{entry['array_id']}_{index}" for ledger in ledgers.values() for entry in ledger for index in range(len(entry['runs']))}

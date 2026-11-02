@@ -73,3 +73,15 @@ def curves(metrics, metric_names):
         result.append(dict(post_hoc=True, maze=maze, arm=arm, nominal_step=point, view=view, metric=metric,
                            seed_values=list(seeds.values()), **summarize(list(seeds.values()))))
     return result
+
+
+def uniform_baselines(metrics, configs):
+    result = []
+    for config in configs:
+        point = config['targets'][-1]
+        for arm in ARMS:
+            values = {seed: metrics[config['task'], arm, seed, point, 'uniform_pairs'] for seed in range(42, 47)}
+            result.append(dict(post_hoc=True, view='uniform_pairs', maze=config['task'], comparison=arm + ': F - C',
+                metric='F-C', nominal_step=point, **paired({seed: item['F'] for seed, item in values.items()},
+                                                         {seed: item['C'] for seed, item in values.items()})))
+    return result
