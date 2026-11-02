@@ -5182,10 +5182,11 @@ unregistered temperature optimum or superiority of all ensembles is claimed.
 
 The diagnostic study in `experiments/per-pair-diagnostics/` repeats five unchanged
 presets on the six registered start-goal pair splits: ACS2, original-only episodic
-ER, full HER, nontrivial HER and shortened HER, the latter three at p=2/3. Stage 1
-allows only the thirty seed42 trajectories and four allocated CPU-hours including
-reservations. Seeds43--46 require approval of the subsequent exact registration and
-its cumulative limit. No learning rule, agent setting or checkpoint interface changes.
+ER, full HER, nontrivial HER and shortened HER, the latter three at p=2/3. The thirty
+seed42 trajectories were a cost pilot under four allocated CPU-hours including
+reservations. The subsequent exact registration and its fifteen-hour cumulative
+limit were approved before seeds43--46 ran. No learning rule, agent setting or
+checkpoint interface changes.
 
 With `--per-start`, the existing per-pair record adds `first_decision`, containing
 `random_fallback` and `winners`. Measurement adapters read their existing population
@@ -5279,12 +5280,141 @@ The single [registered diagnostic plan](../experiments/per-pair-diagnostics/plan
 SHA-256 `ec83bffbba7ca0d14315138abf03d6b485900d6f3c63dcfa0172ebe74a53d8d5`,
 fixes 120 replications before seeds43--46 run. Expected total cost including the
 pilot is 5.10 CPU-hours; doubled future cost plus pilot is 9.18; actual array hard
-reservations plus pilot are 14.353333. The proposed cumulative limit is fifteen
+reservations plus pilot are 14.353333. The approved cumulative limit is fifteen
 CPU-hours. Six twenty-job arrays use hard limits of 5, 8, 10, 10, 4 and 3 minutes
 for Maze4, Maze5, Maze6, Maze7, Woods14 and MazeMA, respectively. Each limit is the
 maximum across that maze's arms of ceil((2*pilot collector wall seconds+60)/60),
-with a three-minute minimum. No stage2 allocation or inference is authorized yet.
-The Polish stage report and complete accounting remain outside the checkout.
+with a three-minute minimum. The completed replication and its measurements are
+described below. The Polish reports and complete accounting remain outside the
+checkout.
+
+## Goal dependence and action value errors
+
+The approved [per-pair registration](../experiments/per-pair-diagnostics/plan.json)
+is complete: five unchanged arms, six mazes, seeds42--46, every original checkpoint
+and all three evaluation blocks. The 120 replications and thirty pilot runs all
+completed on their first allocation. Independent verification on WCSS and locally
+accepts all 1225 shared rows in binary64 bits and 1044150 pair records, including
+their distances, capped optima and weighted block aggregates. The two verification
+objects and all 150 row-file hashes are identical. Source, musl binary and original
+operations retain the pins given above. `sacct` CPUTimeRAW totals 19490 seconds:
+3672 for the pilot and 15818 for the replications, or 5.413889 of the approved
+fifteen allocated CPU-hours. No reservations remain.
+
+Six twenty-job arrays were admitted sequentially, each after mechanical manifest
+derivation, the shared grant check and `sbatch --test-only`. No learning run failed
+or was repeated. Two controller calls ended before a fourth submission when the
+original completed-row verifier exceeded the login memory limit. The resolved STOP
+and diagnosis are retained. `dispatch_arrays.py` runs that unchanged verifier once
+per complete array in bounded sequential foreground children and refuses retries
+requiring cross-array prefix checks. The pinned operations files, node execution
+and measurement binary were not modified. A later scheduler/accounting outage
+delayed admission; no submission proceeded without those checks.
+
+The registered inference uses five paired seed differences, sample standard errors
+and marginal 95% t(4) intervals with critical value 2.7764451051977987, without
+multiplicity correction. The primary weights give equal mass to each block. The
+final point is two million environment interactions except Woods14 at four million.
+The complete 228 entries, including every standard error and interval, are exported
+in `registered-comparisons.csv` and JSON outside Git. Here E denotes episodic ER,
+H full HER, N nontrivial HER and S shortened HER; all hindsight arms use p=2/3.
+
+All ninety registered F-C intervals are below zero: every arm, every maze, at
+30000, 100000 and the final point. C is the best structural goal-blind first-action
+coverage for the fixed pair universe; this result alone does not show that a
+policy ignores its goal. At the final point, H-E on F has intervals below zero on
+Maze4, Maze5 and Maze7. S-E on F includes zero on every maze. S-H on F is positive
+on Maze5; N-H on F is negative on Maze6 and Woods14. The other registered F
+contrasts include zero except ACS2-E on Maze4, which is positive.
+
+H-E on M is negative on Maze4--7, so HER's first action varies more across goals
+there. H-E on D is positive on Maze4--6 and MazeMA; the intervals include zero
+on Maze7 and Woods14. S-E on M is negative on Maze4--7 and MazeMA, while S-E on D
+is positive on Maze4--7. ACS2-E has negative M on Maze4--5 and positive D on
+Maze4--6. N-H has positive M on Maze5 and positive D on Maze7. Remaining registered
+M and D contrasts include zero. Changing actions for incompatible goals and
+choosing optimal actions are distinct properties.
+
+The registered all-pair value contrasts use estimate minus Q* for the actual first
+action, with optimal continuation within the remaining evaluation cap. Each cell
+below gives mean difference (SE; [95% interval]), in reward units.
+
+| Maze | H-E | N-H | S-H |
+|---|---|---|---|
+| Maze4 | 236.491 (16.713; [190.089, 282.894]) | 8.732 (13.672; [-29.227, 46.691]) | -21.194 (9.575; [-47.779, 5.392]) |
+| Maze5 | 241.396 (5.727; [225.495, 257.297]) | 3.170 (1.071; [0.198, 6.142]) | -15.959 (0.569; [-17.538, -14.380]) |
+| Maze6 | 264.174 (10.728; [234.387, 293.960]) | 10.619 (2.048; [4.932, 16.305]) | -16.785 (1.365; [-20.574, -12.995]) |
+| Maze7 | 230.713 (3.827; [220.088, 241.337]) | 8.431 (1.458; [4.382, 12.479]) | -15.047 (2.505; [-22.004, -8.091]) |
+| Woods14 | 354.809 (14.921; [313.382, 396.236]) | 20.417 (1.985; [14.904, 25.929]) | -51.640 (5.772; [-67.666, -35.615]) |
+| MazeMA | 216.462 (18.805; [164.252, 268.672]) | 14.104 (3.145; [5.371, 22.837]) | -32.626 (5.727; [-48.525, -16.726]) |
+
+H-E is positive on all six mazes. N-H is positive and S-H negative on five mazes;
+both Maze4 intervals include zero. These are errors against an environment model,
+not differences from the agent's realized return.
+
+The registered winner profile is the fraction of all first decisions supported by
+a winner specifying at least one goal attribute, with equal fractional credit for
+tied macroclassifiers. Five-seed final means are:
+
+| Maze | ACS2 | E | H | N | S |
+|---|---:|---:|---:|---:|---:|
+| Maze4 | .3403 | .2563 | .3948 | .4056 | .3764 |
+| Maze5 | .3188 | .2038 | .3406 | .3053 | .3218 |
+| Maze6 | .3063 | .2022 | .3498 | .3471 | .3261 |
+| Maze7 | .3089 | .2559 | .3325 | .3379 | .3311 |
+| Woods14 | .2795 | .1956 | .1895 | .1982 | .1839 |
+| MazeMA | .2500 | .2033 | .2480 | .2456 | .2428 |
+
+Their marginal intervals and standard errors are in the registered export. Most
+winning mass has no specified goal attribute, but HER does not simply have less
+goal-specific winning mass than E. This record does not identify which shared rule
+received which hindsight updates.
+
+All remaining views are post hoc. The nine figures (PNG and PDF) show F, M, D,
+the winner profile, F_mod, F-F_mod, nonmodal mass, both-optimal D and the zero/one/two
+goal-attribute split. Every curve is labelled post hoc and includes five-seed
+means with marginal t(4) bands. Block, solved/failed and exact-distance exports
+retain their denominators; the seed-consistency histogram is descriptive.
+
+In the post-hoc modal decomposition, H's deviations from its own most frequent
+action are useful on all six mazes: final F-F_mod intervals are positive. On
+Maze4--7, H-E on F_mod is negative, whereas H-E on the modal gain is positive.
+Thus the smaller HER F combines a poorer modal action with a larger useful gain
+from deviations. This algebraic decomposition is not a causal attribution to a
+learning mechanism. The modal action uses eligible pair weights at each start;
+ties choose the lowest action index.
+
+The post-hoc uniform ordered-pair sensitivity check preserves the positive H-E
+value-error contrast on all six mazes. Twelve corresponding final interval
+classifications change relative to registered weighting. In particular ACS2 and
+E F-C on MazeMA then include zero, and the registered N-H D interval on Maze7
+and N-H F interval on Woods14 also include zero, as does N-H value error on Maze5.
+Full sensitivity tables retain
+both weights; the registered results are not replaced. In the post-hoc winner
+split, mean mass specifying both goal coordinates ranges from .0108 to .0574
+across arm/maze cells. Final random fallbacks are zero; earlier seed/block cells
+reach .1053, so their exclusion remains necessary.
+
+These finite-budget diagnostics do not establish convergence or prove that
+anticipation-based generalization causes inflated values. Greedy tie shuffling
+can also contribute to action differences across goal evaluations. Q* uses optimal
+continuation rather than the evaluated policy, and two Maze4 pairs have zero
+capped value with all eight actions tied. Winner specificity is an equally weighted
+profile over tied macroclassifiers, not the hidden shuffled identity. The five-seed
+plug-in Binomial(5,k/5) comparison fits its rate to the same outcomes and supplies
+no independent heterogeneity test.
+
+Analysis source is frozen at `cc75661e828d8ba2fe6b061f3d7ed16953ead6d2`.
+`analyze.py` streams one checkpoint row at a time; `validate_exports.py` independently
+recomputes all 228 registered entries, 330 uniform and 180 modal contrasts, and
+29290 curve intervals from 5050 seed cells. Eight applied mutations cover action
+Q* attachment, full-set ceiling/random denominators, sample SE, t(4), all three
+registered points, three-block pooling and equal winner scores; all fail tests.
+Full gates pass: 351 Rust tests, 395 Python tests (43 in this study), identical P9
+learning columns, and 22 pre-existing clippy warnings with none new after cleaning
+all six workspace packages. Raw archives, inventories, tables, figures, accounting,
+mutation logs and the Polish report have two verified copies under
+`~/Desktop/tu-runs/per-pair-diagnostics/` and `~/tu_runs/per-pair-diagnostics/` on WCSS.
 
 ## Clippy — the determinism invariants, checked by machine
 
