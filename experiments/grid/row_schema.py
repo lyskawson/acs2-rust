@@ -4,6 +4,7 @@ import json
 from agent_names import agent_settings, canonical_run_name
 from vcp_schema import validate_vcp
 from replay_schema import AXES, parameters as replay_parameters, registered_axes, validate_passes
+from pair_schema import enabled as per_pair_enabled, validate_pairs
 
 EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachable_after_cap',
                      'unreachable_or_ambiguous', 'evaluation_pairs', 'evaluation_distribution',
@@ -35,6 +36,7 @@ def evaluation_blocks(row, required_blocks=None):
 
 
 def validate_blocks(row, config):
+    per_pair = per_pair_enabled(config)
     blocks = evaluation_blocks(row, config.get('evaluation_blocks'))
     if row['schema'] == 5 and config.get('protocol') == 'maze-pairs-v1':
         knowledge = row.get('knowledge')
@@ -55,7 +57,9 @@ def validate_blocks(row, config):
             raise ValueError('evaluation pair count differs from the registered block')
         if block['evaluation_distribution'] != 'exhaustive_exact_weights' or block['evaluation_standard_error'] != 0:
             raise ValueError('maze evaluation must use all pairs with exact weights')
-        if block['starts'] is not None or block['evaluation_sample_seed'] is not None or block['evaluation_sample_stream'] is not None:
+        if per_pair:
+            validate_pairs(row, config, name, block)
+        if (not per_pair and block['starts'] is not None) or block['evaluation_sample_seed'] is not None or block['evaluation_sample_stream'] is not None:
             raise ValueError('grid rows must be compact and exhaustive')
         for key in ('random_floor', 'reachable_within_cap'):
             if not math.isclose(block[key], reference[key], rel_tol=0, abs_tol=1e-12):

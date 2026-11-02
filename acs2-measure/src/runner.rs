@@ -158,6 +158,7 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64);
     fn declared_policy(&self) -> &'static str;
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64);
+    fn first_decision(&self, _head: usize, _state: &Perception<M>, _action: usize) -> Option<Value> { None }
     fn evaluation_heads(&self) -> usize { 1 }
     fn eval_head_action(&self, head: usize, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64) {
         assert_eq!(head, 0);
@@ -248,6 +249,10 @@ impl<A: LearningAgent<M>, const S: usize, const G: usize, const M: usize> GoalAg
             action,
             MaxFitnessBootstrap.estimate(population, &action_set),
         )
+    }
+    fn first_decision(&self, head: usize, state: &Perception<M>, action: usize) -> Option<Value> {
+        assert_eq!(head, 0);
+        Some(crate::first_decision::profile::<S, G, M>(self.agent.population(), state, action))
     }
     fn online_updates(&self) -> u64 {
         if self.replay {
@@ -536,11 +541,15 @@ where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
         let mut steps = 0u32;
         let mut first_action = 0usize;
         let mut estimate = 0.0;
+        let mut first_decision = None;
         let success = loop {
             let (action, value) = agent.eval_head_action(head, &state, &mut rng);
             if steps == 0 {
                 first_action = action;
                 estimate = value;
+                if record_starts {
+                    first_decision = agent.first_decision(head, &state, action);
+                }
             }
             let step = env.step(action);
             steps += 1;
@@ -565,9 +574,13 @@ where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
             }
         }
         if let Some(starts) = &mut result.starts {
-            starts.push(json!({"start": format!("{:?}", start), "goal": format!("{:?}", goal), "weight": weight,
+            let mut record = json!({"start": format!("{:?}", start), "goal": format!("{:?}", goal), "weight": weight,
                 "first_action": first_action, "estimated_first_action_value": estimate,
-                "discounted_return": discounted_return, "success": success, "steps": steps, "shortest_distance": distance}));
+                "discounted_return": discounted_return, "success": success, "steps": steps, "shortest_distance": distance});
+            if let Some(profile) = first_decision {
+                record["first_decision"] = profile;
+            }
+            starts.push(record);
         }
     }
     result.value_gap = result.estimated_first_action_value - result.discounted_return;

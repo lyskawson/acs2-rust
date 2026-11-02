@@ -136,6 +136,9 @@ def run(args):
                "--seeds", str(seed), "--targets", ",".join(map(str, config["targets"])), "--out", str(raw)]
     if 'protocol' in config:
         command.extend(['--protocol', config['protocol']])
+    from pair_schema import enabled as per_pair_enabled
+    if per_pair_enabled(config):
+        command.append('--per-start')
     if config.get('evaluation_blocks') == ['validation']:
         command.extend(['--evaluation-blocks', 'validation'])
     agent_settings = config.get('agent_settings', {}).get(agent, {})

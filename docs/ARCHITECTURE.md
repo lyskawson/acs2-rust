@@ -5178,6 +5178,71 @@ common disagreement, exact-zero shares and both sets of paired intervals; plotti
 software is recorded separately and does not enter measurement. No convergence,
 unregistered temperature optimum or superiority of all ensembles is claimed.
 
+## Per-pair first decisions and capped maze values
+
+The diagnostic study in `experiments/per-pair-diagnostics/` repeats five unchanged
+presets on the six registered start-goal pair splits: ACS2, original-only episodic
+ER, full HER, nontrivial HER and shortened HER, the latter three at p=2/3. Stage 1
+allows only the thirty seed42 trajectories and four allocated CPU-hours including
+reservations. Seeds43--46 require approval of the subsequent exact registration and
+its cumulative limit. No learning rule, agent setting or checkpoint interface changes.
+
+With `--per-start`, the existing per-pair record adds `first_decision`, containing
+`random_fallback` and `winners`. Measurement adapters read their existing population
+references after the actual first evaluation action. They scan matching classifiers
+directly, without forming another instrumented match set, mutating a classifier or
+calling a random source. No additional accessor in `acs2-agents` is needed. Without
+the flag this scan and allocation are absent. Regression tests compare all deterministic
+row fields in binary64 bits and final populations/random states with and without the
+flag, for all five arms. Existing compact fixtures remain unchanged. Wall times and
+source/hardware provenance use the established shared identity exclusions.
+
+The acting selector maximizes `fitness * numerosity`, with fitness = q*r, over
+matching change-anticipating classifiers. The action estimate instead maximizes
+fitness within the chosen action set. The record preserves that distinction. Every
+classifier for the chosen action tied at the global selection maximum contributes
+its specified state and goal attribute counts, q, r, fitness, experience, numerosity
+and selection score. The winner profile gives equal fractional credit to these
+tied macroclassifiers, the conditional expectation under the existing uniform
+shuffle. It does not claim to identify the hidden shuffled winner. Random fallbacks
+have an empty winner list. This is a first-decision profile, not a population dump.
+
+`acs2-measure/src/maze_truth.rs` and `acs2-maze-truth` use the public `MazeTopology`
+transition and shortest-path interfaces in `acs2-envs`, with no edits to that crate.
+Every action has its real successor, including self-loops on wall bumps. Immediate
+goal arrival pays 1000; other actions have .95 times the shortest-path successor
+value within cap-1. A shortest route of length d within the cap has value
+1000*.95^(d-1), computed through explicit multiplications. Routes beyond the cap
+have value zero. Every maximizing action is retained, including all eight when no
+action can reach the goal in time. The Bellman maximum must equal the direct capped
+shortest-path value bit for bit. Analysis also checks every recorded distance and
+value before accepting a pair. The registered protocol does contain pairs beyond
+the cap, so the uncapped exponential cannot hold on those pairs.
+
+Primary analysis concatenates the three blocks with their existing pair weights
+and normalizes the total, giving equal block mass. Goal-blind C takes a separate
+weighted maximum over actions at each start. F, the empirical agent mode M and both
+D rates exclude random fallbacks; D conditions on two goals at the same start with
+disjoint optimal sets, using products of pair weights. Registered D contrasts use
+the different-action rate; the both-optimal rate is also exported. Full-set C and
+the random reference retain all pairs as requested. Eligible-set references and
+distance views expose possible fallback selection and zero-value ties. Value errors
+use one fixed full pair universe across arms. Winner shares expose solved/failed
+and eligible/unconditional denominators. Undefined rates stay null with counts.
+
+The shared grid collection path admits per-pair records only under an explicit
+`per_start_diagnostics` manifest field for these five unchanged coordinate presets
+and the complete three-block pair protocol. It validates exact pair membership,
+weights, field sets, fallback consistency and winner scores. The additional identity
+mode removes only per-pair `starts` before the existing canonical bitwise comparison;
+all other deterministic fields, including newly encountered numeric fields, remain
+checked. The pilot freezes historical references for all five seeds before new runs.
+Execution reuses the shared one-shot dispatcher, immutable operations, node guards,
+shared STOP, one accounting scope, grant checks and scheduler test-only admission.
+The registered analysis fixes paired t(4) intervals, critical value
+2.7764451051977987, without multiplicity correction. Curves, distance and failed-pair
+breakdowns, block views and the plug-in binomial consistency histogram are post hoc.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:

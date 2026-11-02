@@ -80,6 +80,10 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
     fn eval_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64) {
         self.0.learner().greedy_action(state, rng)
     }
+    fn first_decision(&self, head: usize, state: &Perception<M>, action: usize) -> Option<Value> {
+        assert_eq!(head, 0);
+        Some(crate::first_decision::profile::<S, G, M>(self.0.learner().population(), state, action))
+    }
     fn online_updates(&self) -> u64 {
         0
     }

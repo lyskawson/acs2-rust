@@ -70,9 +70,19 @@ def verify_references(plan, entry, rows, resolve_path=None):
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             result = module.compare_rows(rows, pinned, entry['seed'], reference['targets'])
+        elif mode == 'per_pair_records':
+            result = compare_per_pair(rows, pinned, [entry['seed']], reference['targets'], reference['blocks'])
         elif mode is None:
             result = compare(rows, pinned, [entry['seed']], reference['targets'], reference['blocks'])
         else:
             raise ValueError('unregistered identity reference comparison')
         results.append(dict(result, reference_path=reference['path'], reference_sha256=reference['sha256']))
     return results
+
+
+def compare_per_pair(current, reference, seeds, targets, blocks):
+    def compact(rows):
+        return [dict(row, evaluation_blocks={name: dict(block, starts=None)
+                     for name, block in row['evaluation_blocks'].items()}) for row in rows]
+    result = compare(compact(current), compact(reference), seeds, targets, blocks)
+    return dict(result, per_pair_records='excluded; every other deterministic field checked')
