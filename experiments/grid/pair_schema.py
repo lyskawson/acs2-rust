@@ -31,6 +31,12 @@ def finite(value):
 def enabled(config):
     if 'per_start_diagnostics' in config and config['per_start_diagnostics'] is not True:
         raise ValueError('per-pair recording must be explicitly true or absent')
+    if config.get('per_start_diagnostics') and (
+            config.get('protocol') != 'maze-pairs-v1' or config.get('encoding') != 'coordinates'
+            or config.get('pool') != 'full' or config.get('row_schema') != 5
+            or config.get('task') not in MAZES or config.get('evaluation_blocks') != ['training', 'validation', 'test']
+            or config.get('agent_settings', {})):
+        raise ValueError('per-pair recording is restricted to the unchanged registered diagnostic study')
     return config.get('per_start_diagnostics', False)
 
 

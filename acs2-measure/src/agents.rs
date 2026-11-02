@@ -217,6 +217,11 @@ impl<R: RandomSource, const S: usize, const G: usize, const M: usize> GoalAgent<
             &self.0, state, rng,
         )
     }
+    fn first_decision(&self, head: usize, state: &Perception<M>, action: usize) -> Option<Value> {
+        <CoreAgent<acs2_agents::acs2er::one_update::Agent<M, R>, M> as GoalAgent<S, G, M>>::first_decision(
+            &self.0, head, state, action,
+        )
+    }
     fn online_updates(&self) -> u64 {
         0
     }

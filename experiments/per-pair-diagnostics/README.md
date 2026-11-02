@@ -32,8 +32,8 @@ F and M condition on nonfallback decisions. D uses unordered goal pairs with dis
 optimal sets, weighted by products of pair weights, and conditions on both decisions
 being nonfallback. It exports both different-action and both-optimal rates; registered
 D contrasts use the former. C retains all pairs as requested; eligible-set C is a
-post-hoc check for selection bias when fallbacks depend on the goal. Winner shares
-condition on a decision with winners and also expose unconditional masses.
+post-hoc check for selection bias when fallbacks depend on the goal. The registered winner share counts all decisions, with zero credit for fallbacks;
+conditional shares among decisions with winners are also exported.
 
 `analysis_registration()` specifies every registered contrast, t(4) interval and
 post-hoc view. Undefined seed rates are retained as null, never silently dropped.
@@ -67,3 +67,20 @@ retained. `archive.py` independently validates raw checksums, launch identity,
 accounting, every shared row bit, and every pair's distance and optimal value.
 The forecast doubles measured future allocation cost and reserves actual twenty-job
 array maxima. Raw rows, accounting, exports and Polish reports stay outside Git.
+
+The completed pilot has thirty first attempts, 245 bitwise identity rows and 208830
+validated pair records, at 3672 allocated CPU-seconds (1.02 hours). Both raw copies
+and their 767-file inventory are verified. The fixture
+`fixtures/per_pair_diagnostics_regression.json` pins 180 first-decision records and
+six complete archived distance rows (5178 pairs), with shared deterministic fields
+and deduplicated protocol metadata. Seven applied mutations fail their tests.
+
+The registered `plan.json` SHA-256 is
+`ec83bffbba7ca0d14315138abf03d6b485900d6f3c63dcfa0172ebe74a53d8d5`.
+Expected cumulative cost is 5.10 CPU-hours, doubled future cost plus pilot 9.18,
+and actual hard reservations plus pilot 14.353333. The proposed cumulative approval
+is fifteen CPU-hours. Six twenty-job arrays use 5/8/10/10/4/3-minute limits on
+Maze4/5/6/7, Woods14 and MazeMA. No seeds43--46 have been submitted.
+`execute_batch.py` re-derives each manifest before the shared one-shot dispatcher;
+replications require the approved plan, an explicit CPU-limit approval, a matching
+shared scope and a frozen execution-operations snapshot.

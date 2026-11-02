@@ -5228,7 +5228,9 @@ the different-action rate; the both-optimal rate is also exported. Full-set C an
 the random reference retain all pairs as requested. Eligible-set references and
 distance views expose possible fallback selection and zero-value ties. Value errors
 use one fixed full pair universe across arms. Winner shares expose solved/failed
-and eligible/unconditional denominators. Undefined rates stay null with counts.
+and eligible/unconditional denominators. The registered winner profile uses all
+first decisions, with zero credit for random fallbacks; its conditional share is
+also exported. Undefined rates stay null with counts.
 
 The shared grid collection path admits per-pair records only under an explicit
 `per_start_diagnostics` manifest field for these five unchanged coordinate presets
@@ -5242,6 +5244,47 @@ shared STOP, one accounting scope, grant checks and scheduler test-only admissio
 The registered analysis fixes paired t(4) intervals, critical value
 2.7764451051977987, without multiplicity correction. Curves, distance and failed-pair
 breakdowns, block views and the plug-in binomial consistency histogram are post hoc.
+
+The completed seed42 pilot uses measurement source
+`6bd4aa7ecbec34fd30bead3576869e61788cb025`, musl binary SHA-256
+`03c6a029da5808ea20c8835fa55bbdf7d85d5780b390001f41bc78f6c3aadd4b`,
+and immutable operations `4c38c2817af882ce60738963c9aa30a1cbd1d61d`.
+All thirty allocations completed on the first attempt. All 245 rows reproduce
+the historical shared learning, evaluation and knowledge fields in binary64 bits;
+208830 pair records pass the distance and capped-value checks. One thirty-job
+array reserved four CPU-hours with twenty-way concurrency; actual `sacct`
+CPUTimeRAW totals 3672 seconds (1.02 CPU-hours), with zero reservations. The
+767-file raw inventory and both archive copies are independently verified. Six
+model exports also reproduce byte for byte on aarch64 macOS and x86_64 musl.
+
+The 180-record regression slice covers the first and last pair of every block,
+all thirty runs at the first checkpoint, and every shared deterministic field.
+Six additional archived distance rows cover all 5178 pairs. Repeated protocol
+metadata is stored once per maze. Earlier fixtures retain their bytes. Seven
+applied mutations are rejected: omitted successor discount, a moved wall bump,
+dropped optimal ties, a global instead of per-start ceiling, an optimal-action
+instead of agent-action mode, included random fallbacks, and a skipped numeric
+identity field. The one-arm Maze4 local check uses 3000 interactions and ranks
+nothing. Raw row files total 129525776 bytes; per-run sizes and individual row
+ranges are exported outside Git with allocation, process and wall costs.
+
+The final workspace also delegates the read-only profile through
+`OneUpdateAdapter`, preserving its existing exact core-observer row comparison.
+That adapter is outside the five registered arms; the frozen pilot binary and
+its identity are retained. The final factory reproduces all thirty pilot slices.
+Full workspace gates pass with 351 Rust tests (343 previously), and the new study
+has 21 Python tests in addition to the 352 existing Python checks.
+
+The single [registered diagnostic plan](../experiments/per-pair-diagnostics/plan.json),
+SHA-256 `ec83bffbba7ca0d14315138abf03d6b485900d6f3c63dcfa0172ebe74a53d8d5`,
+fixes 120 replications before seeds43--46 run. Expected total cost including the
+pilot is 5.10 CPU-hours; doubled future cost plus pilot is 9.18; actual array hard
+reservations plus pilot are 14.353333. The proposed cumulative limit is fifteen
+CPU-hours. Six twenty-job arrays use hard limits of 5, 8, 10, 10, 4 and 3 minutes
+for Maze4, Maze5, Maze6, Maze7, Woods14 and MazeMA, respectively. Each limit is the
+maximum across that maze's arms of ceil((2*pilot collector wall seconds+60)/60),
+with a three-minute minimum. No stage2 allocation or inference is authorized yet.
+The Polish stage report and complete accounting remain outside the checkout.
 
 ## Clippy — the determinism invariants, checked by machine
 

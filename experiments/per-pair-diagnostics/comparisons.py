@@ -27,8 +27,8 @@ def registered_results(metrics, configurations):
                 **paired(values(left, final, lambda item: item['values']['all']['estimate_minus_q']),
                          values(right, final, lambda item: item['values']['all']['estimate_minus_q']))))
         for arm in ARMS:
-            observed = values(arm, final, lambda item: item['values']['all']['winner_goal_share'])
-            result.append(dict(maze=maze, comparison=arm, metric='winner_goal_share', nominal_step=final,
+            observed = values(arm, final, lambda item: item['values']['all']['winner_goal_mass'])
+            result.append(dict(maze=maze, comparison=arm, metric='winner_goal_mass', nominal_step=final,
                                view='pooled', registered=True, seed_values=list(observed.values()),
                                **summarize(list(observed.values()))))
     return result

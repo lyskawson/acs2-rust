@@ -40,7 +40,8 @@ class SchemaIdentityTests(unittest.TestCase):
         validate_blocks(row, config)
         with self.assertRaises(ValueError):
             validate_blocks(row, configurations()[0])
-        for key, value in [('per_start_diagnostics', False), ('encoding', 'perception'), ('evaluation_blocks', ['test'])]:
+        for key, value in [('per_start_diagnostics', False), ('encoding', 'perception'), ('evaluation_blocks', ['test']),
+                           ('protocol', None), ('agent_settings', {'acs2her': {'relabeled_proportion': .5}})]:
             changed = dict(config, **{key: value})
             with self.subTest(key=key), self.assertRaises(ValueError):
                 validate_blocks(row, changed)
