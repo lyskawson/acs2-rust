@@ -129,4 +129,6 @@ def consistency(seed_records):
         for count in range(6):
             expected[count] += weight * math.comb(5, count) * rate**count * (1 - rate)**(5 - count)
         pairs.append(dict(start=key[0], goal=key[1], solved_seeds=solved, mean_rate=rate, weight=weight))
-    return dict(pairs=pairs, observed=histogram, binomial_plugin=expected, post_hoc=True)
+    total = math.fsum(histogram)
+    return dict(pairs=pairs, observed=[value / total for value in histogram],
+                binomial_plugin=[value / total for value in expected], post_hoc=True)
