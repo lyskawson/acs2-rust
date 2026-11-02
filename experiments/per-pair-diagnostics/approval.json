@@ -1,0 +1,13 @@
+{
+  "approved": true,
+  "plan_sha256": "ec83bffbba7ca0d14315138abf03d6b485900d6f3c63dcfa0172ebe74a53d8d5",
+  "phase_cpu_hour_limit": 15,
+  "includes_pilot_cpu_seconds": 3672,
+  "measurement_commit": "6bd4aa7ecbec34fd30bead3576869e61788cb025",
+  "operations_commit": "4c38c2817af882ce60738963c9aa30a1cbd1d61d",
+  "binary_sha256": "03c6a029da5808ea20c8835fa55bbdf7d85d5780b390001f41bc78f6c3aadd4b",
+  "approved_date": "2026-11-02",
+  "authority": "Explicit user approval of the exact registered plan and cumulative limit after independent verification.",
+  "analysis_test_gaps": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"],
+  "post_hoc_additions": ["uniform ordered-pair weights", "own modal action and nonmodal decisions", "winner goal-attribute counts zero one two"]
+}
