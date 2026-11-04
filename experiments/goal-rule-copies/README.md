@@ -57,7 +57,7 @@ inside the two-hour pilot limit. Measurement source is `1c36582`; frozen operati
 are `b78e5e3`. The binary identity is in [measurement.json](measurement.json).
 
 The single [registered plan](plan.json) has SHA-256
-`24b71afbdccf67afd46bab36304a0f319933753f0c3a11b7b6393f2ef7f46330`.
+`cb38ee22abc0a73c2411adc0a2e3ba921c36b45290353359bbe9ea95d6e57449`.
 Its expected cumulative cost is 4.805556 CPU-hours; doubling the remaining measured
 cost gives 9.370833, while full hard reservations plus the pilot give 14.340278.
 The proposed cumulative approval is therefore 15 CPU-hours. This is a reservation

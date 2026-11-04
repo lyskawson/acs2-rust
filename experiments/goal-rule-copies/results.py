@@ -46,10 +46,10 @@ def decisions(rows, mazes):
         return bound is not None and (bound > 0 if positive else bound < 0)
     positive = {metric: sum(sign(interval(maze, 'success', metric), True) for maze in mazes) for metric in ('primary', 'final')}
     negative = {metric: sum(sign(interval(maze, 'success', metric), False) for maze in mazes) for metric in ('primary', 'final')}
-    if positive['primary'] >= 3 and negative['primary'] == 0:
-        outcome = 'helps'
-    elif (positive['final'] >= 3 and negative['primary'] >= 1) or (positive['primary'] >= 3 and negative['final'] >= 1):
+    if (positive['final'] >= 3 and negative['primary'] >= 1) or (positive['primary'] >= 3 and negative['final'] >= 1):
         outcome = 'trade-off'
+    elif positive['primary'] >= 3 and negative['primary'] == 0:
+        outcome = 'helps'
     else:
         outcome = 'does not help'
     confirmed = [maze for maze in ('maze4', 'maze5', 'maze6', 'maze7')

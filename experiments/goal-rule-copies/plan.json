@@ -25544,8 +25544,8 @@
       "trade_off": "Final interval above zero on >=3 mazes and primary below zero on >=1, or primary above zero on >=3 and final below zero on >=1.",
       "otherwise": "does not help",
       "precedence": [
-        "helps",
         "trade-off",
+        "helps",
         "does not help"
       ]
     },

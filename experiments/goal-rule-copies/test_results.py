@@ -58,3 +58,22 @@ class RegisteredResultsTests(unittest.TestCase):
             self.assertEqual(measured['outcome'], expected)
             self.assertTrue(measured['mechanism_confirmed'])
         self.assertFalse(decisions(rows([0]*6, [0]*6, over=(0,-1,-1,-1)), mazes)['mechanism_confirmed'])
+
+    def test_trade_off_precedes_helps_when_primary_improves_and_final_worsens(self):
+        mazes = [config['task'] for config in configurations()]
+        rows = []
+        for index, maze in enumerate(mazes):
+            intervals = {
+                ('success', 'primary'): (.1, .2) if index < 3 else (-.1, .1),
+                ('success', 'final'): (-.2, -.1) if index == 0 else (-.1, .1),
+                ('mechanism', 'F_mod'): (-.1, .1),
+                ('mechanism', 'estimate_above_v'): (-.1, .1),
+            }
+            for (group, metric), (low, high) in intervals.items():
+                rows.append(dict(maze=maze, reference='acs2her_shortened', group=group,
+                                 metric=metric, ci_low=low, ci_high=high))
+        measured = decisions(rows, mazes)
+        self.assertEqual(measured['positive']['primary'], 3)
+        self.assertEqual(measured['negative']['primary'], 0)
+        self.assertEqual(measured['negative']['final'], 1)
+        self.assertEqual(measured['outcome'], 'trade-off')

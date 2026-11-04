@@ -55,7 +55,7 @@ def analysis_registration():
         intervals='Paired seed differences, sample standard deviation / sqrt(n), marginal 95% t intervals, no multiplicity correction. Undefined seed slots remain null and invalidate the interval; no dropping or imputation.',
         outcome=dict(reference='acs2her_shortened', helps='Primary interval above zero on >=3 mazes and below zero on none.',
             trade_off='Final interval above zero on >=3 mazes and primary below zero on >=1, or primary above zero on >=3 and final below zero on >=1.',
-            otherwise='does not help', precedence=['helps', 'trade-off', 'does not help']),
+            otherwise='does not help', precedence=['trade-off', 'helps', 'does not help']),
         mechanism_confirmation='On >=3 of maze4, maze5, maze6, maze7, new-shortened F_mod interval is above zero AND estimate_above_v interval is below zero.',
         supplementary=['within-start spread/correlation', 'F-C=(F_mod-C)+(F-F_mod)', 'tie-required share of D',
             'uniform ordered-pair sensitivity pooled before reweighting', 'all-checkpoint F and F_mod figures against both references'],
