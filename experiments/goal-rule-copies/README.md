@@ -47,3 +47,29 @@ python3 -B <frozen-operations>/experiments/grid/submit.py --root <cluster-root>/
 Stage 2 will run the remaining nineteen seeds, compute the registered comparisons,
 plot F and F_mod over training against both references, and document the results in
 `docs/ARCHITECTURE.md`. No ranking follows from the cost pilot.
+
+## Cost pilot and registered continuation
+
+The six seed42 allocations completed without failure: 49 rows and 41,766 pair
+records passed the row, reward-counter, aggregate and capped-value checks. The
+allocated cost was 865 CPU-seconds (0.240278 CPU-hours), with zero reservations,
+inside the two-hour pilot limit. Measurement source is `1c36582`; frozen operations
+are `b78e5e3`. The binary identity is in [measurement.json](measurement.json).
+
+The single [registered plan](plan.json) has SHA-256
+`24b71afbdccf67afd46bab36304a0f319933753f0c3a11b7b6393f2ef7f46330`.
+Its expected cumulative cost is 4.805556 CPU-hours; doubling the remaining measured
+cost gives 9.370833, while full hard reservations plus the pilot give 14.340278.
+The proposed cumulative approval is therefore 15 CPU-hours. This is a reservation
+bound, not a prediction of actual CPU use. One cost seed does not bound other seeds.
+The remaining 114 runs are not authorized by stage 1.
+
+```bash
+python3 -B experiments/goal-rule-copies/archive.py <complete-pilot-root>
+python3 -B experiments/goal-rule-copies/prepare_plan.py <verified-pilot-root>
+python3 -B experiments/goal-rule-copies/analyze.py --root <complete-approved-study> --verification <independent-verification.json> --out <new-external-analysis-directory>
+```
+
+`prepare_plan.py` refuses to overwrite the existing registration. The analysis
+requires the exact approved plan and a complete independently verified run index;
+it cannot infer registered twenty-seed outcomes from the pilot.
