@@ -1,0 +1,9 @@
+{
+  "approved": true,
+  "plan_sha256": "cb38ee22abc0a73c2411adc0a2e3ba921c36b45290353359bbe9ea95d6e57449",
+  "phase_cpu_hour_limit": 15,
+  "includes_pilot_cpu_seconds": 865,
+  "test_remarks_commit": "b83222b4d1a1f41c206e70a482e1b49361a2c44c",
+  "approved_date": "2026-11-04",
+  "authorization": "User approved stage2 after closing the three required test remarks. Includes pilot, every attempt and all reservations; no pilot repetition or mechanism change."
+}
