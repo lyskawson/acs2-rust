@@ -73,6 +73,7 @@ fn restricted_hindsight_evaluation_preserves_counters_store_and_both_random_stre
     let preset = Preset::thesis();
     for variant in [
         acs2her::Preset::Acs2HerNontrivial,
+        acs2her::Preset::Acs2HerShortenedGoalRules,
         acs2her::Preset::Acs2HerShortened { proportion: 2.0 / 3.0 },
     ] {
         assert_protocol_evaluation_read_only(

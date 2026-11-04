@@ -96,6 +96,7 @@ fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
         random(7),
     ));
     for variant in [
+        acs2her::Preset::Acs2HerShortenedGoalRules,
         acs2her::Preset::Acs2Her { proportion: 0.5 },
         acs2her::Preset::Acs2HerShortened { proportion: 1.0 / 3.0 },
         acs2her::Preset::Acs2HerShortened { proportion: 0.5 },

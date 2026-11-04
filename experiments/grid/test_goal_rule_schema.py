@@ -35,3 +35,16 @@ class GoalRuleCountersTests(unittest.TestCase):
         row['replay_diagnostics']['reward_updates']['relabeled']['extra'] = 0
         with self.assertRaises(ValueError):
             validate_reward_updates(row, ARM)
+
+    def test_origin_violations_are_rejected_when_all_counts_still_reconcile(self):
+        for origin, changes in [
+            ('original', dict(without_goal=5, skipped_without_goal=1)),
+            ('relabeled', dict(without_goal=1, skipped_without_goal=10)),
+        ]:
+            row = sample()
+            route = row['replay_diagnostics']['reward_updates'][origin]
+            route.update(changes)
+            self.assertEqual(route['action_set_rules'],
+                             route['with_goal'] + route['without_goal'] + route['skipped_without_goal'])
+            with self.subTest(origin=origin), self.assertRaisesRegex(ValueError, 'actual origin'):
+                validate_reward_updates(row, ARM)

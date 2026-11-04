@@ -33,7 +33,10 @@ class AnalysisPipelineTests(unittest.TestCase):
                                         estimated_first_action_value=800+ai*80+(seed-42)*2+point+pair*3,
                                         first_decision=dict(random_fallback=False,winners=[dict(specified_goal_attributes=ai%2)])))
                                 blocks[('training','validation','test')[bi]]=dict(starts=records,
-                                    success=.1+point*.01+ai*.005*(seed-41))
+                                    success=(.1,.25,.4)[bi]+point*(.001,.002,.003)[bi]
+                                        +(seed-41)*(.0002,.0003,.0004)[bi]
+                                        +ai*((0,.02,.06)[bi]+(seed-41)*(.001,.002,.003)[bi]
+                                             +(point-10)*(.0001,.0004,.001)[bi]))
                             rows.append(dict(nominal_step=point,evaluation_blocks=blocks))
                         path=root/(config['id']+'_'+arm+str(seed)+'.jsonl')
                         path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
@@ -46,12 +49,22 @@ class AnalysisPipelineTests(unittest.TestCase):
             self.assertEqual(len(result['success']),360)
             self.assertEqual(len(result['curves']),180)
             self.assertEqual(len(result['supplementary']),450)
-            success=next(row for row in result['success'] if row['maze']=='maze4' and row['arm']==ARM and row['seed']==42)
-            self.assertAlmostEqual(success['primary'],.25)
-            self.assertAlmostEqual(success['final'],.3)
-            contrast=next(row for row in result['registered'] if row['maze']=='maze4' and row['reference']=='acs2er_episodic' and row['metric']=='primary')
-            self.assertAlmostEqual(contrast['mean'],-.105)
-            self.assertGreater(contrast['se'],0)
+            for success in result['success']:
+                ai=ARMS.index(success['arm'])
+                seed_offset=success['seed']-41
+                self.assertAlmostEqual(success['primary'],.445+.0004*seed_offset+ai*(.065+.003*seed_offset))
+                self.assertAlmostEqual(success['final'],.46+.0004*seed_offset+ai*(.07+.003*seed_offset))
+            for contrast in result['registered']:
+                if contrast['group']!='success':
+                    continue
+                ai=ARMS.index(contrast['reference'])
+                offset=.065 if contrast['metric']=='primary' else .07
+                expected=[-ai*(offset+.003*(seed-41)) for seed in range(42,62)]
+                self.assertAlmostEqual(contrast['mean'],-ai*(offset+.003*10.5))
+                self.assertEqual(len(contrast['seed_differences']),20)
+                for measured,value in zip(contrast['seed_differences'],expected):
+                    self.assertAlmostEqual(measured,value)
+                self.assertGreater(contrast['se'],0)
             values=[row for row in result['supplementary'] if row['maze']=='maze4' and row['arm']==ARM and row['seed']==42]
             pooled=next(row for row in values if row['view']=='pooled')
             uniform=next(row for row in values if row['view']=='uniform_pairs')
