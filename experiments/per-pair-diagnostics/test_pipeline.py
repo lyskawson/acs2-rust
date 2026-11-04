@@ -1,4 +1,6 @@
 import hashlib
+import csv
+import statistics
 import json
 from pathlib import Path
 import tempfile
@@ -59,11 +61,11 @@ class PipelineTests(unittest.TestCase):
             model_index, runs = [], []
             for config in configurations():
                 pairs = []
-                for index in range(3):
+                for index in range(7):
                     values = [902.5] * 8
-                    values[index] = 950.0
+                    values[index % 3] = 950.0
                     pairs.append(dict(start=[1, 1], goal=[2, index + 1], shortest_distance=2, value=950.0,
-                                      action_values=values, optimal_actions=[index]))
+                                      action_values=values, optimal_actions=[index % 3]))
                 model = dict(task=config['task'], gamma=.95, reward=1000, actions=8, cap=config['cap'], pairs=pairs)
                 relative = 'models/' + config['task'] + '.json'
                 (root / relative).write_text(json.dumps(model))
@@ -71,15 +73,18 @@ class PipelineTests(unittest.TestCase):
                 for arm_index, arm in enumerate(ARMS):
                     for seed in range(42, 47):
                         rows = []
-                        for point in config['targets']:
+                        for point_index, point in enumerate(config['targets']):
                             blocks = {}
                             for index, name in enumerate(('training', 'validation', 'test')):
-                                action = (seed + arm_index + index) % 3
-                                raw = dict(start='(1, 1)', goal='Goal { symbols: [Token(2), Token(%d)] }' % (index + 1),
-                                    shortest_distance=2, first_action=action, weight=1.0, success=action == index,
-                                    estimated_first_action_value=960.0 + seed, first_decision=dict(random_fallback=False,
-                                        winners=[dict(specified_goal_attributes=(arm_index + index) % 3)]))
-                                blocks[name] = dict(starts=[raw])
+                                indices = ([0], [1, 2], [3, 4, 5, 6])[index]
+                                records = []
+                                for pair in indices:
+                                    action = (seed + arm_index + index + pair + point_index) % 3
+                                    records.append(dict(start='(1, 1)', goal='Goal { symbols: [Token(2), Token(%d)] }' % (pair + 1),
+                                        shortest_distance=2, first_action=action, weight=1.0 / len(indices), success=action == pair % 3,
+                                        estimated_first_action_value=960.0 + seed + point_index, first_decision=dict(random_fallback=False,
+                                            winners=[dict(specified_goal_attributes=(arm_index + index) % 3)])))
+                                blocks[name] = dict(starts=records)
                             rows.append(dict(nominal_step=point, evaluation_blocks=blocks))
                         relative = config['task'] + '_' + arm + '_' + str(seed) + '.jsonl'
                         (root / relative).write_text(''.join(json.dumps(row) + '\n' for row in rows))
@@ -97,6 +102,30 @@ class PipelineTests(unittest.TestCase):
             checked = validate(output, source / 'plan.json')
             self.assertTrue(checked['verified'])
             self.assertEqual(checked['registered_comparisons'], 228)
+            task = configurations()[0]
+            final_index = len(task['targets']) - 1
+            rates = []
+            for seed in range(42, 47):
+                hits = sum((seed + block + pair + final_index) % 3 == pair % 3
+                    for block, indices in enumerate(([0], [1, 2], [3, 4, 5, 6])) for pair in indices)
+                rates.append(hits / 7)
+            cells = list(csv.DictReader((output / 'post-hoc-seed-metrics.csv').read_text().splitlines()))
+            uniform = [row for row in cells if row['maze'] == task['task'] and row['arm'] == 'acs2'
+                       and row['view'] == 'uniform_pairs']
+            self.assertEqual(len(uniform), 5)
+            for row in uniform:
+                self.assertEqual(float(row['F']), rates[int(row['seed']) - 42])
+                self.assertAlmostEqual(float(row['C']), 3 / 7)
+            pooled = [row for row in cells if row['maze'] == task['task'] and row['arm'] == 'acs2'
+                      and row['view'] == 'pooled' and int(row['nominal_step']) == task['targets'][-1]]
+            self.assertTrue(any(float(a['F']) != float(b['F']) for a, b in zip(uniform, pooled)))
+            comparisons = list(csv.DictReader((output / 'post-hoc-uniform-comparisons.csv').read_text().splitlines()))
+            baseline = next(row for row in comparisons if row['maze'] == task['task'] and row['comparison'] == 'acs2: F - C')
+            differences = [rate - 3 / 7 for rate in rates]
+            self.assertAlmostEqual(float(baseline['mean']), statistics.mean(differences))
+            self.assertAlmostEqual(float(baseline['se']), statistics.stdev(differences) / 5**.5)
+            self.assertGreater(float(baseline['se']), 0)
+
 
 
 if __name__ == '__main__':

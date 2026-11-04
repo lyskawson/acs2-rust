@@ -32,6 +32,7 @@ pub struct EpisodicConfiguration {
 pub enum CopyUpdate {
     Full,
     ValuesOnly,
+    GoalRules,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -86,6 +87,7 @@ pub struct EpisodicReplay<const S: usize, const G: usize, const M: usize, R, P> 
     sampler: Sampler<P>,
     counts: UpdateCounts,
     walls: WallCounters,
+    reward_updates: crate::acs2her::goal_rules::RewardUpdateCounts,
     plan: ReplayPlan,
     order_rng: Option<P>,
     passes: PassCounts,
@@ -119,6 +121,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             sampler: Sampler::new(sampler, sampler_rng),
             counts: UpdateCounts::default(),
             walls: WallCounters::default(),
+            reward_updates: Default::default(),
             plan: ReplayPlan::default(),
             order_rng: None,
             passes: PassCounts::default(),
@@ -185,6 +188,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         self.counts
     }
 
+    pub fn reward_update_counts(&self) -> crate::acs2her::goal_rules::RewardUpdateCounts {
+        self.reward_updates
+    }
+
     pub fn wall_counters(&self) -> WallCounters {
         self.walls
     }
@@ -204,6 +211,9 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             self.sampler.counters(),
             self.counts
         );
+        let original = if self.copy_update == CopyUpdate::GoalRules {
+            format!("{original}|{:?}", self.reward_updates)
+        } else { original };
         if self.plan == ReplayPlan::default() {
             original
         } else {
@@ -318,7 +328,15 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
-        if drawn.provenance.origin == SampleOrigin::Relabeled
+        if self.copy_update == CopyUpdate::GoalRules {
+            let relabeled = drawn.provenance.origin == SampleOrigin::Relabeled;
+            let counts = crate::acs2her::goal_rules::learning_step::<S, M>(
+                &mut self.population, &self.config, &drawn.scored.sample, time, &mut self.rng,
+                |classifier| !relabeled || crate::acs2her::goal_rules::specifies_goal::<S, M>(classifier),
+            );
+            self.reward_updates.observe(drawn.provenance.origin, counts);
+            self.counts.full += 1;
+        } else if drawn.provenance.origin == SampleOrigin::Relabeled
             && self.copy_update == CopyUpdate::ValuesOnly
         {
             values_learning_step(&mut self.population, &self.config, &drawn.scored.sample);

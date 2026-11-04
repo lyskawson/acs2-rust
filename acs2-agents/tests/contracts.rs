@@ -223,7 +223,7 @@ fn acs2her_presets_pin_copy_updates_goal_admissibility_and_proportions() {
         assert_eq!(
             sampler.relabeled_proportion.to_bits(),
             match variant {
-                acs2her::Preset::Acs2HerNontrivial => (2.0_f64 / 3.0).to_bits(),
+                acs2her::Preset::Acs2HerNontrivial | acs2her::Preset::Acs2HerShortenedGoalRules => (2.0_f64 / 3.0).to_bits(),
                 acs2her::Preset::Acs2Her { proportion }
                 | acs2her::Preset::Acs2HerShortened { proportion } => proportion.to_bits(),
                 acs2her::Preset::Acs2HerValues { proportion }

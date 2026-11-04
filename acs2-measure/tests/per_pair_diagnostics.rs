@@ -46,7 +46,7 @@ fn deterministic(mut row: Value) -> Value {
 }
 
 #[test]
-fn recording_all_five_arms_changes_only_pair_records_and_clock_times_in_binary64_bits() {
+fn recording_registered_arms_changes_only_pair_records_and_clock_times_in_binary64_bits() {
     let ResearchTask::GoalMaze(geometry) = ResearchTask::named("maze4").unwrap() else {
         unreachable!()
     };
@@ -58,6 +58,7 @@ fn recording_all_five_arms_changes_only_pair_records_and_clock_times_in_binary64
         "acs2her",
         "acs2her_nontrivial",
         "acs2her_shortened",
+        "acs2her_shortened_goal_rules",
     ] {
         let kind = AgentKind::from_run_name(arm, 2.0 / 3.0).unwrap();
         let run = |record_starts| {
@@ -237,4 +238,16 @@ fn environment_truth_matches_every_registered_pair_distance_on_all_six_mazes() {
             }
         }
     }
+}
+
+#[test]
+fn goal_rule_arm_has_an_exact_name_fixed_proportion_and_read_only_evaluation() {
+    assert!(AgentKind::from_run_name("acs2her_shortened_goal_rules_extra", 2.0 / 3.0).is_err());
+    assert!(AgentKind::from_run_name("acs2her_shortened_goal_rules", 0.5).is_err());
+    let ResearchTask::GoalMaze(geometry) = ResearchTask::named("maze4").unwrap() else { unreachable!() };
+    let distributions = MazePairDistributions::<Coordinates, 2>::registered("maze4", geometry, 5, "coordinates");
+    let run = |evaluate_points| run_protocol_with_sink::<_, _, 8, 2, 10>(
+        &distributions.protocol(), AgentKind::Acs2HerShortenedGoalRules, 42, &[30, 60],
+        &RunMetadata::test("test"), RunSettings { evaluate_points, capture_final_state: true }, &mut |_| {});
+    assert_eq!(run(true), run(false));
 }

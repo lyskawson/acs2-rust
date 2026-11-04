@@ -166,7 +166,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "available_steps": counts.available_steps, "emitted_steps": counts.emitted_steps,
             });
         }
-        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened") {
+        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules") {
             let walls = learner.wall_counters();
             diagnostics["wall_bumps"] = json!({
                 "relabeled_draws": walls.relabeled_draws,
@@ -174,6 +174,15 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "unchanged_state_terminal": walls.unchanged_state_terminal,
                 "proposals_equal_draws": true,
             });
+        }
+        if self.0.name() == "acs2her_shortened_goal_rules" {
+            let counts = learner.reward_update_counts();
+            let route = |value: acs2_agents::acs2her::goal_rules::RouteCounts| json!({
+                "draws": value.draws, "with_goal": value.with_goal, "without_goal": value.without_goal,
+                "skipped_without_goal": value.skipped_without_goal, "draws_with_goal": value.draws_with_goal,
+                "action_set_rules": value.action_set_rules,
+            });
+            diagnostics["reward_updates"] = json!({"original": route(counts.original), "relabeled": route(counts.relabeled)});
         }
         Some(diagnostics)
     }

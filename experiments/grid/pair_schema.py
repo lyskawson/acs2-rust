@@ -43,7 +43,7 @@ def enabled(config):
 def validate_pairs(row, config, name, block):
     if (config.get('protocol') != 'maze-pairs-v1' or config.get('encoding') != 'coordinates'
             or config.get('pool') != 'full' or config.get('row_schema') != 5
-            or config['task'] not in MAZES or row['agent'] not in ARMS
+            or config['task'] not in MAZES or row['agent'] not in (*ARMS, 'acs2her_shortened_goal_rules')
             or config.get('evaluation_blocks') != ['training', 'validation', 'test']
             or config.get('agent_settings', {}).get(row['agent'], {})):
         raise ValueError('per-pair records require the five unchanged registered diagnostic presets')

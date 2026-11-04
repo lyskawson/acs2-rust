@@ -48,6 +48,7 @@ pub enum AgentKind {
     Acs2ErEpisodic,
     Acs2Her { proportion: f64 },
     Acs2HerNontrivial,
+    Acs2HerShortenedGoalRules,
     Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
@@ -67,6 +68,7 @@ impl AgentKind {
             "acs2er_episodic" => Ok(Self::Acs2ErEpisodic),
             "acs2her" => Ok(Self::Acs2Her { proportion }),
             "acs2her_nontrivial" => Ok(Self::Acs2HerNontrivial),
+            "acs2her_shortened_goal_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedGoalRules),
             "acs2her_shortened" => Ok(Self::Acs2HerShortened { proportion }),
             "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
             "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
@@ -86,6 +88,7 @@ impl AgentKind {
             Self::Acs2ErEpisodic => "acs2er_episodic",
             Self::Acs2Her { .. } => "acs2her",
             Self::Acs2HerNontrivial => "acs2her_nontrivial",
+            Self::Acs2HerShortenedGoalRules => "acs2her_shortened_goal_rules",
             Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
@@ -865,11 +868,12 @@ where T: Task<S, G, M>, F: FnMut(Value),
                 )
             })
         }
-        AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. } => {
+        AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial | AgentKind::Acs2HerShortenedGoalRules | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. } => {
             use acs2_agents::episodic_replay::EpisodicAgent;
             let variant = match kind {
                 AgentKind::Acs2Her { proportion } => acs2_agents::acs2her::Preset::Acs2Her { proportion },
                 AgentKind::Acs2HerNontrivial => acs2_agents::acs2her::Preset::Acs2HerNontrivial,
+                AgentKind::Acs2HerShortenedGoalRules => acs2_agents::acs2her::Preset::Acs2HerShortenedGoalRules,
                 AgentKind::Acs2HerShortened { proportion } => acs2_agents::acs2her::Preset::Acs2HerShortened { proportion },
                 AgentKind::Acs2HerValues { proportion } => {
                     acs2_agents::acs2her::Preset::Acs2HerValues { proportion }
