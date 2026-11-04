@@ -24,13 +24,14 @@ modal decomposition, overestimation above V*, and the tie-required component of 
 A zero denominator remains null. Uniform-pair sensitivity first pools all blocks,
 then assigns every ordered pair equal mass. All supplementary views are post hoc.
 
-The only authorized allocations are six seed42 cost-pilot runs with per-pair records,
-up to two CPU-hours including reservations. The shared grid submission path re-derives
+The cost pilot authorized six seed42 runs with per-pair records, up to two CPU-hours
+including reservations. [approval.json](approval.json) now authorizes the registered
+continuation within fifteen cumulative CPU-hours, including the pilot and every attempt. The shared grid submission path re-derives
 the exact pilot manifest, verifies a clean pinned musl build and frozen operations,
 checks grant and queue reservations, and invokes scheduler test-only before submission.
 The pilot uses one six-job array with twenty-minute hard limits. Node guards and a
-shared STOP retain real failures. Seeds43--61 require separate approval of the single
-registered plan and a cumulative CPU-hour limit. Stage 1 does not submit them.
+shared STOP retain real failures. The continuation uses the same pinned measurement commit and static binary. Two
+streams share one accounting scope containing the immutable pilot; no pilot is repeated.
 
 References are reused from their original archives: shortened HER from the
 hindsight-admissibility study, episodic ER from the HER study, and per-pair records
@@ -44,8 +45,8 @@ python3 -B experiments/goal-rule-copies/prepare_pilot.py --out <new-local-root> 
 python3 -B <frozen-operations>/experiments/grid/submit.py --root <cluster-root>/pilot --manifest <cluster-root>/pilot-manifest.json --repo <pinned-TU-clone>
 ```
 
-Stage 2 will run the remaining nineteen seeds, compute the registered comparisons,
-plot F and F_mod over training against both references, and document the results in
+Stage 2 runs the remaining nineteen seeds, computes the registered comparisons,
+plots F and F_mod over training against both references, and documents the results in
 `docs/ARCHITECTURE.md`. No ranking follows from the cost pilot.
 
 ## Cost pilot and registered continuation
@@ -62,7 +63,7 @@ Its expected cumulative cost is 4.805556 CPU-hours; doubling the remaining measu
 cost gives 9.370833, while full hard reservations plus the pilot give 14.340278.
 The proposed cumulative approval is therefore 15 CPU-hours. This is a reservation
 bound, not a prediction of actual CPU use. One cost seed does not bound other seeds.
-The remaining 114 runs are not authorized by stage 1.
+The remaining 114 runs use the explicit stage2 approval in `approval.json`.
 
 ```bash
 python3 -B experiments/goal-rule-copies/archive.py <complete-pilot-root>
@@ -73,3 +74,44 @@ python3 -B experiments/goal-rule-copies/analyze.py --root <complete-approved-stu
 `prepare_plan.py` refuses to overwrite the existing registration. The analysis
 requires the exact approved plan and a complete independently verified run index;
 it cannot infer registered twenty-seed outcomes from the pilot.
+
+## Approved execution and verification
+
+The three required review remarks were closed by test-only commit `b83222b`:
+success blocks and both reference contrasts are distinct, origin tests preserve
+all other count identities, and both evaluation contracts include the new arm.
+The measurement commit, binary, registered plan and pilot remain unchanged.
+
+`prepare_execution.py` preserves the original 668-file inventory, snapshots clean
+operations, records the exact approval and creates `continuation/scope.json`.
+The shared dispatcher derives one 24-job diagnostic array and three 30-job compact
+arrays from the approved plan before submission. Each stream admits at most twenty
+running jobs, with at most two streams. Every admission checks the shared grant,
+expanded queue, scheduler test-only and cumulative spent plus reserved CPU-seconds.
+Original pilot files and its admission record are immutable; new events live under
+`continuation/`. No laptop controller or background process is needed.
+
+```bash
+python3 -B experiments/goal-rule-copies/prepare_execution.py --root <verified-study> --destination <absolute-cluster-study>
+python3 -B <execution-operations>/experiments/goal-rule-copies/execute_batch.py --root <cluster-study> --repo <pinned-TU-clone> --purpose diagnostics
+python3 -B <execution-operations>/experiments/goal-rule-copies/execute_batch.py --root <cluster-study> --repo <pinned-TU-clone> --purpose compact
+python3 -B <execution-operations>/experiments/goal-rule-copies/verify.py <cluster-study> --update-accounting
+python3 -B experiments/goal-rule-copies/verify.py <complete-local-study>
+python3 -B experiments/goal-rule-copies/analyze.py --root <complete-local-study> --verification <study>/verification.json --out <new-analysis-directory>
+python3 -B experiments/goal-rule-copies/diagnostics.py --root <complete-local-study> --verification <study>/verification.json --out <analysis-directory>
+uv run --project tools python -B experiments/goal-rule-copies/plot_results.py <analysis-directory>
+```
+
+Call the compact dispatcher again only after its preceding array is terminal.
+The verifier checks all attempts, JobIDRaw-deduplicated allocation accounting,
+exact assignments and source identities, every row and reward counter, per-pair
+aggregates and capped values, protected pilot files, immutable operations and
+admission receipts. The plotting export retains all five seed slots and labels
+curves and marginal t(4) bands as post hoc. PNG and SVG figures show F and F_mod
+for all three arms on each maze, plus one six-maze overview.
+
+Value-dose exports are post hoc descriptions of the recorded macroclassifier
+opportunities in the new arm. The retained-blind share divides original blind
+updates by original blind updates plus skipped relabeled blind opportunities.
+This denominator uses the observed trajectory and post-ALP action sets; it does
+not reconstruct the value-update count of either historical reference agent.
