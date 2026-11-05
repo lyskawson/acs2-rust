@@ -9,6 +9,7 @@ pub mod maze_truth;
 pub mod pair_protocol;
 pub mod reference;
 pub mod replay_plan;
+pub mod reward_dose;
 pub mod runner;
 pub mod task;
 pub mod trajectory;

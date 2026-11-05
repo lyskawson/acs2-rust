@@ -57,7 +57,7 @@ def prepare(root, manifest, repo, approval=None):
         maximum = 5 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
     if plan.get('experiment') == 'replay-schedule-and-order':
         maximum = 12 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
-    if plan.get('experiment') == 'goal-rule-copies':
+    if plan.get('experiment') in ('goal-rule-copies', 'reward-update-dose-control'):
         maximum = 2 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']
     if plan.get('experiment') == 'per-pair-diagnostics':
         maximum = 4 if plan['stage'] == 'authorized_cost_pilot' else plan['phase_cpu_hour_limit']

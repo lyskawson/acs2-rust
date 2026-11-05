@@ -1,0 +1,66 @@
+{
+  "mazes": {
+    "maze4": {
+      "binary64_hex": "0x1.3fb8052466296p-1",
+      "skip_probability": 0.6244508368427713,
+      "skipped_without_goal": 142514142,
+      "with_goal": 85709016
+    },
+    "maze5": {
+      "binary64_hex": "0x1.43a388b345a14p-1",
+      "skip_probability": 0.6321070402944451,
+      "skipped_without_goal": 141997590,
+      "with_goal": 82644094
+    },
+    "maze6": {
+      "binary64_hex": "0x1.48f7720dd0269p-1",
+      "skip_probability": 0.6425128595220261,
+      "skipped_without_goal": 155540108,
+      "with_goal": 86540818
+    },
+    "maze7": {
+      "binary64_hex": "0x1.3d1c9691f243fp-1",
+      "skip_probability": 0.6193587353856244,
+      "skipped_without_goal": 149597364,
+      "with_goal": 91938527
+    },
+    "mazema": {
+      "binary64_hex": "0x1.93d2380211740p-1",
+      "skip_probability": 0.7887132170223836,
+      "skipped_without_goal": 141250415,
+      "with_goal": 37839287
+    },
+    "woods14": {
+      "binary64_hex": "0x1.97c3da6e0acdfp-1",
+      "skip_probability": 0.796416116650473,
+      "skipped_without_goal": 216125525,
+      "with_goal": 55247091
+    }
+  },
+  "origin": "Relabeled",
+  "point": "final",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ],
+  "source_plan_sha256": "cb38ee22abc0a73c2411adc0a2e3ba921c36b45290353359bbe9ea95d6e57449",
+  "source_study": "goal-rule-copies"
+}

@@ -33,6 +33,7 @@ pub enum CopyUpdate {
     Full,
     ValuesOnly,
     GoalRules,
+    RandomRules,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -90,6 +91,7 @@ pub struct EpisodicReplay<const S: usize, const G: usize, const M: usize, R, P> 
     reward_updates: crate::acs2her::goal_rules::RewardUpdateCounts,
     plan: ReplayPlan,
     order_rng: Option<P>,
+    random_rule_updates: Option<crate::acs2her::random_rules::RandomRuleUpdates<P>>,
     passes: PassCounts,
     schedule_counts: ScheduleCounts,
 }
@@ -124,6 +126,7 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             reward_updates: Default::default(),
             plan: ReplayPlan::default(),
             order_rng: None,
+            random_rule_updates: None,
             passes: PassCounts::default(),
             schedule_counts: ScheduleCounts::default(),
         }
@@ -133,6 +136,21 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         assert_eq!(self.counts.environment_steps, 0);
         self.population = population;
         self
+    }
+
+    pub fn set_random_rule_updates(
+        &mut self,
+        parameters: crate::acs2her::random_rules::RandomRuleConfiguration,
+        rng: P,
+    ) {
+        assert_eq!(self.copy_update, CopyUpdate::RandomRules);
+        assert_eq!(self.counts, UpdateCounts::default());
+        assert!(self.random_rule_updates.is_none());
+        self.random_rule_updates = Some(crate::acs2her::random_rules::RandomRuleUpdates::new(parameters, rng));
+    }
+
+    pub fn random_rule_updates(&self) -> Option<&crate::acs2her::random_rules::RandomRuleUpdates<P>> {
+        self.random_rule_updates.as_ref()
     }
 
     pub fn with_replay_plan(mut self, plan: ReplayPlan, order_rng: Option<P>) -> Self {
@@ -213,6 +231,9 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         );
         let original = if self.copy_update == CopyUpdate::GoalRules {
             format!("{original}|{:?}", self.reward_updates)
+        } else { original };
+        let original = if self.copy_update == CopyUpdate::RandomRules {
+            format!("{original}|{}", self.random_rule_updates.as_ref().expect("injected reward-skip stream").snapshot())
         } else { original };
         if self.plan == ReplayPlan::default() {
             original
@@ -328,7 +349,12 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
-        if self.copy_update == CopyUpdate::GoalRules {
+        if self.copy_update == CopyUpdate::RandomRules {
+            self.random_rule_updates.as_mut().expect("injected reward-skip stream").learn::<S, M>(
+                &mut self.population, &self.config, &drawn.scored.sample, time, &mut self.rng, drawn.provenance.origin,
+            );
+            self.counts.full += 1;
+        } else if self.copy_update == CopyUpdate::GoalRules {
             let relabeled = drawn.provenance.origin == SampleOrigin::Relabeled;
             let counts = crate::acs2her::goal_rules::learning_step::<S, M>(
                 &mut self.population, &self.config, &drawn.scored.sample, time, &mut self.rng,

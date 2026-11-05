@@ -1,0 +1,175 @@
+{
+  "configurations": [
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2",
+      "rows": [
+        "5bc7423d8a0d02380655d058ee57fffe029d5325238e2ab4aecda7f059821a71",
+        "3f6e276fafbc11098f3c1f23be68390936d2b3d929980677d3fba9405b04c188"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2er",
+      "rows": [
+        "c4d7776932e976d689b83b1c4676f382f0b9a3b1e88011703c92b67605b85dcd",
+        "3ce7eeb617c5ca93c29db10f633e00940b1667abcf0de2a30c6099fe06eb8eb9"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2er_one_update",
+      "rows": [
+        "231a5b3719f89d26d0c408d70e5f5ff2f2469720af1be4ad3c38e8aeeebb7b52",
+        "47d67607adae2a767dcbf496717a58f6a7fb5d842136439acfa54907f1d9a6d2"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2er_episodic",
+      "rows": [
+        "33bb574ff69573a02c78a5caeb2f5f99ec09deb8b909a57ab47104dc22077f58",
+        "8f29c658fe9debeb8154220818dc1e4677ad2ebe4c9d62c5b9038df6d011467d"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her",
+      "rows": [
+        "df709159bcb18039b80482f1c97c11381414015e7d1a50fcdfa1c97789243ed9",
+        "0003140aed417bdee1106b52f410947f9d635714c5301186a52b9c4f10caedd9"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her_nontrivial",
+      "rows": [
+        "4a895acef93c102a0e4f87373f2b2e4db6f873d51e222c92071eafe916653802",
+        "d4e1bdae3ce4db249a01c416e72140cb8f155acab828b290c1da61947fabf9c5"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her_shortened",
+      "rows": [
+        "5912770493bb4cec7b7921ff9ee2b3231a22ddaea392924ff99ec07aa4b65c87",
+        "a2937bda121de99f7956f21c5aa3a87931bcd34e7ba0a948127f1293e966b35a"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her_values",
+      "rows": [
+        "ee49a27dcd6bcc5c53d8eb235297871dbc45b92f1bfa018cc41d7f13fb1b23ef",
+        "737e0ccbd2209a3aca586e6b15a413e52efb31218fbf2eadf185372fbeb686aa"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her_values_shortened",
+      "rows": [
+        "ce426d5aeedb990251ab055558bda800bf68cef60a7b3427b37117139fb4f317",
+        "27222e6e0b4533aef14e6144a01683d59367314b1cb943d4071ede1c42f30924"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2vcp_k2",
+      "rows": [
+        "ec7a53eaf8052b208571ab53433ba20a314d8200bfacccf0ba422842375c4363",
+        "77c58898237d89baf0e23e9870b0e761d4a9d50c3b9b630bae9f01316c12b7f9"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2vcp_k4",
+      "rows": [
+        "938f337d7f5655128c2533c778df2e4cc0fbeb98af0a3074934f0959621efb6d",
+        "b9799e15a599c212a4a373e1b5a59865246131e8bceadcb5e483cf1f1835e3d0"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2vcp_k2_uniform",
+      "rows": [
+        "33c0b3114712524da4cdc48eaf96c5110e3fee410dc0b197c1e096072f54bb7e",
+        "ebf51fa501d10e491403f0057ca34103fb1606f21c086a6c54e04d2e87c485ab"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2vcp_k4_uniform",
+      "rows": [
+        "2b4b7fac44f694694b1a7cc58626faafba5b6fe99c80925eaa31f982fd95f281",
+        "cd1bed4c0dea0d27d86cde39fc6117fb84363df48c7d2b81f9798eb1d9139739"
+      ]
+    },
+    {
+      "task": "maze4",
+      "cap": 5,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "045bf97e43451687b7f06a0859924c6c119a188b19eba9adf492d3edfd3560b8",
+        "e2d1872a513d342244b63327f4864ac3af4459e1f414b8de02e1a24d3595e907"
+      ]
+    },
+    {
+      "task": "maze5",
+      "cap": 8,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "0dde4bbad7b0cff6871c862fc21cc775bbd35e16f6d34f40ab00ab547d425ac2",
+        "d5890a9c718029f34d0b070027537679d9fec97b5785aa1bbdd5ea5530fcd87e"
+      ]
+    },
+    {
+      "task": "maze6",
+      "cap": 10,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "9bf85b6cbf75bcd22be68ed1a9a0603bdab127607cb942cbab237bde16962c99",
+        "995fdf6d127ebee2867fcbb0523e02b2b1f3d4a81e55d385a669b30063d173b3"
+      ]
+    },
+    {
+      "task": "maze7",
+      "cap": 10,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "b68c3c542b40ff540152d7f429e334d078f801750d908f991681f3db6d7ff3d1",
+        "add142aefa3647a1c6a39e4f697fbdbb36fea487b797e2445b0ee8d873a8668d"
+      ]
+    },
+    {
+      "task": "woods14",
+      "cap": 18,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "1cd8d79825841b8758459baefbf48b44d602910ae147390481a5dd1f560312f9",
+        "2c0ca0d927b259b81b97c4e636795c83dff95acbbb6d1a41fc96d68f0337b8c5"
+      ]
+    },
+    {
+      "task": "mazema",
+      "cap": 9,
+      "arm": "acs2her_shortened_goal_rules",
+      "rows": [
+        "4383bc9a2e062c5edeb5738cae560cd85678455142bc489860169716832b5f41",
+        "4376921c547b414435e0b84a6e99533af6256b56b0686ad467b6f0aa10f86882"
+      ]
+    }
+  ]
+}

@@ -72,6 +72,12 @@ where
         random(7),
     )
     .with_population(Population::from_classifiers(rules));
+    if agent.learner().copy_update() == acs2_agents::episodic_replay::CopyUpdate::RandomRules {
+        agent.learner_mut().set_random_rule_updates(
+            acs2her::random_rules::RandomRuleConfiguration { skip_probability: 0.63 },
+            random(acs2her::random_rules::SKIP_STREAM),
+        );
+    }
     let measured = EpisodicGoalAgent(agent);
     let before = measured.0.learner().snapshot();
     for (desired, action) in [(7, 0), (9, 1)] {
@@ -97,6 +103,7 @@ fn episodic_evaluation_ignores_the_thesis_epsilon_of_point_eight() {
     ));
     for variant in [
         acs2her::Preset::Acs2HerShortenedGoalRules,
+        acs2her::Preset::Acs2HerShortenedRandomRules,
         acs2her::Preset::Acs2Her { proportion: 0.5 },
         acs2her::Preset::Acs2HerShortened { proportion: 1.0 / 3.0 },
         acs2her::Preset::Acs2HerShortened { proportion: 0.5 },

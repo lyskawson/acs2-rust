@@ -54,6 +54,17 @@ pub(crate) fn learning_step<const S: usize, const M: usize>(
     rng: &mut dyn RandomSource,
     keep: impl Fn(&Classifier<M>) -> bool,
 ) -> RouteCounts {
+    learning_step_counted::<S, M>(population, config, sample, time, rng, keep).0
+}
+
+pub(crate) fn learning_step_counted<const S: usize, const M: usize>(
+    population: &mut Population<M>,
+    config: &Configuration,
+    sample: &ReplaySample<M>,
+    time: u64,
+    rng: &mut dyn RandomSource,
+    mut keep: impl FnMut(&Classifier<M>) -> bool,
+) -> (RouteCounts, u64) {
     let matched = population.form_match_set(&sample.state);
     let mut action_set = population.form_action_set(&matched, sample.action);
     let mut next_matched = population.form_match_set(&sample.next_state);
@@ -79,6 +90,7 @@ pub(crate) fn learning_step<const S: usize, const M: usize>(
         action_set_rules: action_set.len() as u64,
         ..Default::default()
     };
+    let mut skipped_with_goal = 0;
     for &reference in &action_set {
         let classifier = population.get_mut(reference);
         let goal = specifies_goal::<S, M>(classifier);
@@ -98,6 +110,8 @@ pub(crate) fn learning_step<const S: usize, const M: usize>(
             } else {
                 counts.without_goal += 1;
             }
+        } else if goal {
+            skipped_with_goal += 1;
         } else {
             counts.skipped_without_goal += 1;
         }
@@ -118,7 +132,7 @@ pub(crate) fn learning_step<const S: usize, const M: usize>(
             rng,
         );
     }
-    counts
+    (counts, skipped_with_goal)
 }
 
 #[cfg(test)]

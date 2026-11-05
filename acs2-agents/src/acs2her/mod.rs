@@ -5,6 +5,7 @@ use acs2_trajectory::{Admissibility, GoalStrategy, SamplerConfiguration, Selecti
 use crate::episodic_replay::{CopyUpdate, EpisodicAgent, EpisodicConfiguration, EpisodicReplay};
 
 pub mod goal_rules;
+pub mod random_rules;
 
 #[cfg(test)]
 mod pyalcs_differential;
@@ -14,6 +15,7 @@ pub enum Preset {
     Acs2Her { proportion: f64 },
     Acs2HerNontrivial,
     Acs2HerShortenedGoalRules,
+    Acs2HerShortenedRandomRules,
     Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
@@ -32,6 +34,7 @@ impl Preset {
             Self::Acs2Her { .. } => "acs2her",
             Self::Acs2HerNontrivial => "acs2her_nontrivial",
             Self::Acs2HerShortenedGoalRules => "acs2her_shortened_goal_rules",
+            Self::Acs2HerShortenedRandomRules => "acs2her_shortened_random_rules",
             Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
@@ -46,6 +49,11 @@ impl Preset {
             },
             Self::Acs2HerShortenedGoalRules => HindsightConfiguration {
                 copy_update: CopyUpdate::GoalRules,
+                admissibility: Admissibility::CounterfactualEpisode,
+                relabeled_proportion: 2.0 / 3.0,
+            },
+            Self::Acs2HerShortenedRandomRules => HindsightConfiguration {
+                copy_update: CopyUpdate::RandomRules,
                 admissibility: Admissibility::CounterfactualEpisode,
                 relabeled_proportion: 2.0 / 3.0,
             },

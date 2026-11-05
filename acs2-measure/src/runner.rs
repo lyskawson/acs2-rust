@@ -49,6 +49,7 @@ pub enum AgentKind {
     Acs2Her { proportion: f64 },
     Acs2HerNontrivial,
     Acs2HerShortenedGoalRules,
+    Acs2HerShortenedRandomRules,
     Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
@@ -69,6 +70,7 @@ impl AgentKind {
             "acs2her" => Ok(Self::Acs2Her { proportion }),
             "acs2her_nontrivial" => Ok(Self::Acs2HerNontrivial),
             "acs2her_shortened_goal_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedGoalRules),
+            "acs2her_shortened_random_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedRandomRules),
             "acs2her_shortened" => Ok(Self::Acs2HerShortened { proportion }),
             "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
             "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
@@ -89,6 +91,7 @@ impl AgentKind {
             Self::Acs2Her { .. } => "acs2her",
             Self::Acs2HerNontrivial => "acs2her_nontrivial",
             Self::Acs2HerShortenedGoalRules => "acs2her_shortened_goal_rules",
+            Self::Acs2HerShortenedRandomRules => "acs2her_shortened_random_rules",
             Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
@@ -868,12 +871,13 @@ where T: Task<S, G, M>, F: FnMut(Value),
                 )
             })
         }
-        AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial | AgentKind::Acs2HerShortenedGoalRules | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. } => {
+        AgentKind::Acs2Her { .. } | AgentKind::Acs2HerNontrivial | AgentKind::Acs2HerShortenedGoalRules | AgentKind::Acs2HerShortenedRandomRules | AgentKind::Acs2HerShortened { .. } | AgentKind::Acs2HerValues { .. } | AgentKind::Acs2HerValuesShortened { .. } => {
             use acs2_agents::episodic_replay::EpisodicAgent;
             let variant = match kind {
                 AgentKind::Acs2Her { proportion } => acs2_agents::acs2her::Preset::Acs2Her { proportion },
                 AgentKind::Acs2HerNontrivial => acs2_agents::acs2her::Preset::Acs2HerNontrivial,
                 AgentKind::Acs2HerShortenedGoalRules => acs2_agents::acs2her::Preset::Acs2HerShortenedGoalRules,
+                AgentKind::Acs2HerShortenedRandomRules => acs2_agents::acs2her::Preset::Acs2HerShortenedRandomRules,
                 AgentKind::Acs2HerShortened { proportion } => acs2_agents::acs2her::Preset::Acs2HerShortened { proportion },
                 AgentKind::Acs2HerValues { proportion } => {
                     acs2_agents::acs2her::Preset::Acs2HerValues { proportion }
@@ -891,6 +895,15 @@ where T: Task<S, G, M>, F: FnMut(Value),
                     agent_rng,
                     ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
                 ));
+            if kind == AgentKind::Acs2HerShortenedRandomRules {
+                assert_eq!(S, 8);
+                assert_eq!(G, 2);
+                assert_eq!(task.encoding(), "coordinates");
+                agent.0.learner_mut().set_random_rule_updates(
+                    crate::reward_dose::registered(task.name()),
+                    ChaChaRandomSource::from_seed_and_stream(seed, acs2_agents::acs2her::random_rules::SKIP_STREAM),
+                );
+            }
             agent.0.learner_mut().set_replay_plan(replay_plan, crate::replay_plan::order_rng(replay_plan, seed));
             run_goal_agent_protocol_with_sink(
                 protocol,

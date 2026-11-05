@@ -166,7 +166,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "available_steps": counts.available_steps, "emitted_steps": counts.emitted_steps,
             });
         }
-        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules") {
+        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules" | "acs2her_shortened_random_rules") {
             let walls = learner.wall_counters();
             diagnostics["wall_bumps"] = json!({
                 "relabeled_draws": walls.relabeled_draws,
@@ -181,6 +181,19 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "draws": value.draws, "with_goal": value.with_goal, "without_goal": value.without_goal,
                 "skipped_without_goal": value.skipped_without_goal, "draws_with_goal": value.draws_with_goal,
                 "action_set_rules": value.action_set_rules,
+            });
+            diagnostics["reward_updates"] = json!({"original": route(counts.original), "relabeled": route(counts.relabeled)});
+        }
+        if let Some(updates) = learner.random_rule_updates() {
+            let counts = updates.counts();
+            let route = |value: acs2_agents::acs2her::random_rules::RandomRouteCounts| json!({
+                "draws": value.updates.draws,
+                "with_goal": value.updates.with_goal,
+                "without_goal": value.updates.without_goal,
+                "skipped_without_goal": value.updates.skipped_without_goal,
+                "skipped_with_goal": value.skipped_with_goal,
+                "draws_with_goal": value.updates.draws_with_goal,
+                "action_set_rules": value.updates.action_set_rules,
             });
             diagnostics["reward_updates"] = json!({"original": route(counts.original), "relabeled": route(counts.relabeled)});
         }
@@ -199,6 +212,10 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
             "sampler_truncation": format!("{:?}", sampler.truncation), "sampler_stream": acs2_trajectory::SAMPLER_STREAM,
             "learning_clock": "episode_end_environment_steps"});
         crate::replay_plan::annotate(&mut parameters, learner.replay_plan());
+        if let Some(updates) = learner.random_rule_updates() {
+            parameters["reward_skip_probability"] = json!(updates.parameters().skip_probability);
+            parameters["reward_skip_stream"] = json!(acs2_agents::acs2her::random_rules::SKIP_STREAM);
+        }
         parameters
     }
 }

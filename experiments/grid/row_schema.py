@@ -6,6 +6,7 @@ from vcp_schema import validate_vcp
 from replay_schema import AXES, parameters as replay_parameters, registered_axes, validate_passes
 from pair_schema import enabled as per_pair_enabled, validate_pairs
 from goal_rule_schema import validate_reward_updates
+from random_rule_schema import ARM as RANDOM_ARM, SKIP_STREAM, probability, validate_random_rewards
 
 EVALUATION_FIELDS = ('success', 'random_floor', 'reachable_within_cap', 'reachable_after_cap',
                      'unreachable_or_ambiguous', 'evaluation_pairs', 'evaluation_distribution',
@@ -76,7 +77,7 @@ def validate_replay(row, config, agent):
     if agent.startswith('acs2vcp'):
         validate_vcp(row, config, agent)
         return
-    restricted_full = agent in ('acs2her_nontrivial', 'acs2her_shortened', 'acs2her_shortened_goal_rules')
+    restricted_full = agent in ('acs2her_nontrivial', 'acs2her_shortened', 'acs2her_shortened_goal_rules', RANDOM_ARM)
     if agent not in ('acs2er_episodic', 'acs2her', 'acs2her_values', 'acs2her_values_shortened', 'acs2er_one_update') and not restricted_full:
         return
     updates = row['replay_updates']
@@ -126,6 +127,10 @@ def validate_replay(row, config, agent):
                     copy_update='Full' if agent in ('acs2er_episodic', 'acs2her') else 'ValuesOnly',
                     relabeled_proportion=0.0 if agent == 'acs2er_episodic' else agent_settings(config, agent).get('relabeled_proportion', 2 / 3))
     settings = agent_settings(config, agent)
+    if agent == RANDOM_ARM:
+        if settings:
+            raise ValueError('random-rule control fixes every preset parameter')
+        expected.update(reward_skip_probability=probability(config['task']), reward_skip_stream=SKIP_STREAM)
     if agent == 'acs2her_shortened_goal_rules' and settings:
         raise ValueError('goal-rule copies fix every preset parameter')
     axes = registered_axes(config, agent)
@@ -138,6 +143,8 @@ def validate_replay(row, config, agent):
     if restricted_full:
         expected.update(copy_update='GoalRules' if agent == 'acs2her_shortened_goal_rules' else 'Full', relabeled_proportion=settings.get('relabeled_proportion', 2 / 3),
                         admissibility='FromNonGoalState' if agent == 'acs2her_nontrivial' else 'CounterfactualEpisode')
+        if agent == RANDOM_ARM:
+            expected['copy_update'] = 'RandomRules'
         if (set(parameters) != set(expected) or (agent == 'acs2her_nontrivial' and set(settings) - AXES)
                 or any(type(parameters[key]) is not type(value) for key, value in expected.items())):
             raise ValueError('restricted full hindsight presets have fixed parameters')
@@ -184,10 +191,13 @@ def validate_replay(row, config, agent):
             raise ValueError('objective purposes do not sum to the total')
     if any(value['objective_evaluations'] != value['reward_evaluations'] + value['reach_evaluations'] for value in purposes.values()):
         raise ValueError('objective cost decomposition differs')
-    validate_reward_updates(row, agent)
+    if agent == RANDOM_ARM:
+        validate_random_rewards(row)
+    else:
+        validate_reward_updates(row, agent)
     if restricted_full:
         copies = routes['relabeled']
-        if copies['already_reached'] or (agent in ('acs2her_shortened', 'acs2her_shortened_goal_rules') and copies['after_counterfactual_end']):
+        if copies['already_reached'] or (agent in ('acs2her_shortened', 'acs2her_shortened_goal_rules', RANDOM_ARM) and copies['after_counterfactual_end']):
             raise ValueError('restricted hindsight retained an inadmissible copy')
         walls = diagnostics.get('wall_bumps', {})
         if set(walls) != {'relabeled_draws', 'unchanged_state', 'unchanged_state_terminal', 'proposals_equal_draws'}:
