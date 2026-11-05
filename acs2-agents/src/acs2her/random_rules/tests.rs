@@ -124,7 +124,7 @@ fn unequal_rule_kinds_receive_independent_coins_with_the_same_probability() {
 
 #[test]
 fn original_and_fallback_update_every_rule_without_consuming_a_skip_coin() {
-    for fallback in [false, true] {
+    for (fallback, probability) in [(false, 1.0), (true, 1.0), (false, 0.63), (true, 0.63)] {
         let config = config(false);
         let replay = EpisodicConfiguration { capacity: 100, warmup: 1, updates_per_step: 3, truncation: TruncationMode::Bootstrap };
         let mut agent = Agent::<1, 1, 2, _, _>::new(config.clone(), replay, Preset::Acs2HerShortenedRandomRules,
@@ -133,7 +133,7 @@ fn original_and_fallback_update_every_rule_without_consuming_a_skip_coin() {
             config.clone(), replay, agent.learner().sampler().configuration(), crate::episodic_replay::CopyUpdate::RandomRules,
             ChaChaRandomSource::from_seed(42), ChaChaRandomSource::from_seed(43),
         ).with_population(population(&config));
-        agent.learner_mut().set_random_rule_updates(RandomRuleConfiguration { skip_probability: 1.0 }, ChaChaRandomSource::from_seed(44));
+        agent.learner_mut().set_random_rule_updates(RandomRuleConfiguration { skip_probability: probability }, ChaChaRandomSource::from_seed(44));
         let before = agent.learner().random_rule_updates().unwrap().rng.capture_state();
         agent.learner_mut().learn_draw(&draw(SampleOrigin::Original, fallback), 10);
         let state = agent.learner().random_rule_updates().unwrap();
@@ -143,9 +143,10 @@ fn original_and_fallback_update_every_rule_without_consuming_a_skip_coin() {
         assert_eq!(state.counts.original.skipped_with_goal, 0);
         assert_eq!(state.counts.original.updates.skipped_without_goal, 0);
         assert_eq!(state.counts.relabeled, RandomRouteCounts::default());
-        for index in [0, 1] {
-            assert!(agent.learner().population().get(index).r > 40.0);
-            assert!(agent.learner().population().get(index).ir > 3.0);
+        for (index, reward) in [(0, 20.0_f64), (1, 40.0_f64)] {
+            let rule = agent.learner().population().get(index);
+            assert_eq!(rule.r.to_bits(), (reward + config.beta * (1000.0 + config.gamma * 400.0 - reward)).to_bits());
+            assert_eq!(rule.ir.to_bits(), (3.0_f64 + config.beta * (1000.0 - 3.0)).to_bits());
         }
     }
 }

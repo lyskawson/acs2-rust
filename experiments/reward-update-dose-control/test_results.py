@@ -1,3 +1,4 @@
+import copy
 import math
 import unittest
 
@@ -82,7 +83,23 @@ class ResultsTests(unittest.TestCase):
         actual=check(finals,[config])[0]
         self.assertFalse(actual['limited'])
         self.assertEqual(actual['all_difference'],0)
-        finals['maze4',ARM,42]=row(100,0,0,100)
-        self.assertTrue(check(finals,[config])[0]['limited'])
-        for seed in range(42,62): finals['maze4',G,seed]=row(100,100,0)
-        self.assertTrue(check(finals,[config])[0]['limited'])
+        baseline=copy.deepcopy(finals)
+        for seed in range(42,62):
+            denominator=100_000*(seed-41)
+            skips=round((probability('maze4')+.03)*denominator)
+            finals['maze4',ARM,seed]=row(denominator,denominator,skips//2,skips-skips//2)
+            finals['maze4',G,seed]=row(denominator,denominator,skips)
+        actual=check(finals,[config])[0]
+        self.assertGreater(abs(actual['relabeled_difference']),.01)
+        self.assertLess(abs(actual['relabeled_difference']),.1)
+        self.assertLess(abs(actual['all_difference']),.02)
+        self.assertTrue(actual['limited'])
+        finals=copy.deepcopy(baseline)
+        for seed in range(42,62):
+            denominator=100_000*(seed-41)
+            skips=round((probability('maze4')-.06)*denominator)
+            finals['maze4',G,seed]=row(denominator,denominator,skips)
+        actual=check(finals,[config])[0]
+        self.assertLess(abs(actual['relabeled_difference']),.01)
+        self.assertGreater(abs(actual['all_difference']),.02)
+        self.assertTrue(actual['limited'])
