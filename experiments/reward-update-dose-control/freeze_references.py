@@ -18,6 +18,13 @@ def freeze(output, archive):
     verification = json.loads((archive / 'verification.json').read_text())
     if verification['plan_sha256'] != probabilities['source_plan_sha256']:
         raise ValueError('G source registration changed')
+    plan_bytes = (archive / 'approved-plan.json').read_bytes()
+    if hashlib.sha256(plan_bytes).hexdigest() != probabilities['source_plan_sha256']:
+        raise ValueError('original G plan bytes changed')
+    source_plan = json.loads(plan_bytes)
+    reference_bytes = (archive / 'reference-index.json').read_bytes()
+    if hashlib.sha256(reference_bytes).hexdigest() != source_plan['cost_pilot']['reference-index_sha256']:
+        raise ValueError('original S/E provenance index differs from the G registration')
     output.mkdir(parents=True, exist_ok=False)
     index = []
     def copy(kind, config, arm, seed, source, expected):
@@ -33,7 +40,7 @@ def freeze(output, archive):
     for entry in verification['runs_index']:
         for kind in ['success'] + (['pairs'] if entry['seed'] < 47 else []):
             copy(kind, entry['configuration_id'], G, entry['seed'], archive / entry['file'], entry['sha256'])
-    for entry in json.loads((archive / 'reference-index.json').read_text()):
+    for entry in json.loads(reference_bytes):
         copy(entry['kind'], entry['configuration_id'], entry['agent'], entry['seed'], entry['source'], entry['sha256'])
     keys = [(entry['kind'], entry['configuration_id'], entry['agent'], entry['seed']) for entry in index]
     expected = {(kind, config['id'], arm, seed) for kind, seeds in [('success', range(42,62)), ('pairs', range(42,47))]
