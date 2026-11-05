@@ -110,3 +110,31 @@ python3 -B experiments/reward-update-dose-control/verify.py <local-study>
 python3 -B experiments/reward-update-dose-control/analyze.py --root <local-study> --verification <local-study>/verification.json --out <new-analysis-directory>
 python3 -B experiments/reward-update-dose-control/plot_results.py <analysis-directory>
 ```
+
+## Held-pair control results
+
+All 114 approved continuation runs completed on their first allocation, retaining
+the six pilot runs: 120 R trajectories, 980 rows and 208830 pair records.
+The cumulative allocated cost is 17448 CPU-seconds (4.846667 CPU-hours), including
+the 827-second pilot, within fourteen hours. No failures or reservations remain.
+
+The 96 registered contrasts give **rule choice beyond fewer updates**: A+=5,
+A-=0, B+=3. G-R primary intervals are positive on Maze4--7 and MazeMA. R-S primary
+intervals are positive on Maze4, Maze6 and Maze7, include zero on Maze5/MazeMA,
+and are negative on Woods14, which is excluded from the outcome rule. G-R final
+intervals are positive on Maze4 and Maze7 and include zero elsewhere.
+
+Both dose checks pass every maze. Maximum absolute discrepancies are 0.000059505
+for relabeled R-minus-pi (MazeMA) and 0.006471438 for all-opportunity R-G (Woods14).
+The mechanism-separation criterion is not met: the joint positive G-R F_mod and
+winner-goal-mass intervals occur only on Maze5. R-S above zero alone does not
+identify the update count as the cause, because R also changes which goal-blind
+copy rewards survive.
+
+[The architecture section](../../docs/ARCHITECTURE.md#reward-recipient-choice-at-a-calibrated-skip-dose)
+contains the registered tables and limits. Full CSV/JSON exports and fourteen
+post-hoc PNG/SVG F/F_mod figures remain in the external archive's `analysis/`.
+The required test gaps were closed before submission in `dd2ced2`; complete gates
+at the frozen operations commit `3f41409` pass 368 Rust and 435 Python tests,
+identical P9 learning columns and 22 existing clippy warnings, with none new.
+The plan, measurement commit and binary retain their registered identities.

@@ -5538,6 +5538,128 @@ figures and the Polish executor report are under `~/Desktop/tu-runs/goal-rule-co
 and `~/tu_runs/goal-rule-copies/` on WCSS. Reproduction commands and authorization
 checks are in [the study README](../experiments/goal-rule-copies/README.md).
 
+## Reward recipient choice at a calibrated skip dose
+
+The approved [reward-dose registration](../experiments/reward-update-dose-control/plan.json),
+SHA-256 `10aafe270bd05de0822efe5dd467b8a6b35228e33ad4755c1b056f36b5fe9d53`,
+is complete within its fourteen cumulative CPU-hour limit. R denotes
+`acs2her_shortened_random_rules`, G the archived goal-rule copies, and S the archived
+shortened HER. R retains p=2/3 and three full-model draws per interaction. On actual
+relabeled draws, each post-ALP action-set macroclassifier independently skips r and ir
+updates with the registered maze-specific probability, ignoring goal attributes.
+Original draws, including fallback, update every rule and consume no skip coin.
+The injected seed-derived skip stream participates in read-only evaluation snapshots.
+ALP, GA, q, learning order, policy construction and the whole-next-match-set bootstrap
+retain their original algorithms; the thesis preset has GA disabled.
+
+The six probabilities are the required pooled integer ratios from G's final
+seeds42--61 counters. The [execution record](../experiments/reward-update-dose-control/README.md)
+and [approval](../experiments/reward-update-dose-control/approval.json) preserve the
+measurement commit `cebf171` and musl SHA-256
+`734021b127f9b801ea6ef1209770c17d8089d59b5c7ec9dc7b73e5e251a33be6`.
+Review closure `dd2ced2` changes only two tests, detecting extra original/fallback
+coins and the two independent dose-limit mutations. Frozen continuation operations
+are `3f41409`; the measurement binary was not rebuilt.
+
+All 114 new seed43--61 runs completed on their first allocation. The unchanged six
+seed42 pilot runs give 120 R trajectories, 980 rows and 208830 per-pair records on
+seeds42--46. Source, protocol, cumulative counters, pair aggregates and capped-value
+checks pass. G, S and E are reused from their original archives: 360 success
+trajectories and ninety per-pair trajectories, with no new reference learning.
+Allocated CPU accounting, deduplicated by JobIDRaw over every attempt, totals 17448
+seconds (4.846667 CPU-hours), including the 827-second pilot. All allocations completed;
+zero reservations and failed attempts remain. One 24-job diagnostic array and three
+30-job compact arrays used mechanical derivation, fresh grant and expanded queue
+checks, scheduler test-only, node guards and a shared STOP, with at most two streams
+and forty running jobs.
+
+Success uses the held-pair test block, paired over seeds42--61. The primary measure
+is the equal-weight mean of registered checkpoints within each seed; the final point
+is two million interactions, four million on Woods14, with complete-episode overshoot.
+Each cell is a mean paired difference followed by its marginal 95% t(19) interval,
+in success fractions, without multiplicity correction.
+
+| Maze | Primary G-R | Primary R-S | Final G-R | Final R-S |
+|---|---|---|---|---|
+| Maze4 | +0.059645 [+0.043569, +0.075721] | +0.021181 [+0.006963, +0.035398] | +0.031790 [+0.001313, +0.062267] | +0.076852 [+0.046343, +0.107361] |
+| Maze5 | +0.037275 [+0.024539, +0.050011] | +0.001380 [-0.004611, +0.007370] | +0.016892 [-0.012598, +0.046382] | +0.027477 [+0.006530, +0.048425] |
+| Maze6 | +0.031166 [+0.019945, +0.042386] | +0.018553 [+0.005296, +0.031810] | +0.008784 [-0.016240, +0.033807] | +0.047297 [+0.026277, +0.068318] |
+| Maze7 | +0.043229 [+0.033744, +0.052714] | +0.013860 [+0.004634, +0.023086] | +0.027778 [+0.007091, +0.048465] | +0.040741 [+0.017568, +0.063914] |
+| Woods14 | +0.003119 [-0.015527, +0.021765] | -0.021637 [-0.042701, -0.000574] | +0.007018 [-0.028464, +0.042499] | -0.021930 [-0.069125, +0.025266] |
+| MazeMA | +0.030972 [+0.013061, +0.048883] | +0.007917 [-0.015252, +0.031085] | +0.022222 [-0.013328, +0.057773] | +0.035556 [-0.009891, +0.081002] |
+
+The registered outcome is **rule choice beyond fewer updates**: A+=5, A-=0 and B+=3.
+G-R primary intervals are positive on Maze4--7 and MazeMA. R-S primary intervals
+are positive on Maze4, Maze6 and Maze7, include zero on Maze5 and MazeMA, and are
+negative on Woods14. Woods14 is reported and excluded from the registered outcome.
+G-R final intervals are positive on Maze4 and Maze7 and include zero on the other
+four mazes. R-S final intervals are positive on Maze4--7 and include zero on
+Woods14 and MazeMA. These finite horizons leave convergence open.
+
+The mechanism test uses final-point seeds42--46, pooling all three blocks with
+recorded pair weights and equal block mass. F and F_mod retain the preceding
+per-pair definitions and exclude random fallbacks. Winner goal mass credits each
+first decision to rules specifying a goal attribute: tied classifier winners split
+credit equally and fallbacks contribute zero. Its denominator includes all first
+decisions. Intervals below are paired marginal 95% t(4), without multiplicity
+correction; these five-seed first-decision tests are separate from twenty-seed
+whole-episode success.
+
+| Maze | G-R F_mod | G-R winner goal mass | R-S F_mod | R-S winner goal mass |
+|---|---|---|---|---|
+| Maze4 | +0.021634 [-0.048947, +0.092216] | +0.187184 [+0.118347, +0.256022] | +0.139447 [+0.080517, +0.198378] | +0.010170 [-0.014548, +0.034889] |
+| Maze5 | +0.061862 [+0.014103, +0.109621] | +0.217793 [+0.175778, +0.259807] | +0.024850 [-0.040977, +0.090677] | +0.001051 [-0.027335, +0.029437] |
+| Maze6 | +0.033183 [-0.003087, +0.069454] | +0.185886 [+0.139260, +0.232512] | +0.032282 [-0.039554, +0.104118] | +0.020495 [-0.023893, +0.064884] |
+| Maze7 | +0.082152 [-0.031823, +0.196128] | +0.185896 [+0.174220, +0.197573] | +0.053315 [-0.028773, +0.135402] | +0.039171 [+0.019241, +0.059100] |
+| Woods14 | -0.021637 [-0.064140, +0.020865] | +0.147661 [+0.122085, +0.173237] | -0.031287 [-0.102531, +0.039958] | -0.004678 [-0.061671, +0.052314] |
+| MazeMA | +0.067407 [-0.104659, +0.239474] | +0.096667 [+0.053583, +0.139750] | -0.026481 [-0.212489, +0.159526] | +0.052963 [-0.014963, +0.120889] |
+
+The registered mechanism-separation criterion is **not met**. G-R winner goal mass
+is positive on all six mazes, but G-R F_mod is positive only on Maze5. Their joint
+condition therefore holds on one of Maze4--7, below the required three. G-R F is
+positive only on Maze7; R-S F and F_mod are positive only on Maze4. R-S winner goal
+mass is positive only on Maze7. All other intervals for these contrasts include zero.
+
+G-R estimate-minus-Q* intervals are negative on Maze5--7 and include zero elsewhere;
+R-S intervals are negative on all six mazes. G-R estimate-above-V* intervals include
+zero on every maze; R-S intervals are negative on all six. Within-start slope
+contrasts for both G-R and R-S are positive on Maze5--7 and Woods14 and include
+zero on Maze4 and MazeMA. Q* is the capped value of the chosen first action;
+V* is the capped optimum. Estimate-minus-Q* and slope retain fallbacks, while the
+strict estimate > V* share excludes them. All 96 registered comparisons and their
+seed differences are exported in CSV and JSON.
+
+The registered final dose check averages each seed's cumulative opportunity shares
+equally over twenty seeds. Pi retains its pooled G-count definition. Opportunities
+count post-ALP macroclassifiers, without numerosity weighting. All-opportunity skips
+combine both origins; original skips are zero in both arms.
+
+| Maze | Pi | R relabeled skip share | R all skip share | G all skip share | R-G all difference |
+|---|---:|---:|---:|---:|---:|
+| Maze4 | 0.624451 | 0.624490 | 0.360133 | 0.363620 | -0.003488 |
+| Maze5 | 0.632107 | 0.632152 | 0.368261 | 0.368104 | +0.000157 |
+| Maze6 | 0.642513 | 0.642568 | 0.381836 | 0.379389 | +0.002447 |
+| Maze7 | 0.619359 | 0.619395 | 0.364798 | 0.365208 | -0.000410 |
+| Woods14 | 0.796416 | 0.796450 | 0.356823 | 0.350352 | +0.006471 |
+| MazeMA | 0.788713 | 0.788773 | 0.371098 | 0.372485 | -0.001387 |
+
+Every maze passes both registered tolerances. The largest absolute R-minus-pi
+relabeled difference is 0.000059505 on MazeMA, below 0.01. The largest absolute
+all-opportunity R-G difference is 0.006471438 on Woods14, below 0.02. No maze has
+a registered dose limitation. Recipient selection has a positive primary contrast
+against this calibrated random control on all five decision mazes. R also removes
+some goal-blind copy rewards, so R-S combines recipient and count changes; its
+positive intervals alone do not identify update count as the cause.
+
+All remaining summaries are labelled post hoc. The fourteen PNG/SVG exports show
+pooled F and F_mod over training for R, G and S, with five-seed means and marginal
+t(4) bands. These curves and the supplementary block/uniform-pair views retain the
+capped-value and tied-winner limitations of the original per-pair study. They do
+not replace the registered contrasts or the unmet mechanism criterion.
+Raw data, accounting, preserved pilot inventory, full tables, figures and the Polish
+executor report are under `~/Desktop/tu-runs/reward-update-dose-control/` and
+`~/tu_runs/reward-update-dose-control/` on WCSS, with two verified archive copies.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
