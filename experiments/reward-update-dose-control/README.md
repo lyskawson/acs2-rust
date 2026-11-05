@@ -36,7 +36,8 @@ single-CPU allocation limits, at most two cumulative CPU-hours including every
 attempt and reservation. The shared `experiments/grid/` path mechanically derives
 the manifest before each submission, verifies a pinned clean musl build and frozen
 operations, checks the shared grant and queue, and runs scheduler test-only.
-Node guards and shared STOP retain real failures. No seed beyond42 is authorized.
+Node guards and shared STOP retain real failures. The registered continuation is
+authorized by [approval.json](approval.json), after the test-only review closure.
 If any final relabeled skip share differs from its registered probability by more
 than 0.01, pilot verification stops before plan preparation.
 
@@ -79,4 +80,33 @@ The expected cumulative cost is 4.594444 CPU-hours, including the pilot.
 Doubling the remaining measured cost gives 8.959167 CPU-hours; full hard
 reservations plus the pilot give 13.829722. The proposed cumulative limit is
 therefore 14 CPU-hours. One cost seed does not bound seed variance. These values
-are a forecast and reservation bound, without approval to run seeds43--61.
+are a forecast and reservation bound. The approved cumulative limit is fourteen
+CPU-hours, including the unchanged pilot, every attempt and all reservations.
+
+## Approved continuation
+
+The review closure `dd2ced2` changes only two test files. R02, P10 and P11 are
+detected by the revised tests; full gates pass with 368 Rust and 429 Python tests,
+identical P9 learning columns and 22 existing clippy warnings, with none new.
+The measurement commit, binary and plan bytes remain unchanged.
+
+`prepare_execution.py` preserves the immutable pilot inventory and freezes clean
+operations for the continuation. `execute_batch.py` re-derives one 24-job per-pair
+array for seeds43--46 and three 30-job compact arrays for seeds47--61. Both streams
+share the cumulative accounting scope, with at most twenty running jobs each.
+Every submission checks the grant, expanded queue, spent allocations, reservations,
+new hard limits and scheduler test-only. A terminal stream can admit its next array
+while the other stream remains active. Pilot allocations are never repeated.
+`verify.py` checks every allocation and input before `analyze.py` produces the
+registered success/mechanism contrasts, dose checks and exact outcome rules.
+`plot_results.py` exports post-hoc pooled F/F_mod curves for R against G and S.
+
+```bash
+python3 -B experiments/reward-update-dose-control/prepare_execution.py --root <local-study> --destination <absolute-cluster-study>
+python3 -B <frozen-execution-operations>/experiments/reward-update-dose-control/execute_batch.py --root <cluster-study> --repo <pinned-TU-clone> --purpose diagnostics
+python3 -B <frozen-execution-operations>/experiments/reward-update-dose-control/execute_batch.py --root <cluster-study> --repo <pinned-TU-clone> --purpose compact
+python3 -B experiments/reward-update-dose-control/verify.py <cluster-study> --update-accounting
+python3 -B experiments/reward-update-dose-control/verify.py <local-study>
+python3 -B experiments/reward-update-dose-control/analyze.py --root <local-study> --verification <local-study>/verification.json --out <new-analysis-directory>
+python3 -B experiments/reward-update-dose-control/plot_results.py <analysis-directory>
+```

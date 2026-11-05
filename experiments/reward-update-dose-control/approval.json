@@ -1,0 +1,10 @@
+{
+  "approved": true,
+  "plan_sha256": "10aafe270bd05de0822efe5dd467b8a6b35228e33ad4755c1b056f36b5fe9d53",
+  "phase_cpu_hour_limit": 14,
+  "includes_pilot_cpu_seconds": 827,
+  "measurement_commit": "cebf17180e3f59db17d825ec445f3d6f1672e1f3",
+  "binary_sha256": "734021b127f9b801ea6ef1209770c17d8089d59b5c7ec9dc7b73e5e251a33be6",
+  "review_closure_commit": "dd2ced2189042f601a7afd106b726f0695c14ffb",
+  "authorization": "User approved stage2 after test-only closure of R02, P10 and P11 and passing gates. Cumulative limit includes pilot, every attempt and all reservations; no pilot repetition, mechanism change or new experiment."
+}
