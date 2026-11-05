@@ -57,3 +57,26 @@ analysis and F/F_mod curves for R against G/S, and documents results in
 Raw rows, accounting, verification tables and reports live outside the checkout
 under `~/Desktop/tu-runs/reward-update-dose-control/` and
 `~/tu_runs/reward-update-dose-control/` on WCSS, with two verified copies.
+
+## Cost, dose and continuation forecast
+
+All six first-attempt seed42 allocations completed: 49 rows and 41,766 per-pair
+records pass source, protocol, cumulative-counter, aggregate and capped-value
+checks. Allocated cost is 827 CPU-seconds (0.229722 CPU-hours), with zero failures
+and reservations, within the two-hour pilot cap. The largest absolute deviation
+of the final relabeled skip share from registered pi is 0.000104379 (Maze7),
+below 0.01 on every maze. This pilot establishes cost and dose, without ranking arms.
+
+Measurement source is `cebf171`; the musl SHA-256 is
+`734021b127f9b801ea6ef1209770c17d8089d59b5c7ec9dc7b73e5e251a33be6`.
+Frozen pilot operations are `277cd7b`. The single [plan](plan.json), SHA-256
+`10aafe270bd05de0822efe5dd467b8a6b35228e33ad4755c1b056f36b5fe9d53`,
+fixes both registered comparisons and the outcome/mechanism rules before further
+R seeds. Dose checks use equal-weight means of per-seed final cumulative shares;
+pi itself retains the required pooled integer-sum definition.
+
+The expected cumulative cost is 4.594444 CPU-hours, including the pilot.
+Doubling the remaining measured cost gives 8.959167 CPU-hours; full hard
+reservations plus the pilot give 13.829722. The proposed cumulative limit is
+therefore 14 CPU-hours. One cost seed does not bound seed variance. These values
+are a forecast and reservation bound, without approval to run seeds43--61.

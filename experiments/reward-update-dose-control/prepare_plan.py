@@ -66,7 +66,7 @@ def prepare(root):
             admission='Re-derive manifests from approved registration before each sbatch; grant, expanded queue, scheduler test-only, node guards and shared STOP. Pilot + spent + reservations + new hard limits within cumulative approved CPU-hour limit.',
             accounting='Every attempt, CPUTimeRAW allocated CPU-seconds, sacct deduplicated by JobIDRaw. Two independently checksum-verified archive copies.'),
         stage2_deliverables=['seeds43--61', 'registered paired contrasts and exact outcome/mechanism decisions',
-            'F and F_mod curves over training against both references', 'results section in docs/ARCHITECTURE.md'],
+            'F and F_mod curves over training for R against G and S', 'results section in docs/ARCHITECTURE.md'],
         authorization='Stage1 ends after this single plan with its forecast and the external report. No seed beyond42 is authorized without explicit stage2 approval of these plan bytes and a CPU-hour limit.')
     path = Path(__file__).with_name('plan.json')
     if path.exists():
