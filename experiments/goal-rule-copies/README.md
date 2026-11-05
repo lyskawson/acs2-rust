@@ -115,3 +115,24 @@ opportunities in the new arm. The retained-blind share divides original blind
 updates by original blind updates plus skipped relabeled blind opportunities.
 This denominator uses the observed trajectory and post-ALP action sets; it does
 not reconstruct the value-update count of either historical reference agent.
+
+## Registered results
+
+The approved continuation completed all 114 new runs without failure. Including
+the unchanged pilot, the archive contains 120 allocations, 980 rows and 208830
+new-arm pair records. JobIDRaw-deduplicated allocated cost is 18966 CPU-seconds
+(5.268333 hours), within fifteen approved hours; zero reservations remain.
+Remote and local full verification objects are byte-identical.
+
+The registered outcome is **helps**: G-S primary and final intervals are positive
+on Maze4--7 and MazeMA, with neither negative on any maze; Woods14 includes zero.
+The registered joint mechanism criterion is met on Maze4--6. The overestimate
+share falls relative to S on every maze, but remains above E on all six. See
+[the architecture results](../../docs/ARCHITECTURE.md#held-pair-success-with-goal-specific-copy-rewards)
+for all success intervals, mechanism denominators and value-dose limitations.
+
+Registered exports contain exactly 84 contrasts. Planned post-hoc curves produce
+fourteen PNG/SVG files and 294 marginal curve intervals. Full tables, protected
+pilot files, accounting and the Polish stage2 report remain outside Git. All
+source/row/parameter checks preserve the original measurement commit, binary,
+registered plan, geometry protocol, budgets and checkpoints.

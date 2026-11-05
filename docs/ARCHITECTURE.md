@@ -5416,6 +5416,128 @@ all six workspace packages. Raw archives, inventories, tables, figures, accounti
 mutation logs and the Polish report have two verified copies under
 `~/Desktop/tu-runs/per-pair-diagnostics/` and `~/tu_runs/per-pair-diagnostics/` on WCSS.
 
+## Held-pair success with goal-specific copy rewards
+
+The approved [goal-rule copy registration](../experiments/goal-rule-copies/plan.json),
+SHA-256 `cb38ee22abc0a73c2411adc0a2e3ba921c36b45290353359bbe9ea95d6e57449`,
+is complete. G denotes `acs2her_shortened_goal_rules`, S the archived shortened HER,
+and E the archived episodic ER. G retains shortened HER at p=2/3 and changes only
+reward updates on actual relabeled draws: after ALP, r and ir are updated only for
+action-set rules specifying at least one goal attribute. Original draws, including
+fallback, update every action-set rule. The bootstrap still uses the maximum
+change-anticipating fitness over the whole next match set, including goal-blind
+rules. ALP, GA, q, action choice and step order retain their original paths; the
+thesis preset has GA disabled. Every interaction still receives three full-model
+replay draws. Reward-update dose is deliberately different and is measured below.
+
+The 114 new runs, seeds43--61, and the six unchanged seed42 pilot runs all completed
+on their first allocation. All 980 rows and 208830 new-arm pair records pass source,
+protocol, counter, aggregate and capped-value checks. Pair records cover seeds42--46;
+seeds47--61 are compact. The two original references are reused without learning
+allocations: 240 historical success trajectories and sixty per-pair trajectories.
+The measurement commit remains `1c36582`; its musl SHA-256 remains
+`880b0a89a661d42ce11ff1bd174674fb5c4ad626d97de27082f83ef2b454bc86`.
+The test-only review closure is `b83222b`; frozen continuation operations are
+`a756045`. The immutable pilot files and measurement binary were not rebuilt.
+
+Allocation accounting deduplicated by JobIDRaw totals 18966 CPU-seconds, or
+5.268333 CPU-hours including the 865-second pilot, within fifteen approved hours.
+No allocation failed and no reservations remain. One 24-job diagnostic array and
+three 30-job compact arrays used the shared manifest derivation, expanded queue,
+grant and scheduler test-only checks. At most two streams each allowed twenty concurrent
+jobs. The original pilot inventory remains protected; all later admissions
+and common accounting are under `continuation/` in the external study archive.
+
+Success uses only the held-pair test block. The primary measure is the equal-weight
+mean of registered checkpoint successes within each seed; the final point is two
+million interactions except Woods14 at four million. Comparisons pair seeds42--61,
+using marginal 95% t(19) intervals without multiplicity correction. Each cell below
+is a mean difference followed by its interval, in success fractions.
+
+| Maze | Primary G-S | Primary G-E | Final G-S | Final G-E |
+|---|---|---|---|---|
+| Maze4 | +0.080826 [+0.065621, +0.096031] | +0.114198 [+0.099172, +0.129223] | +0.108642 [+0.080989, +0.136295] | +0.118519 [+0.091865, +0.145172] |
+| Maze5 | +0.038654 [+0.026468, +0.050841] | +0.087134 [+0.076437, +0.097831] | +0.044369 [+0.020752, +0.067987] | +0.104279 [+0.085532, +0.123027] |
+| Maze6 | +0.049718 [+0.036353, +0.063084] | +0.102337 [+0.092553, +0.112120] | +0.056081 [+0.030825, +0.081337] | +0.120270 [+0.095176, +0.145365] |
+| Maze7 | +0.057089 [+0.047632, +0.066546] | +0.091551 [+0.078014, +0.105087] | +0.068519 [+0.051756, +0.085281] | +0.094213 [+0.064544, +0.123882] |
+| Woods14 | -0.018519 [-0.040056, +0.003019] | +0.048051 [+0.034370, +0.061731] | -0.014912 [-0.058707, +0.028883] | +0.042982 [-0.000258, +0.086223] |
+| MazeMA | +0.038889 [+0.014729, +0.063049] | +0.065139 [+0.038915, +0.091363] | +0.057778 [+0.013473, +0.102083] | +0.071111 [+0.031818, +0.110404] |
+
+The registered outcome is **helps**. Relative to S, both primary and final intervals
+are wholly positive on Maze4--7 and MazeMA; neither has a wholly negative interval.
+Woods14 has negative point estimates with intervals including zero, so the result
+does not establish absence of a Woods14 cost. Relative to E, primary intervals are
+positive on all six mazes; final intervals are positive on five, with Woods14
+including zero. The registered trade-off predicate is checked before helps and is
+false here.
+
+The mechanism test uses five paired seeds42--46 at the final point, pooling all
+three blocks with their original weights and equal block mass. Its intervals are
+marginal 95% t(4), without multiplicity correction. F is first-action optimality
+among nonfallback decisions; F_mod is the optimality of the agent's own weighted
+modal action at each start, with the lowest action index breaking modal ties.
+The overestimate share also excludes fallbacks and uses strict estimate > V*.
+Estimate-minus-Q* and within-start slope retain all pairs, including fallbacks.
+
+| Maze | G-S F_mod | G-S share estimate > V* |
+|---|---|---|
+| Maze4 | +0.161082 [+0.063193, +0.258970] | -0.146384 [-0.171474, -0.121295] |
+| Maze5 | +0.086712 [+0.011199, +0.162225] | -0.092868 [-0.136726, -0.049010] |
+| Maze6 | +0.065465 [+0.001348, +0.129583] | -0.093844 [-0.139374, -0.048313] |
+| Maze7 | +0.135467 [-0.025722, +0.296656] | -0.054227 [-0.066335, -0.042120] |
+| Woods14 | -0.052924 [-0.122256, +0.016408] | -0.209357 [-0.296306, -0.122408] |
+| MazeMA | +0.040926 [-0.044428, +0.126280] | -0.187963 [-0.242564, -0.133362] |
+
+The registered mechanism criterion is met on Maze4, Maze5 and Maze6: G-S F_mod is
+positive and G-S overestimate share is negative on the same three mazes. Maze7's
+F_mod interval includes zero. G-S F is positive on Maze4--7 and includes zero on
+Woods14 and MazeMA. G-E F is positive only on Maze5; every G-E F_mod interval
+includes zero. These five-seed first-decision tests are distinct from the
+registered twenty-seed whole-episode success comparisons.
+
+G-S estimate-minus-Q* and overestimate-share intervals are below zero on all six
+mazes. The corresponding G-E intervals are above zero on every maze: removing
+blind-rule copy rewards reduces the hindsight excess, while G still has more
+overestimation than E. Within-start slope contrasts are positive
+against both references on Maze4--7 and Woods14, and include zero on MazeMA.
+Q* is the capped optimal continuation value for the actual chosen first action,
+not the agent's realized return. The full 84 registered contrasts and every seed
+difference are exported in CSV and JSON outside Git.
+
+All remaining summaries are post hoc. Final cumulative value-dose counters,
+averaged equally over twenty seeds, give these fractions:
+
+| Maze | Copies with a goal-specific rule in the action set | Skipped share of all reward-update opportunities | Retained share of blind-rule opportunities |
+|---|---:|---:|---:|
+| Maze4 | 0.5036 | 0.3636 | 0.4692 |
+| Maze5 | 0.4626 | 0.3681 | 0.4694 |
+| Maze6 | 0.4678 | 0.3794 | 0.4524 |
+| Maze7 | 0.4883 | 0.3652 | 0.4580 |
+| Woods14 | 0.3037 | 0.3504 | 0.5774 |
+| MazeMA | 0.3371 | 0.3725 | 0.5484 |
+
+Opportunities count post-ALP macroclassifiers, not numerosity. The retained-blind
+fraction is original blind updates divided by original blind updates plus skipped
+relabeled blind opportunities in the observed trajectory. It is not a reconstructed
+value-update count for S or E, whose historical rule-level counters are unavailable.
+The intervention holds full-model draw volume fixed while reducing reward-update
+volume; these results cannot be described as matched value-update-dose comparisons.
+
+The planned F and F_mod curves use the pooled view, five-seed means and marginal
+t(4) bands. All fourteen PNG/SVG exports are labelled post hoc: six two-panel maze
+figures and a six-maze overview. Additional post-hoc exports retain the uniform-pair
+view, per-block views, within-start spread, F-C=(F_mod-C)+(F-F_mod), and the
+component of D whose action changes require a cross-action tie. None replaces a
+registered success or mechanism contrast. These finite-budget results establish
+the registered intervention effect, not convergence or a complete explanation of
+value aliasing. The capped-value and tied-winner limitations of the earlier per-pair
+study still apply.
+
+Raw data, accounting, protected pilot inventory, verification, complete tables,
+figures and the Polish executor report are under `~/Desktop/tu-runs/goal-rule-copies/`
+and `~/tu_runs/goal-rule-copies/` on WCSS. Reproduction commands and authorization
+checks are in [the study README](../experiments/goal-rule-copies/README.md).
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
