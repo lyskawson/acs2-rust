@@ -64,7 +64,7 @@ All six first-attempt seed42 allocations completed: 49 rows and 41,766 per-pair
 records pass source, protocol, cumulative-counter, aggregate and capped-value
 checks. Allocated cost is 827 CPU-seconds (0.229722 CPU-hours), with zero failures
 and reservations, within the two-hour pilot cap. The largest absolute deviation
-of the final relabeled skip share from registered pi is 0.000104379 (Maze7),
+of the final relabeled skip share from registered pi is 0.000104378 (Maze7),
 below 0.01 on every maze. This pilot establishes cost and dose, without ranking arms.
 
 Measurement source is `cebf171`; the musl SHA-256 is
