@@ -41,6 +41,7 @@ grid guards, collector, accounting and artifact checks without editing them.
 A real failure writes the shared STOP; every allocation stays in the ledger.
 
 ```bash
+cargo build --release --bin acs2-measure
 python3 -B -m unittest discover -s experiments/per-goal-reward -p 'test_*.py'
 python3 -B experiments/per-goal-reward/archive.py /absolute/external/study
 python3 -B experiments/per-goal-reward/prepare_plan.py /absolute/external/study

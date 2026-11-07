@@ -11,6 +11,7 @@ from decision_metrics import decision_metrics
 from results import contrasts, decisions
 from grid_protocol import atomic_json
 from agent_names import canonical_row
+from collect import outside_repository
 
 
 def read_rows(path):
@@ -66,7 +67,7 @@ def checked_path(root, entry):
 
 
 def analyze(root, verification, output):
-    root, output = Path(root), Path(output)
+    root, output = Path(root), outside_repository(output)
     plan_path = Path(__file__).with_name('plan.json')
     digest = hashlib.sha256(plan_path.read_bytes()).hexdigest()
     plan = json.loads(plan_path.read_text())
@@ -100,8 +101,6 @@ def analyze(root, verification, output):
     if set(truth) != {config['task'] for config in configs}:
         raise ValueError('analysis requires all six environment models')
     result = calculate(configs, inputs, truth)
-    if output.resolve().is_relative_to(Path(__file__).resolve().parents[2]):
-        raise ValueError('analysis results belong outside the checkout')
     output.mkdir(parents=True, exist_ok=False)
     for name, rows in [('registered-comparisons', result['registered']), ('post-hoc-curves', result['curves']),
                        ('success-seed-metrics', result['success']), ('mechanism-seed-metrics', result['mechanism'])]:
