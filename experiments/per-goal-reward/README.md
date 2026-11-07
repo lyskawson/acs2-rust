@@ -55,3 +55,11 @@ section require separate approval of the exact plan bytes and a CPU-hour limit.
 No stage2 submission is currently authorized. Raw results live in
 `~/tu_runs/per-goal-reward/` on the cluster and `~/Desktop/tu-runs/per-goal-reward/`
 locally, with checksum verification of both copies.
+
+The seed42 pilot completed twelve attempts without failures: 98 rows and 83,532
+pair records, at 1,648 allocated CPU-seconds (0.457778 CPU-hours), with no remaining
+reservations. The [single registered plan](plan.json) forecasts 8.697778 CPU-hours
+for 228 remaining runs and 9.155556 including the pilot. Full array reservations
+would total 28.657778 CPU-hours including the pilot, so the proposed cumulative
+limit is 29 CPU-hours. These cost estimates use one seed. The twenty-seed
+contrasts and five-seed mechanism decisions await separately authorized runs.
