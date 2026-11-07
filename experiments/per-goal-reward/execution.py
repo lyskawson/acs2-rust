@@ -37,7 +37,7 @@ def authorization_manifest(manifest):
     if registration['manifest'] != expected or registration['destination'] != str(root):
         raise ValueError('pilot differs from the twelve registered seed42 runs')
     for name in ('reference-index', 'model-index'):
-        if hashlib.sha256((root / (name + '.json')).read_bytes()).hexdigest() != registration[name + '_sha256']:
+        if hashlib.sha256((root / (name + '.json')).read_bytes()).hexdigest() != registration[name.replace('-', '_') + '_sha256']:
             raise ValueError('pilot frozen input index changed')
     scope_path = root / 'pilot-scope.json'
     if json.loads(scope_path.read_text()) != scope(digest, root):

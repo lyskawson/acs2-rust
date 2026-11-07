@@ -45,7 +45,7 @@ def audit(root):
     if registration['manifest'] != pilot(identity()):
         raise ValueError('pilot measurement differs from its registration')
     for name in ('reference-index', 'model-index'):
-        if checksum(root / (name + '.json')) != registration[name + '_sha256']:
+        if checksum(root / (name + '.json')) != registration[name.replace('-', '_') + '_sha256']:
             raise ValueError('pilot frozen input index changed')
     if json.loads((root / 'pilot-scope.json').read_text()) != scope(digest, declared):
         raise ValueError('pilot accounting scope changed')

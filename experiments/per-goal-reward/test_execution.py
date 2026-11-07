@@ -31,7 +31,7 @@ class ExecutionTests(unittest.TestCase):
         for name in ('reference-index', 'model-index'):
             atomic_json(root / (name + '.json'), [])
         registration = dict(manifest=pilot(identity), destination=str(root),
-            **{name + '_sha256': hashlib.sha256((root / (name + '.json')).read_bytes()).hexdigest()
+            **{name.replace('-', '_') + '_sha256': hashlib.sha256((root / (name + '.json')).read_bytes()).hexdigest()
                for name in ('reference-index', 'model-index')})
         atomic_json(root / 'pilot-registration.json', registration)
         digest = hashlib.sha256((root / 'pilot-registration.json').read_bytes()).hexdigest()
