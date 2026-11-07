@@ -6,6 +6,7 @@ use crate::episodic_replay::{CopyUpdate, EpisodicAgent, EpisodicConfiguration, E
 
 pub mod goal_rules;
 pub mod random_rules;
+pub mod per_goal_reward;
 
 #[cfg(test)]
 mod pyalcs_differential;

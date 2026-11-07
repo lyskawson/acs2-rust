@@ -1,0 +1,186 @@
+{
+  "source_commit": "4d233511da07ea942a3010c9a15545e689194a28",
+  "rows": [
+    {
+      "agent": "acs2",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "5dcad6daa4492a1468262fa4fb3811271ca1be9861a08d12ddeed1b536591cfa"
+    },
+    {
+      "agent": "acs2",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "23cca0bbdb511922a00ff1a947feb47fd19663da66a1d85da6a7732f490e6e5d"
+    },
+    {
+      "agent": "acs2er",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "1e149bfb3770428af9facff8eb526faa2b6ec8a91e46e6431ede25d802bf6663"
+    },
+    {
+      "agent": "acs2er",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "ca3eb30d8210fe130b5111f7c5eff81e27509eed105c36b46bf62f431be69867"
+    },
+    {
+      "agent": "acs2er_one_update",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "9cd3a95e5de3c7c2500d373b81b4147876ada1280bbdd4fb848df03b6ee2a72f"
+    },
+    {
+      "agent": "acs2er_one_update",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "afe854586efbac7b1cde553e5e67e0b0d3e3042321a630e18de6d48026618d0b"
+    },
+    {
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "dac4d4e9cbb60407ff448c9580df7a06ac96665de34ea0e2c5d5c0053f862ad8"
+    },
+    {
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "febda483684c37da6ccdca60278089cc11927eb91c27829d2a6877ad214e04e8"
+    },
+    {
+      "agent": "acs2her",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "f6269d9013259e8b38ebc56f990ac1b626900c33a25f3a118ad2bab2aa2ca172"
+    },
+    {
+      "agent": "acs2her",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "c6720f460eec2865c3bc2c09cfb5cadc4d00ae20199d27d06eb3ff9181e7d21f"
+    },
+    {
+      "agent": "acs2her_nontrivial",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "c0b0c5b03590ec9eb5ef47af7461345df1b9f03257b8a79b9347a3884a754fcd"
+    },
+    {
+      "agent": "acs2her_nontrivial",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "c25ee95bd0ea8c38f2d47e709bfec032a5ce36750d2fd344e6215619fcabf4e4"
+    },
+    {
+      "agent": "acs2her_shortened_goal_rules",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "a5c511b1159e443081033bba744f6bb165926880e10016597163e27bf2b0c100"
+    },
+    {
+      "agent": "acs2her_shortened_goal_rules",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "a1e204ba510728489726343c13629d34a82e20f4860fff00703aa049fe2c67be"
+    },
+    {
+      "agent": "acs2her_shortened_random_rules",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "537bc40196fc31bb820333c73dff3d35639f0433a1b1d4cb860cf7b4ab437936"
+    },
+    {
+      "agent": "acs2her_shortened_random_rules",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "360df6e9bcb7e3b001faf76f9cf55ad52367d3e99d18b270f5fe0f7fd998285a"
+    },
+    {
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "61c39faf7bc7efb28dece2a18e143b0c6a50d6d6865cd9aa6aa417813f629649"
+    },
+    {
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "1595f682666581db8941430cf6dd733d606ba2eeda5b477fafdbbb90d051d9d5"
+    },
+    {
+      "agent": "acs2her_values",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "e996be588940917f3c44f4a593793167149e435a76dc65a2cea703852595efa9"
+    },
+    {
+      "agent": "acs2her_values",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "3c3fc083890a15a572750e25a56e18cab186044f9b1870c080d332f456609ecd"
+    },
+    {
+      "agent": "acs2her_values_shortened",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "2483d9833dc4c9ab5f0ad697f363ba1cc32f107f6dc948c6ed910a1ccdbc7424"
+    },
+    {
+      "agent": "acs2her_values_shortened",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "dd7c5bc00a072fcf234c635e0beb59583136fecce42143f3803212a1fb42dca1"
+    },
+    {
+      "agent": "acs2vcp_k2",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "752fd2cc2d5c072c11344bf2ac02c9a440f2fb6324490720755e2a8c38accfe2"
+    },
+    {
+      "agent": "acs2vcp_k2",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "a0a3ddd87272da6ccc0b06effc9e480f0841b60754f53bcf1411359031578344"
+    },
+    {
+      "agent": "acs2vcp_k4",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "9a2c58c9253abaf407d73bbb46d62d2c60a64599c6b6563f3869600a518dd536"
+    },
+    {
+      "agent": "acs2vcp_k4",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "bd0bf3f31cd8894f4618f7fa069827daaf556eae77ef612e80be0481aeea82eb"
+    },
+    {
+      "agent": "acs2vcp_k2_uniform",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "a430a8a13e3cb72214d8fdedc734895f828ffc52bd528de377a5b6d95484dcbb"
+    },
+    {
+      "agent": "acs2vcp_k2_uniform",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "12c4ec3c4a95307237410f22123e38720681e505d337e26073aaf138f57fe163"
+    },
+    {
+      "agent": "acs2vcp_k4_uniform",
+      "seed": 42,
+      "nominal_step": 10,
+      "learning_sha256": "d89eada84230372fbd90fe0d971a051949645fe74c19e964bcb3d1c0c9e3abe0"
+    },
+    {
+      "agent": "acs2vcp_k4_uniform",
+      "seed": 42,
+      "nominal_step": 50,
+      "learning_sha256": "c141663e72ebfe86229cb5cf9e06ea28ddf0bb394a0209e7c63f8efd4097cd36"
+    }
+  ],
+  "encoding": "SHA256 of sorted compact JSON after grid_identity.field_bits; omit commit, source_state, host, cpu_model and three wall-second fields."
+}

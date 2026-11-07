@@ -94,6 +94,7 @@ pub struct EpisodicReplay<const S: usize, const G: usize, const M: usize, R, P> 
     random_rule_updates: Option<crate::acs2her::random_rules::RandomRuleUpdates<P>>,
     passes: PassCounts,
     schedule_counts: ScheduleCounts,
+    per_goal_rewards: Option<crate::per_goal_reward::PerGoalRewards<G>>,
 }
 
 impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomSource>
@@ -129,13 +130,35 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             random_rule_updates: None,
             passes: PassCounts::default(),
             schedule_counts: ScheduleCounts::default(),
+            per_goal_rewards: None,
         }
     }
 
     pub fn with_population(mut self, population: Population<M>) -> Self {
         assert_eq!(self.counts.environment_steps, 0);
+        if let Some(rewards) = &mut self.per_goal_rewards {
+            rewards.initialize_general(population.len(), &self.config);
+        }
         self.population = population;
         self
+    }
+
+    pub fn with_per_goal_rewards(mut self, goals: &[acs2_core::ports::goal::Goal<G>]) -> Self {
+        assert_eq!(self.counts, UpdateCounts::default());
+        assert_eq!(self.copy_update, CopyUpdate::Full);
+        assert!(self.per_goal_rewards.is_none());
+        self.per_goal_rewards = Some(crate::per_goal_reward::PerGoalRewards::new(
+            goals, &self.config, self.population.len(),
+        ));
+        self
+    }
+
+    pub fn per_goal_rewards(&self) -> Option<&crate::per_goal_reward::PerGoalRewards<G>> {
+        self.per_goal_rewards.as_ref()
+    }
+
+    pub fn per_goal_rewards_mut(&mut self) -> Option<&mut crate::per_goal_reward::PerGoalRewards<G>> {
+        self.per_goal_rewards.as_mut()
     }
 
     pub fn set_random_rule_updates(
@@ -235,6 +258,9 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         let original = if self.copy_update == CopyUpdate::RandomRules {
             format!("{original}|{}", self.random_rule_updates.as_ref().expect("injected reward-skip stream").snapshot())
         } else { original };
+        let original = if let Some(rewards) = &self.per_goal_rewards {
+            format!("{original}|{rewards:?}")
+        } else { original };
         if self.plan == ReplayPlan::default() {
             original
         } else {
@@ -245,6 +271,15 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
 
     pub fn explore_action(&mut self, state: &Perception<M>) -> usize {
         let matched = self.population.form_match_set(state);
+        if let Some(rewards) = &self.per_goal_rewards {
+            let goal = GoalLayout::<S, G, M>::split(state).1;
+            return if self.rng.gen_bool(self.config.epsilon) {
+                self.rng.gen_range(self.config.number_of_possible_actions)
+            } else {
+                rewards.best_action(&self.population, &matched, &goal,
+                    self.config.number_of_possible_actions, &mut self.rng)
+            };
+        }
         EpsilonGreedy {
             number_of_possible_actions: self.config.number_of_possible_actions,
             epsilon: self.config.epsilon,
@@ -254,6 +289,13 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
 
     pub fn greedy_action(&self, state: &Perception<M>, rng: &mut dyn RandomSource) -> (usize, f64) {
         let matched = self.population.form_match_set(state);
+        if let Some(rewards) = &self.per_goal_rewards {
+            let goal = GoalLayout::<S, G, M>::split(state).1;
+            let action = rewards.best_action(&self.population, &matched, &goal,
+                self.config.number_of_possible_actions, rng);
+            let action_set = self.population.form_action_set(&matched, action);
+            return (action, rewards.bootstrap(&self.population, &action_set, &goal));
+        }
         let action = BestAction {
             number_of_possible_actions: self.config.number_of_possible_actions,
         }
@@ -349,7 +391,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
-        if self.copy_update == CopyUpdate::RandomRules {
+        if let Some(rewards) = &mut self.per_goal_rewards {
+            rewards.learn::<S, M>(&mut self.population, &self.config, drawn, time, &mut self.rng);
+            self.counts.full += 1;
+        } else if self.copy_update == CopyUpdate::RandomRules {
             self.random_rule_updates.as_mut().expect("injected reward-skip stream").learn::<S, M>(
                 &mut self.population, &self.config, &drawn.scored.sample, time, &mut self.rng, drawn.provenance.origin,
             );

@@ -46,10 +46,12 @@ pub enum AgentKind {
     Acs2Er,
     Acs2ErOneUpdate,
     Acs2ErEpisodic,
+    Acs2ErEpisodicPerGoalReward,
     Acs2Her { proportion: f64 },
     Acs2HerNontrivial,
     Acs2HerShortenedGoalRules,
     Acs2HerShortenedRandomRules,
+    Acs2HerShortenedPerGoalReward,
     Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
@@ -67,10 +69,12 @@ impl AgentKind {
             "acs2er" => Ok(Self::Acs2Er),
             "acs2er_one_update" => Ok(Self::Acs2ErOneUpdate),
             "acs2er_episodic" => Ok(Self::Acs2ErEpisodic),
+            "acs2er_episodic_per_goal_reward" => Ok(Self::Acs2ErEpisodicPerGoalReward),
             "acs2her" => Ok(Self::Acs2Her { proportion }),
             "acs2her_nontrivial" => Ok(Self::Acs2HerNontrivial),
             "acs2her_shortened_goal_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedGoalRules),
             "acs2her_shortened_random_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedRandomRules),
+            "acs2her_shortened_per_goal_reward" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedPerGoalReward),
             "acs2her_shortened" => Ok(Self::Acs2HerShortened { proportion }),
             "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
             "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
@@ -88,10 +92,12 @@ impl AgentKind {
             Self::Acs2Er => "acs2er",
             Self::Acs2ErOneUpdate => "acs2er_one_update",
             Self::Acs2ErEpisodic => "acs2er_episodic",
+            Self::Acs2ErEpisodicPerGoalReward => "acs2er_episodic_per_goal_reward",
             Self::Acs2Her { .. } => "acs2her",
             Self::Acs2HerNontrivial => "acs2her_nontrivial",
             Self::Acs2HerShortenedGoalRules => "acs2her_shortened_goal_rules",
             Self::Acs2HerShortenedRandomRules => "acs2her_shortened_random_rules",
+            Self::Acs2HerShortenedPerGoalReward => "acs2her_shortened_per_goal_reward",
             Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
@@ -735,6 +741,32 @@ where T: Task<S, G, M>, F: FnMut(Value),
     let config = preset.config(task.actions());
     let agent_rng = ChaChaRandomSource::from_seed_and_stream(seed, AGENT_STREAM);
     match kind {
+        AgentKind::Acs2ErEpisodicPerGoalReward => {
+            let goals = task.training_goals().expect("per-goal rewards require an explicit finite goal set");
+            let mut agent = crate::agents::EpisodicGoalAgent(
+                acs2_agents::acs2er::episodic::PerGoalRewardAgent::<S, G, M, _, _>::new(
+                    config, crate::agents::episodic_configuration(preset), goals, agent_rng,
+                    ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
+                ));
+            run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata,
+                settings.evaluate_points, emit);
+            use acs2_agents::episodic_replay::EpisodicAgent;
+            settings.capture_final_state.then(|| (format!("{:?}", agent.0.learner().population().classifiers()),
+                agent.0.learner().snapshot()))
+        }
+        AgentKind::Acs2HerShortenedPerGoalReward => {
+            let goals = task.training_goals().expect("per-goal rewards require an explicit finite goal set");
+            let mut agent = crate::agents::EpisodicGoalAgent(
+                acs2_agents::acs2her::per_goal_reward::Agent::<S, G, M, _, _>::new(
+                    config, crate::agents::episodic_configuration(preset), goals, agent_rng,
+                    ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
+                ));
+            run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata,
+                settings.evaluate_points, emit);
+            use acs2_agents::episodic_replay::EpisodicAgent;
+            settings.capture_final_state.then(|| (format!("{:?}", agent.0.learner().population().classifiers()),
+                agent.0.learner().snapshot()))
+        }
         AgentKind::Acs2Vcp(preset) => {
             let mut agent = crate::agents::vcp::VcpGoalAgent {
                 agent: acs2_agents::acs2vcp::Agent::<S, G, M, _, _, _>::seeded(

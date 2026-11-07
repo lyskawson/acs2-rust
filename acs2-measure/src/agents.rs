@@ -82,6 +82,13 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
     }
     fn first_decision(&self, head: usize, state: &Perception<M>, action: usize) -> Option<Value> {
         assert_eq!(head, 0);
+        if let Some(rewards) = self.0.learner().per_goal_rewards() {
+            let goal = acs2_core::ports::goal::GoalLayout::<S, G, M>::split(state).1;
+            return Some(crate::first_decision::profile_with_rewards::<S, G, M>(
+                self.0.learner().population(), state, action,
+                |reference| rewards.entry(reference, &goal).r,
+            ));
+        }
         Some(crate::first_decision::profile::<S, G, M>(self.0.learner().population(), state, action))
     }
     fn online_updates(&self) -> u64 {
@@ -115,6 +122,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
     }
     fn population_logical_bytes(&self) -> usize {
         self.population_classifiers() * size_of::<Classifier<M>>()
+            + self.0.learner().per_goal_rewards().map_or(0, |rewards| rewards.logical_bytes())
     }
     fn population_mark_entries(&self) -> usize {
         self.0
@@ -166,7 +174,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "available_steps": counts.available_steps, "emitted_steps": counts.emitted_steps,
             });
         }
-        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules" | "acs2her_shortened_random_rules") {
+        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules" | "acs2her_shortened_random_rules" | "acs2her_shortened_per_goal_reward") {
             let walls = learner.wall_counters();
             diagnostics["wall_bumps"] = json!({
                 "relabeled_draws": walls.relabeled_draws,
@@ -197,6 +205,14 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
             });
             diagnostics["reward_updates"] = json!({"original": route(counts.original), "relabeled": route(counts.relabeled)});
         }
+        if let Some(rewards) = learner.per_goal_rewards() {
+            let counts = rewards.updates();
+            diagnostics["per_goal_rewards"] = json!({
+                "goals": rewards.goals().len(), "existing_pairs": rewards.existing_pairs(),
+                "updated_entries": rewards.updated_entries(),
+                "reward_updates": {"original": counts.original, "relabeled": counts.relabeled},
+            });
+        }
         Some(diagnostics)
     }
     fn agent_parameters(&self) -> Value {
@@ -215,6 +231,13 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
         if let Some(updates) = learner.random_rule_updates() {
             parameters["reward_skip_probability"] = json!(updates.parameters().skip_probability);
             parameters["reward_skip_stream"] = json!(acs2_agents::acs2her::random_rules::SKIP_STREAM);
+        }
+        if let Some(rewards) = learner.per_goal_rewards() {
+            parameters["reward_values"] = json!("per_classifier_per_goal");
+            parameters["reward_goal_count"] = json!(rewards.goals().len());
+            parameters["reward_initialization"] = json!("base_creation_values_alp_parent_inheritance");
+            parameters["genetic_algorithm"] = json!(false);
+            parameters["restore_supported"] = json!(false);
         }
         parameters
     }
