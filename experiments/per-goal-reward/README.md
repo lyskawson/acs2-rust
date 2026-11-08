@@ -58,12 +58,26 @@ strict upper-zero-boundary test remark was closed. Raw results live in
 locally, with checksum verification of both copies.
 
 The seed42 pilot completed twelve attempts without failures: 98 rows and 83,532
-pair records, at 1,648 allocated CPU-seconds (0.457778 CPU-hours), with no remaining
-reservations. The [single registered plan](plan.json) forecasts 8.697778 CPU-hours
-for 228 remaining runs and 9.155556 including the pilot. Full array reservations
-would total 28.657778 CPU-hours including the pilot, so the proposed cumulative
-limit is 29 CPU-hours. These cost estimates use one seed. The twenty-seed
-contrasts and five-seed mechanism decisions await separately authorized runs.
+pair records, at 1,648 allocated CPU-seconds (0.457778 CPU-hours). The
+[single registered plan](plan.json) forecast 8.697778 CPU-hours for 228 remaining
+runs and 9.155556 including the pilot, using one cost seed. Full array reservations
+would total 28.657778 CPU-hours including the pilot; the approved cumulative
+limit is 29 CPU-hours.
+
+The full grid completed all 240 runs on their first allocations: 1,960 rows and
+417,660 new-arm pair records, including the unchanged pilot. JobIDRaw-deduplicated
+accounting totals 33,384 allocated CPU-seconds (9.273333 CPU-hours), with no failures,
+unmapped allocations or remaining reservations. A separate job-name accounting
+query reconciles every study allocation with its scoped ledger. All 600 reference
+index entries match 540 original archive files, which were not rerun or written.
+
+Both new arms improve over their bases on all six mazes, separately for primary
+and final success (A+=6, A-=0); S+1 also improves over G on all six in both measures.
+The primary interaction is mixed (A+=1, A-=3). The final interaction gives
+"copies gain less from per-goal values" (A+=0, A-=5). Both registered joint
+mechanism rules are met on all four of Maze4--7. The
+[architecture results](../../docs/ARCHITECTURE.md#per-goal-reward-values-with-a-shared-transition-model)
+give all 120 registered intervals, definitions, provenance and limitations.
 
 `approval.json` pins the approved plan and the unchanged pilot binary.
 `prepare_grid.py` preserves a checksum inventory of every pilot input and artifact,
@@ -90,6 +104,11 @@ checks complete registered rows and validates pair aggregates against capped
 environment values. Analysis then reads only checksum-indexed verified rows.
 Training curves are explicitly post hoc: pooled F and F_mod over seeds42--46,
 with marginal t(4) intervals at each checkpoint, without curve-level inference.
+The archived `analysis/output-scope.json` labels ancillary shared-exporter columns
+in `mechanism-seed-metrics` as post hoc; only the six registered mechanism metrics
+enter registered contrasts and decisions. Full tables are also beside the external
+Polish report. The figures contain six maze panels and a six-maze overview, each
+in PNG and SVG. Every archive file has two independently SHA-256-verified copies.
 
 ```bash
 python3 -B experiments/per-goal-reward/verify_grid.py STUDY_ROOT

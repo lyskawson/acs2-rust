@@ -5660,6 +5660,174 @@ Raw data, accounting, preserved pilot inventory, full tables, figures and the Po
 executor report are under `~/Desktop/tu-runs/reward-update-dose-control/` and
 `~/tu_runs/reward-update-dose-control/` on WCSS, with two verified archive copies.
 
+## Per-goal reward values with a shared transition model
+
+The approved [per-goal reward registration](../experiments/per-goal-reward/plan.json),
+SHA-256 `185e080e5df99cb933a65b76147463a19ea4ef6aa05fe646eb0e0b9be79f46a3`,
+compares E+1 (`acs2er_episodic_per_goal_reward`) with archived episodic ER (E),
+and S+1 (`acs2her_shortened_per_goal_reward`) with archived shortened HER at
+p=2/3 (S). G is the archived goal-rule-copy arm. R is preserved as a reference
+input and has no registered comparison in this study.
+
+Each new run learns one classifier population shared by all its goals. The
+agent-owned `PerGoalRewards` table in `acs2-agents/src/per_goal_reward/` aligns
+dense classifier rows with a sorted finite goal set. Reinforcement updates use
+the draw's goal; copies use the relabeled goal and original/fallback draws use
+the original goal. The next-match maximum of q*r, training and greedy evaluation
+scores q*r*num, and per-pair first-action estimates all use that goal's entry.
+The shared scalar r/ir fields do not drive these paths. Transition learning,
+q, marks, numerosity, subsumption and the three-draw model-update schedule retain
+the base algorithms. Populations can differ across runs as their decisions differ.
+This deliberately removes reward-value generalization across goals and departs
+from Butz's ACS2 in the reinforcement part.
+
+Creation follows the base constructor: covering starts each entry at r=0 and
+ir=initial_ir, general classifiers at initial_r/initial_ir, and ALP offspring
+inherit every parent value. New lifetime update flags are false. Deletion removes
+the corresponding row; subsumption keeps the existing owner's values. Every row
+records reward writes by origin, current classifier-goal pairs and live entries
+updated in their own lifetime. Inheritance is not a reward write. The table, flags
+and counters participate in read-only evaluation snapshots. GA and restore are
+rejected. The one-goal case reproduces its base arm bit for bit. No shared core,
+Configuration, replay sample or checkpoint codec changes are involved.
+
+Measurement source remains `7a7ae7b`; the musl binary SHA-256 remains
+`0d57d9aa63402b6b3d1d0919b570e43d423dc28dc5c6adad434fddbd10a03193`.
+Review closure `dd86876` adds only the strict upper-zero-boundary test for both
+success measures and all four contrasts. P7 (`ci_high <= 0`) fails all eight
+subcases; the correct production condition `ci_high < 0` is unchanged.
+Frozen execution operations are `a84c3ac`; verification and figure tools are
+`8a4a314`. The measurement binary was not rebuilt and the pilot was not repeated.
+
+The 228 new seed43--61 runs and twelve unchanged seed42 pilot runs completed
+on their first allocations: 1960 rows and 417660 new-arm pair records.
+Pair records cover seeds42--46; seeds47--61 are compact. The full pilot inventory,
+frozen operations, source/hardware identities, registered assignments, counters,
+pair aggregates and capped environment values pass verification. All 600 reference
+index entries match 540 original archive files; references were not rerun.
+JobIDRaw-deduplicated allocation accounting totals 33384 CPU-seconds
+(9.273333 CPU-hours), including the 1648-second pilot and every attempt,
+within the approved cumulative 29 CPU-hours. Zero failures and reservations remain.
+Each of eight arrays was rederived before submission with fresh grant/queue checks,
+scheduler test-only, pinned source/binary checks, node guards and shared STOP.
+At most two streams and forty running jobs were authorized.
+
+Success uses the held-pair test block, paired over seeds42--61. The primary
+measure equally averages all registered checkpoints within each seed. Final points
+are two million interactions, four million on Woods14, with complete-episode
+overshoot. The interaction is (S+1-S)-(E+1-E) within each seed before its interval.
+Cells below are mean differences and marginal 95% t(19) intervals in success
+fractions, without multiplicity correction. Display rounding is six decimals;
+all signs and decisions use the unrounded binary64 endpoints.
+
+### Primary held-pair success
+
+| Maze | S+1 - S | E+1 - E | interaction | S+1 - G |
+|---|---|---|---|---|
+| Maze4 | +0.545756 [+0.536761, +0.554751] | +0.500270 [+0.490102, +0.510439] | +0.045486 [+0.032666, +0.058307] | +0.464931 [+0.448072, +0.481789] |
+| Maze5 | +0.484882 [+0.476063, +0.493700] | +0.480574 [+0.470961, +0.490188] | +0.004307 [-0.010615, +0.019229] | +0.446227 [+0.434604, +0.457851] |
+| Maze6 | +0.465541 [+0.455779, +0.475302] | +0.473536 [+0.466491, +0.480581] | -0.007995 [-0.020493, +0.004502] | +0.415822 [+0.403536, +0.428108] |
+| Maze7 | +0.433999 [+0.425408, +0.442589] | +0.446788 [+0.436940, +0.456636] | -0.012789 [-0.023927, -0.001652] | +0.376910 [+0.366711, +0.387108] |
+| Woods14 | +0.449513 [+0.429350, +0.469676] | +0.514815 [+0.502500, +0.527129] | -0.065302 [-0.092243, -0.038361] | +0.468031 [+0.454355, +0.481707] |
+| MazeMA | +0.317778 [+0.299381, +0.336175] | +0.348611 [+0.332597, +0.364625] | -0.030833 [-0.055260, -0.006406] | +0.278889 [+0.257747, +0.300031] |
+
+### Final held-pair success
+
+| Maze | S+1 - S | E+1 - E | interaction | S+1 - G |
+|---|---|---|---|---|
+| Maze4 | +0.759259 [+0.738300, +0.780218] | +0.770062 [+0.753272, +0.786852] | -0.010802 [-0.034844, +0.013239] | +0.650617 [+0.631399, +0.669836] |
+| Maze5 | +0.794144 [+0.783392, +0.804896] | +0.854279 [+0.840527, +0.868032] | -0.060135 [-0.080794, -0.039476] | +0.749775 [+0.733727, +0.765822] |
+| Maze6 | +0.754730 [+0.743214, +0.766246] | +0.818243 [+0.794301, +0.842185] | -0.063514 [-0.089853, -0.037174] | +0.698649 [+0.676784, +0.720514] |
+| Maze7 | +0.773148 [+0.760053, +0.786243] | +0.798843 [+0.773944, +0.823741] | -0.025694 [-0.050434, -0.000955] | +0.704630 [+0.688513, +0.720746] |
+| Woods14 | +0.742105 [+0.712429, +0.771781] | +0.800000 [+0.762195, +0.837805] | -0.057895 [-0.102796, -0.012994] | +0.757018 [+0.725354, +0.788681] |
+| MazeMA | +0.366667 [+0.333692, +0.399642] | +0.438889 [+0.407802, +0.469976] | -0.072222 [-0.103492, -0.040953] | +0.308889 [+0.278727, +0.339051] |
+
+### Registered success decisions
+
+A+ counts ci_low > 0 and A- counts ci_high < 0 over all six mazes. An endpoint
+touching zero counts neither. Primary and final decisions remain separate.
+
+| Measure | Contrast | A+ | A- | Registered verdict |
+|---|---|---:|---:|---|
+| primary | S+1 - S | 6 | 0 | improves |
+| primary | E+1 - E | 6 | 0 | improves |
+| primary | interaction | 1 | 3 | mixed |
+| primary | S+1 - G | 6 | 0 | improves |
+| final | S+1 - S | 6 | 0 | improves |
+| final | E+1 - E | 6 | 0 | improves |
+| final | interaction | 0 | 5 | copies gain less from per-goal values |
+| final | S+1 - G | 6 | 0 | improves |
+
+### Final first-decision mechanism
+
+Mechanism contrasts use final-point seeds42--46, paired before marginal 95% t(4)
+intervals. Pooling retains recorded pair weights and gives each of the training,
+validation and test blocks equal mass despite unequal block sizes. F is the
+weighted optimal chosen-action fraction. F_mod scores the within-start modal
+action, with lowest-index modal tie breaking. Both exclude random fallbacks.
+Within-start slope and spread include fallbacks, as does estimate-Q*. The
+estimate>V* share excludes them and uses strict binary64 comparison. Slope is
+weighted within-start covariance(estimate,Q*)/variance(Q*); spread is the weighted
+within-start estimate standard deviation. Value differences and spreads use reward
+units; shares and slopes are dimensionless. Undefined seed metrics invalidate an
+interval; none are dropped or imputed.
+
+| Maze | S+1 - S within_start_slope | S+1 - S F_mod | E+1 - E within_start_slope | E+1 - E F_mod |
+|---|---|---|---|---|
+| Maze4 | +0.518382 [+0.461719, +0.575045] | +0.313463 [+0.235108, +0.391817] | +0.500231 [+0.438674, +0.561788] | +0.206290 [+0.124413, +0.288168] |
+| Maze5 | +0.919817 [+0.909794, +0.929840] | +0.278078 [+0.233926, +0.322231] | +0.894083 [+0.871713, +0.916453] | +0.210811 [+0.178643, +0.242979] |
+| Maze6 | +0.916679 [+0.908094, +0.925263] | +0.255330 [+0.204266, +0.306395] | +0.847556 [+0.782629, +0.912483] | +0.214865 [+0.138720, +0.291009] |
+| Maze7 | +0.956756 [+0.941715, +0.971797] | +0.387426 [+0.283029, +0.491824] | +0.866588 [+0.849527, +0.883648] | +0.242338 [+0.164040, +0.320636] |
+| Woods14 | +0.965827 [+0.955968, +0.975687] | +0.092982 [+0.031094, +0.154871] | +0.856643 [+0.829535, +0.883751] | +0.141813 [+0.073335, +0.210291] |
+| MazeMA | +0.437842 [+0.396644, +0.479039] | +0.020926 [-0.066830, +0.108682] | +0.483985 [+0.414163, +0.553806] | +0.056296 [-0.021277, +0.133870] |
+
+| Maze | S+1 - S F | S+1 - S estimate_minus_q | E+1 - E F | E+1 - E estimate_minus_q |
+|---|---|---|---|---|
+| Maze4 | +0.559259 [+0.489146, +0.629372] | -167.133132 [-196.996755, -137.269509] | +0.494944 [+0.435924, +0.553965] | +48.592370 [+13.525606, +83.659133] |
+| Maze5 | +0.581907 [+0.556430, +0.607383] | -114.479856 [-116.719631, -112.240081] | +0.546922 [+0.511614, +0.582230] | +110.894867 [+95.593603, +126.196131] |
+| Maze6 | +0.544369 [+0.497230, +0.591508] | -105.640818 [-107.372771, -103.908865] | +0.515090 [+0.439330, +0.590850] | +140.957991 [+111.110638, +170.805344] |
+| Maze7 | +0.560319 [+0.467944, +0.652695] | -131.966647 [-136.128748, -127.804547] | +0.463875 [+0.392464, +0.535287] | +82.463286 [+70.444473, +94.482100] |
+| Woods14 | +0.302339 [+0.237325, +0.367354] | -162.873636 [-178.593982, -147.153289] | +0.359942 [+0.281616, +0.438267] | +134.447469 [+95.055699, +173.839240] |
+| MazeMA | +0.169630 [+0.101451, +0.237808] | -53.922878 [-65.556919, -42.288838] | +0.201296 [+0.110939, +0.291653] | +95.957143 [+44.255792, +147.658495] |
+
+| Maze | S+1 - S estimate_above_v | S+1 - S within_start_sd_estimate | E+1 - E estimate_above_v | E+1 - E within_start_sd_estimate |
+|---|---|---|---|---|
+| Maze4 | -0.822163 [-0.827060, -0.817267] | +42.932707 [+41.970663, +43.894751] | -0.010229 [-0.021867, +0.001408] | +28.470741 [+25.620567, +31.320916] |
+| Maze5 | -0.822973 [-0.834665, -0.811281] | +53.165982 [+52.308017, +54.023947] | -0.011562 [-0.019830, -0.003293] | +40.915647 [+38.180943, +43.650352] |
+| Maze6 | -0.792718 [-0.804036, -0.781399] | +53.975870 [+53.146814, +54.804926] | -0.008408 [-0.023083, +0.006266] | +44.401796 [+38.852678, +49.950915] |
+| Maze7 | -0.811863 [-0.826914, -0.796811] | +68.635913 [+67.862833, +69.408993] | -0.104495 [-0.137785, -0.071205] | +59.624140 [+56.846122, +62.402158] |
+| Woods14 | -0.770760 [-0.805308, -0.736212] | +128.557779 [+125.887446, +131.228113] | -0.178655 [-0.249071, -0.108239] | +121.209096 [+107.349143, +135.069048] |
+| MazeMA | -0.323148 [-0.352996, -0.293300] | +47.163827 [+42.699020, +51.628635] | +0.180741 [+0.046047, +0.315435] | +70.934665 [+46.893136, +94.976194] |
+
+The registered joint mechanism rule for S+1 - S is met: both slope
+and F_mod intervals are above zero on Maze4, Maze5, Maze6, Maze7 (4 of Maze4--7;
+at least three required).
+
+The registered joint mechanism rule for E+1 - E is met: both slope
+and F_mod intervals are above zero on Maze4, Maze5, Maze6, Maze7 (4 of Maze4--7;
+at least three required).
+
+### Training curves and reproduction
+
+The requested F and F_mod curves are explicitly post hoc: pooled seeds42--46 at
+every registered checkpoint, four arms E/E+1/S/S+1, means with marginal 95% t(4)
+intervals. These are pointwise bands, without a whole-curve claim. There are six
+maze figure pairs and one six-maze overview, each exported as PNG and SVG. The
+finite registered horizons do not establish convergence. No new comparison with
+ACS2 or R was performed.
+
+Raw rows, ledgers, accounting, source/reference checks, full 120-contrast CSV/JSON,
+seed metrics and figures live outside Git at `~/tu_runs/per-goal-reward/` on the
+cluster and `~/Desktop/tu-runs/per-goal-reward/` locally, with independent SHA-256
+verification of every archive file in both copies. Within `study/analysis/`,
+`registered-comparisons.csv` and `registered-decisions.json` contain the registered
+results; `output-scope.json` labels ancillary seed-export columns as post hoc.
+`post-hoc-curves.csv`, `post-hoc-curve-summary.csv` and `figures/` contain
+the labelled curves. [Execution and reproduction](../experiments/per-goal-reward/README.md)
+document the approval, immutable binary and the verification/analysis entry points.
+Validation at `8a4a314`: Rust 383, Python 463, P9 learning columns byte-identical,
+and 22 pre-existing clippy warnings with none added.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
