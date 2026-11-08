@@ -52,7 +52,8 @@ are audited. Its forecast keeps each arm-maze cost and counts array padding in
 the hard reservation total. Stage1 ends with that committed plan and the external
 report. Seeds43--61, final contrasts, training curves and the architecture results
 section require separate approval of the exact plan bytes and a CPU-hour limit.
-No stage2 submission is currently authorized. Raw results live in
+Stage2 was approved on 2026-11-08 with a cumulative 29 CPU-hour limit after the
+strict upper-zero-boundary test remark was closed. Raw results live in
 `~/tu_runs/per-goal-reward/` on the cluster and `~/Desktop/tu-runs/per-goal-reward/`
 locally, with checksum verification of both copies.
 
@@ -63,3 +64,22 @@ for 228 remaining runs and 9.155556 including the pilot. Full array reservations
 would total 28.657778 CPU-hours including the pilot, so the proposed cumulative
 limit is 29 CPU-hours. These cost estimates use one seed. The twenty-seed
 contrasts and five-seed mechanism decisions await separately authorized runs.
+
+`approval.json` pins the approved plan and the unchanged pilot binary.
+`prepare_grid.py` preserves a checksum inventory of every pilot input and artifact,
+then freezes separate execution operations. `dispatch.py` derives each of the eight
+forecast arrays from the approved plan before scheduler preview and submission.
+Each arm has one stream: its 24-job pair array precedes its three 30-job compact
+arrays. At most two arrays are active, each with twenty running slots. The shared
+accounting scope includes the immutable pilot and every new allocation.
+
+```bash
+python3 -B experiments/per-goal-reward/prepare_grid.py --root STUDY_ROOT --destination CLUSTER_STUDY_ROOT
+python3 -B experiments/per-goal-reward/dispatch.py --root CLUSTER_STUDY_ROOT --repo TU_CLONE --array 0
+```
+
+The forecast indices are 0--3 for episodic replay and 4--7 for shortened HER.
+Submit the next array of an arm only after its predecessor is terminal and all
+registered rows validate. The dispatcher refuses an existing batch, a changed
+measurement source or binary, shared STOP, exhausted grant/budget or a third
+active stream. No pilot job is repeated and no measurement binary is rebuilt.

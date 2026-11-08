@@ -1,0 +1,10 @@
+{
+  "approved": true,
+  "date": "2026-11-08",
+  "plan_sha256": "185e080e5df99cb933a65b76147463a19ea4ef6aa05fe646eb0e0b9be79f46a3",
+  "phase_cpu_hour_limit": 29,
+  "includes_pilot_cpu_seconds": 1648,
+  "measurement_commit": "7a7ae7b769a30be235fb248b42482a68a0c201dd",
+  "binary_sha256": "0d57d9aa63402b6b3d1d0919b570e43d423dc28dc5c6adad434fddbd10a03193",
+  "scope": "Remaining registered seeds43--61, registered analysis, F/F_mod training curves and architecture results. No mechanism change, new experiment or pilot rerun."
+}
