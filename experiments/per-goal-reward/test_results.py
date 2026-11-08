@@ -92,6 +92,18 @@ class ResultsTests(unittest.TestCase):
         result = decisions(rows)
         self.assertEqual(result['verdicts'][0]['A_positive'], 2)
         self.assertEqual(result['verdicts'][0]['verdict'], 'no clear effect')
+        upper_zero = self.fixture([0] * 6, [0] * 6)
+        for row in upper_zero:
+            if row['group'] == 'success':
+                row.update(ci_low=-1.0, ci_high=0.0)
+        boundary = decisions(upper_zero)['verdicts']
+        self.assertEqual({(row['metric'], row['comparison']) for row in boundary},
+            {(metric, comparison) for metric in ('primary', 'final') for comparison in SUCCESS_CONTRASTS})
+        for row in boundary:
+            with self.subTest(metric=row['metric'], comparison=row['comparison']):
+                self.assertEqual({key: row[key] for key in ('A_positive', 'A_negative', 'verdict')},
+                    dict(A_positive=0, A_negative=0, verdict='no clear difference'
+                         if row['comparison'] == 'interaction' else 'no clear effect'))
         with self.assertRaises(ValueError): decisions(rows + [rows[0]])
 
     def test_mechanism_requires_both_positive_intervals_on_the_same_three_core_mazes(self):
