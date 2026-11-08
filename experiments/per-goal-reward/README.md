@@ -83,3 +83,16 @@ Submit the next array of an arm only after its predecessor is terminal and all
 registered rows validate. The dispatcher refuses an existing batch, a changed
 measurement source or binary, shared STOP, exhausted grant/budget or a third
 active stream. No pilot job is repeated and no measurement binary is rebuilt.
+
+`verify_grid.py` reconciles every ledger with terminal JobIDRaw-deduplicated
+accounting, verifies the preserved pilot and both frozen operation snapshots,
+checks complete registered rows and validates pair aggregates against capped
+environment values. Analysis then reads only checksum-indexed verified rows.
+Training curves are explicitly post hoc: pooled F and F_mod over seeds42--46,
+with marginal t(4) intervals at each checkpoint, without curve-level inference.
+
+```bash
+python3 -B experiments/per-goal-reward/verify_grid.py STUDY_ROOT
+python3 -B experiments/per-goal-reward/analyze.py --root STUDY_ROOT --verification STUDY_ROOT/verification.json --out STUDY_ROOT/analysis
+uv run --project tools python -B experiments/per-goal-reward/plot_results.py STUDY_ROOT/analysis
+```
