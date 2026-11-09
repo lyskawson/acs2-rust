@@ -79,6 +79,18 @@ mechanism rules are met on all four of Maze4--7. The
 [architecture results](../../docs/ARCHITECTURE.md#per-goal-reward-values-with-a-shared-transition-model)
 give all 120 registered intervals, definitions, provenance and limitations.
 
+The registered final interaction label is a threshold-rule outcome. **Post hoc
+context from the independent review**: final success E+1/S+1 is 0.997840/0.996914
+on Maze4, 1.000000/0.999775 on Maze5, 0.999324/1.000000 on Maze6, and exactly
+1/1 on Maze7 and Woods14. On Maze7/Woods14 the interaction equals -(S-E).
+On Maze4--6 the direct S+1-E+1 intervals include zero; proximity to the ceiling
+limits further gains and gives no additional evidence of a generally weaker copy
+mechanism. These intervals are not equivalence tests. MazeMA is away from the
+ceiling: E+1/S+1=0.673333/0.614444 and S+1-E+1=-0.058889
+[-0.073703, -0.044075], showing a final E+1 advantage at this finite budget.
+The architecture table gives all direct post-hoc intervals. Registered
+computations, contrasts and verdict labels are unchanged.
+
 `approval.json` pins the approved plan and the unchanged pilot binary.
 `prepare_grid.py` preserves a checksum inventory of every pilot input and artifact,
 then freezes separate execution operations. `dispatch.py` derives each of the eight
@@ -106,7 +118,16 @@ Training curves are explicitly post hoc: pooled F and F_mod over seeds42--46,
 with marginal t(4) intervals at each checkpoint, without curve-level inference.
 The archived `analysis/output-scope.json` labels ancillary shared-exporter columns
 in `mechanism-seed-metrics` as post hoc; only the six registered mechanism metrics
-enter registered contrasts and decisions. Full tables are also beside the external
+enter registered contrasts and decisions. `D_tie_*` retain compatibility names:
+they count action changes with a goal-attribute-omitting winner in each profile,
+not demonstrated ties in E+1/S+1. With r(goal), those winners can reverse rankings
+without ties; the profiles omit losing-action scores. The mechanism JSON and
+CSV companion `output-scope.json` explicitly describe the pair weights,
+denominators and this limitation. Winner goal-attribute shares measure condition
+syntax, not the share of goal-dependent decisions. Earlier protocols are unchanged.
+`export_metadata.py` annotates new exports and can annotate existing exports
+without rerunning any registered computation or changing their numeric rows.
+Full tables are also beside the external
 Polish report. The figures contain six maze panels and a six-maze overview, each
 in PNG and SVG. Every archive file has two independently SHA-256-verified copies.
 

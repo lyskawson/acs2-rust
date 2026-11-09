@@ -103,19 +103,41 @@ class GridTests(unittest.TestCase):
                 self.assertIn('--array=0-23%20', commands[1])
                 with self.assertRaises(ValueError): submit(root, repo, 0, execute)
 
-    def test_budget_and_two_stream_bounds_reject_before_any_scheduler_call(self):
+    def rejected_submission(self, state, reason, index=0):
         with tempfile.TemporaryDirectory() as directory:
             root, repo, binary, plan = self.fixture(directory)
-            execute = lambda command: plan['measurement_commit'] if 'rev-parse' in command else ''
+            calls = []
+            def execute(command):
+                calls.append(command)
+                if command[0] == '/usr/bin/git': return plan['measurement_commit'] if 'rev-parse' in command else ''
+                if command[0] == 'sshare': return '1000\n'
+                if command[0] == 'squeue': return '999|other-study|R|00:01:00|1\n'
+                if command[0] == 'sbatch': return 'test passed' if '--test-only' in command else '12345'
+                raise AssertionError(command)
             real_checksum = checksum
             digest = lambda path: plan['binary_sha256'] if Path(path) == binary else real_checksum(path)
-            states = [dict(spent_seconds=29 * 3600, reserved_seconds=0, batch_states={}),
-                dict(spent_seconds=1648, reserved_seconds=20, batch_states={'one': dict(reserved_seconds=10), 'two': dict(reserved_seconds=10)})]
-            with patch('execution_grid.validate_inputs'), patch('dispatch.checksum', side_effect=digest):
-                for state in states:
-                    with patch('dispatch.snapshot', return_value=state), self.assertRaises(ValueError): submit(root, repo, 0, execute)
-                with patch('dispatch.snapshot', return_value=dict(spent_seconds=1648, reserved_seconds=0, batch_states={})), \
-                        self.assertRaises(ValueError): submit(root, repo, 1, execute)
+            with patch('execution_grid.validate_inputs'), patch('dispatch.checksum', side_effect=digest), \
+                    patch('dispatch.snapshot', return_value=state):
+                try:
+                    with self.assertRaises(ValueError) as error: submit(root, repo, index, execute)
+                    self.assertEqual(str(error.exception), reason)
+                finally:
+                    self.assertEqual([command[0] for command in calls], ['/usr/bin/git', '/usr/bin/git'])
+                    self.assertFalse((root / batch_name(plan['forecast']['arrays'][index])).exists())
+                    self.assertFalse((root / 'continuation/admission-decisions.jsonl').exists())
+
+    def test_budget_bound_rejects_before_grant_queue_or_scheduler_calls(self):
+        self.rejected_submission(dict(spent_seconds=29 * 3600, reserved_seconds=0, batch_states={}),
+            'phase budget would be exceeded: 32.200000 hours')
+
+    def test_two_active_streams_reject_before_grant_queue_or_scheduler_calls(self):
+        self.rejected_submission(dict(spent_seconds=1648, reserved_seconds=20,
+            batch_states={'one': dict(reserved_seconds=10), 'two': dict(reserved_seconds=10)}),
+            'two active streams already reserve forty running slots')
+
+    def test_unfinished_previous_array_rejects_before_grant_queue_or_scheduler_calls(self):
+        self.rejected_submission(dict(spent_seconds=1648, reserved_seconds=0, batch_states={}),
+            'previous array of this arm must finish and validate first', index=1)
 
     def test_actual_preparation_output_is_authorizable_and_preserves_pilot_bytes(self):
         plan, _ = approved()

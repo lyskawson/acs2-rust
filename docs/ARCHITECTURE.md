@@ -5758,6 +5758,33 @@ touching zero counts neither. Primary and final decisions remain separate.
 | final | interaction | 0 | 5 | copies gain less from per-goal values |
 | final | S+1 - G | 6 | 0 | improves |
 
+### Final interaction and success levels — post hoc context
+
+The registered final label "copies gain less from per-goal values" is retained.
+The following success levels and direct new-arm contrasts are **post hoc**, from
+section B and the JSON of the independent `POST-HOC-ETAP2` review, test block,
+seeds42--61. They limit interpretation of that label.
+
+| Maze | E+1 final | S+1 final | S+1 - E+1, marginal 95% t(19) |
+|---|---:|---:|---|
+| Maze4 | 0.997840 | 0.996914 | -0.000926 [-0.003274, +0.001422] |
+| Maze5 | 1.000000 | 0.999775 | -0.000225 [-0.000697, +0.000246] |
+| Maze6 | 0.999324 | 1.000000 | +0.000676 [-0.000097, +0.001448] |
+| Maze7 | 1.000000 | 1.000000 | +0.000000 [+0.000000, +0.000000] |
+| Woods14 | 1.000000 | 1.000000 | +0.000000 [+0.000000, +0.000000] |
+| MazeMA | 0.673333 | 0.614444 | -0.058889 [-0.073703, -0.044075] |
+
+At the final point on Maze7 and Woods14 both new arms solve every test pair in
+every seed: success is exactly one, so the interaction equals -(S-E). Maze4--6
+are near that bound, and the direct S+1-E+1 intervals include zero; these are not
+equivalence tests. Under this ceiling the negative interaction supplies no
+additional evidence of a generally weaker hindsight-copy mechanism. It largely
+reflects the earlier S-E advantage and the limited room for improvement.
+MazeMA is different: final E+1=0.673333 and S+1=0.614444, with direct difference
+-0.058889 [-0.073703, -0.044075], away from the ceiling. Here the post-hoc contrast
+also shows a final E+1 advantage within the registered finite budget. Neither
+case establishes convergence or a universal ranking of the copy mechanism.
+
 ### Final first-decision mechanism
 
 Mechanism contrasts use final-point seeds42--46, paired before marginal 95% t(4)
@@ -5822,6 +5849,19 @@ cluster and `~/Desktop/tu-runs/per-goal-reward/` locally, with independent SHA-2
 verification of every archive file in both copies. Within `study/analysis/`,
 `registered-comparisons.csv` and `registered-decisions.json` contain the registered
 results; `output-scope.json` labels ancillary seed-export columns as post hoc.
+The inherited `D_tie_*` export names are compatibility labels. In E+1/S+1 they
+measure action changes where both winner profiles contain at least one classifier
+without a goal attribute in its condition. They do not establish action-score ties:
+even such a classifier uses r(goal), so scores can reverse without a tie. The
+numerator uses products of pair weights for eligible same-start, different-goal,
+disjoint-optimal-action pairs; `D_tie_implied` divides by all eligible pair weight,
+`D_tie_share` by `D_different_weight`. Losing-action scores are absent from the
+profiles, so actual cross-action tie frequency cannot be recovered from them.
+The mechanism JSON and its CSV companion `output-scope.json` carry this warning.
+Winner goal-attribute shares describe condition syntax, with equal credit across
+top-scoring winning macroclassifiers and zero fallback credit. They are not shares
+of decisions depending on the goal; an omitted goal attribute does not prevent
+goal-dependent reward values. Earlier protocols retain their original definitions.
 `post-hoc-curves.csv`, `post-hoc-curve-summary.csv` and `figures/` contain
 the labelled curves. [Execution and reproduction](../experiments/per-goal-reward/README.md)
 document the approval, immutable binary and the verification/analysis entry points.

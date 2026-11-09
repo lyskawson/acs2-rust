@@ -12,6 +12,7 @@ from results import contrasts, decisions
 from grid_protocol import atomic_json
 from agent_names import canonical_row
 from collect import outside_repository
+from export_metadata import annotate_outputs
 
 
 def read_rows(path):
@@ -110,6 +111,7 @@ def analyze(root, verification, output):
             writer.writeheader()
             writer.writerows(rows)
     atomic_json(output / 'registered-decisions.json', dict(plan_sha256=digest, **result['decisions']))
+    annotate_outputs(output)
     return dict(registered_comparisons=len(result['registered']), **result['decisions'])
 
 
