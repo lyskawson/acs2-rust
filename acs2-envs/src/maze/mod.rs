@@ -43,6 +43,7 @@ impl Maze {
         max_episode_steps: u32,
         rng: Box<dyn RandomSource>,
     ) -> Self {
+        assert_eq!(matrix.iter().flatten().filter(|&&cell| cell == REWARD_CODE).count(), 1, "a single reward cell is required");
         let path_cells = collect_path_cells(&matrix);
         let (agent_row, agent_col) = path_cells[0];
         Self {

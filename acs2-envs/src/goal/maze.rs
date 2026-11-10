@@ -94,7 +94,7 @@ impl<E: MazeGoalEncoding<G>, const G: usize> GoalMaze<E, G> {
         step_cap: u32,
         rng: Box<dyn RandomSource>,
     ) -> Result<Self, GoalMazeError> {
-        let topology = MazeTopology::new(geometry).map_err(GoalMazeError::Geometry)?;
+        let topology = MazeTopology::multi_goal(geometry).map_err(GoalMazeError::Geometry)?;
         Self::multi_goal(geometry, topology.walkable_cells().to_vec(), step_cap, rng)
     }
 
@@ -127,7 +127,10 @@ impl<E: MazeGoalEncoding<G>, const G: usize> GoalMaze<E, G> {
         start_distribution: StartDistribution,
         rng: Box<dyn RandomSource>,
     ) -> Result<Self, GoalMazeError> {
-        let topology = MazeTopology::new(geometry).map_err(GoalMazeError::Geometry)?;
+        let topology = match start_distribution {
+            StartDistribution::PyalcsPaths => MazeTopology::new(geometry),
+            StartDistribution::WalkableExceptGoal => MazeTopology::multi_goal(geometry),
+        }.map_err(GoalMazeError::Geometry)?;
         if step_cap == 0 {
             return Err(GoalMazeError::ZeroStepCap);
         }

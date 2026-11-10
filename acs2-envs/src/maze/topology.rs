@@ -22,11 +22,19 @@ pub struct MazeTopology {
     matrix: &'static [&'static [u8]],
     walkable: Vec<Cell>,
     paths: Vec<Cell>,
-    reward: Cell,
+    reward: Option<Cell>,
 }
 
 impl MazeTopology {
     pub fn new(geometry: &MazeGeometry) -> Result<Self, MazeGeometryError> {
+        Self::construct(geometry, false)
+    }
+
+    pub fn multi_goal(geometry: &MazeGeometry) -> Result<Self, MazeGeometryError> {
+        Self::construct(geometry, true)
+    }
+
+    fn construct(geometry: &MazeGeometry, multiple: bool) -> Result<Self, MazeGeometryError> {
         let matrix = geometry.matrix;
         let height = matrix.len();
         let width = matrix.first().map_or(0, |row| row.len());
@@ -63,14 +71,14 @@ impl MazeTopology {
         if paths.is_empty() {
             return Err(MazeGeometryError::MissingPaths);
         }
-        if rewards.len() != 1 {
+        if rewards.is_empty() || (!multiple && rewards.len() != 1) {
             return Err(MazeGeometryError::RewardCount);
         }
         Ok(Self {
             matrix,
             walkable,
             paths,
-            reward: rewards[0],
+            reward: (rewards.len() == 1).then(|| rewards[0]),
         })
     }
 
@@ -83,7 +91,7 @@ impl MazeTopology {
     }
 
     pub fn reward_cell(&self) -> Cell {
-        self.reward
+        self.reward.expect("a single reward cell is required")
     }
 
     pub fn is_walkable(&self, cell: Cell) -> bool {

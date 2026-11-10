@@ -20,3 +20,5 @@ pub fn geometry_by_id(id: &str) -> Option<&'static MazeGeometry> {
         .chain(alcs::GEOMETRIES.iter())
         .find(|geometry| geometry.id == id)
 }
+
+pub mod research;

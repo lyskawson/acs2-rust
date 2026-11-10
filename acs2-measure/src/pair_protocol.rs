@@ -126,7 +126,7 @@ pub struct MazePairTask<E, const G: usize> {
 }
 
 impl<E: MazeGoalEncoding<G>, const G: usize> MazePairTask<E, G> {
-    fn registered(
+    pub(crate) fn registered(
         name: &str,
         geometry: &'static MazeGeometry,
         cap: u32,
@@ -134,7 +134,7 @@ impl<E: MazeGoalEncoding<G>, const G: usize> MazePairTask<E, G> {
         configuration: &Value,
         block: &str,
     ) -> Self {
-        let topology = MazeTopology::new(geometry).unwrap();
+        let topology = MazeTopology::multi_goal(geometry).unwrap();
         let goals = topology.walkable_cells().to_vec();
         let starts: BTreeMap<_, _> = goal_starts(configuration, block).into_iter().collect();
         let starts_by_goal = goals.iter().map(|goal| starts[goal].clone()).collect();

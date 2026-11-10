@@ -1,0 +1,1258 @@
+{
+  "study": "per-goal-reward-ablation",
+  "stage": "authorized_cost_pilot",
+  "pilot_seed": 42,
+  "pilot_runs": [
+    {
+      "configuration_id": "maze4_c5_pairs",
+      "task": "maze4",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze5_c8_pairs",
+      "task": "maze5",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze6_c10_pairs",
+      "task": "maze6",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_c10_pairs",
+      "task": "maze7",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods14_c18_pairs",
+      "task": "woods14",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazema_c9_pairs",
+      "task": "mazema",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 600
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 1200
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "per_pair": true,
+      "limit_seconds": 300
+    }
+  ],
+  "pilot_run_count": 138,
+  "pilot_cpu_hour_limit": 15,
+  "pilot_hard_reservations_cpu_hours": 14.0,
+  "arms": [
+    "acs2",
+    "acs2_per_goal_reward",
+    "acs2er_episodic",
+    "acs2her_shortened",
+    "acs2er_episodic_per_goal_reward",
+    "acs2her_shortened_per_goal_reward"
+  ],
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ],
+  "per_pair_seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "new_runs": 2760,
+  "archived_runs": 600,
+  "archive_policy": "Reuse ACS2 from verified 4b pair grid; E/S from original archives; E+1/S+1 from per-goal-reward. Never rerun for the full grid.",
+  "old_tasks": [
+    "maze4",
+    "maze5",
+    "maze6",
+    "maze7",
+    "woods14",
+    "mazema"
+  ],
+  "analysis": {
+    "block": "test",
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61
+    ],
+    "measures": [
+      "primary",
+      "final"
+    ],
+    "primary": "Equally weighted mean of every registered checkpoint success within each seed.",
+    "contrasts": {
+      "ACS2 r(g) - ACS2": {
+        "acs2_per_goal_reward": 1,
+        "acs2": -1
+      },
+      "E+1 - E": {
+        "acs2er_episodic_per_goal_reward": 1,
+        "acs2er_episodic": -1
+      },
+      "S+1 - S": {
+        "acs2her_shortened_per_goal_reward": 1,
+        "acs2her_shortened": -1
+      },
+      "E+1 - ACS2 r(g)": {
+        "acs2er_episodic_per_goal_reward": 1,
+        "acs2_per_goal_reward": -1
+      },
+      "S+1 - E+1": {
+        "acs2her_shortened_per_goal_reward": 1,
+        "acs2er_episodic_per_goal_reward": -1
+      },
+      "memory x values": {
+        "acs2er_episodic_per_goal_reward": 1,
+        "acs2er_episodic": -1,
+        "acs2_per_goal_reward": -1,
+        "acs2": 1
+      },
+      "copies x values": {
+        "acs2her_shortened_per_goal_reward": 1,
+        "acs2her_shortened": -1,
+        "acs2er_episodic_per_goal_reward": -1,
+        "acs2er_episodic": 1
+      }
+    },
+    "interactions": "Calculate (E+1-E)-(ACS2 r(g)-ACS2) and (S+1-S)-(E+1-E) within each seed before the marginal 95% t(19) interval.",
+    "critical_value": 2.093024054408263,
+    "degrees_of_freedom": 19,
+    "labels": {
+      "floor": "No arm lower 95% final-mean bound exceeds the exact test floor.",
+      "too_easy": "ACS2 across-seed mean at 1k >= 0.9 * test ceiling.",
+      "ceiling": "Both compared final means >= 0.99. For interactions use their two per-goal arms."
+    },
+    "exclusions": "Per group and contrast: floor always, too easy only for primary, ceiling only for final. Labels never remove table rows.",
+    "verdict": "n counted mazes; A+ counts CI low>0, A- counts CI high<0. If n=0 not assessed; improves/worsens if its sign count >= ceil(n/2) and opposite=0; mixed if both signs occur; otherwise no clear effect/difference.",
+    "interaction_words": {
+      "memory x values": [
+        "values gain more with memory",
+        "values gain less with memory"
+      ],
+      "copies x values": [
+        "copies gain more from values",
+        "copies gain less from values"
+      ]
+    },
+    "all_mazes": "Report A+, A- and n over all 28 without a verdict.",
+    "sustained_095": "First registered checkpoint in environment steps whose across-seed mean and all later checkpoint means are >=0.95; no interpolation; otherwise not reached.",
+    "reference_check": "E+1-E, S+1-S and copies x values on the original six reproduce the earlier registered intervals, without replacing earlier verdicts.",
+    "secondary": [
+      "knowledge",
+      "rules",
+      "per-goal entries",
+      "CPU time",
+      "peak memory"
+    ],
+    "post_hoc": "Every other comparison, per-pair mechanism analysis, success by distance, G and R comparisons."
+  },
+  "authorization": "Only seed42 cost pilot, all 138 new cells with per-pair records. All attempts, spent CPU time, reservations and new limits within 15 CPU-hours. No later seeds until explicit plan approval with a CPU-hour limit."
+}

@@ -31,6 +31,9 @@ pub enum ResearchTask {
 
 impl ResearchTask {
     pub fn named(name: &str) -> Option<Self> {
+        if let Some((_, geometry)) = crate::maze::geometries::research::ALCS_TASKS.iter().find(|(task, _)| *task == name) {
+            return Some(Self::GoalMaze(geometry));
+        }
         match name {
             "maze4" => Some(Self::GoalMaze(&pyalcs::MAZE4)),
             "maze5" => Some(Self::GoalMaze(&pyalcs::MAZE5)),

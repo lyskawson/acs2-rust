@@ -6,7 +6,7 @@ use acs2_core::support::config::Configuration;
 use acs2_core::support::rng::{shuffle, RandomSource};
 use acs2_trajectory::SampleOrigin;
 
-mod learning;
+pub(crate) mod learning;
 
 #[cfg(test)]
 mod tests;
@@ -106,7 +106,7 @@ impl<const G: usize> PerGoalRewards<G> {
         ]
     }
 
-    fn goal_index(&self, goal: &Goal<G>) -> usize {
+    pub(crate) fn goal_index(&self, goal: &Goal<G>) -> usize {
         self.goals
             .binary_search(goal)
             .expect("unregistered per-goal reward goal")
@@ -175,7 +175,7 @@ impl<const G: usize> PerGoalRewards<G> {
             acs2_core::ports::goal::GoalLayout::<S, G, M>::split(&sample.next_state).1,
             drawn.goal
         );
-        let goal = self.goal_index(&drawn.goal);
+        self.goal_index(&drawn.goal);
         let matched = population.form_match_set(&sample.state);
         let mut sets = learning::AlpSets {
             action_set: population.form_action_set(&matched, sample.action),
@@ -188,13 +188,22 @@ impl<const G: usize> PerGoalRewards<G> {
         } else {
             self.bootstrap(population, &next_matched, &drawn.goal)
         };
-        let discounted_reward = sample.reward + config.gamma * bootstrap;
-        for reference in sets.action_set {
+        self.update_values(config, &sets.action_set, &drawn.goal,
+            sample.reward, bootstrap, drawn.provenance.origin);
+    }
+
+    pub(crate) fn update_values(
+        &mut self, config: &Configuration, action_set: &[ClassifierRef], goal: &Goal<G>,
+        reward: f64, bootstrap: f64, origin: SampleOrigin,
+    ) {
+        let goal = self.goal_index(goal);
+        let discounted_reward = reward + config.gamma * bootstrap;
+        for &reference in action_set {
             let entry = &mut self.entries[reference][goal];
             entry.r += config.beta * (discounted_reward - entry.r);
-            entry.ir += config.beta * (sample.reward - entry.ir);
+            entry.ir += config.beta * (reward - entry.ir);
             entry.updated = true;
-            match drawn.provenance.origin {
+            match origin {
                 SampleOrigin::Original => self.updates.original += 1,
                 SampleOrigin::Relabeled => self.updates.relabeled += 1,
             }

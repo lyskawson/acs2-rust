@@ -8,3 +8,5 @@ pub mod per_goal_reward;
 #[cfg(test)]
 #[path = "../../acs2-core/tests/common/mod.rs"]
 mod differential_common;
+
+pub mod acs2_per_goal_reward;

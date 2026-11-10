@@ -235,6 +235,12 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
             encoding, "coordinates",
             "registered protocol uses coordinate goals"
         );
+        if protocol == acs2_measure::research_pairs::ID {
+            let distributions = acs2_measure::research_pairs::registered::<E, G>(
+                &options.task, geometry, options.cap, encoding);
+            execute_protocol::<_, 8, G, M>(&acs2_measure::research_pairs::protocol(&distributions), options, writer, metadata);
+            return;
+        }
         if protocol == MAZE_PAIR_PROTOCOL_ID {
             let distributions = MazePairDistributions::<E, G>::registered(
                 &options.task,
@@ -255,7 +261,7 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
         execute_protocol::<_, 8, G, M>(&distributions.protocol(), options, writer, metadata);
         return;
     }
-    let topology = MazeTopology::new(geometry).expect("valid geometry");
+    let topology = MazeTopology::multi_goal(geometry).expect("valid geometry");
     let pool = if options.pool == "full" {
         topology.walkable_cells().to_vec()
     } else {
@@ -397,7 +403,7 @@ fn main() {
     if let Some(protocol) = &options.protocol {
         assert!(matches!(
             protocol.as_str(),
-            MAZE_PROTOCOL_ID | MAZE_PAIR_PROTOCOL_ID
+            MAZE_PROTOCOL_ID | MAZE_PAIR_PROTOCOL_ID | acs2_measure::research_pairs::ID
         ));
         assert_eq!(options.pool, "full", "registered protocol owns its pools");
         assert_eq!(
@@ -411,7 +417,9 @@ fn main() {
             ),
             "goal partition protocol is for mazes"
         );
-        let configuration = if protocol == MAZE_PAIR_PROTOCOL_ID {
+        let configuration = if protocol == acs2_measure::research_pairs::ID {
+            acs2_measure::research_pairs::configuration(&options.task)
+        } else if protocol == MAZE_PAIR_PROTOCOL_ID {
             acs2_measure::pair_protocol::registered_configuration(&options.task)
         } else {
             registered_configuration(&options.task)

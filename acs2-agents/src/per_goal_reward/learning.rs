@@ -6,12 +6,12 @@ use acs2_core::support::rng::RandomSource;
 
 use super::PerGoalRewards;
 
-pub(super) struct AlpSets {
+pub(crate) struct AlpSets {
     pub action_set: Vec<ClassifierRef>,
     pub next_matched: Vec<ClassifierRef>,
 }
 
-pub(super) fn apply_alp<const G: usize, const M: usize>(
+pub(crate) fn apply_alp<const G: usize, const M: usize>(
     rewards: &mut PerGoalRewards<G>,
     population: &mut Population<M>,
     sets: &mut AlpSets,

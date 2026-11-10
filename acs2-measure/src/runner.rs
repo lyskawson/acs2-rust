@@ -43,6 +43,7 @@ pub const EVALUATION_ENVIRONMENT_STREAM: u64 = 6;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AgentKind {
     Acs2,
+    Acs2PerGoalReward,
     Acs2Er,
     Acs2ErOneUpdate,
     Acs2ErEpisodic,
@@ -66,6 +67,7 @@ impl AgentKind {
         }
         match name {
             "acs2" => Ok(Self::Acs2),
+            "acs2_per_goal_reward" => Ok(Self::Acs2PerGoalReward),
             "acs2er" => Ok(Self::Acs2Er),
             "acs2er_one_update" => Ok(Self::Acs2ErOneUpdate),
             "acs2er_episodic" => Ok(Self::Acs2ErEpisodic),
@@ -89,6 +91,7 @@ impl AgentKind {
     pub fn name(self) -> &'static str {
         match self {
             Self::Acs2 => "acs2",
+            Self::Acs2PerGoalReward => "acs2_per_goal_reward",
             Self::Acs2Er => "acs2er",
             Self::Acs2ErOneUpdate => "acs2er_one_update",
             Self::Acs2ErEpisodic => "acs2er_episodic",
@@ -741,6 +744,16 @@ where T: Task<S, G, M>, F: FnMut(Value),
     let config = preset.config(task.actions());
     let agent_rng = ChaChaRandomSource::from_seed_and_stream(seed, AGENT_STREAM);
     match kind {
+        AgentKind::Acs2PerGoalReward => {
+            let goals = task.training_goals().expect("per-goal rewards require finite goals");
+            let mut agent = crate::agents::online_values::OnlineGoalAgent {
+                agent: acs2_agents::acs2_per_goal_reward::Agent::<S, G, M, _>::new(config, goals, agent_rng)
+                    .with_truncation_mode(preset.truncation), preset, steps: 0,
+            };
+            run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata,
+                settings.evaluate_points, emit);
+            settings.capture_final_state.then(|| (format!("{:?}", agent.agent.population().classifiers()), agent.agent.snapshot()))
+        }
         AgentKind::Acs2ErEpisodicPerGoalReward => {
             let goals = task.training_goals().expect("per-goal rewards require an explicit finite goal set");
             let mut agent = crate::agents::EpisodicGoalAgent(

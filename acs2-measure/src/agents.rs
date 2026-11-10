@@ -321,3 +321,5 @@ impl<R: RandomSource, const S: usize, const G: usize, const M: usize> GoalAgent<
         )
     }
 }
+
+pub mod online_values;

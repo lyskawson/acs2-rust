@@ -13,3 +13,5 @@ pub mod reward_dose;
 pub mod runner;
 pub mod task;
 pub mod trajectory;
+
+pub mod research_pairs;

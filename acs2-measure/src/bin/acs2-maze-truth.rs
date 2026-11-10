@@ -8,7 +8,7 @@ fn main() {
     else {
         panic!("ground truth requires a maze")
     };
-    let topology = MazeTopology::new(geometry).expect("valid environment topology");
+    let topology = MazeTopology::multi_goal(geometry).expect("valid environment topology");
     println!(
         "{}",
         acs2_measure::maze_truth::model(&topology, &args[0], args[1].parse().expect("cap"))
