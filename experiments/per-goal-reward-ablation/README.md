@@ -73,3 +73,27 @@ longer attempts. No unmeasured discount is applied to compact evaluation seeds. 
 proposed allocation limits add an operational margin and require separate approval.
 The pilot does not supply any completed full run; all 20 seeds remain in the new grid.
 No pilot success summary, registered outcome analysis or figures are produced here.
+
+## Approved full grid
+
+`grid_execution.py prepare ROOT --repo REPO --operations SNAPSHOT` creates an execution
+wrapper beside an exact copy of the approved `plan.json` (SHA-256 `7d9606...ac66`).
+Measurement remains pinned at 41b025a and its original musl binary. The wrapper records
+the 2026-11-10 approval, the test-only review fix a8e8c15, 3583 cumulative CPU-hours,
+2048 MiB per allocation and immutable evidence for all 156 pilot attempts.
+
+Invoke `dispatch ROOT` in the active session. It submits the 2520 ordinary runs first,
+then the twelve seed42 MazeE2/MazeE3 scouts, permitting overlap at the array boundary.
+The remaining 228 runs require every scout to complete and its allocation CPU to stay
+within that cell's approved high forecast. `scout-cost-gate.json` retains each cost and
+threshold. Every array groups equal registered time limits, uses at most 20 concurrent
+tasks and shares the two-stream cap. Before every submission, accounting deduplicates
+all pilot and grid allocations by JobIDRaw, checks spend plus reservations against the
+approved cumulative limit, and checks the shared grant and scheduler test-only result.
+
+`job_grid.sh` and `launch_grid.py` retain the source, binary, allocation, hardware,
+preset and row-validation guards. The node runs the measurement collector without
+loading pilot prefixes or decoding the complete measurement again. Collector STOP
+semantics and every registered budget and time limit remain unchanged. A timeout is
+not resubmitted automatically. No laptop experiment, detached controller or background
+monitor is part of this workflow.
