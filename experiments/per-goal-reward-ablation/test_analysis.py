@@ -83,6 +83,20 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(verdict(0,0,0,'E+1 - E'),'not assessed')
         self.assertEqual(interval([0.0]*20)['ci_low'],0)
 
+    def test_floor_requires_every_arm_lower_bound_to_stay_below_the_exact_floor(self):
+        configs,inputs,names=self.data()
+        for arm,level in zip(ARMS,[0.06,0.08,0.10,0.12,0.14,0.30]):
+            for seed in range(42,62):
+                inputs['m0',arm,seed][-1]['evaluation_blocks']['test']['success']=level+(seed-51.5)*0.001
+        result=calculate(configs,inputs,names)
+        def lower(arm):
+            values=[inputs['m0',arm,seed][-1]['evaluation_blocks']['test']['success'] for seed in range(42,62)]
+            return statistics.mean(values)-T19*statistics.stdev(values)/math.sqrt(20)
+        self.assertLess(lower(A),0.15)
+        self.assertGreater(lower(S1),0.15)
+        self.assertFalse(next(row for row in result['labels'] if row['task']=='m0')['floor'])
+        self.assertTrue(all(row['counted'] for row in result['comparisons'] if row['task']=='m0'))
+
     def test_sustained_uses_all_later_points_without_interpolation(self):
         self.assertEqual(sustained([1000,3000,10000,30000],[0.96,0.94,0.95,0.97]),10000)
         self.assertEqual(sustained([1000,3000],[0.99,0.949]),'not reached')

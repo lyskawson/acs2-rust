@@ -1,11 +1,67 @@
 use acs2_core::support::rng::ChaChaRandomSource;
 use acs2_envs::goal::maze::CoordinateGoalMaze;
-use acs2_envs::maze::geometries::{alcs, research};
+use acs2_envs::maze::geometries::{alcs, pyalcs, research};
 use acs2_envs::maze::topology::{MazeGeometryError, MazeTopology};
 use acs2_envs::maze::Maze;
 use acs2_envs::roles::{ResearchTask, PERFORMANCE_MAZES};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
+
+#[test]
+fn multi_goal_equals_single_goal_topology_on_every_existing_geometry() {
+    let mut count = 0;
+    for geometry in pyalcs::GEOMETRIES.iter().chain(alcs::GEOMETRIES) {
+        let single = MazeTopology::new(geometry).unwrap();
+        let multiple = MazeTopology::multi_goal(geometry).unwrap();
+        assert_eq!(
+            single.walkable_cells(),
+            multiple.walkable_cells(),
+            "{}",
+            geometry.id
+        );
+        assert_eq!(
+            single.path_cells(),
+            multiple.path_cells(),
+            "{}",
+            geometry.id
+        );
+        assert_eq!(
+            single.reward_cell(),
+            multiple.reward_cell(),
+            "{}",
+            geometry.id
+        );
+        for (row, cells) in geometry.matrix.iter().enumerate() {
+            for column in 0..cells.len() {
+                let cell = (row, column);
+                assert_eq!(
+                    single.is_walkable(cell),
+                    multiple.is_walkable(cell),
+                    "{} {cell:?}",
+                    geometry.id
+                );
+            }
+        }
+        for &cell in single.walkable_cells() {
+            assert_eq!(
+                single.perception_at(cell),
+                multiple.perception_at(cell),
+                "{} {cell:?}",
+                geometry.id
+            );
+            for action in 0..8 {
+                assert_eq!(
+                    single.next_cell(cell, action),
+                    multiple.next_cell(cell, action),
+                    "{} {cell:?} {action}",
+                    geometry.id
+                );
+            }
+        }
+        count += 1;
+    }
+    assert_eq!(count, 32);
+}
 
 #[test]
 fn all_24_research_matrices_equal_pinned_alcs_sources_and_known_benchmark_differences_are_exact() {

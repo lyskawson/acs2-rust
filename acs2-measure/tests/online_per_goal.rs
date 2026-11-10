@@ -6,7 +6,7 @@ use acs2_envs::goal::maze::Coordinates;
 use acs2_envs::maze::geometries::pyalcs::MAZE4;
 use acs2_envs::roles::ResearchTask;
 use acs2_measure::agents::online_values::OnlineGoalAgent;
-use acs2_measure::runner::{self, AgentKind, GoalAgent, Preset};
+use acs2_measure::runner::{self, AgentKind, CoreAgent, GoalAgent, Preset};
 use acs2_measure::task::MazeTask;
 
 #[test]
@@ -48,6 +48,60 @@ fn one_goal_rows_and_per_pair_records_equal_the_base_through_the_new_online_driv
             assert_eq!(value, &b[key], "field {key}");
         }
     }
+    let preset = Preset::thesis();
+    let config = preset.config(8);
+    let goal = Goal::new([Symbol::Token(1), Symbol::Token(1)]);
+    let mut selected = Classifier::<10>::general(Some(0), &config);
+    selected.q = 1.0;
+    selected.r = 10.0;
+    selected.ir = 7.0;
+    selected.num = 3;
+    selected.effect.symbols[0] = Symbol::Token(1);
+    let mut other = selected.clone();
+    other.action = Some(1);
+    other.num = 1;
+    other.r = 20.0;
+    other.ir = 13.0;
+    let classifiers = vec![selected, other];
+    let base = CoreAgent {
+        agent: acs2_agents::acs2::Agent::with_population(
+            config.clone(),
+            ChaChaRandomSource::from_seed(42),
+            Population::from_classifiers(classifiers.clone()),
+        ),
+        preset,
+        replay: false,
+        steps: 0,
+        updates: 0,
+    };
+    let mut actual = Agent::<8, 2, 10, _>::new(config.clone(), &[goal], ChaChaRandomSource::from_seed(42))
+        .with_population(Population::from_classifiers(classifiers));
+    for (reference, r, ir) in [(0, 10.0, 7.0), (1, 20.0, 13.0)] {
+        let entry = actual.rewards_mut().entry_mut(reference, &goal);
+        entry.r = r;
+        entry.ir = ir;
+    }
+    let actual = OnlineGoalAgent {
+        agent: actual,
+        preset,
+        steps: 0,
+    };
+    let pairs = [((1, 2), goal, 1.0)];
+    let base = runner::evaluate::<_, _, 8, 2, 10>(&task, &base, &pairs, 42, config.gamma, true);
+    let actual = runner::evaluate::<_, _, 8, 2, 10>(&task, &actual, &pairs, 42, config.gamma, true);
+    assert_eq!(
+        base.estimated_first_action_value.to_bits(),
+        10.0_f64.to_bits()
+    );
+    assert_eq!(
+        actual.estimated_first_action_value.to_bits(),
+        base.estimated_first_action_value.to_bits()
+    );
+    let actual_starts = actual.starts.unwrap();
+    let base_starts = base.starts.unwrap();
+    assert_eq!(actual_starts[0]["first_action"], 0);
+    assert_eq!(actual_starts[0]["estimated_first_action_value"], 10.0);
+    assert_eq!(actual_starts, base_starts);
 }
 
 #[test]
