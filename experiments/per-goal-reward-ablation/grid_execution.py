@@ -1,6 +1,7 @@
 import argparse
 import json
 from pathlib import Path
+import subprocess
 import time
 
 from protocol import HERE,ARMS,A1,OLD_TASKS,SEEDS
@@ -162,7 +163,7 @@ def scout_gate(root,registered,ledger,records):
 
 
 def inspect(root,plan,registered,ledger,records):
-    known={r['JobID']:r for r in records};counts={};failed=[];active=0
+    known={r['JobID']:r for r in records};counts={};failed=[];active=[]
     for entry in ledger:
         stream_active=False
         for index,run in enumerate(entry['runs']):
@@ -172,22 +173,38 @@ def inspect(root,plan,registered,ledger,records):
             elif state!='COMPLETED':failed.append(dict(job=f"{entry['array_id']}_{index}",attempt=run['attempt_id'],state=state))
             elif account.get('AllocCPUS')!='1' or account.get('ExitCode')!='0:0':
                 failed.append(dict(attempt=run['attempt_id'],state='allocation identity differs'))
-        active+=stream_active
+        if stream_active:
+            active.append(entry['array_id'])
     if failed:stop_phase(Path(root)/'STOP.json',dict(terminal_failures=failed))
     gate=scout_gate(root,registered,ledger,records)
     atomic_json(Path(root)/'scout-cost-gate.json',gate)
-    return dict(active_streams=active,allocations=counts,submitted=sum(len(e['runs']) for e in ledger),
+    return dict(active_streams=len(active),active_arrays=active,allocations=counts,submitted=sum(len(e['runs']) for e in ledger),
         terminal_failures=failed,scout_gate=gate)
 
 
-def dispatch(root,executor=execute):
+def next_wave(ledger, active_arrays):
+    if not ledger or 'wave' not in ledger[-1]:
+        if len(active_arrays) > 2:
+            raise ValueError('cannot queue behind more than two independent arrays')
+        return len(ledger), active_arrays
+
+    last = ledger[-1]
+    siblings = [entry for entry in ledger if entry.get('wave') == last['wave']]
+    if len(siblings) > 2 or siblings != ledger[-len(siblings):]:
+        raise ValueError('array wave in the ledger is not contiguous or exceeds two arrays')
+    if len(siblings) == 1:
+        return last['wave'], last['wave_predecessors']
+    return len(ledger), [entry['array_id'] for entry in siblings]
+
+
+def dispatch(root,executor=execute,*,queue_wave=False):
     root=Path(root);plan=load_plan(root/'plan.json',(root/'plan.sha256').read_text().strip());registered=require_authorization(plan)
     if root.resolve()!=Path(plan['result_root']).resolve():raise ValueError('grid destination differs')
     ledger=json.loads((root/'ledger.json').read_text());state,records=balance(root,plan,ledger,executor)
     status=inspect(root,plan,registered,ledger,records)
     if (root/'STOP.json').exists():return dict(submitted=False,stopped=True,status=status,**state)
     if status['scout_gate']['failed_cost']:return dict(submitted=False,blocked='scout allocation exceeded its approved high forecast',status=status,**state)
-    if status['active_streams']>=2:return dict(submitted=False,status=status,**state)
+    if not queue_wave and status['active_streams']>=2:return dict(submitted=False,status=status,**state)
     done={r['attempt_id'] for e in ledger for r in e['runs']}
     remaining=[r for r in registered_runs(registered) if r['attempt_id'] not in done]
     if not remaining:return dict(submitted=False,all_submitted=True,status=status,**state)
@@ -196,6 +213,13 @@ def dispatch(root,executor=execute):
     if eligible[0]['phase']=='conditional' and not status['scout_gate']['passed']:
         return dict(submitted=False,waiting_for_scout_gate=True,status=status,**state)
     limit=max(r['limit_seconds'] for r in eligible);batch=[r for r in eligible if r['limit_seconds']==limit][:40]
+    dependencies = []
+    wave_metadata = {}
+    if queue_wave:
+        wave, predecessors = next_wave(ledger, status['active_arrays'])
+        dependencies = [array_id for array_id in predecessors if array_id in status['active_arrays']]
+        wave_metadata = dict(wave=wave, wave_predecessors=predecessors, depends_on=dependencies,
+                             controller_sha256=checksum(__file__))
     new=sum(r['limit_seconds'] for r in batch);bound=require_budget(0,state,new,LIMIT_HOURS)
     grant=executor(['sshare','-U','-u','alelys2099','-o','RawUsage','-n'])
     queue=executor(['squeue','--array','-u','alelys2099','-h','-o','%i|%j|%t|%L|%C'])
@@ -203,26 +227,40 @@ def dispatch(root,executor=execute):
     assignment=root/f'assignment-{len(ledger):03d}.json'
     atomic_json(assignment,dict(plan_sha256=checksum(root/'plan.json'),runs=batch,
         measurement_repository=plan['measurement_repository'],binary=plan['binary'],operations_commit=plan['operations_commit']))
-    command=submission_command(root,assignment,limit//60,len(batch),20,2048,[],job_name='tu-ablation-grid')
+    command=submission_command(root,assignment,limit//60,len(batch),20,2048,dependencies,job_name='tu-ablation-grid')
+    if dependencies:
+        command.insert(1, '--kill-on-invalid-dep=yes')
     operations=Path(plan['operations_manifest']).parent/'experiments/per-goal-reward-ablation'
     command[-4:]=[str(operations/'job_grid.sh'),str(operations),str(root),str(assignment)]
-    tested=executor(command[:1]+['--test-only']+command[1:]);require_authorization(plan)
+    try:
+        tested = executor(command[:1] + ['--test-only'] + command[1:])
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f'array test-only failed: {error.output.strip()}') from error
+    require_authorization(plan)
     if (root/'STOP.json').exists():raise ValueError('study stopped before submission')
     for run in batch:(root/run['relative_directory']).parent.parent.mkdir(parents=True)
     entry=dict(array_id=None,runs=batch,command=command,test_only=tested,grant=grant,queue=queue,
-        balance=state,bound_seconds=bound,submitted_unix=time.time())
+        balance=state,bound_seconds=bound,submitted_unix=time.time(),**wave_metadata)
     ledger.append(entry);atomic_json(root/'ledger.json',ledger)
     response=executor(command).strip();entry.update(array_id=int(response.split(';')[0]),submission_response=response)
     atomic_json(root/'ledger.json',ledger)
     return dict(submitted=True,array_id=entry['array_id'],runs=len(batch),phase=batch[0]['phase'],
-        limit_seconds=limit,bound_cpu_hours=bound/3600)
+        limit_seconds=limit,bound_cpu_hours=bound/3600,**wave_metadata)
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','dispatch','status']);parser.add_argument('root')
-    parser.add_argument('--repo');parser.add_argument('--operations');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','dispatch','enqueue','status']);parser.add_argument('root')
+    parser.add_argument('--repo');parser.add_argument('--operations');parser.add_argument('--max-arrays',type=int,default=256);args=parser.parse_args()
     if args.action=='prepare':result=prepare(args.root,args.repo,args.operations)
     elif args.action=='dispatch':result=dispatch(args.root)
+    elif args.action == 'enqueue':
+        if args.max_arrays < 1:
+            parser.error('--max-arrays must be positive')
+        for index in range(args.max_arrays):
+            result = dispatch(args.root, queue_wave=True)
+            if not result['submitted'] or index + 1 == args.max_arrays:
+                break
+            print(json.dumps(result), flush=True)
     else:
         root=Path(args.root);plan=load_plan(root/'plan.json',(root/'plan.sha256').read_text().strip());registered=require_authorization(plan)
         ledger=json.loads((root/'ledger.json').read_text());state,records=balance(root,plan,ledger)

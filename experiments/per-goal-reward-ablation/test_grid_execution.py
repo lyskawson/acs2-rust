@@ -198,6 +198,49 @@ class GridExecutionTests(unittest.TestCase):
             self.assertFalse(result['submitted']);self.assertEqual(result['status']['active_streams'],2)
             self.assertEqual(calls,[])
 
+    def test_enqueue_waves_wait_for_both_previous_arrays_and_keep_the_admission_checks(self):
+        ordinary = [run for run in self.runs if run['phase'] == 'ordinary']
+        initial = [dict(array_id=100 + i, runs=[run]) for i, run in enumerate(ordinary[:2])]
+        submitted = []
+        commands = []
+
+        def balance(root, plan, ledger, executor):
+            records = [dict(JobID=f'{entry["array_id"]}_{i}', State='PENDING', CPUTimeRAW='0')
+                       for entry in ledger for i, _ in enumerate(entry['runs'])]
+            reserved = sum(run['limit_seconds'] for entry in ledger for run in entry['runs'])
+            return dict(spent_seconds=12965, reserved_seconds=reserved), records
+
+        def execute(command):
+            commands.append(command)
+            if command[0] == 'sshare':
+                return '0'
+            if command[0] == 'squeue':
+                return ''
+            if '--test-only' in command:
+                return 'accepted'
+            submitted.append(command)
+            return str(199 + len(submitted))
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            atomic_json(root / 'plan.json', self.wrapper(root))
+            (root / 'plan.sha256').write_text(grid.checksum(root / 'plan.json'))
+            atomic_json(root / 'ledger.json', initial)
+            with patch.object(grid, 'require_authorization', return_value=self.registered), patch.object(grid, 'balance', side_effect=balance):
+                results = [grid.dispatch(root, execute, queue_wave=True) for _ in range(3)]
+
+            self.assertEqual([result['depends_on'] for result in results], [[100, 101], [100, 101], [200, 201]])
+            self.assertEqual([result['wave'] for result in results], [2, 2, 4])
+            self.assertEqual([command[0] for command in commands], ['sshare', 'squeue', 'sbatch', 'sbatch'] * 3)
+            for index, command in enumerate(submitted):
+                parents = ':'.join(map(str, results[index]['depends_on']))
+                self.assertIn(f'--dependency=afterok:{parents}', command)
+                self.assertIn('--kill-on-invalid-dep=yes', command)
+                self.assertEqual(commands[index * 4 + 2], command[:1] + ['--test-only'] + command[1:])
+            ledger = json.loads((root / 'ledger.json').read_text())
+            expected_bound = 12965 + sum(run['limit_seconds'] for entry in ledger for run in entry['runs'])
+            self.assertEqual(ledger[-1]['bound_seconds'], expected_bound)
+
     def test_dispatch_waits_for_scouts_before_the_remaining_228_runs(self):
         ledger=[dict(array_id=100,runs=[r for r in self.runs if r['phase']!='conditional'])]
         with tempfile.TemporaryDirectory() as directory:
@@ -205,8 +248,10 @@ class GridExecutionTests(unittest.TestCase):
             (root/'plan.sha256').write_text(grid.checksum(root/'plan.json'));atomic_json(root/'ledger.json',ledger)
             status=dict(active_streams=0,scout_gate=dict(passed=False,failed_cost=False))
             with patch.object(grid,'require_authorization',return_value=self.registered),patch.object(grid,'balance',return_value=(dict(spent_seconds=12965,reserved_seconds=0),[])),patch.object(grid,'inspect',return_value=status):
-                result=grid.dispatch(root,lambda command:self.fail('must not contact scheduler before scout gate'))
-            self.assertTrue(result['waiting_for_scout_gate'])
+                for queue_wave in (False, True):
+                    result = grid.dispatch(root, lambda command: self.fail('must not contact scheduler before scout gate'),
+                                           queue_wave=queue_wave)
+                    self.assertTrue(result['waiting_for_scout_gate'])
 
     def test_terminal_timeout_sets_stop_and_cannot_be_resubmitted(self):
         with tempfile.TemporaryDirectory() as directory:
