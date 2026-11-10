@@ -37,3 +37,21 @@ checkpoint means, final points, both within-seed interactions, floor/easy/ceilin
 labels, separate group verdicts and descriptive sustained-0.95 checkpoints. Other
 comparisons and mechanism analyses are post hoc. No registered grid analysis or
 figures are produced by the cost-pilot stage.
+
+## Approved 30k cost pilot
+
+The 2026-11-10 amendment authorizes `cost-pilot.json`: fresh 30k runs in all 138 cells,
+including 18 bitwise prefix checks against the stopped first wave. The latter's 9810
+CPU-seconds remain charged to the same 15 CPU-hour budget. `execution.py` and the old
+registration remain first-wave evidence; use `cost_pilot.py` for the active pilot.
+Its independent operations snapshot may advance while the measurement clone and binary
+remain pinned at 41b025a. `cost_pilot.py prepare ROOT --repo REPO --operations SNAPSHOT
+--prior STOPPED_ROOT` verifies both identities and the immutable stopped ledger.
+`dispatch` accounts for both roots, checks the grant and test-only before every array,
+and permits at most two streams. New worst-case reservations plus prior spend are
+14.725 CPU-hours. `prefix_identity.py` compares every learning and per-pair field in
+binary64 bits before a stopped prefix may be reused as cost-growth evidence.
+
+Only cost, memory, population and per-goal entry summaries are allowed for this pilot.
+The full protocols, budgets and all 28 mazes remain unchanged. No full new run completed
+in the first wave, so the later full grid still needs all 2760 runs, including seed42.

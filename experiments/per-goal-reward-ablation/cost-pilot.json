@@ -1,0 +1,1129 @@
+{
+  "study": "per-goal-reward-ablation",
+  "stage": "authorized_30000_cost_pilot",
+  "targets": [
+    1000,
+    3000,
+    10000,
+    30000
+  ],
+  "pilot_runs": [
+    {
+      "configuration_id": "maze4_c5_pairs",
+      "task": "maze4",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze5_c8_pairs",
+      "task": "maze5",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze6_c10_pairs",
+      "task": "maze6",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_c10_pairs",
+      "task": "maze7",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods14_c18_pairs",
+      "task": "woods14",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazema_c9_pairs",
+      "task": "mazema",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "cassandra4x4_alcs_c3_pairs",
+      "task": "cassandra4x4_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman57_alcs_c10_pairs",
+      "task": "littman57_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "littman89_alcs_c7_pairs",
+      "task": "littman89_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze10_alcs_c10_pairs",
+      "task": "maze10_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "maze7_alcs_c7_pairs",
+      "task": "maze7_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazea_alcs_c6_pairs",
+      "task": "mazea_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazeb_alcs_c6_pairs",
+      "task": "mazeb_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazed_alcs_c6_pairs",
+      "task": "mazed_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee1_alcs_c7_pairs",
+      "task": "mazee1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee2_alcs_c6_pairs",
+      "task": "mazee2_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazee3_alcs_c8_pairs",
+      "task": "mazee3_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 600,
+      "prior_prefix_check": true
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef1_alcs_c3_pairs",
+      "task": "mazef1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef2_alcs_c4_pairs",
+      "task": "mazef2_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef3_alcs_c5_pairs",
+      "task": "mazef3_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "mazef4_alcs_c7_pairs",
+      "task": "mazef4_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakia_alcs_c5_pairs",
+      "task": "miyazakia_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "miyazakib_alcs_c5_pairs",
+      "task": "miyazakib_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods1_alcs_c4_pairs",
+      "task": "woods1_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods100_alcs_c6_pairs",
+      "task": "woods100_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_alcs_c6_pairs",
+      "task": "woods101_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods101_5_alcs_c6_pairs",
+      "task": "woods101_5_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2er_episodic",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2her_shortened",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2er_episodic_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    },
+    {
+      "configuration_id": "woods102_alcs_c6_pairs",
+      "task": "woods102_alcs",
+      "agent": "acs2her_shortened_per_goal_reward",
+      "seed": 42,
+      "limit_seconds": 300,
+      "prior_prefix_check": false
+    }
+  ],
+  "pilot_run_count": 138,
+  "phase_cpu_hour_limit": 15,
+  "prior_cpu_seconds": 9810,
+  "prior_attempts": 18,
+  "prior_arrays": [
+    6296853,
+    6296855
+  ],
+  "maximum_new_reservations_cpu_seconds": 43200,
+  "maximum_combined_cpu_hours": 14.725,
+  "measurement_commit": "41b025a0733a23d8a3d438a18cbf34b4526c9af2",
+  "binary_sha256": "630baba8e6244e4ce38ec3cf31e59a36cdf054f67fbe488ea55a8c27da178e3d",
+  "authorization": "User approval on 2026-11-10: first 30k steps in all 138 cells with registered per-pair records. The same 15 CPU-hour limit includes 9810 CPU-s already spent. Do not repeat the 18 first-wave attempts at full budget. Reuse their prefixes only after equality with fresh 30k runs. Report cost only, preserve full registered protocols and budgets, stop with plan and cost-range forecast."
+}
