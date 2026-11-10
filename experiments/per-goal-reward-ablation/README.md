@@ -82,8 +82,11 @@ Measurement remains pinned at 41b025a and its original musl binary. The wrapper 
 the 2026-11-10 approval, the test-only review fix a8e8c15, 3583 cumulative CPU-hours,
 2048 MiB per allocation and immutable evidence for all 156 pilot attempts.
 
-Invoke `dispatch ROOT` in the active session. It submits the 2520 ordinary runs first,
-then the twelve seed42 MazeE2/MazeE3 scouts, permitting overlap at the array boundary.
+Use `dispatch ROOT` for an immediate submission or `enqueue ROOT` for pairs of
+arrays with SLURM `afterok` dependencies. Each pair waits for both predecessors.
+Invalid dependencies close queued arrays after a failure. Resume enqueueing when
+the association has submission capacity. The dispatcher selects the 2520 ordinary
+runs first, then the twelve seed42 MazeE2/MazeE3 scouts.
 The remaining 228 runs require every scout to complete and its allocation CPU to stay
 within that cell's approved high forecast. `scout-cost-gate.json` retains each cost and
 threshold. Every array groups equal registered time limits, uses at most 20 concurrent
@@ -91,9 +94,29 @@ tasks and shares the two-stream cap. Before every submission, accounting dedupli
 all pilot and grid allocations by JobIDRaw, checks spend plus reservations against the
 approved cumulative limit, and checks the shared grant and scheduler test-only result.
 
-`job_grid.sh` and `launch_grid.py` retain the source, binary, allocation, hardware,
-preset and row-validation guards. The node runs the measurement collector without
-loading pilot prefixes or decoding the complete measurement again. Collector STOP
-semantics and every registered budget and time limit remain unchanged. A timeout is
-not resubmitted automatically. No laptop experiment, detached controller or background
-monitor is part of this workflow.
+`job_grid.sh` and `launch_grid.py` check the source, binary, allocation, hardware,
+preset and row identity. The launcher runs the collector and checks completion metadata.
+The collector owns STOP handling. Timeout retries require approval. Run the controller
+commands in the active session.
+
+`grid_results.py ROOT --out EVIDENCE` audits array admissions, allocation CPU and
+resources against the registered plan. It writes attempt and checkpoint cost tables.
+For a complete grid, supply `--archive-index`, `--original-root`, `--mirror-root`
+and `--reference-costs` to build `full-index.json` and the resource table for the
+600 original runs. The index uses verified measurements from the grid and the
+original archives.
+
+`artifact_analysis.py --index FULL_INDEX --earlier EARLIER_COMPARISONS --out OUTPUT`
+requires all 3360 full runs: the new 2760 and the 600 original archives. It verifies
+source hashes, normalizes archived agent names, projects each checkpoint without
+retaining per-pair arrays, and checks the 36 earlier intervals in binary64 bits before
+writing any results. Outputs include registered contrasts and labels, per-group
+verdicts, per-seed measures and paired differences, checkpoint means, descriptive
+sustained-0.95 points and secondary observations. The original analysis formulas and
+approved plan remain unchanged.
+
+`success_curves.py --data OUTPUT/curves.csv --out FIGURES` writes every maze/arm curve
+as an individual PNG/PDF and paginated overviews by observation aliasing. Curves show
+20-seed means at registered checkpoints, without smoothing or an interpolated
+threshold. All mazes remain visible. Registered paired primary/final contrast
+intervals are in the tables; the plots do not add pointwise inference.
