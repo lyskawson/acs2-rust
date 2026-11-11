@@ -3,9 +3,14 @@
 
 set -euo pipefail
 
-ssh -i ~/.ssh/id_rsa_wcss -o ConnectTimeout=20 alelys2099@ui.wcss.pl 'bash -s' <<'REMOTE'
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO/tools/cluster_env.sh"
+load_dotenv "$REPO"
+require_env WCSS_USER WCSS_HOST WCSS_SSH_KEY
+
+ssh -i "$WCSS_SSH_KEY" -o ConnectTimeout=20 "$WCSS_USER@$WCSS_HOST" 'bash -s' <<'REMOTE'
 echo "=== QUEUE ==="
-if queue=$(squeue -u alelys2099 -o "%.10i %.14j %.18P %.2t %.11M %.12L" 2>&1); then
+if queue=$(squeue -u "$USER" -o "%.10i %.14j %.18P %.2t %.11M %.12L" 2>&1); then
   echo "$queue"
   [ "$(echo "$queue" | wc -l)" -le 1 ] && echo "(no jobs queued or running)"
 else

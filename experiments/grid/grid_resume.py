@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import time
 
+from cluster_account import grant_limit_seconds, grant_usage_command, queue_command
 from grid_protocol import atomic_json, load_plan, require_budget
 from grid_scope import require_batch_root, stop_path, verify_operations
 from submit import balance, require_authorization, run_batches, shared_reservation
@@ -60,9 +61,9 @@ def resume(root, execute, command_builder):
         atomic_json(assignment, payload)
         state = balance(plan, ledger, execute)
         bound = require_budget(plan['pilot_allocation_cpu_seconds'], state, remaining, plan['phase_cpu_hour_limit'])
-        grant = execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n'])
-        queue = execute(['squeue', '--array', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
-        if float(grant.strip()) + shared_reservation(queue) + remaining > 15000 * 3600:
+        grant = execute(grant_usage_command())
+        queue = execute(queue_command())
+        if float(grant.strip()) + shared_reservation(queue) + remaining > grant_limit_seconds():
             raise ValueError('shared grant cannot cover remaining reservations')
         command = command_builder(root, assignment, limit, len(runs), plan['concurrency'], plan['memory_mib'],
                                   [ledger[-1]['array_id']], plan.get('job_name', 'tu-her-variants'))

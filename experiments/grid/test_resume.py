@@ -1,15 +1,28 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from grid_protocol import atomic_json
 from grid_resume import resume
 from grid_scope import SACCT_FIELDS
 from submit import submission_command
 from test_authorization import changed_manifests, tuning_fixture
+
+
+ACCOUNT = patch.dict(os.environ, {'WCSS_USER': 'tester', 'WCSS_ACCOUNT': 'tester-account', 'WCSS_GRANT_CPU_HOURS': '15000'})
+
+
+def setUpModule():
+    ACCOUNT.start()
+
+
+def tearDownModule():
+    ACCOUNT.stop()
 
 
 class ResumeTests(unittest.TestCase):

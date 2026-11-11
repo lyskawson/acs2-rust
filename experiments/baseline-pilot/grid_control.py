@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import time
 
+from cluster_account import grant_limit_seconds, grant_usage_command
 from collect import complete_rows, outside_repository
 from grid_protocol import ORDER, PLAN_SHA256, TERMINAL, accounting, allocation_rows, atomic_json, load_plan, require_budget
 from grid_attempts import attempts, inspect_attempt, select_attempts
@@ -165,8 +166,8 @@ def submit_chain(root, plan, ledger, operations, repo, chain_id=None):
                 raise ValueError('phase stopped during submission; all new arrays remain held')
             state, records, queue = snapshot(root, ledger)
             bound = require_budget(plan['pilot_allocation_cpu_hours'] * 3600, state, remaining)
-            grant = float(execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n']).strip())
-            if grant + state['reserved_seconds'] + remaining > 15000 * 3600:
+            grant = float(execute(grant_usage_command()).strip())
+            if grant + state['reserved_seconds'] + remaining > grant_limit_seconds():
                 raise ValueError('shared grant cannot cover all remaining caps')
             for run in group['runs']:
                 attempt_dir = (root / run['relative_directory']).parent.parent

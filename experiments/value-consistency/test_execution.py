@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -12,6 +13,17 @@ from protocol import ROOT
 from grid_authorization import require_authorization, require_derivation
 from grid_protocol import atomic_json, load_plan
 from submit import run_batches, submit
+
+
+ACCOUNT = patch.dict(os.environ, {'WCSS_USER': 'tester', 'WCSS_ACCOUNT': 'tester-account', 'WCSS_GRANT_CPU_HOURS': '15000'})
+
+
+def setUpModule():
+    ACCOUNT.start()
+
+
+def tearDownModule():
+    ACCOUNT.stop()
 
 
 class ExecutionTests(unittest.TestCase):

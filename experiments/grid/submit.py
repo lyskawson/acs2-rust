@@ -6,6 +6,7 @@ import subprocess
 import time
 
 from collect import outside_repository
+from cluster_account import grant_limit_seconds, grant_usage_command, queue_command
 from grid_authorization import require_authorization
 from grid_protocol import accounting, allocation_rows, atomic_json, require_budget, seconds
 from grid_scope import SACCT_FIELDS, require_batch_root, snapshot, stop_path, verify_operations
@@ -132,9 +133,9 @@ def submit(root, manifest, repo, approval=None):
                                     plan_sha256=digest, runs=runs))
         state = balance(plan, ledger, execute)
         bound = require_budget(plan['pilot_allocation_cpu_seconds'], state, remaining, plan['phase_cpu_hour_limit'])
-        grant_text = execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n'])
-        queue = execute(['squeue', '--array', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
-        if float(grant_text.strip()) + shared_reservation(queue) + remaining > 15_000 * 3600:
+        grant_text = execute(grant_usage_command())
+        queue = execute(queue_command())
+        if float(grant_text.strip()) + shared_reservation(queue) + remaining > grant_limit_seconds():
             raise ValueError('shared grant cannot cover queue plus new limits')
         command = submission_command(root, assignment, limit, len(runs), plan['concurrency'], plan['memory_mib'], dependencies,
                                      plan.get('job_name', 'tu-maze-baselines'))

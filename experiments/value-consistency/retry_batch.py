@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import time
 
+from cluster_account import grant_limit_seconds, grant_usage_command, queue_command
 from execution import APPROVED_SHA256, BINARY_SHA256, MEASUREMENT_COMMIT
 from grid_authorization import require_authorization
 from grid_attempts import inspect_attempt, attempts
@@ -75,9 +76,9 @@ def retry(root, proposal_path, approval_path):
                          cause='approved timeout recovery ' + RECOVERY_SHA256))
     assignment = batch / 'assignment-recovery-01.json'
     command = submission_command(batch, assignment, 10, 7, 20, plan['memory_mib'], [], 'tu-vcp-recovery')
-    grant = execute(['sshare', '-U', '-u', 'alelys2099', '-o', 'RawUsage', '-n'])
-    queue = execute(['squeue', '--array', '-u', 'alelys2099', '-h', '-o', '%i|%j|%t|%L|%C'])
-    if float(grant.strip()) + shared_reservation(queue) + 4200 > 15000 * 3600:
+    grant = execute(grant_usage_command())
+    queue = execute(queue_command())
+    if float(grant.strip()) + shared_reservation(queue) + 4200 > grant_limit_seconds():
         raise ValueError('shared grant cannot cover recovery')
     tested = execute(command[:1] + ['--test-only'] + command[1:])
     recovery = root / 'recovery'

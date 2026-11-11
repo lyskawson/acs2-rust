@@ -12,6 +12,9 @@ baseline/cpusingle/alcs_sandbox/
 # SLURM wrapper-level diagnostics (job stderr, not measurements)
 reports/slurm-*.wrapper
 
+# Per-user cluster account, see .env.example
+.env
+
 # macOS
 .DS_Store
 

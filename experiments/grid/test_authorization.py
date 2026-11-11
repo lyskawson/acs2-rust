@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,17 @@ from unittest.mock import patch
 from grid_authorization import derive_manifest
 from grid_protocol import atomic_json
 from submit import prepare, require_authorization, submit
+
+
+ACCOUNT = patch.dict(os.environ, {'WCSS_USER': 'tester', 'WCSS_ACCOUNT': 'tester-account', 'WCSS_GRANT_CPU_HOURS': '15000'})
+
+
+def setUpModule():
+    ACCOUNT.start()
+
+
+def tearDownModule():
+    ACCOUNT.stop()
 
 ROOT = Path(__file__).resolve().parents[2]
 

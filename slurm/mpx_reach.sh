@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
-#SBATCH --output=/home/alelys2099/mpx_runs/slurm-%j.wrapper
+#SBATCH --output=/home/%u/mpx_runs/slurm-%j.wrapper
 
 set -euo pipefail
 

@@ -188,11 +188,25 @@ multiple of ACS2's, and it is memory-hungry: k=70 at `m = 13` needs well over 8 
 
 ### On a cluster (SLURM)
 
+The cluster account belongs to whoever runs the code, so it is kept out of the scripts.
+Copy `.env.example` to `.env` in the repository root (git ignores it) and fill in
+`WCSS_USER`, `WCSS_HOST`, `WCSS_SSH_KEY`, `WCSS_ACCOUNT` and `WCSS_GRANT_CPU_HOURS`.
+`WCSS_ACCOUNT` is the SLURM account the grant belongs to (on WCSS it is also the QoS
+name); a login can hold several, each with its own limit, so the grant query is
+filtered by it. A variable already exported in the shell takes precedence over `.env`.
+`tools/sync_runs.sh` and `slurm/mpx_status.sh` read it on the laptop. The submission
+scripts under `experiments/` read it from the clone they run in, or from the exported
+environment, and refuse to submit without `WCSS_ACCOUNT` and `WCSS_GRANT_CPU_HOURS`. Their `sshare` and
+`squeue` queries fall back to the login account when `WCSS_USER` is unset. The
+wrapper's own SLURM log goes to `/home/<login>/mpx_runs/`.
+
 The wrapper expects a clone at `~/acs2-rust-repo` on the cluster and a release binary
 at `target/x86_64-unknown-linux-musl/release/mpx_reach` inside it. Prepare that clone
 and build there with `cargo build --release --target x86_64-unknown-linux-musl`
 (install the Rust target and musl linker first); the local quick start does not
-prepare this cluster binary. Run the submission command from that clone.
+prepare this cluster binary. On WCSS the login node caps each user at 100 processes and threads and
+1 GB of memory, so build with `-j 2`: the default parallelism makes the linker abort with
+`std::__throw_system_error`. Run the submission command from that clone.
 
 ```bash
 sbatch --export=ALL,TAG=<tag>,U_MAX=11,ENCODING=outcome,EPSILON=1 \

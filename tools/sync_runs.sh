@@ -11,10 +11,10 @@
 
 set -euo pipefail
 
-REMOTE="alelys2099@ui.wcss.pl"
 MPX_SYNC_BRANCH="${MPX_SYNC_BRANCH:-feature/mpx264}"
-KEY="$HOME/.ssh/id_rsa_wcss"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO/tools/cluster_env.sh"
+load_dotenv "$REPO"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
@@ -47,6 +47,9 @@ fi
 new=0
 updated=0
 if ! $local_only; then
+  require_env WCSS_USER WCSS_HOST WCSS_SSH_KEY
+  REMOTE="$WCSS_USER@$WCSS_HOST"
+  KEY="$WCSS_SSH_KEY"
   echo "==> pulling ~/mpx_runs from the cluster"
   # Checkpoints live under ~/mpx_runs/checkpoints/ and are resumable state, not results:
   # a k=264 one is ~1.5 KB per classifier and a chained run keeps several. Pulling them

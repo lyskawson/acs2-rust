@@ -116,11 +116,16 @@ the file. The commits and the docs they corrected are the durable record.
   grant first.
 - Experiments run on the cluster, never on the user's laptop — it overheats. Test
   gates locally are fine.
-- **Check the grant before submitting anything.** `sshare -U -u alelys2099 -o
-  RawUsage -n` gives CPU-seconds used against the grant (15,000 h since the
-  increase landed 2026-09-11), and it is
-  SLURM-enforced with `DenyOnLimit`: once spent, `sbatch` refuses. §5 of the handoff
-  has the commands and the traps.
+- **The cluster account is per user and lives in `.env`** (git-ignored; `.env.example`
+  lists the keys): `WCSS_USER`, `WCSS_HOST`, `WCSS_SSH_KEY`, `WCSS_ACCOUNT`,
+  `WCSS_GRANT_CPU_HOURS`. A login can hold several accounts, each with its own limit. Never hard-code a login, key path or grant size in a script;
+  read them through `tools/cluster_env.sh` or `experiments/grid/cluster_account.py`.
+  Logins and paths inside archived logs, registered protocols and the handoff are
+  historical records and stay as they are.
+- **Check the grant before submitting anything.** `sshare -U -u "$WCSS_USER" -A
+  "$WCSS_ACCOUNT" -o RawUsage -n` gives CPU-seconds used against the grant of `WCSS_GRANT_CPU_HOURS`,
+  and it is SLURM-enforced with `DenyOnLimit`: once spent, `sbatch` refuses. §5 of
+  the handoff has the commands and the traps.
 - Emails to the supervisor are Polish, plain, free of AI phrasing. **The user sends
   them, never an agent.**
 - Ask the user only about scope: new experiment phases, cancelling jobs, anything
