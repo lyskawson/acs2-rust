@@ -99,6 +99,15 @@ preset and row identity. The launcher runs the collector and checks completion m
 The collector owns STOP handling. Timeout retries require approval. Run the controller
 commands in the active session.
 
+`grid_execution.py recover ROOT --diagnostics DIAGNOSTICS` handles a verified
+SLURM metadata failure before measurement. It authenticates the STOP, allocation
+records, launch logs, cancelled dependencies and absence of measurement artifacts.
+The original STOP and first attempts remain in the audit and accounting. Continue
+with `enqueue ROOT --operations SNAPSHOT` from the verified recovery snapshot.
+Only the diagnosed losses receive new attempt IDs, with the same per-run limits.
+The scout gate uses their replacement allocations and requires all twelve full
+completions. A new failure triggers STOP.
+
 `grid_results.py ROOT --out EVIDENCE` audits array admissions, allocation CPU and
 resources against the registered plan. It writes attempt and checkpoint cost tables.
 For a complete grid, supply `--archive-index`, `--original-root`, `--mirror-root`

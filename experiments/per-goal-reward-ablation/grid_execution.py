@@ -9,6 +9,7 @@ from execution import checksum
 from cost_pilot_registration import MEASUREMENT_COMMIT,BINARY_SHA256
 from grid_protocol import atomic_json,load_plan,allocation_rows,accounting,require_budget,TERMINAL,stop_phase
 from grid_scope import verify_operations,SACCT_FIELDS
+from grid_recovery import checked_recovery,recovered_record,retry_run,start_recovery
 from submit import execute,submission_command,shared_reservation
 
 
@@ -43,6 +44,12 @@ def registered_runs(registered):
                 relative_directory=f"attempts/{identifier}/measurement/{config['id']}_{cell['agent']}_s{seed}"))
     if len(result)!=2760:raise ValueError('2760 full runs required')
     return result
+
+
+def permitted_attempts(registered, excluded):
+    original = registered_runs(registered)
+    return {run['attempt_id']: run for run in original
+            + [retry_run(run) for run in original if run['attempt_id'] in excluded]}
 
 
 def authorization():
@@ -142,8 +149,10 @@ def completion(root,run,registered):
     return checksum(path)
 
 
-def scout_gate(root,registered,ledger,records):
-    expected={r['attempt_id']:r for r in registered_runs(registered) if r['phase']=='scout'}
+def scout_gate(root,registered,ledger,records,excluded=None):
+    excluded = checked_recovery(root, ledger) if excluded is None else excluded
+    expected={key:r for key,r in permitted_attempts(registered, excluded).items()
+              if r['phase']=='scout' and key not in excluded}
     known={r['JobID']:r for r in records};checks=[]
     for entry in ledger:
         for index,run in enumerate(entry['runs']):
@@ -164,19 +173,22 @@ def scout_gate(root,registered,ledger,records):
 
 def inspect(root,plan,registered,ledger,records):
     known={r['JobID']:r for r in records};counts={};failed=[];active=[]
+    excluded = checked_recovery(root, ledger)
     for entry in ledger:
         stream_active=False
         for index,run in enumerate(entry['runs']):
             account=known.get(f"{entry['array_id']}_{index}",{});state=state_name(account)
             counts[state]=counts.get(state,0)+1
             if state not in TERMINAL:stream_active=True
+            elif recovered_record(account, f"{entry['array_id']}_{index}", excluded.get(run['attempt_id'])):
+                continue
             elif state!='COMPLETED':failed.append(dict(job=f"{entry['array_id']}_{index}",attempt=run['attempt_id'],state=state))
             elif account.get('AllocCPUS')!='1' or account.get('ExitCode')!='0:0':
                 failed.append(dict(attempt=run['attempt_id'],state='allocation identity differs'))
         if stream_active:
             active.append(entry['array_id'])
     if failed:stop_phase(Path(root)/'STOP.json',dict(terminal_failures=failed))
-    gate=scout_gate(root,registered,ledger,records)
+    gate=scout_gate(root,registered,ledger,records,excluded)
     atomic_json(Path(root)/'scout-cost-gate.json',gate)
     return dict(active_streams=len(active),active_arrays=active,allocations=counts,submitted=sum(len(e['runs']) for e in ledger),
         terminal_failures=failed,scout_gate=gate)
@@ -197,7 +209,7 @@ def next_wave(ledger, active_arrays):
     return len(ledger), [entry['array_id'] for entry in siblings]
 
 
-def dispatch(root,executor=execute,*,queue_wave=False):
+def dispatch(root,executor=execute,*,queue_wave=False,operations=None):
     root=Path(root);plan=load_plan(root/'plan.json',(root/'plan.sha256').read_text().strip());registered=require_authorization(plan)
     if root.resolve()!=Path(plan['result_root']).resolve():raise ValueError('grid destination differs')
     ledger=json.loads((root/'ledger.json').read_text());state,records=balance(root,plan,ledger,executor)
@@ -206,7 +218,10 @@ def dispatch(root,executor=execute,*,queue_wave=False):
     if status['scout_gate']['failed_cost']:return dict(submitted=False,blocked='scout allocation exceeded its approved high forecast',status=status,**state)
     if not queue_wave and status['active_streams']>=2:return dict(submitted=False,status=status,**state)
     done={r['attempt_id'] for e in ledger for r in e['runs']}
-    remaining=[r for r in registered_runs(registered) if r['attempt_id'] not in done]
+    excluded=checked_recovery(root,ledger)
+    if excluded and operations is None:
+        raise ValueError('resumption requires a verified recovery operations snapshot')
+    remaining=[run for key,run in permitted_attempts(registered,excluded).items() if key not in done]
     if not remaining:return dict(submitted=False,all_submitted=True,status=status,**state)
     eligible=next(([r for r in remaining if r['phase']==phase] for phase in ('ordinary','scout','conditional')
         if any(r['phase']==phase for r in remaining)),[])
@@ -225,13 +240,23 @@ def dispatch(root,executor=execute,*,queue_wave=False):
     queue=executor(['squeue','--array','-u','alelys2099','-h','-o','%i|%j|%t|%L|%C'])
     if float(grant.strip())+shared_reservation(queue)+new>15000*3600:raise ValueError('shared grant cannot cover this array')
     assignment=root/f'assignment-{len(ledger):03d}.json'
-    atomic_json(assignment,dict(plan_sha256=checksum(root/'plan.json'),runs=batch,
-        measurement_repository=plan['measurement_repository'],binary=plan['binary'],operations_commit=plan['operations_commit']))
+    assigned=dict(plan_sha256=checksum(root/'plan.json'),runs=batch,
+        measurement_repository=plan['measurement_repository'],binary=plan['binary'],operations_commit=plan['operations_commit'])
     command=submission_command(root,assignment,limit//60,len(batch),20,2048,dependencies,job_name='tu-ablation-grid')
     if dependencies:
         command.insert(1, '--kill-on-invalid-dep=yes')
-    operations=Path(plan['operations_manifest']).parent/'experiments/per-goal-reward-ablation'
-    command[-4:]=[str(operations/'job_grid.sh'),str(operations),str(root),str(assignment)]
+    if operations is None:
+        node_operations=Path(plan['operations_manifest']).parent/'experiments/per-goal-reward-ablation'
+    else:
+        manifest=Path(operations).resolve()/'manifest.json'
+        snapshot=dict(operations_manifest=str(manifest),operations_manifest_sha256=checksum(manifest))
+        verify_operations(snapshot)
+        node_operations=manifest.parent/'experiments/per-goal-reward-ablation'
+        if checksum(node_operations/'grid_execution.py') != checksum(__file__):
+            raise ValueError('recovery controller and node snapshot differ')
+        assigned.update(operations_commit=json.loads(manifest.read_text())['commit'], **snapshot)
+    atomic_json(assignment,assigned)
+    command[-4:]=[str(node_operations/'job_grid.sh'),str(node_operations),str(root),str(assignment)]
     try:
         tested = executor(command[:1] + ['--test-only'] + command[1:])
     except subprocess.CalledProcessError as error:
@@ -249,20 +274,26 @@ def dispatch(root,executor=execute,*,queue_wave=False):
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','dispatch','enqueue','status']);parser.add_argument('root')
-    parser.add_argument('--repo');parser.add_argument('--operations');parser.add_argument('--max-arrays',type=int,default=256);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','dispatch','enqueue','status','recover']);parser.add_argument('root')
+    parser.add_argument('--repo');parser.add_argument('--operations');parser.add_argument('--diagnostics')
+    parser.add_argument('--max-arrays',type=int,default=256);args=parser.parse_args()
     if args.action=='prepare':result=prepare(args.root,args.repo,args.operations)
-    elif args.action=='dispatch':result=dispatch(args.root)
+    elif args.action=='dispatch':result=dispatch(args.root,operations=args.operations)
     elif args.action == 'enqueue':
         if args.max_arrays < 1:
             parser.error('--max-arrays must be positive')
         for index in range(args.max_arrays):
-            result = dispatch(args.root, queue_wave=True)
+            result = dispatch(args.root, queue_wave=True, operations=args.operations)
             if not result['submitted'] or index + 1 == args.max_arrays:
                 break
             print(json.dumps(result), flush=True)
     else:
         root=Path(args.root);plan=load_plan(root/'plan.json',(root/'plan.sha256').read_text().strip());registered=require_authorization(plan)
         ledger=json.loads((root/'ledger.json').read_text());state,records=balance(root,plan,ledger)
-        result=dict(state=state,**inspect(root,plan,registered,ledger,records))
+        if args.action=='recover':
+            if args.diagnostics is None or root.resolve()!=Path(plan['result_root']).resolve():
+                parser.error('recovery requires the authorized grid root and its STOP diagnostics')
+            result=start_recovery(root,ledger,records,state,registered_runs(registered),args.diagnostics,LIMIT_HOURS,execute)
+        else:
+            result=dict(state=state,**inspect(root,plan,registered,ledger,records))
     print(json.dumps(result))

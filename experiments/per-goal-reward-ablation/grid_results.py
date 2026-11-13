@@ -6,8 +6,9 @@ from artifact_analysis import checksum, write_csv
 from grid_attempts import attempts
 from grid_execution import (
     APPROVED_SHA256, LIMIT_HOURS, PILOT_CPU_SECONDS, completion,
-    registered_runs, require_authorization, scout_gate, state_name,
+    permitted_attempts, require_authorization, scout_gate, state_name,
 )
+from grid_recovery import checked_recovery
 from grid_protocol import accounting, allocation_rows, load_plan, require_budget
 from protocol import HERE, recorded
 from submit import shared_reservation
@@ -23,8 +24,9 @@ def scope(root):
 
 
 def verify_admissions(root, ledger, registered):
-    expected = {run['attempt_id']: run for run in registered_runs(registered)}
+    expected = permitted_attempts(registered, checked_recovery(root, ledger))
     plan_sha = checksum(root / 'plan.json')
+    operation_commits = {}
     for number, entry in enumerate(ledger):
         assignment = json.loads((root / f'assignment-{number:03d}.json').read_text())
         runs = entry['runs']
@@ -46,6 +48,14 @@ def verify_admissions(root, ledger, registered):
         if (bound != entry['bound_seconds'] or not entry['test_only']
                 or grant_bound > 15000 * 3600):
             raise ValueError('missing or inconsistent admission evidence')
+        if 'operations_manifest' in assignment:
+            snapshot = Path(assignment['operations_manifest'])
+            manifest = load_plan(root.parent / snapshot.parent.name / snapshot.name,
+                                 assignment['operations_manifest_sha256'])
+            if manifest['commit'] != assignment['operations_commit']:
+                raise ValueError('assigned recovery operations differ from their snapshot')
+        operation_commits[entry['array_id']] = assignment['operations_commit']
+    return operation_commits
 
 
 def read_resources(directory):
@@ -56,7 +66,7 @@ def read_resources(directory):
         return [json.loads(line) for line in stream if line.endswith('\n')]
 
 
-def verified_source(root, attempt, account, run, config, plan, registered, resources, report):
+def verified_source(root, attempt, account, run, config, plan, registered, resources, report, operation_commit):
     directory = attempt['path']
     completion(root, run, registered)
     hashes = report['sha256']
@@ -82,6 +92,7 @@ def verified_source(root, attempt, account, run, config, plan, registered, resou
             or manifest['agent'] != run['agent'] or manifest['seed'] != run['seed']
             or manifest['attempt_id'] != run['attempt_id']
             or manifest['allocation_limit_seconds'] != run['limit_seconds']
+            or manifest['operations_commit'] != operation_commit
             or ('--per-start' in launch['command']) != (run['seed'] in registered['per_pair_seeds'])):
         raise ValueError(f'launch or allocation identity differs for {run["attempt_id"]}')
     return dict(task=run['task'], agent=run['agent'], seed=run['seed'], kind='grid_full',
@@ -91,7 +102,7 @@ def verified_source(root, attempt, account, run, config, plan, registered, resou
 def grid_snapshot(root):
     plan, registered = scope(root)
     ledger = json.loads((root / 'ledger.json').read_text())
-    verify_admissions(root, ledger, registered)
+    operation_commits = verify_admissions(root, ledger, registered)
     raw = allocation_rows((root / 'accounting-all.psv').read_text())
     records = list({row['JobIDRaw']: row for row in raw}.values())
     by_job = {row['JobID']: row for row in records}
@@ -105,7 +116,8 @@ def grid_snapshot(root):
     bound = require_budget(PILOT_CPU_SECONDS, state, 0, LIMIT_HOURS)
     gate = scout_gate(root, registered, ledger, records)
     configs = {config['id']: config for config in registered['configurations']}
-    registered_runs_by_id = {run['attempt_id']: run for run in registered_runs(registered)}
+    excluded = checked_recovery(root, ledger)
+    registered_runs_by_id = permitted_attempts(registered, excluded)
     names = load_plan(HERE / 'maze-names.json', registered['maze_names_sha256'])
     sources, run_costs, checkpoint_costs = [], [], []
     for attempt in attempts(root, ledger):
@@ -119,7 +131,10 @@ def grid_snapshot(root):
         completion_file = directory / 'completion.json'
         report = json.loads(completion_file.read_text()) if completion_file.exists() else {}
         if status == 'COMPLETED':
-            sources.append(verified_source(root, attempt, account, run, config, plan, registered, resources, report))
+            if run['attempt_id'] in excluded:
+                raise ValueError('excluded infrastructure attempt became a completed measurement')
+            sources.append(verified_source(root, attempt, account, run, config, plan, registered,
+                                           resources, report, operation_commits[attempt['array_id']]))
         common = dict(task=run['task'], maze=names[run['task']], agent=run['agent'], seed=run['seed'],
                       attempt_id=run['attempt_id'], job_id=job, job_id_raw=account.get('JobIDRaw'), state=status)
         wait4 = report['user_cpu_seconds'] + report['system_cpu_seconds'] if report else None
@@ -130,7 +145,8 @@ def grid_snapshot(root):
             peak_rss_kib=report.get('peak_rss_kib', resources[-1]['peak_rss_kib'] if resources else None),
             failure=report.get('failure')))
         checkpoint_costs.extend(dict(**common, **point) for point in resources)
-    complete = (len(sources) == registered['new_full_runs'] and state['reserved_seconds'] == 0
+    source_keys = {(run['task'], run['agent'], run['seed']) for run in sources}
+    complete = (len(source_keys) == len(sources) == registered['new_full_runs'] and state['reserved_seconds'] == 0
                 and gate['passed'] and not (root / 'STOP.json').exists())
     summary = dict(plan_sha256=APPROVED_SHA256, complete_grid=complete, verified_full_runs=len(sources),
         grid_attempts=len(run_costs), pilot_allocation_cpu_seconds=PILOT_CPU_SECONDS,

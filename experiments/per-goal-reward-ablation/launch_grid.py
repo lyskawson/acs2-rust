@@ -4,7 +4,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from grid_execution import checksum,require_authorization,registered_runs,completion
+from grid_execution import checksum,require_authorization,permitted_attempts,completion
+from grid_recovery import checked_recovery
 from grid_protocol import atomic_json,load_plan,seconds,stop_phase
 from grid_launch import allocation_fields
 from protocol import recorded
@@ -16,8 +17,15 @@ def launch(root,assignment,index):
     try:
         assigned=json.loads(assignment.read_text());plan=load_plan(root/'plan.json',assigned['plan_sha256']);registered=require_authorization(plan)
         if root.resolve()!=Path(plan['result_root']).resolve():raise ValueError('node result destination differs')
-        expected={r['attempt_id']:r for r in registered_runs(registered)}
-        if any(expected.get(r['attempt_id'])!=r for r in assigned['runs']):raise ValueError('assignment differs from approved full-grid runs')
+        excluded = checked_recovery(root, json.loads((root/'ledger.json').read_text())) if (root/'infrastructure-recovery.json').exists() else {}
+        if excluded:
+            manifest = Path(__file__).resolve().parents[2] / 'manifest.json'
+            if (str(manifest) != assigned['operations_manifest']
+                    or load_plan(manifest, assigned['operations_manifest_sha256'])['commit'] != assigned['operations_commit']):
+                raise ValueError('recovery node operations identity differs')
+        expected=permitted_attempts(registered,excluded)
+        if any(expected.get(r['attempt_id'])!=r or r['attempt_id'] in excluded for r in assigned['runs']):
+            raise ValueError('assignment differs from approved full-grid runs')
         run=assigned['runs'][index]
         if run['phase']=='conditional' and not json.loads((root/'scout-cost-gate.json').read_text())['passed']:
             raise ValueError('all twelve scouts must pass the cost gate before later large-maze seeds')
@@ -39,7 +47,7 @@ def launch(root,assignment,index):
         config=recorded(next(c for c in registered['configurations'] if c['id']==run['configuration_id']),run['seed'])
         manifest=dict(configuration=config,agent=run['agent'],seed=run['seed'],attempt_id=run['attempt_id'],
             expected_cpu_model=plan['cpu_model'],expected_host=None,expected_binary_sha256=plan['binary_sha256'],
-            expected_preset=plan['preset'],measurement_commit=commit,operations_commit=plan['operations_commit'],
+            expected_preset=plan['preset'],measurement_commit=commit,operations_commit=assigned['operations_commit'],
             stop_path=str(stop),first_row_timeout_seconds=60,process_timeout_seconds=timeout,allocation_limit_seconds=limit)
         path=output.parent/'manifest.json';atomic_json(path,manifest)
         subprocess.run([sys.executable,'-B',str(Path(__file__).with_name('collector.py')),'--manifest',str(path),
