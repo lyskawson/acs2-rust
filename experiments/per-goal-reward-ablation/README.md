@@ -124,6 +124,12 @@ verdicts, per-seed measures and paired differences, checkpoint means, descriptiv
 sustained-0.95 points and secondary observations. The original analysis formulas and
 approved plan remain unchanged.
 
+Use `--project-only --index FULL_INDEX --out PROJECTION` to verify raw archives
+and export their scalar checkpoints on the storage host. Pass `--projection
+PROJECTION --projection-sha256 SHA256` to the analysis command with the same full
+index. Run the statistics with Python 3.12.13, which reproduces the archived
+intervals bit for bit.
+
 `success_curves.py --data OUTPUT/curves.csv --out FIGURES` writes every maze/arm curve
 as an individual PNG/PDF and paginated overviews by observation aliasing. Curves show
 20-seed means at registered checkpoints, without smoothing or an interpolated

@@ -103,6 +103,19 @@ class ArtifactAnalysisTests(unittest.TestCase):
             self.assertEqual({r['maze'] for r in comparisons},set(names.values()))
             self.assertTrue((out/'curves.csv').exists());self.assertTrue((out/'sustained-095.csv').exists())
             self.assertTrue((out/'secondary-checkpoints.csv').exists());self.assertTrue((out/'paired-differences.csv').exists())
+            projection=root/'projection.json'
+            with patch.object(artifacts,'registered_plan',return_value=dict(configurations=configs)):
+                projected=artifacts.project(index,projection)
+            self.assertEqual(projected['full_runs'],840)
+            with self.assertRaisesRegex(ValueError,'projection checksum'):
+                artifacts.read_projection(index,projection,'0'*64)
+            for entry in entries:
+                Path(entry['source']).unlink()
+            projected_out=root/'from-projection'
+            artifacts.analyze(index,reference,projected_out,configs=configs,names=names,
+                              projection=projection,projection_sha256=projected['projection_sha256'])
+            for name in ['registered-results.json','secondary-checkpoints.csv','paired-differences.csv']:
+                self.assertEqual((out/name).read_bytes(),(projected_out/name).read_bytes())
 
 
 if __name__=='__main__':unittest.main()

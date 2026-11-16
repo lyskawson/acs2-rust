@@ -104,11 +104,40 @@ def write_csv(rows, path):
         writer.writerows(rows)
 
 
-def analyze(index, earlier, out, configs=None, names=None):
-    configs = configs or registered_plan()['configurations']
-    names = names or json.loads((HERE / 'maze-names.json').read_text())
+def project(index, output):
+    configs = registered_plan()['configurations']
+    index_sha = checksum(index)
     entries = json.loads(Path(index).read_text())
     inputs, secondary = load_sources(entries, configs)
+    value = dict(plan_sha256=APPROVED_SHA256, source_index_sha256=index_sha,
+                 inputs=[[list(key), rows] for key, rows in inputs.items()], secondary=secondary)
+    with Path(output).open('x') as stream:
+        json.dump(value, stream, separators=(',', ':'))
+        stream.write('\n')
+    return dict(full_runs=len(entries), source_index_sha256=index_sha, projection_sha256=checksum(output))
+
+
+def read_projection(index, path, digest):
+    if checksum(path) != digest:
+        raise ValueError('analysis projection checksum differs')
+    value = json.loads(Path(path).read_text())
+    if value['plan_sha256'] != APPROVED_SHA256 or value['source_index_sha256'] != checksum(index):
+        raise ValueError('projection belongs to another registration or source index')
+    entries = json.loads(Path(index).read_text())
+    keys = {(e['task'], e['agent'], e['seed']) for e in entries}
+    inputs = {tuple(key): rows for key, rows in value['inputs']}
+    if len(keys) != len(entries) or keys != inputs.keys() or len(inputs) != len(value['inputs']):
+        raise ValueError('projection does not match the run index')
+    return inputs, value['secondary']
+
+
+def analyze(index, earlier, out, configs=None, names=None, projection=None, projection_sha256=None):
+    configs = configs or registered_plan()['configurations']
+    names = names or json.loads((HERE / 'maze-names.json').read_text())
+    if projection is None:
+        inputs, secondary = load_sources(json.loads(Path(index).read_text()), configs)
+    else:
+        inputs, secondary = read_projection(index, projection, projection_sha256)
     result = tables(configs, inputs, names)
     previous = json.loads(Path(earlier).read_text())
     if isinstance(previous, dict):
@@ -126,9 +155,11 @@ def analyze(index, earlier, out, configs=None, names=None):
                  for row in result['sustained']]
     write_csv(sustained, output / 'sustained-095.csv')
     (output / 'registered-results.json').write_text(json.dumps(result, indent=2) + '\n')
-    evidence = dict(registered=True, full_runs=len(entries), earlier_intervals_bit_identical=checked,
+    evidence = dict(registered=True, full_runs=len(inputs), earlier_intervals_bit_identical=checked,
         plan_sha256=APPROVED_SHA256, source_index_sha256=checksum(index), earlier_comparisons_sha256=checksum(earlier),
         note='The reader normalizes archived agent names and projects each checkpoint to scalar values.')
+    if projection is not None:
+        evidence['projection_sha256'] = projection_sha256
     (output / 'analysis-verification.json').write_text(json.dumps(evidence, indent=2) + '\n')
     return evidence
 
@@ -136,7 +167,19 @@ def analyze(index, earlier, out, configs=None, names=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--index', required=True)
-    parser.add_argument('--earlier', required=True)
+    parser.add_argument('--earlier')
     parser.add_argument('--out', required=True)
+    parser.add_argument('--project-only', action='store_true')
+    parser.add_argument('--projection')
+    parser.add_argument('--projection-sha256')
     args = parser.parse_args()
-    print(json.dumps(analyze(args.index, args.earlier, args.out)))
+    if args.project_only:
+        if args.earlier or args.projection or args.projection_sha256:
+            parser.error('projection only takes a source index and an output file')
+        result = project(args.index, args.out)
+    else:
+        if not args.earlier or bool(args.projection) != bool(args.projection_sha256):
+            parser.error('analysis requires earlier comparisons and an optional projection with its SHA-256')
+        result = analyze(args.index, args.earlier, args.out,
+                         projection=args.projection, projection_sha256=args.projection_sha256)
+    print(json.dumps(result))
