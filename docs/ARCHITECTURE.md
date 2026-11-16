@@ -5868,6 +5868,91 @@ document the approval, immutable binary and the verification/analysis entry poin
 Validation at `8a4a314`: Rust 383, Python 463, P9 learning columns byte-identical,
 and 22 pre-existing clippy warnings with none added.
 
+## Per-goal reward ablation on the full maze set
+
+The [approved registration](../experiments/per-goal-reward-ablation/plan.json)
+compares six arms on 28 mazes at seeds 42–61. The 2,760 new runs cover all six
+arms on 22 ALCS tasks and ACS2 r(g) on the six original tasks. The other five
+arms on the original tasks contribute 600 verified archive runs. The budgets
+are 2M interactions and 4M on Woods14. Seeds 42–46 carry per-pair records.
+
+ACS2 r(g) uses the same delayed online update and transition model as ACS2.
+The current goal selects the reward and immediate-reward entries for greedy
+action choice, bootstrap, reward updates and first-decision records. Offspring
+inherit all entries, and covering and general rules initialize goal entries
+with the corresponding ACS2 defaults. The online arm requires GA to be disabled
+and rejects restore. The one-goal differential runs the new online path.
+
+`maze-pairs-v1` serves the original six; `alcs-maze-pairs-v1` serves the new
+tasks. Pairs stay inside a connected component, and the component diameter
+determines the cap. MazeF1, MazeF2 and Woods100 use the registered fallback
+split. The test block uses exact random-policy floors and ceilings. The two
+groups contain nine mazes without observation aliasing and nineteen with it.
+The grouping uses duplicate eight-neighbour observations on walkable cells.
+Research task IDs and geometry additions are separate from the benchmark and P9
+lists. The ALCS audit includes the three recorded deviations of benchmark
+geometries from the pinned source files.
+
+The primary measure is the equally weighted mean of test success over the
+registered checkpoints within each seed. The final measure uses the last
+checkpoint. Both interactions are differences of paired differences within
+seed. Inference is marginal paired 95% t(19), with verdicts per aliasing group.
+The `floor` label excludes both measures from verdict counts, `too easy`
+excludes the primary measure, and a contrast-specific `ceiling` excludes the
+final measure. All maze rows appear in the tables. The sustained-0.95 point
+uses the first registered checkpoint from which the mean remains at least
+0.95, through the final checkpoint.
+
+### Registered ablation results
+
+The entries give the verdict followed by `A+/A−/n`. No maze received
+`floor` or `too easy`. The four final contrasts affected by `ceiling` have
+one counted maze without aliasing, MazeMA. MazeD also has a ceiling for
+E+1 − ACS2 r(g) and memory × values.
+
+| Contrast | Primary, no aliasing | Primary, aliasing | Final, no aliasing | Final, aliasing |
+|---|---|---|---|---|
+| ACS2 r(g) − ACS2 | improves 9/0/9 | improves 19/0/19 | improves 9/0/9 | improves 19/0/19 |
+| E+1 − E | improves 9/0/9 | improves 19/0/19 | improves 9/0/9 | improves 19/0/19 |
+| S+1 − S | improves 9/0/9 | improves 19/0/19 | improves 9/0/9 | improves 19/0/19 |
+| E+1 − ACS2 r(g) | improves 8/0/9 | mixed 9/3/19 | no clear effect 0/0/1 | mixed 1/2/18 |
+| S+1 − E+1 | improves 6/0/9 | improves 19/0/19 | worsens 0/1/1 | mixed 11/3/19 |
+| Memory × values | more with memory 7/0/9 | mixed 6/2/19 | no clear difference 0/0/1 | mixed 6/1/18 |
+| Copies × values | mixed 1/3/9 | more from values 14/0/19 | less from values 0/1/1 | no clear difference 0/8/19 |
+
+Per-goal values improve each base arm on every maze in both measures, including
+the online arm without replay. The nonsaturated final contrasts for S+1 − E+1
+and copies × values without aliasing each use the single remaining MazeMA
+interval. When both per-goal arms approach the ceiling their difference becomes
+small, and the shared-value arm difference dominates the interaction. The
+earlier study's 36 overlapping intervals reproduce bit for bit.
+
+The three per-goal arms each reach sustained 0.95 on eight of nine mazes
+without aliasing. In the aliasing group, ACS2 r(g) reaches it on MazeD at 1M
+and E+1 on MazeD at 300k. The tables give the point or `not reached` for
+every maze and arm.
+
+### Execution and artifacts
+
+The last allocation finished on 2026-11-16. `sacct` charges 3,522,387 CPU-s
+to the grid and 12,965 CPU-s to the pilots (982.042222 CPU-h of 3,583 combined),
+with zero remaining reservations. The final archive audit allocated another
+199 CPU-s. A SLURM metadata timeout before measurement
+caused 30 failed and 12 cancelled first attempts. All 42 recovered at their
+original limits and the first attempts remain in the ledger. The twelve
+MazeE2 and MazeE3 scouts passed their individual cost gates before the
+remaining 228 runs entered the queue.
+
+The [execution and analysis tools](../experiments/per-goal-reward-ablation/README.md)
+verify 2,760 new runs and 600 full archive references. The evidence includes all
+392 maze-level intervals, verdict counts for both groups and pooled counts,
+27,000 analyzed checkpoints, secondary measures and allocation/peak-memory
+tables. Figures show all six arms for each maze at registered checkpoints,
+with grouped PDFs by aliasing. The study archive lives under
+`~/tu_runs/per-goal-reward-ablation/` on WCSS and
+`~/Desktop/tu-runs/per-goal-reward-ablation/` locally. The two complete
+measurement copies have identical SHA-256 manifests for all 30,554 files.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
