@@ -115,8 +115,15 @@ and `--reference-costs` to build `full-index.json` and the resource table for th
 600 original runs. The index uses verified measurements from the grid and the
 original archives.
 
-`artifact_analysis.py --index FULL_INDEX --earlier EARLIER_COMPARISONS --out OUTPUT`
-requires all 3360 full runs: the new 2760 and the 600 original archives. It verifies
+From the repository root, run the registered analysis with Python 3.12.13.
+
+```bash
+uv run --python 3.12.13 python -B \
+  experiments/per-goal-reward-ablation/artifact_analysis.py \
+  --index FULL_INDEX --earlier EARLIER_COMPARISONS --out OUTPUT
+```
+
+The analysis requires 2760 new full runs and 600 original archive runs. It verifies
 source hashes, normalizes archived agent names, projects each checkpoint without
 retaining per-pair arrays, and checks the 36 earlier intervals in binary64 bits before
 writing any results. Outputs include registered contrasts and labels, per-group
@@ -127,8 +134,7 @@ approved plan remain unchanged.
 Use `--project-only --index FULL_INDEX --out PROJECTION` to verify raw archives
 and export their scalar checkpoints on the storage host. Pass `--projection
 PROJECTION --projection-sha256 SHA256` to the analysis command with the same full
-index. Run the statistics with Python 3.12.13, which reproduces the archived
-intervals bit for bit.
+index.
 
 `success_curves.py --data OUTPUT/curves.csv --out FIGURES` writes every maze/arm curve
 as an individual PNG/PDF and paginated overviews by observation aliasing. Curves show
