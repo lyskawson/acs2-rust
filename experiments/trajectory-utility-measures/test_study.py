@@ -1,0 +1,84 @@
+import copy
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+
+from forecast import MENU, expected_refreshes, known_ratio, projected_utility
+from pilot import BUILD_LIMIT, batches, registered_plan
+from registration import ARMS, REPOSITORY, S1, TRIAL, pilot_registration
+from validate import validate_row
+
+
+class StudyTest(unittest.TestCase):
+    def test_pilot_reservations_and_throttles_cover_exactly_the_registered_cells(self):
+        settings, _, configs, runs = pilot_registration()
+        reservations = sum(run['limit_seconds'] for run in runs)
+        self.assertEqual(len(runs), 84)
+        self.assertEqual(len(configs), 28)
+        self.assertEqual(sum(cfg['targets'][-1] > 300000 for cfg in configs.values()), 16)
+        self.assertEqual({run['seed'] for run in runs}, {42})
+        self.assertEqual({run['agent'] for run in runs}, set(ARMS))
+        self.assertEqual(reservations, settings['reserved_seconds'])
+        self.assertLessEqual(reservations + BUILD_LIMIT, 72000)
+        grouped = batches(registered_plan('test', 'test'))
+        self.assertEqual({run['attempt_id'] for batch, _, _ in grouped for run in batch},
+                         {run['attempt_id'] for run in runs})
+        concurrent = sum(throttle for _, throttle, short in grouped if not short)
+        concurrent += max(throttle for _, throttle, short in grouped if short)
+        self.assertLessEqual(concurrent, 40)
+        for batch, _, _ in grouped:
+            self.assertEqual(len({run['limit_seconds'] for run in batch}), 1)
+
+    def test_cost_projection_preserves_anchor_and_models_fixed_and_candidate_work(self):
+        point = dict(
+            archive_cpu=60.0, process_cpu=96.0, steps=10000, retained_steps=9995, tu_draws=10030,
+            cost=dict(evaluations=260, candidates_sampled=1500, candidate_slots_at_four=890,
+                      cpu_seconds=12.0, scoring_cpu_seconds=5.0, insertion_evaluations=100,
+                      insertion_candidates=700, insertion_candidate_slots_at_four=390,
+                      insertion_cpu_seconds=8.0, insertion_scoring_cpu_seconds=3.0),
+        )
+        self.assertEqual(len(MENU), 6)
+        self.assertEqual(known_ratio(point, 8, 2000), (1.6, 12.0, 0.026))
+        self.assertEqual(projected_utility(point, 8, None), (8.0, 0.01))
+        cheap_cpu, cheap_rate = projected_utility(point, 4, None)
+        self.assertAlmostEqual(cheap_cpu, 5 + 3 * 390 / 700)
+        self.assertEqual(cheap_rate, 0.01)
+        mid_cpu, mid_rate = projected_utility(point, 8, 5000)
+        self.assertTrue(8 < mid_cpu < 12)
+        self.assertTrue(0.01 < mid_rate < 0.026)
+        self.assertAlmostEqual(expected_refreshes(9995, 5000, 0.0005), 1 - 2.718281828459045 ** -2.4975)
+        self.assertGreater(known_ratio(point, 4, 2000)[0], known_ratio(point, 4, 5000)[0])
+
+    def test_real_rows_and_per_pair_records_use_exactly_the_registered_arms(self):
+        binary = REPOSITORY / 'target/release/acs2-measure'
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'rows.jsonl'
+            subprocess.run([
+                str(binary), '--task', 'maze4', '--cap', '5', '--protocol', 'maze-pairs-v1',
+                '--agents', ','.join((*ARMS, S1)), '--seeds', '42', '--targets', '100', '--per-start',
+                '--tu-candidates', '8', '--tu-refresh', '2000', '--out', str(path),
+            ], check=True)
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+        _, _, configs, _ = pilot_registration()
+        config = configs['maze4_c5_pairs']
+        self.assertEqual({row['agent'] for row in rows}, {*ARMS, S1})
+        for row in rows:
+            row['source_state'] = 'clean'
+            validate_row(row, config, row['agent'], 42, row['commit'], 100)
+        trial = next(row for row in rows if row['agent'] == TRIAL)
+        changed = copy.deepcopy(trial)
+        changed['match_formations_train'] += changed['trajectory_utility']['cost']['match_sets']
+        with self.assertRaisesRegex(ValueError, 'measurement separation'):
+            validate_row(changed, config, TRIAL, 42, trial['commit'], 100)
+        changed = copy.deepcopy(trial)
+        changed['agent_parameters']['trajectory_utility']['refresh_steps'] = 5000
+        with self.assertRaisesRegex(ValueError, 'unregistered utility parameters'):
+            validate_row(changed, config, TRIAL, 42, trial['commit'], 100)
+        with self.assertRaisesRegex(ValueError, 'exactly the three TU arms and S\\+1'):
+            validate_row(dict(trial, agent='acs2her_shortened'), config, 'acs2her_shortened', 42, trial['commit'], 100)
+
+
+if __name__ == '__main__':
+    unittest.main()
