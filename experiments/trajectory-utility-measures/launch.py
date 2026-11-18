@@ -36,7 +36,7 @@ def launch(root, assignment, index):
     assigned = read(assignment)
     commit, digest = source_identity()
     plan = load_plan(root / 'plan.json', assigned['plan_sha256'])
-    registered = registered_plan(commit, digest)
+    registered = registered_plan(commit, digest, plan['build_cpu_seconds'])
     if plan != registered or assigned['runs'] != batches(registered)[assigned['batch']][0]:
         raise ValueError('node assignment, source or binary differs from the registered pilot')
     run = assigned['runs'][index]
