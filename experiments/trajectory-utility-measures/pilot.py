@@ -11,15 +11,14 @@ from grid_scope import SACCT_FIELDS
 from submit import execute, shared_reservation, submission_command
 
 
-BINARY = REPOSITORY / 'target/x86_64-unknown-linux-musl/release/acs2-measure'
+MEASUREMENT_REPOSITORY = (Path.home() / 'acs2-tu').resolve()
+BINARY = MEASUREMENT_REPOSITORY / 'target/x86_64-unknown-linux-musl/release/acs2-measure'
 ROOT = (Path.home() / 'tu_runs' / STUDY).resolve()
 BUILD_LIMIT = 600
 
 
 def clean_commit():
-    if REPOSITORY != (Path.home() / 'acs2-tu').resolve():
-        raise ValueError('pilot requires the dedicated cluster clone')
-    git = ['/usr/bin/git', '-C', str(REPOSITORY)]
+    git = ['/usr/bin/git', '-C', str(MEASUREMENT_REPOSITORY)]
     commit = execute(git + ['rev-parse', 'HEAD']).strip()
     if execute(git + ['status', '--porcelain']).strip():
         raise ValueError('pilot clone must be clean')
@@ -72,6 +71,8 @@ def check_grant(remaining):
 
 
 def build():
+    if REPOSITORY != MEASUREMENT_REPOSITORY:
+        raise ValueError('pilot build requires the dedicated cluster clone')
     commit = clean_commit()
     settings, _, _, runs = pilot_registration()
     remaining = sum(run['limit_seconds'] for run in runs) + BUILD_LIMIT
@@ -116,6 +117,8 @@ def completed_build(commit, binary_sha256):
 
 
 def submit():
+    if REPOSITORY != MEASUREMENT_REPOSITORY:
+        raise ValueError('initial pilot submission requires the dedicated cluster clone')
     commit, digest = source_identity()
     build_cpu_seconds = completed_build(commit, digest)
     plan = registered_plan(commit, digest, build_cpu_seconds)

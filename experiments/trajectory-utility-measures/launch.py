@@ -39,7 +39,12 @@ def launch(root, assignment, index):
     registered = registered_plan(commit, digest, plan['build_cpu_seconds'])
     if plan != registered or assigned['runs'] != batches(registered)[assigned['batch']][0]:
         raise ValueError('node assignment, source or binary differs from the registered pilot')
-    run = assigned['runs'][index]
+    launch_run(root, plan, assigned['runs'][index], index)
+
+
+def launch_run(root, plan, run, index):
+    stop = root / 'STOP.json'
+    config = plan['configurations'][run['configuration_id']]
     array, task, job = (os.environ[name] for name in ('SLURM_ARRAY_JOB_ID', 'SLURM_ARRAY_TASK_ID', 'SLURM_JOB_ID'))
     if int(task) != index:
         raise ValueError('SLURM index differs')
@@ -52,9 +57,9 @@ def launch(root, assignment, index):
         raise ValueError('node allocation differs from the registered pilot')
     directory = root / run['relative_directory']
     atomic_json(directory.parent.parent / 'allocation-start.json', dict(response=details, fields=fields))
-    config = plan['configurations'][run['configuration_id']]
     manifest = dict(configuration=config, agent=run['agent'], seed=run['seed'], attempt_id=run['attempt_id'],
-                    stop_path=str(stop), measurement_commit=commit, expected_binary_sha256=digest,
+                    stop_path=str(stop), measurement_commit=plan['measurement_commit'],
+                    expected_binary_sha256=plan['binary_sha256'],
                     expected_preset=plan['preset'], expected_cpu_model=plan['cpu_model'],
                     process_timeout_seconds=timeout, allocation_limit_seconds=limit,
                     first_row_timeout_seconds=60)
@@ -62,7 +67,7 @@ def launch(root, assignment, index):
     atomic_json(path, manifest)
     pair_schema.enabled = per_pair_enabled
     collect.validate_row = validate_row
-    collect.run(argparse.Namespace(manifest=str(path), binary=str(BINARY), commit=commit,
+    collect.run(argparse.Namespace(manifest=str(path), binary=str(BINARY), commit=plan['measurement_commit'],
                                     output=str(directory.parent), index=0, sample_interval=0.1))
 
 
