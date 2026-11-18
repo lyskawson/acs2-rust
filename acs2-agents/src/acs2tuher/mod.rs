@@ -175,7 +175,7 @@ impl<const G: usize, P: RandomSource> Utility<G, P> {
         &mut self,
         store: &TrajectoryStore<S, G>,
         episode: EpisodeId,
-        evaluator: &impl GoalEvaluator<S, G>,
+        evaluator: &dyn GoalEvaluator<S, G>,
         scoring: &Scoring<G, M>,
         time: u64,
     ) {
@@ -198,7 +198,7 @@ impl<const G: usize, P: RandomSource> Utility<G, P> {
         &mut self,
         store: &TrajectoryStore<S, G>,
         episode: EpisodeId,
-        evaluator: &impl GoalEvaluator<S, G>,
+        evaluator: &dyn GoalEvaluator<S, G>,
         scoring: &Scoring<G, M>,
         time: u64,
     ) -> Option<Goal<G>> {
@@ -213,11 +213,12 @@ impl<const G: usize, P: RandomSource> Utility<G, P> {
         self.assignments[&episode].goal
     }
 
+    #[inline(never)]
     fn evaluate<const S: usize, const M: usize>(
         &mut self,
         store: &TrajectoryStore<S, G>,
         id: EpisodeId,
-        evaluator: &impl GoalEvaluator<S, G>,
+        evaluator: &dyn GoalEvaluator<S, G>,
         scoring: &Scoring<G, M>,
         time: u64,
         insertion: bool,

@@ -101,6 +101,7 @@ fn source_multiset<const S: usize, const G: usize>(
         GoalStrategy::Future => states[t + 1..].to_vec(),
         GoalStrategy::Episode => states[1..].to_vec(),
         GoalStrategy::UniformReal => candidates.to_vec(),
+        GoalStrategy::TrajectoryUtility => Vec::new(),
     }
 }
 

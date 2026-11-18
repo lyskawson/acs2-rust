@@ -16,7 +16,7 @@ pub(super) fn sample_candidates<const S: usize, const G: usize>(
     episode: &StoredEpisode<S, G>,
     observed_goals: &[Goal<G>],
     count: usize,
-    evaluator: &impl GoalEvaluator<S, G>,
+    evaluator: &dyn GoalEvaluator<S, G>,
     rng: &mut impl RandomSource,
 ) -> Vec<Goal<G>> {
     let mut candidates = observed_goals
@@ -40,7 +40,7 @@ pub(super) fn sample_candidates<const S: usize, const G: usize>(
 pub(super) fn first_reach<const S: usize, const G: usize>(
     episode: &StoredEpisode<S, G>,
     goal: &Goal<G>,
-    evaluator: &impl GoalEvaluator<S, G>,
+    evaluator: &dyn GoalEvaluator<S, G>,
 ) -> Option<usize> {
     (1..=episode.len()).find(|&state| evaluator.is_reached(episode.achieved(state), goal))
 }
@@ -117,13 +117,14 @@ pub(super) struct Scoring<'a, const G: usize, const M: usize> {
 }
 
 impl<const G: usize, const M: usize> Scoring<'_, G, M> {
+    #[inline(never)]
     pub fn score<const S: usize>(
         &self,
         measure: Measure,
         episode: &StoredEpisode<S, G>,
         (goal, prefix): (Goal<G>, usize),
         observations: &ObservationMatches,
-        evaluator: &impl GoalEvaluator<S, G>,
+        evaluator: &dyn GoalEvaluator<S, G>,
         cost: &mut Cost,
     ) -> Score {
         let sets = observations.for_goal::<S, G, M>(self.population, &goal, cost);
