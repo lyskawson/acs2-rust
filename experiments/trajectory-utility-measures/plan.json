@@ -1,0 +1,168 @@
+{
+  "study": "trajectory-utility-measures",
+  "stage": "draft_before_cost_pilot",
+  "ablation_registration_sha256": {
+    "plan.json": "7d9606634a9b114922c84c77d9acea358964ebe5e0e3ff27b590b3713684ac66",
+    "pair-protocol.json": "752475b6b7da145dd6e2f644ec857693491576726facf65979ad068f21412b3f",
+    "maze-names.json": "0a671a76ced00a7982d82098270f9f5c9d75b73db7df05efc89b019cd3670a69"
+  },
+  "mazes": 28,
+  "maze_groups": {
+    "no_aliasing": 9,
+    "aliasing": 19
+  },
+  "protocol": "Use the ablation configurations verbatim for the task, thesis maze name, aliasing group, registered pair protocols, cap, budgets, targets, training law, read-only evaluation and knowledge.",
+  "arms": [
+    "acs2tuher_mean_value",
+    "acs2tuher_trial_update",
+    "acs2tuher_random_goal"
+  ],
+  "reference": {
+    "agent": "acs2her_shortened_per_goal_reward",
+    "runs": 560,
+    "source": "Original S+1 analysis inputs of per-goal-reward-ablation: six tasks from per-goal-reward and 22 from the ablation grid. Verify original hashes; reuse the reference."
+  },
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+  ],
+  "per_pair_seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "per_pair_fields": "Use the ablation fields at every registered checkpoint on per-pair seeds.",
+  "new_runs": 1680,
+  "base": "S+1 with per-goal r and ir, shared transition model, GA disabled, 10000 retained steps, 3 full ALP and RL draws per environment step after each complete episode.",
+  "routes": {
+    "transition": "Uniform from retained transitions, with replacement.",
+    "probability": "1/3 each for original, hindsight and trajectory utility.",
+    "original": "Own episode goal.",
+    "hindsight": "S+1 future strategy with counterfactual-episode admissibility and fallback to the original goal.",
+    "trajectory_utility": "Assigned goal from this episode. Fall back to the original goal when unassigned or inadmissible. A realized copy runs full S+1 ALP and RL and updates the assigned goal column.",
+    "requested_copy_share": "2/3",
+    "buffer": "References to retained episodes, assigned goals and their evaluation timestamps."
+  },
+  "utility": {
+    "values": "Join the observation and goal. Q(s,a,g) is the maximum q*r_g among matched classifiers of action a that anticipate a change, with initial maximum zero. V(s,g) is the maximum over actions.",
+    "admissible_prefix": "Transitions up to and including the first transition reaching the candidate goal, or the whole episode if it is never reached. Reaching it at the initial state makes the prefix empty.",
+    "candidates": "Uniform sample of up to K distinct desired goals observed by the training store, excluding the episode goal and empty prefixes.",
+    "mean_value": "Mean Q(s_t,a_t,g) on the admissible prefix, on the shared reward scale.",
+    "trial_update": "On a private copy of r_g and ir_g, apply one S+1 RL update per admissible transition from last to first, keeping the population, q and other goal entries fixed. Use the relabeled reward and termination, beta and gamma, and next-state V on the copy for nonterminal transitions. Score the mean of V_after(s,g) minus V_before(s,g) on all states of the episode. Record the post-update level as a diagnostic.",
+    "random_goal": "Uniform selection from the same sampled candidates at the same evaluation times.",
+    "selection": "Take the largest score and break ties uniformly. Utility randomness uses a dedicated injected stream.",
+    "timing": "Evaluate at insertion before the episode replay draws and when a TU draw encounters the episode strictly more than F environment steps after its last evaluation. Redraw candidates each time. Evict the assignment with its episode.",
+    "menu": {
+      "K": [
+        4,
+        8
+      ],
+      "F": [
+        null,
+        5000,
+        2000
+      ]
+    },
+    "selected": {
+      "K": null,
+      "F": null,
+      "status": "Open. The orchestrator closes the choice based on cost alone before review."
+    }
+  },
+  "pilot": {
+    "seed": 42,
+    "cells": 84,
+    "K": 8,
+    "F": 2000,
+    "minimum_steps": 300000,
+    "full_budget": "Use the complete registered budget where cheap.",
+    "cpu_hour_limit_including_reservations": 20,
+    "report": "Report costs and forecast for every menu point, including overhead at matched S+1 checkpoints, spread, separate MazeE2 and MazeE3 estimates, CPU per evaluated candidate and evaluations per environment step."
+  },
+  "analysis": {
+    "block": "test",
+    "primary": "Equally weighted mean of every registered checkpoint success within each seed.",
+    "final": "Success at the last registered checkpoint.",
+    "contrasts": [
+      [
+        "acs2tuher_mean_value",
+        "acs2tuher_random_goal"
+      ],
+      [
+        "acs2tuher_trial_update",
+        "acs2tuher_random_goal"
+      ],
+      [
+        "acs2tuher_trial_update",
+        "acs2tuher_mean_value"
+      ],
+      [
+        "acs2tuher_random_goal",
+        "acs2her_shortened_per_goal_reward"
+      ],
+      [
+        "acs2tuher_mean_value",
+        "acs2her_shortened_per_goal_reward"
+      ],
+      [
+        "acs2tuher_trial_update",
+        "acs2her_shortened_per_goal_reward"
+      ]
+    ],
+    "interval": "Paired over 20 seeds, marginal two-sided 95% t interval for each maze and measure.",
+    "degrees_of_freedom": 19,
+    "critical_value": 2.093024054408263,
+    "labels": {
+      "floor": "No compared study arm lower 95% final-mean bound exceeds the exact test floor.",
+      "too_easy": "Use the archived ablation ACS2 label: across-seed mean at 1k >= 0.9 * test ceiling.",
+      "ceiling": "Both arms in the contrast have final means >= 0.99."
+    },
+    "exclusions": "Per group and contrast: floor always, too easy only for primary, ceiling only for final. Labels never remove table rows.",
+    "verdict": "Per aliasing group, A+ counts CI low > 0 and A- counts CI high < 0 among n counted mazes. If n = 0: not assessed. If both signs occur: mixed. Otherwise improves or worsens if the corresponding count reaches ceil(n/2), and no clear effect for all other cases.",
+    "all_mazes": "Report A+, A- and n over all 28 without a verdict.",
+    "sustained_095": "First registered checkpoint in environment steps whose across-seed mean and all later checkpoint means are >=0.95; no interpolation; otherwise not reached.",
+    "secondary": [
+      "knowledge",
+      "rules",
+      "CPU time",
+      "utility evaluation CPU time",
+      "utility evaluations",
+      "candidates scored",
+      "utility match sets",
+      "utility value reads",
+      "trial value updates",
+      "TU buffer memory",
+      "draws by route",
+      "TU fallbacks",
+      "reward updates by origin",
+      "realized copy shares",
+      "share of assigned goals reached in their episode",
+      "distinct assigned goals",
+      "minimum, median and maximum reward updates per goal",
+      "trial post-update level"
+    ],
+    "carry_forward": "Carry trial update if trial update minus mean value improves for the primary measure in at least one aliasing group and worsens in neither. Otherwise carry mean value. Report the decision beside the measured cost ratio.",
+    "post_hoc": "Label other comparisons, per-pair mechanism measures, success by pair distance and TU goal statistics beyond the registered counters as post hoc."
+  },
+  "authorization": "Stage 1 ends after the cost-only pilot report with K and F open. Commit the final choice and obtain explicit plan approval and a CPU-hour limit before any run beyond the pilot."
+}
