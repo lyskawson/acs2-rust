@@ -11,7 +11,8 @@ use acs2_core::representation::population::Population;
 use acs2_core::support::config::Configuration;
 use acs2_core::support::rng::RandomSource;
 use acs2_trajectory::{
-    DrawnSample, GoalEvaluator, SampleOrigin, Sampler, SamplerConfiguration, TrajectoryStore,
+    DrawRoute, DrawnSample, EpisodeId, GoalEvaluator, SampleOrigin, Sampler, SamplerConfiguration,
+    TrajectoryStore,
 };
 
 mod plan;
@@ -307,7 +308,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         )
     }
 
-    pub fn train_episode(&mut self, env: &mut impl ReplayEnvironment<S, G, M>, time: u64) {
+    pub(crate) fn collect_episode(
+        &mut self,
+        env: &mut impl ReplayEnvironment<S, G, M>,
+    ) -> (EpisodeId, usize) {
         let mut state = env.reset();
         let start = env.episode_start();
         assert_eq!(
@@ -330,12 +334,40 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             }
         }
         let steps = episode.steps().len();
-        self.store
+        let id = self.store
             .insert(episode)
             .expect("complete episode must fit the trajectory capacity");
         self.counts.environment_steps += steps as u64;
+        (id, steps)
+    }
+
+    pub(crate) fn ready_for_replay(&mut self, steps: usize) -> bool {
         if self.store.len() < self.replay.warmup {
             self.counts.skipped_warmup_steps += steps as u64;
+            return false;
+        }
+        true
+    }
+
+    pub(crate) fn select_transition(&mut self) -> (EpisodeId, usize) {
+        let (episode, transition) = self.sampler.select_transition(&self.store);
+        (episode.id(), transition)
+    }
+
+    pub(crate) fn draw_routed(
+        &mut self,
+        transition: (EpisodeId, usize),
+        evaluator: &impl GoalEvaluator<S, G>,
+        route: DrawRoute<G>,
+    ) -> DrawnSample<G, M> {
+        self.sampler
+            .draw_routed(&self.store, transition, evaluator, route)
+            .expect("valid task replay objective")
+    }
+
+    pub fn train_episode(&mut self, env: &mut impl ReplayEnvironment<S, G, M>, time: u64) {
+        let (_, steps) = self.collect_episode(env);
+        if !self.ready_for_replay(steps) {
             return;
         }
         let episode_end = time + steps as u64;
@@ -381,13 +413,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         }
     }
 
-    fn observe_and_learn(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
-            let first = self.store.episodes().next().expect("retained episode").id();
-            let index = usize::try_from(drawn.episode.0 - first.0).expect("retained episode index");
-            let episode = self.store.episodes().nth(index).expect("drawn episode retained");
-            assert_eq!(episode.id(), drawn.episode);
-            self.walls.observe(drawn, episode.achieved(drawn.transition), episode.achieved(drawn.transition + 1));
-            self.learn_draw(drawn, time);
+    pub(crate) fn observe_and_learn(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
+        let episode = self.store.episode(drawn.episode).expect("drawn episode retained");
+        self.walls.observe(drawn, episode.achieved(drawn.transition), episode.achieved(drawn.transition + 1));
+        self.learn_draw(drawn, time);
     }
 
     pub fn learn_draw(&mut self, drawn: &DrawnSample<G, M>, time: u64) {
@@ -457,4 +486,13 @@ pub trait EpisodicAgent<const S: usize, const G: usize, const M: usize> {
     fn learner_mut(
         &mut self,
     ) -> &mut EpisodicReplay<S, G, M, Self::PolicyRandom, Self::SamplerRandom>;
+    fn train_episode(&mut self, env: &mut impl ReplayEnvironment<S, G, M>, time: u64)
+    where
+        Self: Sized,
+    {
+        self.learner_mut().train_episode(env, time);
+    }
+    fn trajectory_utility(&self) -> Option<crate::acs2tuher::Measurements> {
+        None
+    }
 }

@@ -58,6 +58,8 @@ impl Options {
         let mut vcp_temperature: Option<u32> = None;
         let mut replay_schedule = None;
         let mut replay_order = None;
+        let mut tu_candidates = None;
+        let mut tu_refresh = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -103,6 +105,11 @@ impl Options {
                 }
                 "--replay-schedule" => replay_schedule = Some(value),
                 "--replay-order" => replay_order = Some(value),
+                "--tu-candidates" => tu_candidates = Some(value.parse().expect("TU candidate count")),
+                "--tu-refresh" => tu_refresh = Some(match value.as_str() {
+                    "none" => None,
+                    _ => Some(value.parse().expect("TU refresh steps or none")),
+                }),
                 "--vcp-temperature" => vcp_temperature = Some(value.parse().expect("integer VCP temperature")),
                 _ => panic!("unknown option {flag}"),
             }
@@ -166,6 +173,17 @@ impl Options {
         let replay_plan = acs2_measure::replay_plan::parse(
             replay_schedule.as_deref().unwrap_or("constant"),
             replay_order.as_deref().unwrap_or("independent"));
+        if tu_candidates.is_some() || tu_refresh.is_some() {
+            assert!(agents.iter().any(|agent| matches!(agent, AgentKind::Acs2TuHer(_))),
+                "TU parameters require a TU preset");
+            for agent in &mut agents {
+                if let AgentKind::Acs2TuHer(parameters) = agent {
+                    parameters.candidates = tu_candidates.unwrap_or(parameters.candidates);
+                    parameters.refresh_steps = tu_refresh.unwrap_or(parameters.refresh_steps);
+                    parameters.validate();
+                }
+            }
+        }
         if let Some(blocks) = &evaluation_blocks {
             assert!(
                 protocol.is_some(),

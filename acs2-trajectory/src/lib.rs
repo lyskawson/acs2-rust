@@ -14,7 +14,7 @@ pub use relabel::{
     RelabeledEpisode, SampleError, ScoredSample,
 };
 pub use sampler::{
-    DrawnSample, Provenance, ReplayCounters, RouteCounters, RouteMeans, SampleOrigin, Sampler,
+    DrawRoute, DrawnSample, Provenance, ReplayCounters, RouteCounters, RouteMeans, SampleOrigin, Sampler,
     SamplerConfiguration,
 };
 pub use selection::{

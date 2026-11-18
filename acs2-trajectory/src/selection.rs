@@ -14,6 +14,7 @@ pub enum GoalStrategy {
     Future,
     Episode,
     UniformReal,
+    TrajectoryUtility,
 }
 
 impl GoalStrategy {
@@ -24,6 +25,7 @@ impl GoalStrategy {
             Self::Future => 2,
             Self::Episode => 3,
             Self::UniformReal => 4,
+            Self::TrajectoryUtility => 5,
         }
     }
     pub fn name(self) -> &'static str {
@@ -33,6 +35,7 @@ impl GoalStrategy {
             Self::Future => "future",
             Self::Episode => "episode",
             Self::UniformReal => "uniform_real",
+            Self::TrajectoryUtility => "trajectory_utility",
         }
     }
 }
@@ -167,6 +170,7 @@ pub(crate) fn source_goals<const S: usize, const G: usize>(
             .map(|state| *episode.achieved(state))
             .collect(),
         GoalStrategy::UniformReal => candidates.to_vec(),
+        GoalStrategy::TrajectoryUtility => Vec::new(),
     };
     let mut weights = BTreeMap::new();
     for goal in goals {

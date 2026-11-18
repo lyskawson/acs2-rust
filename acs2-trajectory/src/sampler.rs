@@ -5,7 +5,7 @@ use acs2_core::trial::TruncationMode;
 use crate::cost::CostByPurpose;
 use crate::relabel::{build_sample, scoring_cost, GoalEvaluator, SampleError, ScoredSample};
 use crate::selection::{goal_distribution, goal_facts, GoalStrategy, Selection};
-use crate::store::{EpisodeId, TrajectoryStore};
+use crate::store::{EpisodeId, StoredEpisode, TrajectoryStore};
 
 mod passes;
 pub use passes::EpisodePass;
@@ -31,6 +31,13 @@ impl SamplerConfiguration {
 pub enum SampleOrigin {
     Original,
     Relabeled,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DrawRoute<const G: usize> {
+    Original,
+    Hindsight,
+    TrajectoryUtility(Option<Goal<G>>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -127,7 +134,9 @@ impl ReplayCounters {
         };
         route.record(provenance, drawn.scored.sample.reward);
         self.fallbacks += u64::from(provenance.fallback);
-        self.strategies[provenance.strategy.index()] += 1;
+        if let Some(count) = self.strategies.get_mut(provenance.strategy.index()) {
+            *count += 1;
+        }
         self.cost.add(drawn.cost);
     }
 }
@@ -193,33 +202,78 @@ impl<R: RandomSource> Sampler<R> {
         store: &TrajectoryStore<S, G>,
         evaluator: &impl GoalEvaluator<S, G>,
     ) -> Result<DrawnSample<G, M>, (SampleError, CostByPurpose)> {
-        let (episode, transition) = store.transition(self.rng.gen_range(store.len()));
+        let picked = self.select_transition(store);
         let config = self.configuration;
         let attempt = config.selection.strategy != GoalStrategy::Original
             && (config.relabeled_proportion == 1.0
                 || (config.relabeled_proportion > 0.0
                     && self.rng.gen_bool(config.relabeled_proportion)));
-        let mut cost = CostByPurpose::default();
-        let selected = if attempt {
-            let distribution = goal_distribution(
-                episode,
-                transition,
-                config.selection,
-                store.candidates(),
-                evaluator,
-            );
-            cost.add(distribution.cost);
-            distribution.draw(&mut self.rng)
+        let route = if attempt {
+            DrawRoute::Hindsight
         } else {
-            None
+            DrawRoute::Original
         };
-        let (goal, facts, origin, strategy) = if let Some(choice) = selected {
-            (
-                choice.goal,
-                choice.facts,
-                SampleOrigin::Relabeled,
-                config.selection.strategy,
-            )
+        self.draw_at(picked, store.candidates(), evaluator, route, config.selection.strategy)
+    }
+
+    pub fn select_transition<'a, const S: usize, const G: usize>(
+        &mut self,
+        store: &'a TrajectoryStore<S, G>,
+    ) -> (&'a StoredEpisode<S, G>, usize) {
+        store.transition(self.rng.gen_range(store.len()))
+    }
+
+    pub fn draw_routed<const S: usize, const G: usize, const M: usize>(
+        &mut self,
+        store: &TrajectoryStore<S, G>,
+        (id, transition): (EpisodeId, usize),
+        evaluator: &impl GoalEvaluator<S, G>,
+        route: DrawRoute<G>,
+    ) -> Result<DrawnSample<G, M>, SampleError> {
+        let episode = store.episode(id).expect("selected episode retained");
+        let requested_strategy = match route {
+            DrawRoute::Original => GoalStrategy::Original,
+            DrawRoute::Hindsight => self.configuration.selection.strategy,
+            DrawRoute::TrajectoryUtility(_) => GoalStrategy::TrajectoryUtility,
+        };
+        match self.draw_at((episode, transition), store.candidates(), evaluator, route, requested_strategy) {
+            Ok(drawn) => {
+                self.counters.record(&drawn);
+                Ok(drawn)
+            }
+            Err((error, cost)) => {
+                self.counters.failed_draws += 1;
+                self.counters.cost.add(cost);
+                Err(error)
+            }
+        }
+    }
+
+    fn draw_at<const S: usize, const G: usize, const M: usize>(
+        &mut self,
+        (episode, transition): (&StoredEpisode<S, G>, usize),
+        candidates: &[Goal<G>],
+        evaluator: &impl GoalEvaluator<S, G>,
+        route: DrawRoute<G>,
+        requested_strategy: GoalStrategy,
+    ) -> Result<DrawnSample<G, M>, (SampleError, CostByPurpose)> {
+        let config = self.configuration;
+        let mut cost = CostByPurpose::default();
+        let selected = match route {
+            DrawRoute::Original => None,
+            DrawRoute::Hindsight => {
+                let distribution = goal_distribution(episode, transition, config.selection, candidates, evaluator);
+                cost.add(distribution.cost);
+                distribution.draw(&mut self.rng).map(|choice| (choice.goal, choice.facts))
+            }
+            DrawRoute::TrajectoryUtility(assignment) => assignment.and_then(|goal| {
+                let (facts, queries) = goal_facts(episode, transition, &goal, evaluator);
+                cost.add(config.selection.admissibility.attribute(queries));
+                config.selection.admissibility.admits(facts).then_some((goal, facts))
+            }),
+        };
+        let (goal, facts, origin, strategy) = if let Some((goal, facts)) = selected {
+            (goal, facts, SampleOrigin::Relabeled, requested_strategy)
         } else {
             let goal = episode.start().desired;
             let (facts, queries) = goal_facts(episode, transition, &goal, evaluator);
@@ -242,12 +296,12 @@ impl<R: RandomSource> Sampler<R> {
             provenance: Provenance {
                 origin,
                 strategy,
-                requested_strategy: config.selection.strategy,
+                requested_strategy,
                 already_reached: facts.already_reached,
                 after_counterfactual_end: facts.after_counterfactual_end,
                 done: scored.sample.done,
-                outside_candidates: !store.candidates().contains(&goal),
-                fallback: attempt && selected.is_none(),
+                outside_candidates: !candidates.contains(&goal),
+                fallback: route != DrawRoute::Original && selected.is_none(),
             },
             scored,
             cost,

@@ -165,7 +165,8 @@ impl<const S: usize, const G: usize> TrajectoryStore<S, G> {
         self.episodes.iter()
     }
     pub fn episode(&self, id: EpisodeId) -> Option<&StoredEpisode<S, G>> {
-        self.episodes.iter().find(|episode| episode.id == id)
+        let offset = id.0.checked_sub(self.episodes.front()?.id.0)?;
+        self.episodes.get(usize::try_from(offset).ok()?)
     }
 
     pub fn transition(&self, mut index: usize) -> (&StoredEpisode<S, G>, usize) {

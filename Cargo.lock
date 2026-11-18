@@ -9,6 +9,7 @@ dependencies = [
  "acs2-core",
  "acs2-envs",
  "acs2-trajectory",
+ "libc",
  "serde_json",
 ]
 

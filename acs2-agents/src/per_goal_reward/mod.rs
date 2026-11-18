@@ -18,6 +18,25 @@ pub struct GoalValue {
     pub updated: bool,
 }
 
+impl GoalValue {
+    pub(crate) fn update(&mut self, beta: f64, reward: f64, discounted_reward: f64) {
+        self.r += beta * (discounted_reward - self.r);
+        self.ir += beta * (reward - self.ir);
+        self.updated = true;
+    }
+}
+
+pub(crate) fn bootstrap_with<const M: usize>(
+    population: &Population<M>,
+    matched: impl Iterator<Item = ClassifierRef>,
+    reward: impl Fn(ClassifierRef) -> f64,
+) -> f64 {
+    matched
+        .filter(|&reference| population.get(reference).does_anticipate_change())
+        .map(|reference| population.get(reference).q * reward(reference))
+        .fold(0.0, f64::max)
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct RewardUpdates {
     pub original: u64,
@@ -112,6 +131,10 @@ impl<const G: usize> PerGoalRewards<G> {
             .expect("unregistered per-goal reward goal")
     }
 
+    pub(crate) fn value_at(&self, classifier: ClassifierRef, goal_index: usize) -> GoalValue {
+        self.entries[classifier][goal_index]
+    }
+
     pub fn bootstrap<const M: usize>(
         &self,
         population: &Population<M>,
@@ -119,12 +142,9 @@ impl<const G: usize> PerGoalRewards<G> {
         goal: &Goal<G>,
     ) -> f64 {
         let index = self.goal_index(goal);
-        matched
-            .iter()
-            .copied()
-            .filter(|&reference| population.get(reference).does_anticipate_change())
-            .map(|reference| population.get(reference).q * self.entries[reference][index].r)
-            .fold(0.0, f64::max)
+        bootstrap_with(population, matched.iter().copied(), |reference| {
+            self.entries[reference][index].r
+        })
     }
 
     pub fn best_action<const M: usize>(
@@ -200,9 +220,7 @@ impl<const G: usize> PerGoalRewards<G> {
         let discounted_reward = reward + config.gamma * bootstrap;
         for &reference in action_set {
             let entry = &mut self.entries[reference][goal];
-            entry.r += config.beta * (discounted_reward - entry.r);
-            entry.ir += config.beta * (reward - entry.ir);
-            entry.updated = true;
+            entry.update(config.beta, reward, discounted_reward);
             match origin {
                 SampleOrigin::Original => self.updates.original += 1,
                 SampleOrigin::Relabeled => self.updates.relabeled += 1,

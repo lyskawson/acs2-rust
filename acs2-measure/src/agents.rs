@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use crate::runner::{CoreAgent, GoalAgent, MeasuredEnvironment, Preset};
 
 pub mod vcp;
+mod trajectory_utility;
 
 pub fn episodic_configuration(preset: Preset) -> EpisodicConfiguration {
     EpisodicConfiguration {
@@ -70,9 +71,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
         self.0.name()
     }
     fn train_episode<E: MeasuredEnvironment<S, G, M>>(&mut self, env: &mut E, time: u64) {
-        self.0
-            .learner_mut()
-            .train_episode(&mut EpisodeAdapter::<_, M>(env), time);
+        self.0.train_episode(&mut EpisodeAdapter::<_, M>(env), time);
     }
     fn declared_policy(&self) -> &'static str {
         "greedy_change_anticipating_population"
@@ -97,6 +96,9 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
     fn replay_updates(&self) -> u64 {
         let counts = self.0.learner().counts();
         counts.full + counts.values_only
+    }
+    fn trajectory_utility(&self) -> Option<Value> {
+        self.0.trajectory_utility().map(trajectory_utility::measurements)
     }
     fn learning_update_counts(&self) -> Option<Value> {
         let counts = self.0.learner().counts();
@@ -154,6 +156,11 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
         let learner = self.0.learner();
         let counters = learner.sampler().counters();
         let mut diagnostics = crate::trajectory::replay_diagnostics(counters);
+        let utility = self.0.trajectory_utility();
+        if let Some(stats) = utility {
+            diagnostics["strategies"]["trajectory_utility"] =
+                json!(stats.draw_requests.trajectory_utility - stats.tu_fallbacks);
+        }
         let draws = counters.pooled().draws;
         diagnostics["realized_relabeled_share"] =
             json!((draws > 0).then(|| counters.relabeled.draws as f64 / draws as f64));
@@ -174,7 +181,7 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
                 "available_steps": counts.available_steps, "emitted_steps": counts.emitted_steps,
             });
         }
-        if matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules" | "acs2her_shortened_random_rules" | "acs2her_shortened_per_goal_reward") {
+        if utility.is_some() || matches!(self.0.name(), "acs2her_nontrivial" | "acs2her_shortened" | "acs2her_shortened_goal_rules" | "acs2her_shortened_random_rules" | "acs2her_shortened_per_goal_reward") {
             let walls = learner.wall_counters();
             diagnostics["wall_bumps"] = json!({
                 "relabeled_draws": walls.relabeled_draws,
@@ -238,6 +245,9 @@ impl<A: EpisodicAgent<S, G, M>, const S: usize, const G: usize, const M: usize> 
             parameters["reward_initialization"] = json!("base_creation_values_alp_parent_inheritance");
             parameters["genetic_algorithm"] = json!(false);
             parameters["restore_supported"] = json!(false);
+        }
+        if let Some(stats) = self.0.trajectory_utility() {
+            parameters["trajectory_utility"] = trajectory_utility::parameters(stats.configuration);
         }
         parameters
     }

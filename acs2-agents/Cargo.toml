@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 acs2-core = { path = "../acs2-core" }
 acs2-trajectory = { path = "../acs2-trajectory" }
+libc = "0.2"
 
 [dev-dependencies]
 acs2-envs = { path = "../acs2-envs" }

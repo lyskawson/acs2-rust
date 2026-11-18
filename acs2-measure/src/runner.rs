@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use acs2_agents::acs2er::Agent as Acs2ErAgent;
 use acs2_agents::acs2er::replay::ReplayConfiguration;
+use acs2_agents::acs2tuher::{Measure as UtilityMeasure, UtilityConfiguration, UtilityRandom};
 use acs2_core::learning::replay::ReplaySample;
 use acs2_core::learning::action_selection::{ActionSelector, BestAction, EpsilonGreedy};
 use acs2_agents::acs2::Agent;
@@ -53,6 +54,7 @@ pub enum AgentKind {
     Acs2HerShortenedGoalRules,
     Acs2HerShortenedRandomRules,
     Acs2HerShortenedPerGoalReward,
+    Acs2TuHer(UtilityConfiguration),
     Acs2HerShortened { proportion: f64 },
     Acs2HerValues { proportion: f64 },
     Acs2HerValuesShortened { proportion: f64 },
@@ -77,6 +79,9 @@ impl AgentKind {
             "acs2her_shortened_goal_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedGoalRules),
             "acs2her_shortened_random_rules" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedRandomRules),
             "acs2her_shortened_per_goal_reward" if proportion == 2.0 / 3.0 => Ok(Self::Acs2HerShortenedPerGoalReward),
+            "acs2tuher_mean_value" if proportion == 2.0 / 3.0 => Ok(Self::Acs2TuHer(UtilityConfiguration::pilot(UtilityMeasure::MeanValue))),
+            "acs2tuher_trial_update" if proportion == 2.0 / 3.0 => Ok(Self::Acs2TuHer(UtilityConfiguration::pilot(UtilityMeasure::TrialUpdate))),
+            "acs2tuher_random_goal" if proportion == 2.0 / 3.0 => Ok(Self::Acs2TuHer(UtilityConfiguration::pilot(UtilityMeasure::RandomGoal))),
             "acs2her_shortened" => Ok(Self::Acs2HerShortened { proportion }),
             "acs2her_values" => Ok(Self::Acs2HerValues { proportion }),
             "acs2her_values_shortened" => Ok(Self::Acs2HerValuesShortened { proportion }),
@@ -101,6 +106,7 @@ impl AgentKind {
             Self::Acs2HerShortenedGoalRules => "acs2her_shortened_goal_rules",
             Self::Acs2HerShortenedRandomRules => "acs2her_shortened_random_rules",
             Self::Acs2HerShortenedPerGoalReward => "acs2her_shortened_per_goal_reward",
+            Self::Acs2TuHer(parameters) => parameters.measure.name(),
             Self::Acs2HerShortened { .. } => "acs2her_shortened",
             Self::Acs2HerValues { .. } => "acs2her_values",
             Self::Acs2HerValuesShortened { .. } => "acs2her_values_shortened",
@@ -181,6 +187,9 @@ pub trait GoalAgent<const S: usize, const G: usize, const M: usize> {
     }
     fn online_updates(&self) -> u64;
     fn replay_updates(&self) -> u64;
+    fn trajectory_utility(&self) -> Option<Value> {
+        None
+    }
     fn learning_update_counts(&self) -> Option<Value> {
         None
     }
@@ -767,18 +776,26 @@ where T: Task<S, G, M>, F: FnMut(Value),
             settings.capture_final_state.then(|| (format!("{:?}", agent.0.learner().population().classifiers()),
                 agent.0.learner().snapshot()))
         }
-        AgentKind::Acs2HerShortenedPerGoalReward => {
+        AgentKind::Acs2HerShortenedPerGoalReward | AgentKind::Acs2TuHer(_) => {
             let goals = task.training_goals().expect("per-goal rewards require an explicit finite goal set");
+            let utility = match kind {
+                AgentKind::Acs2TuHer(parameters) => Some((parameters, UtilityRandom {
+                    routes: ChaChaRandomSource::from_seed_and_stream(seed, acs2_agents::acs2tuher::ROUTE_STREAM),
+                    candidates: ChaChaRandomSource::from_seed_and_stream(seed, acs2_agents::acs2tuher::CANDIDATE_STREAM),
+                })),
+                _ => None,
+            };
             let mut agent = crate::agents::EpisodicGoalAgent(
-                acs2_agents::acs2her::per_goal_reward::Agent::<S, G, M, _, _>::new(
+                acs2_agents::acs2tuher::Agent::<S, G, M, _, _>::new(
                     config, crate::agents::episodic_configuration(preset), goals, agent_rng,
                     ChaChaRandomSource::from_seed_and_stream(seed, acs2_trajectory::SAMPLER_STREAM),
+                    utility,
                 ));
             run_goal_agent_protocol_with_sink(protocol, &mut agent, seed, targets, metadata,
                 settings.evaluate_points, emit);
             use acs2_agents::episodic_replay::EpisodicAgent;
             settings.capture_final_state.then(|| (format!("{:?}", agent.0.learner().population().classifiers()),
-                agent.0.learner().snapshot()))
+                agent.0.snapshot()))
         }
         AgentKind::Acs2Vcp(preset) => {
             let mut agent = crate::agents::vcp::VcpGoalAgent {
@@ -1274,6 +1291,9 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
         });
         if let Some(counts) = agent.learning_update_counts() {
             row["learning_update_counts"] = counts;
+        }
+        if let Some(utility) = agent.trajectory_utility() {
+            row["trajectory_utility"] = utility;
         }
         if let Some(heads) = &eval.heads {
             row["heads"] = json!(heads.iter().map(|head| evaluation_json(head, pairs.len(), refs)).collect::<Vec<_>>());
