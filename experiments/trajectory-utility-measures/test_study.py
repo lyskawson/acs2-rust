@@ -7,6 +7,7 @@ import unittest
 
 from forecast import MENU, expected_refreshes, known_ratio, projected_utility
 from pilot import BUILD_LIMIT, batches, registered_plan
+from recovery import grouped_runs, pilot_accounting, retry_runs
 from registration import ARMS, REPOSITORY, S1, TRIAL, pilot_registration
 from validate import validate_row
 
@@ -30,6 +31,25 @@ class StudyTest(unittest.TestCase):
         self.assertLessEqual(concurrent, 40)
         for batch, _, _ in grouped:
             self.assertEqual(len({run['limit_seconds'] for run in batch}), 1)
+
+    def test_retry_preserves_cells_and_counts_unstarted_dependency_cancellations(self):
+        plan = registered_plan('test', 'test')
+        first = next(run for run in plan['runs'] if run['attempt_id'].startswith('woods102_alcs') and run['agent'] == TRIAL)
+        other = [run for run in plan['runs'] if run['attempt_id'].startswith('maze4_c5_pairs')]
+        runs = [first, *other]
+        header = 'JobID|JobIDRaw|CPUTimeRAW|AllocCPUS|State|\n'
+        lines = '40_0|41|390|1|FAILED|\n40_1|40|0|0|CANCELLED|\n40_2|40|0|0|CANCELLED|\n40_3|42|125|1|COMPLETED|\n'
+        audit = pilot_accounting([dict(array_id=40, runs=runs)], header + lines)
+        self.assertEqual(audit['states'], dict(FAILED=1, CANCELLED=2, COMPLETED=1))
+        self.assertEqual(audit['spent_seconds'], 515)
+        self.assertEqual(audit['reserved_seconds'], 0)
+        retry = retry_runs(plan, audit)
+        self.assertEqual({run['previous_attempt_id'] for run in retry}, {run['attempt_id'] for run in runs[:3]})
+        self.assertTrue(all(run['seed'] == 42 and run['attempt_id'].endswith('_a02') for run in retry))
+        self.assertEqual(sorted(run['limit_seconds'] for run in retry), [720, 720, 840])
+        self.assertEqual(sum(n for _, n, _ in grouped_runs(retry, 40)), 3)
+        with self.assertRaisesRegex(ValueError, 'duplicated or invalid charged'):
+            pilot_accounting([dict(array_id=40, runs=runs)], header + lines.replace('40_3|42', '40_3|41'))
 
     def test_cost_projection_preserves_anchor_and_models_fixed_and_candidate_work(self):
         point = dict(

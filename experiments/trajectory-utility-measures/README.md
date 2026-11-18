@@ -38,6 +38,14 @@ accounting ledger and checksum manifest. Short-job arrays form a dependency chai
 while the large cells run independently. Submission verifies the grant and runs
 SLURM test-only for each array. A failed measurement writes the study STOP.
 
+The Woods102 timeout stopped the initial wave. The recovery snapshot reruns only
+incomplete cells, with the same seed, configuration, checkpoints and pinned binary.
+It keeps both allocation ledgers and all stopped artifacts. The two remaining MazeE3
+cells depend on completion of the shorter retries. Recovery guards count cancelled
+dependencies by array element and allocation CPU by JobIDRaw. Completed retries
+compare any preserved prefix in binary64 bits and exclude CPU timers. Use
+`recovery.py seal` from the frozen operations snapshot to seal both waves together.
+
 `verify_reference.py` reproduces the first checkpoint on the original six tasks
 and Littman57 with S+1 and checks the original row hashes and pair records in
 binary64 bits. `forecast.py` uses paired archived costs and seed-42 pilot overhead

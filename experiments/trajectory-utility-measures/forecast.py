@@ -1,5 +1,5 @@
 import argparse
-from collections import defaultdict
+from collections import Counter, defaultdict
 import csv
 from dataclasses import dataclass
 from itertools import product
@@ -9,7 +9,8 @@ from pathlib import Path
 import statistics
 
 from registration import ABLATION, ARMS, OLD_TASKS, S1, ablation, checksum, read
-from grid_protocol import allocation_rows, load_plan
+from grid_protocol import TERMINAL, allocation_rows, load_plan
+from recovery import checked_completion, pilot_accounting
 from validate import validate_row
 
 
@@ -116,67 +117,90 @@ def reference_costs(archive, configs, seeds):
     return full, checkpoints
 
 
+def accounted_attempts(root, plan, summary):
+    ledger = read(root / 'ledger.json')
+    recovery = root / 'recovery'
+    recovered = (recovery / 'accounting.psv').exists()
+    first_accounting = recovery / 'initial-accounting.psv' if recovered else root / 'accounting.psv'
+    initial = pilot_accounting(ledger, first_accounting.read_text())
+    attempts = [dict(run, wave='initial') for run in initial['attempts']]
+    ledgers = ledger
+    if recovered:
+        retry_ledger = read(recovery / 'ledger.json')
+        retry = pilot_accounting(retry_ledger, (recovery / 'accounting.psv').read_text())
+        attempts.extend(dict(run, wave='recovery', relative_directory='recovery/' + run['relative_directory'])
+                        for run in retry['attempts'])
+        if attempts != read(root / 'attempt-accounting.json'):
+            raise ValueError('sealed retry accounting differs from SLURM evidence')
+        ledgers = ledger + retry_ledger
+    charged = [run for run in attempts if run['allocated_cpu_seconds']]
+    built = read(root / 'build/submission.json')
+    build_records = [record for record in allocation_rows((root / 'build/accounting.psv').read_text())
+                     if record['JobIDRaw'] == str(built['job_id']) and record['State'] == 'COMPLETED']
+    if (len(build_records) != 1 or float(build_records[0]['CPUTimeRAW']) != summary['build_cpu_seconds']
+            or any(batch['upper_bound_seconds'] > plan['limit_seconds'] for batch in [built, *ledgers])
+            or len({run['job_id_raw'] for run in charged}) != len(charged)
+            or len({run['attempt_id'] for run in attempts}) != len(attempts)
+            or sum(run['allocated_cpu_seconds'] for run in charged) != summary['spent_seconds']
+            or summary['spent_seconds'] + summary['build_cpu_seconds'] != summary['total_charged_cpu_seconds']
+            or Counter(run['state'] for run in attempts) != summary['states']
+            or len(attempts) != summary['submitted']):
+        raise ValueError('charged allocations do not match the pilot ledger')
+    return attempts
+
+
 def pilot_costs(root, configurations, ablation_cost):
     summary = read(root / 'accounting-summary.json')
-    ledger = read(root / 'ledger.json')
     plan = load_plan(root / 'plan.json', (root / 'plan.sha256').read_text().strip())
-    if (summary['stopped'] or summary['reserved_seconds'] or summary['states'] != {'COMPLETED': 84}
-            or len(plan['runs']) != 84):
+    if (summary['stopped'] or summary['reserved_seconds'] or summary['states'].get('COMPLETED') != 84
+            or set(summary['states']) - TERMINAL or len(plan['runs']) != 84):
         raise ValueError('a full forecast requires 84 terminal, complete pilot cells')
     if summary['total_charged_cpu_seconds'] > plan['limit_seconds']:
         raise ValueError('pilot allocation CPU exceeded its authorization')
-    records = {row['JobIDRaw']: row for row in allocation_rows((root / 'accounting.psv').read_text())}
-    by_job = {row['JobID']: row for row in records.values()}
     attempts = []
     cells = {}
-    for batch in ledger:
-        if batch['upper_bound_seconds'] > plan['limit_seconds']:
-            raise ValueError('pilot admission exceeded the authorization')
-        for array_index, run in enumerate(batch['runs']):
-            job = f'{batch["array_id"]}_{array_index}'
-            record = by_job[job]
-            allocated = float(record['CPUTimeRAW'])
-            config = plan['configurations'][run['configuration_id']]
-            task, agent = config['task'], run['agent']
-            if allocated > run['limit_seconds'] or record['AllocCPUS'] != '1' or record['State'] != 'COMPLETED':
-                raise ValueError(f'pilot accounting differs from registration: {job}')
-            directory = root / run['relative_directory']
-            completion = read(directory / 'completion.json')
-            if (completion['exit_code'] or completion['failure']
-                    or any(checksum(directory / name) != digest for name, digest in completion['sha256'].items())):
-                raise ValueError(f'pilot completion is invalid: {job}')
-            attempts.append(dict(
-                task=task, maze=configurations[task]['maze'], arm=agent, job_id=job,
-                job_id_raw=record['JobIDRaw'], state=record['State'], cpu_reservation_seconds=run['limit_seconds'],
-                allocated_cpu_seconds=allocated, process_cpu_seconds_wait4=completion['user_cpu_seconds'] + completion['system_cpu_seconds'],
-                peak_rss_kib=completion['peak_rss_kib'], last_checkpoint=config['targets'][-1],
-            ))
-            points = []
-            with (directory / 'rows.jsonl').open() as row_file, (directory / 'resources.jsonl').open() as cost_file:
-                for line, sample, target in zip(row_file, cost_file, config['targets'], strict=True):
-                    row, resources = json.loads(line), json.loads(sample)
-                    validate_row(row, config, agent, 42, plan['measurement_commit'], target)
-                    if resources['nominal_step'] != target:
-                        raise ValueError(f'pilot resources are missing checkpoint {target} for {job}')
-                    cost = row['trajectory_utility']['cost']
-                    process = resources['process_cpu_seconds_at_observation']
-                    if not 0 < cost['cpu_seconds'] <= process:
-                        raise ValueError(f'matched pilot process CPU does not contain all utility CPU for {job}')
-                    points.append(dict(
-                        nominal_step=target, steps=row['actual_steps'], cost=cost,
-                        process_cpu=process, archive_cpu=ablation_cost[task][target],
-                        retained_steps=row['replay_diagnostics']['stored_steps'],
-                        tu_draws=row['trajectory_utility']['diagnostics']['draw_requests']['trajectory_utility'],
-                        peak_rss_kib=resources['peak_rss_kib'],
-                    ))
-            if (task, agent) in cells or points[-1]['nominal_step'] < 300000:
-                raise ValueError('duplicate or short pilot cell')
-            cells[task, agent] = points
-    if (set(cells) != set(product(configurations, ARMS))
-            or len({row['job_id_raw'] for row in attempts}) != 84
-            or len(records) != len(attempts)
-            or sum(row['allocated_cpu_seconds'] for row in attempts) != summary['spent_seconds']):
-        raise ValueError('charged allocations do not match the pilot ledger')
+    for run in accounted_attempts(root, plan, summary):
+        config = plan['configurations'][run['configuration_id']]
+        task, agent = config['task'], run['agent']
+        directory = root / run['relative_directory']
+        completion, rows = {}, []
+        if (directory / 'completion.json').exists():
+            completion, rows = checked_completion(directory, config['targets'])
+        attempts.append(dict(
+            task=task, maze=configurations[task]['maze'], arm=agent, wave=run['wave'],
+            attempt_id=run['attempt_id'], job_id=run['job_id'], job_id_raw=run['job_id_raw'],
+            state=run['state'], cpu_reservation_seconds=run['limit_seconds'],
+            allocated_cpu_seconds=run['allocated_cpu_seconds'],
+            process_cpu_seconds_wait4=completion['user_cpu_seconds'] + completion['system_cpu_seconds'] if completion else None,
+            peak_rss_kib=completion.get('peak_rss_kib'), last_checkpoint=rows[-1]['nominal_step'] if rows else None,
+            failure=completion.get('failure'),
+        ))
+        if run['state'] != 'COMPLETED':
+            continue
+        if (completion['exit_code'] or completion['failure'] or len(rows) != len(config['targets'])
+                or (task, agent) in cells or rows[-1]['nominal_step'] < 300000):
+            raise ValueError('invalid, duplicate or short completed pilot cell')
+        points = []
+        with (directory / 'resources.jsonl').open() as cost_file:
+            for row, sample, target in zip(rows, cost_file, config['targets'], strict=True):
+                resources = json.loads(sample)
+                validate_row(row, config, agent, 42, plan['measurement_commit'], target)
+                if resources['nominal_step'] != target:
+                    raise ValueError(f'pilot resources are missing checkpoint {target} for {run["job_id"]}')
+                cost = row['trajectory_utility']['cost']
+                process = resources['process_cpu_seconds_at_observation']
+                if not 0 < cost['cpu_seconds'] <= process:
+                    raise ValueError(f'matched pilot process CPU does not contain all utility CPU for {run["job_id"]}')
+                points.append(dict(
+                    nominal_step=target, steps=row['actual_steps'], cost=cost,
+                    process_cpu=process, archive_cpu=ablation_cost[task][target],
+                    retained_steps=row['replay_diagnostics']['stored_steps'],
+                    tu_draws=row['trajectory_utility']['diagnostics']['draw_requests']['trajectory_utility'],
+                    peak_rss_kib=resources['peak_rss_kib'],
+                ))
+        cells[task, agent] = points
+    if set(cells) != set(product(configurations, ARMS)):
+        raise ValueError('complete pilot inputs do not cover the registered cells')
     return summary, attempts, cells
 
 
