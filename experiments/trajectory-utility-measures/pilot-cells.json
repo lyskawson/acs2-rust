@@ -1,0 +1,236 @@
+{
+  "seed": 42,
+  "candidates": 8,
+  "refresh_steps": 2000,
+  "cpu_model": "AMD EPYC 9554 64-Core Processor",
+  "memory_mib": 2048,
+  "max_running_jobs": 40,
+  "max_cpu_seconds": 72000,
+  "reserved_seconds": 71160,
+  "tasks": {
+    "maze4": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 5,
+        "acs2tuher_trial_update": 6,
+        "acs2tuher_random_goal": 5
+      }
+    },
+    "maze5": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "maze6": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "maze7": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "woods14": {
+      "last_target": 4000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 5,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazema": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "cassandra4x4_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 12,
+        "acs2tuher_trial_update": 14,
+        "acs2tuher_random_goal": 11
+      }
+    },
+    "littman57_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "littman89_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 7,
+        "acs2tuher_trial_update": 8,
+        "acs2tuher_random_goal": 7
+      }
+    },
+    "maze10_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 6,
+        "acs2tuher_trial_update": 7,
+        "acs2tuher_random_goal": 6
+      }
+    },
+    "maze7_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazea_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 5,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazeb_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazed_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazee1_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 34,
+        "acs2tuher_trial_update": 40,
+        "acs2tuher_random_goal": 30
+      }
+    },
+    "mazee2_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 100,
+        "acs2tuher_trial_update": 115,
+        "acs2tuher_random_goal": 82
+      }
+    },
+    "mazee3_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 125,
+        "acs2tuher_trial_update": 150,
+        "acs2tuher_random_goal": 105
+      }
+    },
+    "mazef1_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazef2_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazef3_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "mazef4_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 5,
+        "acs2tuher_trial_update": 5,
+        "acs2tuher_random_goal": 5
+      }
+    },
+    "miyazakia_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 12,
+        "acs2tuher_trial_update": 13,
+        "acs2tuher_random_goal": 11
+      }
+    },
+    "miyazakib_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 9,
+        "acs2tuher_trial_update": 10,
+        "acs2tuher_random_goal": 8
+      }
+    },
+    "woods1_alcs": {
+      "last_target": 300000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "woods100_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "woods101_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 4,
+        "acs2tuher_trial_update": 4,
+        "acs2tuher_random_goal": 4
+      }
+    },
+    "woods101_5_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 6,
+        "acs2tuher_trial_update": 7,
+        "acs2tuher_random_goal": 6
+      }
+    },
+    "woods102_alcs": {
+      "last_target": 2000000,
+      "limit_minutes": {
+        "acs2tuher_mean_value": 7,
+        "acs2tuher_trial_update": 7,
+        "acs2tuher_random_goal": 6
+      }
+    }
+  }
+}

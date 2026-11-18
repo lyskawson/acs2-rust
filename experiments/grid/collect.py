@@ -146,6 +146,11 @@ def run(args):
         command.extend(['--relabel-proportion', str(agent_settings['relabeled_proportion'])])
     if 'temperature' in agent_settings:
         command.extend(['--vcp-temperature', str(agent_settings['temperature'])])
+    if 'trajectory_utility' in config:
+        utility = config['trajectory_utility']
+        refresh = utility['refresh_steps']
+        command.extend(['--tu-candidates', str(utility['candidates']),
+                        '--tu-refresh', 'none' if refresh is None else str(refresh)])
     from replay_schema import registered_axes
     axes = registered_axes(config, agent)
     if axes is not None:
