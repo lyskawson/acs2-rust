@@ -8,7 +8,7 @@ import math
 from pathlib import Path
 import statistics
 
-from registration import ARMS, OLD_TASKS, S1, ablation, checksum, read
+from registration import ABLATION, ARMS, OLD_TASKS, S1, ablation, checksum, read
 from grid_protocol import allocation_rows, load_plan
 from validate import validate_row
 
@@ -70,7 +70,8 @@ def projected_utility(point, candidates, refresh_steps):
     if refresh_steps == 2000:
         refresh_count = refresh.evaluations
     elif reference_refreshes:
-        refresh_count = refresh.evaluations * expected_refreshes(retention, refresh_steps, hazard) / reference_refreshes
+        scaled = refresh.evaluations * expected_refreshes(retention, refresh_steps, hazard) / reference_refreshes
+        refresh_count = min(insertion.evaluations, scaled)
     else:
         refresh_count = 0.0
     utility = insertion.seconds_at(candidates, insertion.evaluations) + refresh.seconds_at(candidates, refresh_count)
@@ -194,7 +195,7 @@ def known_ratio(point, candidates, refresh_steps):
 
 def forecast(root, archive, output):
     registration, inherited = ablation()
-    names = read(Path(__file__).resolve().parent.parent / 'per-goal-reward-ablation' / 'maze-names.json')
+    names = read(ABLATION / 'maze-names.json')
     configs = {row['task']: dict(row, maze=names[row['task']]) for row in inherited['configurations']}
     seeds = registration['seeds']
     full, checkpoints = reference_costs(archive, configs, seeds)
@@ -261,12 +262,18 @@ def forecast(root, archive, output):
     metadata = dict(
         **summary, forecasts=len(cells), matched_checkpoints=len(matched),
         base_reference='560 complete original S+1 runs, seed 42 at all matched checkpoints',
+        input_sha256={
+            'pilot_files': checksum(root / 'files.sha256.json'),
+            'ablation_index': checksum(archive / 'local-full-index.json'),
+            'grid_run_costs': checksum(archive / 'grid-evidence/grid-run-costs.csv'),
+            'reference_run_costs': checksum(archive / 'grid-evidence/reference-run-costs.csv'),
+        },
         model={
             'cost_ratio': '(pilot process CPU - measured utility CPU + projected utility CPU) / S+1 process CPU',
             'matched_cpu': 'Process CPU at checkpoint observation for pilot and S+1, using scheduler samples.',
             'full_forecast': 'Apply each arm/maze ratio at its last matched checkpoint to each archived S+1 full-seed allocation/process CPU.',
             'cost_of_evaluation': 'Separate insertion and refresh. Fixed CPU per evaluation plus timed scoring CPU per candidate times observed mean candidate slots at K. The random arm uses fixed CPU only.',
-            'refresh_rate': 'Keep measured insertion rate and calibrate Poisson encounter renewals to the measured F=2000 refresh rate. Hazard is TU requests over the product of retained steps and episodes inserted. Retention uses stored steps at the checkpoint.',
+            'refresh_rate': 'Keep measured insertion rate and calibrate Poisson encounter renewals to the measured F=2000 refresh rate. Hazard is TU requests over the product of retained steps and episodes inserted. Retention uses stored steps at the checkpoint. F=5000 allows at most one refresh per insertion.',
             'spread': 'Sum observed min/max ratio scenarios from matched checkpoints at 100k or later. In the point model, also report min, median and max total CPU of paired archived seed vectors. These are scenario ranges.',
             'limitations': 'Same non-utility ratio, conditional evaluation costs and retention geometry across K/F. Unmeasured training changes and late growth can move the ratios.',
         },
