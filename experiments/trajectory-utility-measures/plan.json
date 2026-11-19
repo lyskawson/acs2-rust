@@ -84,8 +84,8 @@
       ]
     },
     "selected": {
-      "K": null,
-      "F": null,
+      "K": 8,
+      "F": 2000,
       "status": "Open. The orchestrator closes the choice based on cost alone before review."
     }
   },
