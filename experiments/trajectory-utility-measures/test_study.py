@@ -6,6 +6,8 @@ import tempfile
 import unittest
 
 from forecast import MENU, expected_refreshes, known_ratio, projected_utility
+from grid_limits import (PILOT_SHA256, PLAN_SHA256, approved_registration, batches as grid_batches,
+                         conditional_limit, derive)
 from pilot import BUILD_LIMIT, batches, registered_plan
 from recovery import grouped_runs, pilot_accounting, retry_runs
 from registration import ARMS, REPOSITORY, S1, TRIAL, pilot_registration
@@ -50,6 +52,38 @@ class StudyTest(unittest.TestCase):
         self.assertEqual(sum(n for _, n, _ in grouped_runs(retry, 40)), 3)
         with self.assertRaisesRegex(ValueError, 'duplicated or invalid charged'):
             pilot_accounting([dict(array_id=40, runs=runs)], header + lines.replace('40_3|42', '40_3|41'))
+
+    def test_grid_limits_use_each_cells_last_checkpoint_and_route_heavy_seeds_through_gate(self):
+        settings, _, _, _ = pilot_registration()
+        study, _, configs = approved_registration()
+        pilot = []
+        for task, cfg in configs.items():
+            targets = [step for step in cfg['targets'] if step <= settings['tasks'][task]['last_target']]
+            early = [dict(step=step, process=120, utility=20, reference=50) for step in targets[:-1]]
+            last = dict(step=targets[-1], process=50, utility=10, reference=80)
+            for arm in ARMS:
+                pilot.append(dict(task=task, agent=arm, points=[*early, last]))
+        inputs = dict(final_plan_sha256=PLAN_SHA256, pilot_manifest_sha256=PILOT_SHA256,
+                      archive={task: {str(seed): 800 if seed == 42 else 1000 for seed in study['seeds']}
+                               for task in configs}, pilot=pilot)
+        plan = derive(inputs)
+        runs = {(run['task'], run['agent'], run['seed']): run for run in plan['runs']}
+        self.assertEqual(runs['woods14', TRIAL, 43]['limit_seconds'], 1080)
+        self.assertEqual(runs['mazee1_alcs', TRIAL, 42]['limit_seconds'], 1860)
+        self.assertEqual(runs['mazee2_alcs', TRIAL, 42]['limit_seconds'], 1440)
+        self.assertEqual(runs['mazee3_alcs', TRIAL, 43]['limit_seconds'], 1860)
+        self.assertEqual(conditional_limit(1250, 1.25), 1680)
+        self.assertEqual(len(plan['reused']), 48)
+        batches = grid_batches(plan)
+        scheduled = {run['run_id'] for batch in batches for job in batch['jobs'] for run in job['runs']}
+        self.assertEqual(scheduled, {run['run_id'] for run in runs.values()})
+        scouts = {batch['name'] for batch in batches if batch['phase'] == 'scout'}
+        self.assertEqual(len(scouts), 6)
+        gate = next(batch for batch in batches if batch['phase'] == 'gate')
+        self.assertEqual(set(gate['dependencies']), scouts)
+        leading = [batch for batch in batches if 'scout-gate' in batch['dependencies']]
+        self.assertEqual(len(leading), 2)
+        self.assertTrue(all(batch['phase'] == 'conditional' and batch['throttle'] == 19 for batch in leading))
 
     def test_cost_projection_preserves_anchor_and_models_fixed_and_candidate_work(self):
         point = dict(

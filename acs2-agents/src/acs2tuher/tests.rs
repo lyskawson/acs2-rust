@@ -1,5 +1,5 @@
 use acs2_core::checkpoint::Checkpointed;
-use acs2_core::ports::goal::{ExactMatch, GoalStart, GoalStep};
+use acs2_core::ports::goal::{ExactMatch, GoalOutcome, GoalStart, GoalStep};
 use acs2_core::representation::classifier::Classifier;
 use acs2_core::representation::perception::Perception;
 use acs2_core::representation::population::Population;
@@ -252,6 +252,22 @@ impl RandomSource for Last {
     }
 }
 
+struct TimedObjective;
+
+impl GoalEvaluator<1, 1> for TimedObjective {
+    fn is_reached(&self, achieved: &Goal<1>, desired: &Goal<1>) -> bool {
+        let start = thread_cpu_nanoseconds();
+        while thread_cpu_nanoseconds() - start < 50_000 {
+            std::hint::spin_loop();
+        }
+        GoalEvaluator::<1, 1>::is_reached(&OBJECTIVE, achieved, desired)
+    }
+
+    fn outcome(&self, step: &GoalStep<1, 1>, desired: &Goal<1>) -> GoalOutcome {
+        OBJECTIVE.outcome(step, desired)
+    }
+}
+
 #[test]
 fn refresh_is_strictly_after_the_age_limit_and_resamples_seen_goals() {
     let real = [goal(2), goal(4), goal(9)];
@@ -271,16 +287,21 @@ fn refresh_is_strictly_after_the_age_limit_and_resamples_seen_goals() {
     utility.on_insertion(&store, id, &OBJECTIVE, &scoring, 17);
     let other = store.insert(trajectory(4, &[0, 1])).unwrap();
     utility.on_insertion(&store, other, &OBJECTIVE, &scoring, 2_017);
+    let insertion_cpu = utility.cost.cpu_nanoseconds;
+    assert_eq!(insertion_cpu, utility.cost.insertion_cpu_nanoseconds);
     assert_eq!(
-        utility.assigned_goal(&store, id, &OBJECTIVE, &scoring, 2_017),
+        utility.assigned_goal(&store, id, &TimedObjective, &scoring, 2_017),
         Some(goal(2))
     );
     assert_eq!(utility.cost.refreshes, 0);
+    assert_eq!(utility.cost.cpu_nanoseconds, insertion_cpu);
     assert_eq!(
-        utility.assigned_goal(&store, id, &OBJECTIVE, &scoring, 2_018),
+        utility.assigned_goal(&store, id, &TimedObjective, &scoring, 2_018),
         Some(goal(4))
     );
     assert_eq!(utility.cost.refreshes, 1);
+    assert!(utility.cost.cpu_nanoseconds > insertion_cpu);
+    assert_eq!(utility.cost.insertion_cpu_nanoseconds, insertion_cpu);
     assert_eq!(utility.cost.candidates_sampled, 5);
     assert_eq!(
         utility.assigned_goal(&store, id, &OBJECTIVE, &scoring, 4_018),

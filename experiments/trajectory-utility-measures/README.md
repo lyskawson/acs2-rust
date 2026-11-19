@@ -54,3 +54,37 @@ from the observed checkpoint ratios and paired archival seed spread. The model
 projects the refresh rate from the observed insertion rate, retained steps and
 the measured TU draw frequency. Its estimates hold the measured non-utility CPU
 ratios fixed as K and F vary.
+
+## Full grid
+
+The approved plan fields fix eight candidates and a 2000-step refresh. The 48
+full-budget pilot measurements supply their seed-42 cells. The grid supplies
+1632 full measurements, including six MazeE2 and MazeE3 scouts. Seed-42 extensions
+compare their overlap to the corresponding sealed pilot rows in binary64 bits.
+
+`grid_limits.py` authenticates the pilot and ablation inputs and derives every
+time limit. Ordinary cells use their last matched checkpoint, the maximum archived
+S+1 seed cost for that maze, a 50% margin, and a two-minute allowance. On the ten
+ordinary 300k prefixes the non-utility ratio has floor one. Scout reservations use
+the floor-one non-utility ratio times one plus utility's process CPU share, the
+S+1 seed-42 allocation, a 30% margin, and three minutes. The pending heavy arrays
+reserve the scout reservation times the archived seed spread with one additional
+minute. Their gate replaces that envelope with the same calculation from the
+completed scout allocation CPU. The scheduler and node both verify the updated limit.
+
+`grid_run.py prepare INPUT_SHA256` and `grid_run.py submit` run from the frozen
+operations snapshot under the grid result directory. The measurement clone stays
+pinned to the pilot binary. Ordinary bundles use one allocated CPU and separate
+timed Slurm steps for each registered run. Bundling keeps the entire submission
+within the association's array element limit. The six scouts can overlap ordinary
+bundles. The two heavy array chains follow the ordinary chain and the scout gate.
+Before each submission the controller re-derives the assignment, checks the pilot
+plus grid budget, the shared grant, queue capacity, and SLURM test-only.
+
+`grid_run.py status` reads cumulative accounting. A failed run or allocation
+writes the study STOP and blocks downstream dependencies. `grid_run.py seal`
+requires all allocations and runs to complete within the cumulative approval.
+After copying and authenticating the grid snapshot, `grid_analysis.py analyze`
+combines it with the full pilot runs and original S+1 files. Use
+`grid_analysis.py figures` with the registered `curves.csv` for the individual
+and grouped test success figures.
