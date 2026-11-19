@@ -172,6 +172,19 @@ def read_labels(path, configs, names):
     return labels
 
 
+def measurement_step(path, manifest, grid, records):
+    step_path = path.parents[2] / 'step.json'
+    step = load_plan(step_path, manifest[str(step_path.relative_to(grid))])
+    job_id = f"{step['job_id']}.{step['step_id']}"
+    raw_id = f"{step['job_id_raw']}.{step['step_id']}"
+    record = records[raw_id]
+    cpu = float(record['CPUTimeRAW'])
+    if (record['JobID'] != job_id or record['State'] != 'COMPLETED' or record['ExitCode'] != '0:0'
+            or record['AllocCPUS'] != '1' or not 0 < cpu <= step['limit_seconds']):
+        raise ValueError(f'measurement step does not match its accepted allocation: {path}')
+    return job_id, raw_id, cpu
+
+
 def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
     study, _, configs = approved_registration()
     names = read(ABLATION / 'maze-names.json')
@@ -183,6 +196,13 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
     if (summary['submitted_runs'] != len(registered_grid['runs']) or summary['stopped']
             or summary['reserved_seconds'] or sum(summary['completed_runs'].values()) != len(registered_grid['runs'])):
         raise ValueError('analysis requires a complete successful grid')
+    accounting_path = grid / 'accounting.psv'
+    if evidence_sha(accounting_path) != manifests['grid']['accounting.psv']:
+        raise ValueError('Slurm accounting differs from the sealed grid')
+    with accounting_path.open() as stream:
+        records = {row['JobIDRaw']: row for row in csv.DictReader(stream, delimiter='|')}
+    pilot_accounting = load_plan(pilot / 'attempt-accounting.json', manifests['pilot']['attempt-accounting.json'])
+    pilot_slots = {row['relative_directory']: row for row in pilot_accounting if row['state'] == 'COMPLETED'}
     named = {task: dict(cfg, maze=names[task]) for task, cfg in configs.items()}
     archive_costs, _ = reference_costs(archive, named, study['seeds'])
     entries = load_plan(archive / 'local-full-index.json', stage['source_sha256']['ablation_index'])
@@ -193,6 +213,7 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
     inputs, observations, run_costs = {}, [], []
     prefix_count = 0
     index = []
+    measured_steps = set()
     for run in (*registered_grid['runs'], *registered_grid['reused']):
         key = run['task'], run['agent'], run['seed']
         path, digest, label = registered_path(pilot, grid, run, manifests)
@@ -210,18 +231,29 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
             prefix_count += identity['rows']
         inputs[key], secondary = rows_from(path, digest, key, configs[key[0]], label, process_cpu)
         observations.extend(secondary)
+        if label == 'grid':
+            job, raw_id, cpu = measurement_step(path, manifests['grid'], grid, records)
+            if raw_id in measured_steps:
+                raise ValueError('measurements share a Slurm step')
+            measured_steps.add(raw_id)
+        else:
+            certified = pilot_slots[str(path.parent.relative_to(pilot))]
+            job, raw_id, cpu = certified['job_id'], certified['job_id_raw'], certified['allocated_cpu_seconds']
         index.append(dict(task=key[0], agent=key[1], seed=key[2], source=str(path), sha256=digest, kind=label))
         run_costs.append(dict(task=key[0], arm=key[1], seed=key[2], source=label,
-                              process_cpu_seconds=process_cpu, peak_rss_kib=completion['peak_rss_kib']))
+                              process_cpu_seconds=process_cpu, peak_rss_kib=completion['peak_rss_kib'],
+                              accounting_id=job, accounting_id_raw=raw_id, measurement_step_or_allocation_cpu_seconds=cpu))
     for key, row in earlier.items():
         path, digest = Path(row['source']), row['sha256']
         process = archive_costs[key[0], key[2]]['process_cpu_seconds_wait4']
         inputs[key], secondary = rows_from(path, digest, key, configs[key[0]], 'reference', process)
         observations.extend(secondary)
         index.append(dict(row, kind='reference'))
+        allocation = archive_costs[key[0], key[2]]['allocation_cpu_seconds']
         run_costs.append(dict(task=key[0], arm=key[1], seed=key[2], source='reference',
-                              process_cpu_seconds=process, peak_rss_kib=None))
-    if set(inputs) != expected or prefix_count != 216:
+                              process_cpu_seconds=process, peak_rss_kib=read(path.with_name('completion.json'))['peak_rss_kib'],
+                              accounting_id=None, accounting_id_raw=None, measurement_step_or_allocation_cpu_seconds=allocation))
+    if set(inputs) != expected or prefix_count != 216 or len(measured_steps) != len(registered_grid['runs']):
         raise ValueError('registered runs or seed42 prefix comparisons are incomplete')
     results, carry = calculate(study, configs, names, inputs, read_labels(labels, configs, names))
     cpu = {arm: sum(row['process_cpu_seconds'] for row in run_costs if row['arm'] == arm)

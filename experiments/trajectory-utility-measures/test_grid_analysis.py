@@ -1,12 +1,33 @@
 import math
+import json
+from pathlib import Path
+import tempfile
 import unittest
 
-from grid_analysis import ANALYSIS_ARMS, calculate
+from grid_analysis import ANALYSIS_ARMS, calculate, measurement_step
 from grid_limits import approved_registration
-from registration import MEAN, RANDOM, S1, TRIAL
+from registration import MEAN, RANDOM, S1, TRIAL, checksum
 
 
 class RegisteredAnalysisTest(unittest.TestCase):
+    def test_measurement_cost_uses_the_timed_step_for_a_shared_allocation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            attempt = root / 'attempts' / 'a03'
+            attempt.mkdir(parents=True)
+            step = attempt / 'step.json'
+            step.write_text(json.dumps(dict(job_id='902_0', job_id_raw='903', step_id='5', limit_seconds=180)))
+            raw = attempt / 'measurement' / 'run' / 'rows.jsonl'
+            manifest = {str(step.relative_to(root)): checksum(step)}
+            rows = {
+                '903.4': dict(JobID='902_0.4', State='COMPLETED', ExitCode='0:0', AllocCPUS='1', CPUTimeRAW='29'),
+                '903.5': dict(JobID='902_0.5', State='COMPLETED', ExitCode='0:0', AllocCPUS='1', CPUTimeRAW='145'),
+            }
+            self.assertEqual(measurement_step(raw, manifest, root, rows), ('902_0.5', '903.5', 145))
+            rows['903.5']['CPUTimeRAW'] = '181'
+            with self.assertRaisesRegex(ValueError, 'does not match its accepted allocation'):
+                measurement_step(raw, manifest, root, rows)
+
     def test_paired_nonconstant_seeds_floor_and_contrast_ceiling(self):
         study, _, _ = approved_registration()
         provider = dict(targets=[1000, 3000, 10000], registration={
