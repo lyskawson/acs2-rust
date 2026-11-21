@@ -5953,6 +5953,72 @@ with grouped PDFs by aliasing. The study archive lives under
 `~/Desktop/tu-runs/per-goal-reward-ablation/` locally. The two complete
 measurement copies have identical SHA-256 manifests for all 30,554 files.
 
+## Trajectory utility measures on shortened hindsight replay
+
+The [registered study](../experiments/trajectory-utility-measures/plan.json)
+compares Mean value, Trial update and Random goal on 28 mazes at seeds 42–61.
+It includes 1,680 full ACS2-TUHER runs and the 560 original S+1 reference runs.
+The ablation supplies the held-out pairs, budgets, checkpoints and observation
+aliasing groups. Seeds 42–46 carry per-pair records.
+
+Each replay draw samples a stored transition. The three equally probable
+routes use its own goal, shortened future hindsight, or the episode's
+assigned utility goal. A relabeling that fails counterfactual admissibility
+falls back to the episode's goal. Every draw uses the S+1 ALP and RL update.
+The TU arms evaluate assignments at insertion and on a TU draw when an
+assignment is more than 2,000 interactions old. They sample up to eight
+admissible goals observed in training with a dedicated random stream.
+Mean value averages the action values along the admissible
+prefix. Trial update averages the value gain over the episode's states after
+a reverse update pass on a private copy of one goal's value entries. Random
+goal selects uniformly from the sampled candidates. Utility CPU and work
+counters are recorded separately from learning.
+
+### Registered test success
+
+The primary measure averages held-out test success equally over checkpoints
+within each seed. The final measure uses the last checkpoint. Each maze and
+measure has a paired marginal 95% t(19) interval. The table gives the
+registered verdict and `A+/A−/n`. The `floor` and `too_easy` labels each
+apply to zero mazes. The final `ceiling` rule leaves one counted maze per
+contrast without aliasing.
+
+| Contrast | Primary, no aliasing | Primary, aliasing | Final, no aliasing | Final, aliasing |
+|---|---|---|---|---|
+| Mean value − Random goal | mixed 1/4/9 | mixed 3/4/19 | no clear effect 0/0/1 | no clear effect 0/1/18 |
+| Trial update − Random goal | mixed 1/3/9 | no clear effect 0/7/19 | no clear effect 0/0/1 | worsens 0/10/19 |
+| Trial update − Mean value | mixed 2/1/9 | no clear effect 0/8/19 | no clear effect 0/0/1 | worsens 0/11/19 |
+| Random goal − S+1 | improves 7/0/9 | mixed 6/9/19 | no clear effect 0/0/1 | mixed 7/6/19 |
+| Mean value − S+1 | improves 5/0/9 | mixed 4/7/19 | no clear effect 0/0/1 | mixed 5/3/19 |
+| Trial update − S+1 | no clear effect 4/0/9 | mixed 2/10/19 | no clear effect 0/0/1 | mixed 1/9/19 |
+
+The registered selection rule carries Mean value to the proportion study.
+Across the full runs, Trial update uses 1.237 times the process CPU and 1.622
+times the utility evaluation CPU of Mean value. Descriptively, each arm
+reaches sustained 0.95 test success on eight of nine mazes without aliasing.
+With aliasing, the counts are two for Mean value, one for Trial update, two
+for Random goal and zero for S+1.
+
+### Execution and artifacts
+
+The last allocation finished on 2026-11-21. The pilot, initial grid and
+recovery used 33,177, 1,743,129 and 1,164,918 allocated CPU-seconds,
+respectively. The cumulative charge was 817.006667 of 2,000 CPU-hours.
+A deadline for MazeE2 Mean value seed 43 stopped nine other active
+measurements and cancelled 76 dependent allocations before start. All
+86 incomplete cells finished with the approved 14-hour retry limits and
+the pinned measurement binary from `bb9a9e4`. The 70 checkpoints saved
+before STOP and the 216 extended pilot checkpoints reproduce bit for bit
+in the compared deterministic fields.
+
+The [execution and analysis tools](../experiments/trajectory-utility-measures/README.md)
+verify 2,240 full runs and 18,000 test checkpoints. The archive includes
+all 336 intervals, group verdicts, pooled counts, secondary measurements and
+success figures for all four arms. Raw files and accounting are stored
+under `~/tu_runs/trajectory-utility-measures/` on WCSS and
+`~/Desktop/tu-runs/trajectory-utility-measures/` locally. The pilot, stopped
+grid and recovery copies have matching SHA-256 manifests for 18,667 files.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
