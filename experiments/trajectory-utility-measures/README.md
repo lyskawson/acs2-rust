@@ -2,7 +2,7 @@
 
 `plan.json` registers three ACS2-TUHER arms and the original shortened HER reference
 with per-goal values. It inherits 28 maze configurations and three pair blocks from
-the ablation by their registered hashes. The evaluation menu remains open.
+the ablation by their registered hashes. The final plan selects K = 8 and F = 2000.
 
 The measurement CLI selects `acs2tuher_mean_value`, `acs2tuher_trial_update`, or
 `acs2tuher_random_goal`. The pilot passes `--tu-candidates 8 --tu-refresh 2000`.
@@ -88,3 +88,21 @@ After copying and authenticating the grid snapshot, `grid_analysis.py analyze`
 combines it with the full pilot runs and original S+1 files. Use
 `grid_analysis.py figures` with the registered `curves.csv` for the individual
 and grouped test success figures.
+
+## Recovery after the MazeE2 deadline
+
+The first grid was sealed with 1546 full measurements, ten partial measurements
+and 76 cancelled before start. The approved retry selects the 86 unfinished
+registered runs from that seal, keeping their seeds, settings and binary. It uses
+14 hours per allocation and a chain of three arrays with up to 40 concurrent
+tasks. The maximum combined charge and reservation for the pilot, stopped grid
+and retry is 1697.418333 CPU-hours. The retry keeps a separate ledger and STOP
+marker. Its ten reruns must reproduce the 70 preserved checkpoints before the
+retry can seal.
+
+From the retry operations snapshot, use `grid_run.py --retry prepare INPUT_SHA256`
+with the original grid input checksum, then `--retry submit`, `--retry status` and
+`--retry seal`. Pass the stopped grid and its partial manifest checksum to
+`grid_analysis.py analyze`. Supply the retry archive with `--retry` and its seal
+with `--retry-manifest-sha256`. The analysis selects one full measurement per cell
+and carries the cumulative accounting from both waves.

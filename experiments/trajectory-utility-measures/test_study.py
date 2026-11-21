@@ -4,14 +4,33 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from forecast import MENU, expected_refreshes, known_ratio, projected_utility
 from grid_limits import (PILOT_SHA256, PLAN_SHA256, approved_registration, batches as grid_batches,
                          conditional_limit, derive)
+from grid_protocol import atomic_json, require_budget
+from grid_retry import retry_plan
+from grid_run import bound_current, prior_cpu_seconds, scheduled_batches
 from pilot import BUILD_LIMIT, batches, registered_plan
 from recovery import grouped_runs, pilot_accounting, retry_runs
-from registration import ARMS, REPOSITORY, S1, TRIAL, pilot_registration
+from registration import ARMS, REPOSITORY, S1, TRIAL, checksum, pilot_registration
 from validate import validate_row
+
+
+def grid_inputs():
+    settings, _, _, _ = pilot_registration()
+    study, _, configs = approved_registration()
+    pilot = []
+    for task, cfg in configs.items():
+        targets = [step for step in cfg['targets'] if step <= settings['tasks'][task]['last_target']]
+        early = [dict(step=step, process=120, utility=20, reference=50) for step in targets[:-1]]
+        last = dict(step=targets[-1], process=50, utility=10, reference=80)
+        for arm in ARMS:
+            pilot.append(dict(task=task, agent=arm, points=[*early, last]))
+    return dict(final_plan_sha256=PLAN_SHA256, pilot_manifest_sha256=PILOT_SHA256,
+                archive={task: {str(seed): 800 if seed == 42 else 1000 for seed in study['seeds']}
+                         for task in configs}, pilot=pilot)
 
 
 class StudyTest(unittest.TestCase):
@@ -54,19 +73,7 @@ class StudyTest(unittest.TestCase):
             pilot_accounting([dict(array_id=40, runs=runs)], header + lines.replace('40_3|42', '40_3|41'))
 
     def test_grid_limits_use_each_cells_last_checkpoint_and_route_heavy_seeds_through_gate(self):
-        settings, _, _, _ = pilot_registration()
-        study, _, configs = approved_registration()
-        pilot = []
-        for task, cfg in configs.items():
-            targets = [step for step in cfg['targets'] if step <= settings['tasks'][task]['last_target']]
-            early = [dict(step=step, process=120, utility=20, reference=50) for step in targets[:-1]]
-            last = dict(step=targets[-1], process=50, utility=10, reference=80)
-            for arm in ARMS:
-                pilot.append(dict(task=task, agent=arm, points=[*early, last]))
-        inputs = dict(final_plan_sha256=PLAN_SHA256, pilot_manifest_sha256=PILOT_SHA256,
-                      archive={task: {str(seed): 800 if seed == 42 else 1000 for seed in study['seeds']}
-                               for task in configs}, pilot=pilot)
-        plan = derive(inputs)
+        plan = derive(grid_inputs())
         runs = {(run['task'], run['agent'], run['seed']): run for run in plan['runs']}
         self.assertEqual(runs['woods14', TRIAL, 43]['limit_seconds'], 1080)
         self.assertEqual(runs['mazee1_alcs', TRIAL, 42]['limit_seconds'], 1860)
@@ -84,6 +91,45 @@ class StudyTest(unittest.TestCase):
         leading = [batch for batch in batches if 'scout-gate' in batch['dependencies']]
         self.assertEqual(len(leading), 2)
         self.assertTrue(all(batch['phase'] == 'conditional' and batch['throttle'] == 19 for batch in leading))
+
+    def test_grid_retry_selects_only_unfinished_runs_and_charges_the_stopped_wave(self):
+        inputs = grid_inputs()
+        original = derive(inputs)
+        conditional = [run for run in original['runs'] if run['phase'] == 'conditional']
+        partial = {run['attempt_id'] for run in conditional[:10]}
+        cancelled = {run['attempt_id'] for run in conditional[10:86]}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            outcomes, gate, manifest = [], {}, {}
+            for run in original['runs']:
+                attempt = run['attempt_id']
+                row = {key: run[key] for key in ('task', 'agent', 'seed', 'phase', 'relative_directory', 'attempt_id')}
+                row['outcome'] = 'full'
+                if attempt in partial:
+                    row.update(outcome='partial', rows_seen=7, rows_sha256='a' * 64)
+                    manifest[run['relative_directory'] + '/rows.jsonl'] = row['rows_sha256']
+                if attempt in cancelled:
+                    row['outcome'] = 'not_started'
+                outcomes.append(row)
+                if run['phase'] == 'conditional':
+                    gate[run['task'] + run['agent']] = dict(task=run['task'], agent=run['agent'], limit_seconds=5100)
+            for name, data in (('grid-inputs.json', inputs), ('partial-measurements.json', outcomes),
+                               ('scout-gate.json', dict(arrays=gate))):
+                atomic_json(root / name, data)
+                manifest[name] = checksum(root / name)
+            with patch('grid_retry.stopped_evidence', return_value=(manifest, dict(grid_cpu_seconds=1743129))):
+                plan = retry_plan(root, manifest['grid-inputs.json'])
+                attempts = {run['previous_attempt_id']: run for run in plan['runs']}
+                self.assertEqual(set(attempts), partial | cancelled)
+                self.assertEqual({key for key, run in attempts.items() if run['previous']}, partial)
+                self.assertEqual(sum(attempts[key]['previous']['checkpoints'] for key in partial), 70)
+                self.assertTrue(all(run['attempt_id'].endswith('_a02') for run in attempts.values()))
+                batches = scheduled_batches(plan)
+                self.assertEqual([batch['throttle'] for batch in batches], [40, 40, 6])
+                self.assertEqual([batch['dependencies'] for batch in batches], [[], ['retry-0'], ['retry-1']])
+                self.assertEqual(bound_current(batches), 4334400)
+                self.assertEqual(require_budget(prior_cpu_seconds(plan), dict(spent_seconds=0, reserved_seconds=0),
+                                                bound_current(batches), 2000), 6110706)
 
     def test_cost_projection_preserves_anchor_and_models_fixed_and_candidate_work(self):
         point = dict(

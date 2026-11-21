@@ -12,6 +12,7 @@ from agent_names import canonical_run_name
 from forecast import csv_table, reference_costs
 from grid_limits import PILOT_SHA256, PLAN_SHA256, approved_registration, derive
 from grid_protocol import load_plan
+from grid_retry import STOPPED_MANIFEST_SHA256, retry_plan, stopped_evidence
 from grid_run import MEASUREMENT_COMMIT, evidence_sha
 
 
@@ -106,14 +107,15 @@ def calculate(study, configs, names, inputs, easy):
     return dict(result), carry
 
 
-def registered_path(pilot, grid, run, manifests):
+def registered_path(roots, run, manifests):
     if 'relative_directory' in run:
+        label = 'retry' if run['phase'] == 'retry' else 'grid'
         relative = run['relative_directory'] + '/rows.jsonl'
-        return grid / relative, manifests['grid'][relative], 'grid'
+        return roots[label] / relative, manifests[label][relative], label
     relative = run['pilot']['rows']
     if manifests['pilot'][relative] != run['pilot']['rows_sha256']:
         raise ValueError('full reused pilot run differs from the source manifest')
-    return pilot / relative, run['pilot']['rows_sha256'], 'pilot'
+    return roots['pilot'] / relative, run['pilot']['rows_sha256'], 'pilot'
 
 
 def rows_from(path, digest, key, config, label, process_cpu):
@@ -185,22 +187,60 @@ def measurement_step(path, manifest, grid, records):
     return job_id, raw_id, cpu
 
 
-def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
-    study, _, configs = approved_registration()
-    names = read(ABLATION / 'maze-names.json')
-    manifests = dict(pilot=load_plan(pilot / 'files.sha256.json', PILOT_SHA256),
-                     grid=load_plan(grid / 'files.sha256.json', grid_manifest_sha))
-    stage = load_plan(grid / 'grid-inputs.json', manifests['grid']['grid-inputs.json'])
-    registered_grid = derive(stage)
-    summary = load_plan(grid / 'accounting-summary.json', manifests['grid']['accounting-summary.json'])
-    if (summary['submitted_runs'] != len(registered_grid['runs']) or summary['stopped']
-            or summary['reserved_seconds'] or sum(summary['completed_runs'].values()) != len(registered_grid['runs'])):
+def completed_accounting(root, manifest, count):
+    summary = load_plan(root / 'accounting-summary.json', manifest['accounting-summary.json'])
+    if (summary['submitted_runs'] != count or summary['stopped']
+            or summary['reserved_seconds'] or sum(summary['completed_runs'].values()) != count):
         raise ValueError('analysis requires a complete successful grid')
-    accounting_path = grid / 'accounting.psv'
-    if evidence_sha(accounting_path) != manifests['grid']['accounting.psv']:
+    return summary
+
+
+def step_records(root, manifest, name):
+    accounting_path = root / name
+    if evidence_sha(accounting_path) != manifest[name]:
         raise ValueError('Slurm accounting differs from the sealed grid')
     with accounting_path.open() as stream:
-        records = {row['JobIDRaw']: row for row in csv.DictReader(stream, delimiter='|')}
+        return {row['JobIDRaw']: row for row in csv.DictReader(stream, delimiter='|')}
+
+
+def grid_sources(grid, grid_sha, retry, retry_sha):
+    if (retry is None) != (retry_sha is None):
+        raise ValueError('retry evidence requires its path and manifest checksum')
+    if retry is None:
+        manifests = dict(grid=load_plan(grid / 'files.sha256.json', grid_sha))
+    else:
+        if grid_sha != STOPPED_MANIFEST_SHA256:
+            raise ValueError('retry analysis requires the sealed stopped grid')
+        prior_manifest, prior_account = stopped_evidence(grid)
+        manifests = dict(grid=prior_manifest, retry=load_plan(retry / 'files.sha256.json', retry_sha))
+    source_sha = manifests['grid']['grid-inputs.json']
+    stage = load_plan(grid / 'grid-inputs.json', source_sha)
+    registration = derive(stage)
+    runs = registration['runs']
+    if retry is None:
+        summary = completed_accounting(grid, manifests['grid'], len(runs))
+        records = dict(grid=step_records(grid, manifests['grid'], 'accounting.psv'))
+        return stage, registration, runs, summary, manifests, records
+    prior_plan = retry_plan(grid, source_sha)
+    by_run = {run['run_id']: run for run in prior_plan['runs']}
+    summary = completed_accounting(retry, manifests['retry'], len(by_run))
+    if (summary['earlier_completed_runs'] != len(runs) - len(by_run)
+            or summary['grid_cpu_seconds'] != prior_account['grid_cpu_seconds'] + summary['retry_cpu_seconds']
+            or summary['total_charged_cpu_seconds'] != prior_account['total_cpu_seconds'] + summary['retry_cpu_seconds']):
+        raise ValueError('retry accounting does not reconcile to the stopped grid')
+    selected = [by_run.get(run['run_id'], run) for run in runs]
+    records = dict(grid=step_records(grid, prior_manifest, 'partial-accounting.psv'),
+                   retry=step_records(retry, manifests['retry'], 'accounting.psv'))
+    return stage, registration, selected, summary, manifests, records
+
+
+def analyze(pilot, grid, archive, labels, output, grid_manifest_sha, retry=None, retry_manifest_sha=None):
+    study, _, configs = approved_registration()
+    names = read(ABLATION / 'maze-names.json')
+    stage, registered_grid, selected, summary, manifests, records = grid_sources(
+        grid, grid_manifest_sha, retry, retry_manifest_sha)
+    roots = dict(pilot=pilot, grid=grid, retry=retry)
+    manifests['pilot'] = load_plan(pilot / 'files.sha256.json', PILOT_SHA256)
     pilot_accounting = load_plan(pilot / 'attempt-accounting.json', manifests['pilot']['attempt-accounting.json'])
     pilot_slots = {row['relative_directory']: row for row in pilot_accounting if row['state'] == 'COMPLETED'}
     named = {task: dict(cfg, maze=names[task]) for task, cfg in configs.items()}
@@ -211,28 +251,36 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
     if set(earlier) != {key for key in expected if key[1] == S1}:
         raise ValueError('the S+1 index differs from the registered reference')
     inputs, observations, run_costs = {}, [], []
-    prefix_count = 0
+    prefix_count = retry_prefix_count = 0
     index = []
     measured_steps = set()
-    for run in (*registered_grid['runs'], *registered_grid['reused']):
+    for run in (*selected, *registered_grid['reused']):
         key = run['task'], run['agent'], run['seed']
-        path, digest, label = registered_path(pilot, grid, run, manifests)
+        path, digest, label = registered_path(roots, run, manifests)
+        root = roots[label]
         completion_path = path.with_name('completion.json')
-        relative_completion = str(completion_path.relative_to(grid if label == 'grid' else pilot))
+        relative_completion = str(completion_path.relative_to(root))
         completion = load_plan(completion_path, manifests[label][relative_completion])
         process_cpu = completion['user_cpu_seconds'] + completion['system_cpu_seconds']
         if (completion['exit_code'] or completion['failure'] or completion['sha256']['rows.jsonl'] != digest or key in inputs):
             raise ValueError('invalid or duplicate completed run')
-        if label == 'grid' and run['pilot']:
+        if label != 'pilot' and run['pilot']:
             proof = path.with_name('prefix-identity.json')
-            identity = load_plan(proof, manifests[label][str(proof.relative_to(grid))])
+            identity = load_plan(proof, manifests[label][str(proof.relative_to(root))])
             if identity['pilot_sha256'] != run['pilot']['rows_sha256'] or identity['differences']:
                 raise ValueError('seed42 overlap did not reproduce the pilot')
             prefix_count += identity['rows']
+        if previous := run.get('previous'):
+            proof = path.with_name('retry-prefix-identity.json')
+            identity = load_plan(proof, manifests[label][str(proof.relative_to(root))])
+            if (identity['previous_sha256'] != previous['rows_sha256'] or identity['differences']
+                    or identity['rows'] != previous['checkpoints']):
+                raise ValueError('retry overlap did not reproduce the stopped attempt')
+            retry_prefix_count += identity['rows']
         inputs[key], secondary = rows_from(path, digest, key, configs[key[0]], label, process_cpu)
         observations.extend(secondary)
-        if label == 'grid':
-            job, raw_id, cpu = measurement_step(path, manifests['grid'], grid, records)
+        if label != 'pilot':
+            job, raw_id, cpu = measurement_step(path, manifests[label], root, records[label])
             if raw_id in measured_steps:
                 raise ValueError('measurements share a Slurm step')
             measured_steps.add(raw_id)
@@ -253,11 +301,14 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
         run_costs.append(dict(task=key[0], arm=key[1], seed=key[2], source='reference',
                               process_cpu_seconds=process, peak_rss_kib=read(path.with_name('completion.json'))['peak_rss_kib'],
                               accounting_id=None, accounting_id_raw=None, measurement_step_or_allocation_cpu_seconds=allocation))
-    if set(inputs) != expected or prefix_count != 216 or len(measured_steps) != len(registered_grid['runs']):
-        raise ValueError('registered runs or seed42 prefix comparisons are incomplete')
+    if (set(inputs) != expected or prefix_count != 216 or len(measured_steps) != len(registered_grid['runs'])
+            or retry_prefix_count != (70 if retry else 0)):
+        raise ValueError('registered runs or archived prefix comparisons are incomplete')
     results, carry = calculate(study, configs, names, inputs, read_labels(labels, configs, names))
     cpu = {arm: sum(row['process_cpu_seconds'] for row in run_costs if row['arm'] == arm)
            for arm in ANALYSIS_ARMS}
+    utility_cpu = {arm: math.fsum(row['tu_cpu_seconds'] for row in observations if row['arm'] == arm
+                                 and row['nominal_step'] == configs[row['task']]['targets'][-1]) for arm in ARMS}
     output.mkdir(parents=True, exist_ok=False)
     for name, rows in results.items():
         csv_table(output / (name + '.csv'), rows)
@@ -268,7 +319,11 @@ def analyze(pilot, grid, archive, labels, output, grid_manifest_sha):
                    new_runs=len(registered_grid['runs']), reused_pilot_runs=len(registered_grid['reused']),
                    reference_runs=len(earlier), overlap_checkpoints=prefix_count, carry_forward=carry,
                    trial_to_mean_process_cpu_ratio=cpu[TRIAL] / cpu[MEAN], process_cpu_seconds=cpu,
+                   trial_to_mean_utility_cpu_ratio=utility_cpu[TRIAL] / utility_cpu[MEAN], utility_cpu_seconds=utility_cpu,
                    registered=True, labels_sha256=evidence_sha(labels), accounting=summary)
+    if retry:
+        summary.update(retry_manifest_sha256=retry_manifest_sha, recovered_runs=sum(run['phase'] == 'retry' for run in selected),
+                       retry_overlap_checkpoints=retry_prefix_count)
     (output / 'registered-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     return summary
 
@@ -291,12 +346,15 @@ if __name__ == '__main__':
     for argument in ('pilot', 'grid', 'archive', 'labels', 'out'):
         aggregate.add_argument(f'--{argument}', type=Path, required=True)
     aggregate.add_argument('--grid-manifest-sha256', required=True)
+    aggregate.add_argument('--retry', type=Path)
+    aggregate.add_argument('--retry-manifest-sha256')
     plot = actions.add_parser('figures')
     plot.add_argument('--curves', type=Path, required=True)
     plot.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
     if args.action == 'analyze':
-        result = analyze(args.pilot, args.grid, args.archive, args.labels, args.out, args.grid_manifest_sha256)
+        result = analyze(args.pilot, args.grid, args.archive, args.labels, args.out, args.grid_manifest_sha256,
+                         args.retry, args.retry_manifest_sha256)
     else:
         result = figures(args.curves, args.out)
     print(json.dumps(result, sort_keys=True))

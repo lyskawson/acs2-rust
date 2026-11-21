@@ -15,11 +15,15 @@ from validate import CPU_FIELDS, validate_row
 
 
 def measure(path, parent):
-    from grid_run import BINARY, ROOT
-    expected_root = ROOT / 'attempts'
-    if expected_root not in path.resolve().parents or path.parent / 'measurement' != parent:
+    from grid_run import BINARY, RETRY, ROOT
+    resolved = path.resolve()
+    root = resolved.parents[2]
+    if (root not in (ROOT, RETRY) or resolved.parents[1] != root / 'attempts'
+            or path.parent / 'measurement' != parent):
         raise ValueError('measurement path differs from the assigned attempt')
     manifest = read(path)
+    if manifest['stop_path'] != str(root / 'STOP.json'):
+        raise ValueError('measurement does not use its own STOP marker')
     job, array, index, step = (os.environ[key] for key in
         ('SLURM_JOB_ID', 'SLURM_ARRAY_JOB_ID', 'SLURM_ARRAY_TASK_ID', 'SLURM_STEP_ID'))
     if (manifest['allocation_job_id'] != f'{array}_{index}'
@@ -33,22 +37,36 @@ def measure(path, parent):
                                     output=str(parent), index=0, sample_interval=0.25))
 
 
-def compare_pilot_prefix(pilot_root, run, config, new_directory):
-    source = pilot_root / run['pilot']['rows']
-    if pilot_root.resolve() not in source.resolve().parents or checksum(source) != run['pilot']['rows_sha256']:
-        raise ValueError('seed42 stage-one prefix differs from its sealed archive')
+def compare_prefix(root, reference, seed, config, new_directory):
+    source = root / reference['rows']
+    if root.resolve() not in source.resolve().parents or checksum(source) != reference['rows_sha256']:
+        raise ValueError('earlier measurement rows differ from the sealed prefix')
     with source.open() as stream:
         old = [json.loads(line) for line in stream]
     targets = [row['nominal_step'] for row in old]
     _, new = checked_completion(new_directory, config['targets'])
-    if targets != config['targets'][:len(targets)]:
-        raise ValueError('the archived seed42 checkpoints do not form a registered prefix')
+    if not targets or targets != config['targets'][:len(targets)]:
+        raise ValueError('the archived checkpoints do not form a registered prefix')
     for row in (*old, *new):
         for field in CPU_FIELDS:
             del row['trajectory_utility']['cost'][field]
-    identity = compare(new, old, [run['seed']], targets, config['evaluation_blocks'])
+    identity = compare(new, old, [seed], targets, config['evaluation_blocks'])
+    return dict(identity, excluded_utility_cpu_fields=CPU_FIELDS)
+
+
+def compare_pilot_prefix(pilot_root, run, config, new_directory):
+    identity = compare_prefix(pilot_root, run['pilot'], run['seed'], config, new_directory)
     atomic_json(new_directory / 'prefix-identity.json',
-                dict(identity, pilot_sha256=run['pilot']['rows_sha256'], excluded_utility_cpu_fields=CPU_FIELDS))
+                dict(identity, pilot_sha256=run['pilot']['rows_sha256']))
+
+
+def compare_retry_prefix(original, run, config, new_directory):
+    previous = run['previous']
+    identity = compare_prefix(original, previous, run['seed'], config, new_directory)
+    if identity['rows'] != previous['checkpoints']:
+        raise ValueError('retry did not reproduce all earlier checkpoints')
+    atomic_json(new_directory / 'retry-prefix-identity.json',
+                dict(identity, previous_sha256=previous['rows_sha256']))
 
 
 if __name__ == '__main__':
