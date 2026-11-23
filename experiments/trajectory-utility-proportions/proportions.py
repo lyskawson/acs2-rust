@@ -1,3 +1,4 @@
+from fractions import Fraction
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -33,6 +34,11 @@ def read(path):
 
 
 def label(agent, share):
+    fraction = Fraction(share)
+    return f'{agent}_p{fraction.numerator}of{fraction.denominator}'
+
+
+def pilot_label(agent, share):
     return f'{agent}_tu{int(share * 100)}'
 
 
@@ -43,7 +49,7 @@ def registered():
             raise ValueError(f'inherited registration differs: {directory.name}')
     base = read(ABLATION / 'plan.json')
     configs = {config['task']: config for config in base['configurations']}
-    arms = {label(agent, share): (agent, share) for agent in MEASURES_BY_ARM for share in SHARES}
+    arms = {pilot_label(agent, share): (agent, share) for agent in MEASURES_BY_ARM for share in SHARES}
     if (len(configs) != 28 or study['seeds'] != list(range(42, 62)) or study['seeds'] != base['seeds']
             or study['per_pair_seeds'] != list(range(42, 47)) or study['per_pair_seeds'] != base['per_pair_seeds']
             or [(arm['label'], arm['agent'], arm['tu_share']) for arm in study['arms']] !=

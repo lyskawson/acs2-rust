@@ -15,6 +15,10 @@ class PilotRegistrationTest(unittest.TestCase):
         self.assertTrue(all(run['last_target'] >= 300_000 for run in runs))
         self.assertLessEqual(settings['reservation_seconds'] + settings['build_limit_seconds'], 40 * 3600)
 
+    def test_grid_labels_use_the_same_fraction_notation_as_hindsight_proportion(self):
+        self.assertEqual([label(MEAN, p) for p in (0.25, 0.5, 0.75, 1.0)],
+                         [f'{MEAN}_p{suffix}' for suffix in ('1of4', '1of2', '3of4', '1of1')])
+
     def test_derived_capped_steps(self):
         self.assertEqual(capped_steps(0.0, None, 10), 10)
         self.assertEqual(capped_steps(1.0, 4, 10), 4)

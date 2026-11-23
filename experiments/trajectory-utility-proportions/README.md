@@ -5,7 +5,9 @@ The six new arms cross Mean value and Random goal with
 `--tu-share 0.25`, `--tu-share 0.75` and `--tu-share 1`.
 The share is conditional on requesting a copy. The original-goal probability stays
 one third. The other two requested probabilities appear beside the realized shares
-and fallbacks in the row diagnostics. Share one disables hindsight requests.
+and fallbacks in the row diagnostics. The final grid labels append the fraction,
+for example `acs2tuher_mean_value_p1of4`. The final plan records the mapping from
+the submission labels in the pilot. Share one disables hindsight requests.
 Share one half uses the original route stream and row schema. Share zero runs S+1.
 
 For the registered maze pair protocols, `--second-test-cap 100` adds

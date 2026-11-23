@@ -6,7 +6,7 @@ from pathlib import Path
 from statistics import median
 
 from proportions import (ATTEMPT_SPREAD, MEASURES_BY_ARM, SCOUTS, checksum, configuration,
-                         pilot_cells, read, registered)
+                         label, pilot_cells, read, registered)
 
 
 def json_lines(path):
@@ -125,7 +125,7 @@ def forecast(root, archive, output):
         full = targets[-1] == configs[task]['targets'][-1]
         if full:
             observations[targets[-1]] = total_cpu
-        common = dict(task=task, maze=configs[task]['maze'], arm=run['label'], agent=agent, tu_share=run['tu_share'])
+        common = dict(task=task, maze=configs[task]['maze'], arm=label(agent, run['tu_share']), agent=agent, tu_share=run['tu_share'])
         ratios = []
         prior_extended = 0.0
         for record in records:

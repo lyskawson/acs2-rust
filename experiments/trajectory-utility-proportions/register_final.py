@@ -3,7 +3,7 @@ import csv
 import json
 from pathlib import Path
 
-from proportions import HERE, SCOUTS, checksum, pilot_cells, read
+from proportions import HERE, SCOUTS, checksum, label, pilot_cells, read
 
 
 def final_plan(costs, identity, pilot_root):
@@ -20,8 +20,9 @@ def final_plan(costs, identity, pilot_root):
         raise ValueError('final registration requires the completed pilot and all identity checks')
     with (costs / 'time-limits.csv').open() as stream:
         limits = list(csv.DictReader(stream))
+    mapped = {run['label']: label(run['agent'], run['tu_share']) for run in runs}
     if (len(limits) != len(runs)
-            or {(row['task'], row['arm']) for row in limits} != {(run['task'], run['label']) for run in runs}):
+            or {(row['task'], row['arm']) for row in limits} != {(run['task'], mapped[run['label']]) for run in runs}):
         raise ValueError('time limits differ from the registered arms')
     timing = []
     for row in limits:
@@ -42,6 +43,7 @@ def final_plan(costs, identity, pilot_root):
         pilot_manifest_sha256=pilot_digest, identity_sha256=checksum(identity),
         measurement_commit=pilot['measurement_commit'], binary_sha256=pilot['binary_sha256'],
         definitions='The pinned draft defines the arms, protocol, observations, analysis and carry rule.',
+        pilot_to_grid_arm_labels=mapped,
         analysis_details={
             'floor': 'No compared arm has a lower 95% final-mean bound above the exact random-policy test floor at the same cap.',
             'too_easy': 'Use the original ablation ACS2 labels for both caps.',
