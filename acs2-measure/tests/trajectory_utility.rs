@@ -294,7 +294,7 @@ fn share_and_second_test_cap_preserve_state_and_all_registered_fields() {
             assert_protocol_evaluation_read_only(
                 &protocol, SEED, &targets, make, |agent| agent.0.snapshot()
             );
-            let run = |protocol| {
+            let run = |protocol: &acs2_measure::goal_protocol::TaskProtocol<'_, _>| {
                 let mut agent = make();
                 let mut rows = Vec::new();
                 run_goal_agent_protocol_with_sink(
