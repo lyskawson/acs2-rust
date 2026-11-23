@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 from statistics import median
 
-from proportions import (ATTEMPT_SPREAD, MEASURES_BY_ARM, SCOUTS, checksum, configuration,
+from proportions import (ABLATION, ATTEMPT_SPREAD, MEASURES_BY_ARM, SCOUTS, checksum, configuration,
                          label, pilot_cells, read, registered)
 
 
@@ -107,8 +107,11 @@ def verified_pilot(root, pilot_runs):
 
 def forecast(root, archive, output):
     study, _, configs, _ = registered()
+    names = read(ABLATION / 'maze-names.json')
+    if not configs.keys() <= names.keys():
+        raise ValueError('thesis maze names do not cover the registered tasks')
     _, _, _, pilot_runs = pilot_cells()
-    manifest, summary, attempts = verified_pilot(root, pilot_runs)
+    _, summary, attempts = verified_pilot(root, pilot_runs)
     costs, checkpoints, checksums = archive_costs(archive, configs, study['seeds'])
     pilot_rows, matched, limits, per_seed = [], [], [], []
     for run in pilot_runs:
@@ -125,7 +128,8 @@ def forecast(root, archive, output):
         full = targets[-1] == configs[task]['targets'][-1]
         if full:
             observations[targets[-1]] = total_cpu
-        common = dict(task=task, maze=configs[task]['maze'], arm=label(agent, run['tu_share']), agent=agent, tu_share=run['tu_share'])
+        common = dict(task=task, maze=names[task], arm=label(agent, run['tu_share']),
+                      agent=agent, tu_share=run['tu_share'])
         ratios = []
         prior_extended = 0.0
         for record in records:

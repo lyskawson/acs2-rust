@@ -1,0 +1,1575 @@
+{
+  "study": "trajectory-utility-proportions",
+  "stage": "grid_pending_approval",
+  "draft_sha256": "fd2e1be123e78ba97400b76d028e0b361346eb7bfb5928d0aa14c97d853d2248",
+  "pilot_cells_sha256": "5ab74c6cd66e4a0394fd4c95467db6dbb533a1fc94756fffc4d50c7b36f9c97a",
+  "pilot_manifest_sha256": "d63fd165f2a45519890a411290335450626d8cc66baedbfce467454e9918b957",
+  "identity_sha256": "8f9c5945c5b82d822f736dd8a4e8de8e7f1d9db34e4c0d65e98948eed507d474",
+  "measurement_commit": "8ea47c086ba6312da98bf9be26789d7420b32809",
+  "binary_sha256": "2ee08d8f6a0378e5dad2c1c9696d9262ee164d568b6ff879e64339496aee6ee0",
+  "definitions": "The pinned draft defines the arms, protocol, observations, analysis and carry rule.",
+  "pilot_to_grid_arm_labels": {
+    "acs2tuher_mean_value_tu25": "acs2tuher_mean_value_p1of4",
+    "acs2tuher_mean_value_tu75": "acs2tuher_mean_value_p3of4",
+    "acs2tuher_mean_value_tu100": "acs2tuher_mean_value_p1of1",
+    "acs2tuher_random_goal_tu25": "acs2tuher_random_goal_p1of4",
+    "acs2tuher_random_goal_tu75": "acs2tuher_random_goal_p3of4",
+    "acs2tuher_random_goal_tu100": "acs2tuher_random_goal_p1of1"
+  },
+  "analysis_details": {
+    "floor": "No compared arm has a lower 95% final-mean bound above the exact random-policy test floor at the same cap.",
+    "too_easy": "Use the original ablation ACS2 labels for both caps.",
+    "ceiling": "Each of the two arms in the contrast has a final mean of at least 0.99 at the cap under analysis.",
+    "descriptive_steps": "Weight by the registered pair distribution. Infer failed steps at the registered cap from original success and conditional solved steps. Divide the resulting weighted mean by the weighted mean shortest path of the same pairs.",
+    "cpu_ratios": "Divide per-seed process CPU and per-seed utility CPU by the paired S+1 process CPU before taking medians per maze. Report peak memory from the measured process."
+  },
+  "pilot": {
+    "seed": 42,
+    "cells": 168,
+    "cpu_hours": 14.7325,
+    "full_budget_cells": 105,
+    "wave_count": 1
+  },
+  "costs": {
+    "forecast_sha256": "5d81b070670eae1dfa33424b948ee46087f53f9c35ce6701a0ad5d0678b26515",
+    "time_limits_sha256": "1c68a0bfefa3698476b6f57498b58e049166f6f488eaa9e28ac5b928532d32be",
+    "archive_sha256": {
+      "full-index": "cbb4d25c8dda0b505306811452fd7cb7b5daa88e1fe026495be531c19242d1de",
+      "run-costs": "4b98277e243466e730bb7b3d0e0538fb4408874d684c7641ecace42d4063aeab"
+    },
+    "new_cells": 3360,
+    "expected_total_grid_cpu_hours": 1346.924185640687,
+    "expected_remaining_cpu_hours": 1343.4400448757103,
+    "sum_of_initial_allocations_cpu_hours": 3149.733333333333,
+    "checkpoint_scenario_cpu_hours": [
+      1336.113771176734,
+      1428.88631001837
+    ],
+    "model": "Multiply each full 6a seed cost by the corresponding new arm-to-6a seed-42 process CPU ratio at the last common checkpoint. Use the observed ratio extrema at >=100k as scenario bounds. A complete pilot supplies its final process CPU; partial observations use schedstat samples.",
+    "limits": "Use the maximum 6a seed cost, the upper matched ratio floored at one, and 1.41 attempt spread, plus 120s. Scout with the seed-42 6a cost and the same factors. The dependent initial envelope uses the entire scout reservation, multiplied by the 6a maximum-to-42 seed ratio and 1.41, plus 120s. After a successful scout replace its reservation by its charged allocation CPU in that formula. Round limits up to a minute."
+  },
+  "scout_gate": {
+    "tasks": [
+      "mazee2_alcs",
+      "mazee3_alcs"
+    ],
+    "seed": 42,
+    "concurrency": 40,
+    "limits": [
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3478260869565217,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3478260869565217,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3478260869565217,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.110344827586207,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.110344827586207,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze4",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.110344827586207,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.127659574468085,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.127659574468085,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze5",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.127659574468085,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0072639225181599,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0072639225181599,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0072639225181599,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze6",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1871794871794872,
+        "ordinary_limit_seconds": 840,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1871794871794872,
+        "ordinary_limit_seconds": 840,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1871794871794872,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0604982206405693,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0604982206405693,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0604982206405693,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.376068376068376,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.376068376068376,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.376068376068376,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.32,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.32,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods14",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.32,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4705882352941178,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4705882352941178,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazema",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4705882352941178,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0992338562568407,
+        "ordinary_limit_seconds": 4800,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0992338562568407,
+        "ordinary_limit_seconds": 4380,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0992338562568407,
+        "ordinary_limit_seconds": 4380,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0175,
+        "ordinary_limit_seconds": 3300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0175,
+        "ordinary_limit_seconds": 3000,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "cassandra4x4_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0175,
+        "ordinary_limit_seconds": 3000,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3866666666666667,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3866666666666667,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3866666666666667,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3333333333333333,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3333333333333333,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman57_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3333333333333333,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3013100436681222,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3013100436681222,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.3013100436681222,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2746478873239437,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2746478873239437,
+        "ordinary_limit_seconds": 480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "littman89_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2746478873239437,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1091954022988506,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1091954022988506,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1091954022988506,
+        "ordinary_limit_seconds": 480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2549019607843137,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2549019607843137,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze10_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2549019607843137,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1546391752577319,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1546391752577319,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1546391752577319,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0806451612903225,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0806451612903225,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "maze7_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0806451612903225,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.328,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.328,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.328,
+        "ordinary_limit_seconds": 420,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.141025641025641,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.141025641025641,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazea_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.141025641025641,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1260,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1140,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1200,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1238532110091743,
+        "ordinary_limit_seconds": 1080,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1238532110091743,
+        "ordinary_limit_seconds": 840,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1238532110091743,
+        "ordinary_limit_seconds": 840,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.171919770773639,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.171919770773639,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.171919770773639,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2244897959183674,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2244897959183674,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazed_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2244897959183674,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0576161853100718,
+        "ordinary_limit_seconds": 10320,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0576161853100718,
+        "ordinary_limit_seconds": 10320,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0576161853100718,
+        "ordinary_limit_seconds": 10320,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 8400,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 8820,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee1_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 7500,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1267576366281082,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 22140,
+        "after_scout_initial_limit_seconds": 35340
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1267576366281082,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 20580,
+        "after_scout_initial_limit_seconds": 32820
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1267576366281082,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 20940,
+        "after_scout_initial_limit_seconds": 33420
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0180915786103106,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 17880,
+        "after_scout_initial_limit_seconds": 25800
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0180915786103106,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 17760,
+        "after_scout_initial_limit_seconds": 25620
+      },
+      {
+        "task": "mazee2_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0180915786103106,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 17760,
+        "after_scout_initial_limit_seconds": 25620
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 31260,
+        "after_scout_initial_limit_seconds": 44220
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 25140,
+        "after_scout_initial_limit_seconds": 35580
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 25080,
+        "after_scout_initial_limit_seconds": 35520
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1676715007332572,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 20220,
+        "after_scout_initial_limit_seconds": 33420
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1676715007332572,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 21000,
+        "after_scout_initial_limit_seconds": 34740
+      },
+      {
+        "task": "mazee3_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1676715007332572,
+        "ordinary_limit_seconds": null,
+        "scout_limit_seconds": 24000,
+        "after_scout_initial_limit_seconds": 39660
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0192307692307692,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0192307692307692,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0192307692307692,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.105263157894737,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.105263157894737,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef1_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.105263157894737,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2040816326530612,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2040816326530612,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2040816326530612,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef2_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2727272727272727,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2727272727272727,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.2727272727272727,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.173913043478261,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.173913043478261,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef3_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.173913043478261,
+        "ordinary_limit_seconds": 240,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.12,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.131578947368421,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.131578947368421,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazef4_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.131578947368421,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1286799620132955,
+        "ordinary_limit_seconds": 3720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1286799620132955,
+        "ordinary_limit_seconds": 3480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1286799620132955,
+        "ordinary_limit_seconds": 4020,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1382913337430853,
+        "ordinary_limit_seconds": 2880,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1382913337430853,
+        "ordinary_limit_seconds": 2760,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakia_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1382913337430853,
+        "ordinary_limit_seconds": 2760,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 2640,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 2340,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 2340,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.094488188976378,
+        "ordinary_limit_seconds": 2040,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.094488188976378,
+        "ordinary_limit_seconds": 1740,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.094488188976378,
+        "ordinary_limit_seconds": 1740,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.802020202020202,
+        "ordinary_limit_seconds": 1380,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.802020202020202,
+        "ordinary_limit_seconds": 1560,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.802020202020202,
+        "ordinary_limit_seconds": 1440,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4146341463414633,
+        "ordinary_limit_seconds": 840,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4146341463414633,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods1_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.4146341463414633,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1666666666666667,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1666666666666667,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.1666666666666667,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods100_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0,
+        "ordinary_limit_seconds": 180,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.309278350515464,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.309278350515464,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.309278350515464,
+        "ordinary_limit_seconds": 360,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.462962962962963,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.462962962962963,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.462962962962963,
+        "ordinary_limit_seconds": 300,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.048780487804878,
+        "ordinary_limit_seconds": 600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.048780487804878,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.048780487804878,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0599078341013826,
+        "ordinary_limit_seconds": 480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0599078341013826,
+        "ordinary_limit_seconds": 480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods101_5_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": true,
+        "seed_spread": 1.0599078341013826,
+        "ordinary_limit_seconds": 480,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_mean_value_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.3406940063091484,
+        "ordinary_limit_seconds": 720,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.3406940063091484,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.3406940063091484,
+        "ordinary_limit_seconds": 780,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.236842105263158,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.236842105263158,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "woods102_alcs",
+        "arm": "acs2tuher_random_goal_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.236842105263158,
+        "ordinary_limit_seconds": 540,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      }
+    ],
+    "dependency": "Submit each dependent array behind the full-budget seed-42 scout gate. Validate accounting and reproduce the pilot prefix before updating the dependent time limits. Stop if any resulting limit exceeds the initial envelope or a scout fails."
+  },
+  "authorization": "No grid submission until explicit approval states a CPU-hour limit covering the approved envelope and existing spend."
+}
