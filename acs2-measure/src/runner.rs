@@ -486,6 +486,24 @@ where
 }
 
 #[derive(Default)]
+struct CappedTest {
+    registered_steps: f64,
+    extended_steps: f64,
+    extended_success: f64,
+    shortest_path: f64,
+    cpu_seconds: f64,
+    starts: Option<Vec<Value>>,
+    heads: Option<Vec<Option<Vec<Value>>>>,
+}
+
+fn thread_cpu_seconds() -> f64 {
+    let mut time = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+    let result = unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &mut time) };
+    assert_eq!(result, 0, "thread CPU time is unavailable");
+    time.tv_sec as f64 + time.tv_nsec as f64 / 1e9
+}
+
+#[derive(Default)]
 pub struct EvalResult {
     pub heads: Option<Vec<EvalResult>>,
     pub success: f64,
@@ -498,6 +516,7 @@ pub struct EvalResult {
     pub successful_discounted_return: Option<f64>,
     pub successful_value_gap: Option<f64>,
     pub starts: Option<Vec<Value>>,
+    capped_test: Option<CappedTest>,
 }
 
 pub fn evaluate<T, A, const S: usize, const G: usize, const M: usize>(
@@ -512,12 +531,29 @@ where
     T: Task<S, G, M>,
     A: GoalAgent<S, G, M>,
 {
+    evaluate_with_test_cap(task, agent, pairs, seed, gamma, record_starts, None)
+}
+
+fn evaluate_with_test_cap<T, A, const S: usize, const G: usize, const M: usize>(
+    task: &T,
+    agent: &A,
+    pairs: &[Pair<T::State, G>],
+    seed: u64,
+    gamma: f64,
+    record_starts: bool,
+    extended: Option<&T>,
+) -> EvalResult
+where
+    T: Task<S, G, M>,
+    A: GoalAgent<S, G, M>,
+{
+    let evaluate = |head| {
+        evaluate_head(task, agent, pairs, seed, gamma, record_starts, head, extended)
+    };
     if agent.evaluation_heads() == 1 {
-        return evaluate_head(task, agent, pairs, seed, gamma, record_starts, 0);
+        return evaluate(0);
     }
-    let heads: Vec<_> = (0..agent.evaluation_heads()).map(|head| {
-        evaluate_head(task, agent, pairs, seed, gamma, record_starts, head)
-    }).collect();
+    let mut heads: Vec<_> = (0..agent.evaluation_heads()).map(evaluate).collect();
     let count = heads.len() as f64;
     let mut result = EvalResult::default();
     for head in &heads {
@@ -534,13 +570,28 @@ where
     result.successful_estimated_first_action_value = conditional_mean(|head| head.successful_estimated_first_action_value);
     result.successful_discounted_return = conditional_mean(|head| head.successful_discounted_return);
     result.successful_value_gap = conditional_mean(|head| head.successful_value_gap);
+    if extended.is_some() {
+        let mut test = CappedTest::default();
+        let mut records = Vec::new();
+        for head in &mut heads {
+            let cap = head.capped_test.take().expect("capped head evaluation");
+            test.registered_steps += cap.registered_steps / count;
+            test.extended_steps += cap.extended_steps / count;
+            test.extended_success += cap.extended_success / count;
+            test.shortest_path += cap.shortest_path / count;
+            test.cpu_seconds += cap.cpu_seconds;
+            records.push(cap.starts);
+        }
+        test.heads = record_starts.then_some(records);
+        result.capped_test = Some(test);
+    }
     result.heads = Some(heads);
     result
 }
 
 fn evaluate_head<T, A, const S: usize, const G: usize, const M: usize>(
     task: &T, agent: &A, pairs: &[Pair<T::State, G>], seed: u64, gamma: f64,
-    record_starts: bool, head: usize,
+    record_starts: bool, head: usize, extended: Option<&T>,
 ) -> EvalResult
 where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
 {
@@ -557,34 +608,29 @@ where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
     let mut successful_step_ratio = 0.0;
     let mut successful_estimate = 0.0;
     let mut successful_return = 0.0;
-    for &(start, goal, weight) in pairs {
-        let initial = task.reset_at(&mut env, start, goal);
-        let mut state = GoalLayout::<S, G, M>::join(&initial.observation, &goal);
-        let mut discounted_return = 0.0;
-        let mut discount = 1.0;
-        let mut steps = 0u32;
-        let mut first_action = 0usize;
-        let mut estimate = 0.0;
-        let mut first_decision = None;
-        let success = loop {
-            let (action, value) = agent.eval_head_action(head, &state, &mut rng);
-            if steps == 0 {
-                first_action = action;
-                estimate = value;
-                if record_starts {
-                    first_decision = agent.first_decision(head, &state, action);
-                }
-            }
-            let step = env.step(action);
-            steps += 1;
-            let outcome = step.outcome(env.objective(), &goal);
-            discounted_return += discount * outcome.reward;
-            discount *= gamma;
-            if outcome.terminated || outcome.truncated {
-                break outcome.terminated;
-            }
-            state = GoalLayout::<S, G, M>::join(&step.observation, &goal);
+    let mut extended = extended.map(|task| {
+        let started = thread_cpu_seconds();
+        let env = task.environment(ChaChaRandomSource::from_seed_and_stream(
+            seed, EVALUATION_ENVIRONMENT_STREAM,
+        ));
+        let test = CappedTest {
+            starts: record_starts.then(Vec::new),
+            cpu_seconds: thread_cpu_seconds() - started,
+            ..CappedTest::default()
         };
+        (task, env, test)
+    });
+    for &(start, goal, weight) in pairs {
+        let alternate_rng = extended.as_mut().map(|(_, _, test)| {
+            let started = thread_cpu_seconds();
+            let fork = ChaChaRandomSource::from_state(&rng.capture_state().unwrap());
+            test.cpu_seconds += thread_cpu_seconds() - started;
+            fork
+        });
+        let initial = task.reset_at(&mut env, start, goal);
+        let rollout = rollout(agent, &mut env, initial, &mut rng, head, gamma, record_starts);
+        let Rollout { success, steps, first_action, estimate, discounted_return, first_decision } =
+            rollout;
         let distance = task.distance(start, &goal);
         result.estimated_first_action_value += weight * estimate;
         result.discounted_return += weight * discounted_return;
@@ -606,6 +652,21 @@ where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
             }
             starts.push(record);
         }
+        if let (Some((extended_task, extended_env, test)), Some(mut fork)) =
+            (&mut extended, alternate_rng)
+        {
+            let started = thread_cpu_seconds();
+            let initial = extended_task.reset_at(extended_env, start, goal);
+            let long = capped_rollout(agent, extended_env, initial, &mut fork, head);
+            test.registered_steps += weight * f64::from(if success { steps } else { task.cap() });
+            test.extended_steps += weight * f64::from(if long.0 { long.1 } else { extended_task.cap() });
+            test.extended_success += weight * f64::from(long.0);
+            test.shortest_path += weight * f64::from(distance.expect("registered maze pair distance"));
+            if let Some(records) = &mut test.starts {
+                records.push(json!({"success": long.0, "steps": long.1}));
+            }
+            test.cpu_seconds += thread_cpu_seconds() - started;
+        }
     }
     result.value_gap = result.estimated_first_action_value - result.discounted_return;
     if result.success > 0.0 {
@@ -616,7 +677,66 @@ where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
         result.successful_value_gap =
             Some((successful_estimate - successful_return) / result.success);
     }
+    result.capped_test = extended.map(|(_, _, test)| test);
     result
+}
+
+struct Rollout {
+    success: bool,
+    steps: u32,
+    first_action: usize,
+    estimate: f64,
+    discounted_return: f64,
+    first_decision: Option<Value>,
+}
+
+fn rollout<A, E, const S: usize, const G: usize, const M: usize>(
+    agent: &A, env: &mut E, initial: GoalStart<S, G>, rng: &mut ChaChaRandomSource,
+    head: usize, gamma: f64, record_starts: bool,
+) -> Rollout
+where
+    A: GoalAgent<S, G, M>,
+    E: GoalEnvironment<S, G>,
+{
+    let goal = initial.desired;
+    let mut state = GoalLayout::<S, G, M>::join(&initial.observation, &goal);
+    let mut discounted_return = 0.0;
+    let mut discount = 1.0;
+    let mut steps = 0u32;
+    let mut first_action = 0usize;
+    let mut estimate = 0.0;
+    let mut first_decision = None;
+    let success = loop {
+        let (action, value) = agent.eval_head_action(head, &state, rng);
+        if steps == 0 {
+            first_action = action;
+            estimate = value;
+            if record_starts {
+                first_decision = agent.first_decision(head, &state, action);
+            }
+        }
+        let step = env.step(action);
+        steps += 1;
+        let outcome = step.outcome(env.objective(), &goal);
+        discounted_return += discount * outcome.reward;
+        discount *= gamma;
+        if outcome.terminated || outcome.truncated {
+            break outcome.terminated;
+        }
+        state = GoalLayout::<S, G, M>::join(&step.observation, &goal);
+    };
+    Rollout { success, steps, first_action, estimate, discounted_return, first_decision }
+}
+
+fn capped_rollout<A, E, const S: usize, const G: usize, const M: usize>(
+    agent: &A, env: &mut E, initial: GoalStart<S, G>, rng: &mut ChaChaRandomSource, head: usize,
+) -> (bool, u32)
+where
+    A: GoalAgent<S, G, M>,
+    E: GoalEnvironment<S, G>,
+{
+    let result = rollout(agent, env, initial, rng, head, 0.0, false);
+    (result.success, result.steps)
 }
 
 pub struct RunOutput {
@@ -1078,6 +1198,7 @@ pub fn run_goal_agent_protocol_with_sink<T, A, F, const S: usize, const G: usize
     let plan = RunPlan {
         blocks: &blocks,
         registration: protocol.registration.as_ref(),
+        second_test: protocol.second_test,
         seed,
         targets,
         metadata,
@@ -1192,6 +1313,7 @@ struct EvaluationPlan<'a, T: Task<S, G, M>, const S: usize, const G: usize, cons
 struct RunPlan<'a, T: Task<S, G, M>, const S: usize, const G: usize, const M: usize> {
     blocks: &'a [EvaluationPlan<'a, T, S, G, M>],
     registration: Option<&'a Value>,
+    second_test: Option<&'a T>,
     seed: u64,
     targets: &'a [u64],
     metadata: &'a RunMetadata<'a>,
@@ -1229,6 +1351,7 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
     let mut eval_elapsed = Duration::ZERO;
     let knowledge_transitions = task.knowledge_transitions();
     let _counter = MatchCountGuard::new();
+    let mut second_test_cpu_seconds = 0.0;
     for &target in plan.targets {
         let train_started = Instant::now();
         while env.steps < target {
@@ -1302,18 +1425,42 @@ fn run_inner<T, A, F, const S: usize, const G: usize, const M: usize>(
             let mut blocks = serde_json::Map::new();
             blocks.insert(block.name.to_owned(), evaluation_fields(&mut row));
             for block in &plan.blocks[1..] {
+                let extended = (block.name == "test").then_some(plan.second_test).flatten();
                 let eval = if plan.evaluate_points {
-                    evaluate(
+                    evaluate_with_test_cap(
                         block.task,
                         agent,
                         &block.pairs,
                         plan.seed,
                         Preset::thesis().config(block.task.actions()).gamma,
                         plan.metadata.record_starts,
+                        extended,
                     )
                 } else {
                     EvalResult::default()
                 };
+                if let Some(test) = &eval.capped_test {
+                    second_test_cpu_seconds += test.cpu_seconds;
+                    row["test_caps"] = json!({
+                        "registered": {
+                            "cap": block.task.cap(),
+                            "success": eval.success,
+                            "mean_steps": test.registered_steps,
+                            "mean_shortest_path": test.shortest_path,
+                            "mean_steps_over_shortest": test.registered_steps / test.shortest_path,
+                        },
+                        "extended": {
+                            "cap": extended.unwrap().cap(),
+                            "success": test.extended_success,
+                            "mean_steps": test.extended_steps,
+                            "mean_shortest_path": test.shortest_path,
+                            "mean_steps_over_shortest": test.extended_steps / test.shortest_path,
+                            "starts": test.starts,
+                            "heads": test.heads,
+                            "cumulative_cpu_seconds": second_test_cpu_seconds,
+                        }
+                    });
+                }
                 blocks.insert(
                     block.name.to_owned(),
                     evaluation_json(&eval, block.pairs.len(), block.refs),

@@ -8,6 +8,7 @@ acs2-agents = { path = "../acs2-agents" }
 acs2-core = { path = "../acs2-core" }
 acs2-envs = { path = "../acs2-envs" }
 acs2-trajectory = { path = "../acs2-trajectory" }
+libc = "0.2"
 serde_json = { version = "1", features = ["float_roundtrip"] }
 
 [[example]]

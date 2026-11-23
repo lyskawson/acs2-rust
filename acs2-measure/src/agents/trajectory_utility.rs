@@ -4,14 +4,18 @@ use acs2_agents::acs2tuher::{
 use serde_json::{json, Value};
 
 pub(super) fn parameters(config: UtilityConfiguration) -> Value {
-    json!({
+    let mut parameters = json!({
         "measure": config.measure.name(),
         "candidates": config.candidates,
         "refresh_steps": config.refresh_steps,
         "route_stream": ROUTE_STREAM,
         "candidate_stream": CANDIDATE_STREAM,
-        "route_probabilities": {"original": 1.0 / 3.0, "hindsight": 1.0 / 3.0, "trajectory_utility": 1.0 / 3.0}
-    })
+        "route_probabilities": {"original": 1.0 / 3.0, "hindsight": (1.0 - config.tu_share) * (2.0 / 3.0), "trajectory_utility": config.tu_share * (2.0 / 3.0)}
+    });
+    if config.tu_share != 0.5 {
+        parameters["tu_share"] = json!(config.tu_share);
+    }
+    parameters
 }
 
 fn by_route(by_route: ByRoute) -> Value {

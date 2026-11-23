@@ -40,9 +40,10 @@ impl Measure {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UtilityConfiguration {
     pub measure: Measure,
+    pub tu_share: f64,
     pub candidates: usize,
     pub refresh_steps: Option<u64>,
 }
@@ -51,12 +52,14 @@ impl UtilityConfiguration {
     pub fn pilot(measure: Measure) -> Self {
         Self {
             measure,
+            tu_share: 0.5,
             candidates: 8,
             refresh_steps: Some(2_000),
         }
     }
 
     pub fn validate(self) {
+        assert!((0.0..=1.0).contains(&self.tu_share), "TU copy share must be in [0, 1]");
         assert!(
             matches!(self.candidates, 4 | 8),
             "TU candidates must be 4 or 8"
@@ -65,6 +68,23 @@ impl UtilityConfiguration {
             matches!(self.refresh_steps, None | Some(2_000 | 5_000)),
             "TU refresh must be none, 2000 or 5000 steps"
         );
+    }
+
+    fn route<const G: usize>(self, rng: &mut impl RandomSource) -> DrawRoute<G> {
+        match rng.gen_range(3) {
+            0 => DrawRoute::Original,
+            draw if self.tu_share == 0.5 => {
+                if draw == 1 {
+                    DrawRoute::Hindsight
+                } else {
+                    DrawRoute::TrajectoryUtility(None)
+                }
+            }
+            _ if self.tu_share == 1.0 || rng.gen_bool(self.tu_share) => {
+                DrawRoute::TrajectoryUtility(None)
+            }
+            _ => DrawRoute::Hindsight,
+        }
     }
 }
 
@@ -153,7 +173,6 @@ struct Utility<const G: usize, P> {
 
 impl<const G: usize, P: RandomSource> Utility<G, P> {
     fn new(configuration: UtilityConfiguration, rng: UtilityRandom<P>, goals: &[Goal<G>]) -> Self {
-        configuration.validate();
         Self {
             configuration,
             rng,
@@ -360,6 +379,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
         utility: Option<(UtilityConfiguration, UtilityRandom<P>)>,
     ) -> Self {
         assert!(!config.do_ga, "ACS2-TUHER requires GA disabled");
+        if let Some((parameters, _)) = &utility {
+            parameters.validate();
+        }
+        let utility = utility.filter(|(parameters, _)| parameters.tu_share > 0.0);
         if utility.is_some() {
             assert_eq!(replay.truncation, TruncationMode::Bootstrap);
         }
@@ -441,10 +464,10 @@ impl<const S: usize, const G: usize, const M: usize, R: RandomSource, P: RandomS
             .expect("replay draw count");
         for _ in 0..draws {
             let transition = learner.select_transition();
-            let route = match utility.rng.routes.gen_range(3) {
-                0 => DrawRoute::Original,
-                1 => DrawRoute::Hindsight,
-                _ => DrawRoute::TrajectoryUtility(utility.assigned_goal(
+            let route = match utility.configuration.route::<G>(&mut utility.rng.routes) {
+                DrawRoute::Original => DrawRoute::Original,
+                DrawRoute::Hindsight => DrawRoute::Hindsight,
+                DrawRoute::TrajectoryUtility(_) => DrawRoute::TrajectoryUtility(utility.assigned_goal(
                     learner.store(),
                     transition.0,
                     env,

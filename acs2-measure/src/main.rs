@@ -38,6 +38,7 @@ struct Options {
     record_starts: bool,
     protocol: Option<String>,
     evaluation_blocks: Option<String>,
+    second_test_cap: Option<u32>,
     replay_plan: ReplayPlan,
 }
 
@@ -60,6 +61,8 @@ impl Options {
         let mut replay_order = None;
         let mut tu_candidates = None;
         let mut tu_refresh = None;
+        let mut tu_share = None;
+        let mut second_test_cap = None;
         let mut args = std::env::args().skip(1);
         while let Some(flag) = args.next() {
             if flag == "--per-start" {
@@ -105,6 +108,8 @@ impl Options {
                 }
                 "--replay-schedule" => replay_schedule = Some(value),
                 "--replay-order" => replay_order = Some(value),
+                "--tu-share" => tu_share = Some(value.parse().expect("TU share among copies")),
+                "--second-test-cap" => second_test_cap = Some(value.parse().expect("test cap")),
                 "--tu-candidates" => tu_candidates = Some(value.parse().expect("TU candidate count")),
                 "--tu-refresh" => tu_refresh = Some(match value.as_str() {
                     "none" => None,
@@ -173,11 +178,12 @@ impl Options {
         let replay_plan = acs2_measure::replay_plan::parse(
             replay_schedule.as_deref().unwrap_or("constant"),
             replay_order.as_deref().unwrap_or("independent"));
-        if tu_candidates.is_some() || tu_refresh.is_some() {
+        if tu_candidates.is_some() || tu_refresh.is_some() || tu_share.is_some() {
             assert!(agents.iter().any(|agent| matches!(agent, AgentKind::Acs2TuHer(_))),
                 "TU parameters require a TU preset");
             for agent in &mut agents {
                 if let AgentKind::Acs2TuHer(parameters) = agent {
+                    parameters.tu_share = tu_share.unwrap_or(parameters.tu_share);
                     parameters.candidates = tu_candidates.unwrap_or(parameters.candidates);
                     parameters.refresh_steps = tu_refresh.unwrap_or(parameters.refresh_steps);
                     parameters.validate();
@@ -194,6 +200,13 @@ impl Options {
                 "restricted evaluation is validation only"
             );
         }
+        if let Some(test_cap) = second_test_cap {
+            assert!(
+                test_cap >= cap && evaluation_blocks.is_none() &&
+                    matches!(protocol.as_deref(), Some(MAZE_PAIR_PROTOCOL_ID | acs2_measure::research_pairs::ID)),
+                "the second test cap requires a registered maze pair test block and a cap at least as large as the registered cap"
+            );
+        }
         Self {
             task,
             cap,
@@ -206,6 +219,7 @@ impl Options {
             record_starts,
             protocol,
             evaluation_blocks,
+            second_test_cap,
             replay_plan,
         }
     }
@@ -256,7 +270,10 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
         if protocol == acs2_measure::research_pairs::ID {
             let distributions = acs2_measure::research_pairs::registered::<E, G>(
                 &options.task, geometry, options.cap, encoding);
-            execute_protocol::<_, 8, G, M>(&acs2_measure::research_pairs::protocol(&distributions), options, writer, metadata);
+            let second = options.second_test_cap.map(|cap| distributions.test.with_cap(cap));
+            let mut protocol = acs2_measure::research_pairs::protocol(&distributions);
+            protocol.second_test = second.as_ref();
+            execute_protocol::<_, 8, G, M>(&protocol, options, writer, metadata);
             return;
         }
         if protocol == MAZE_PAIR_PROTOCOL_ID {
@@ -266,7 +283,10 @@ fn maze<const G: usize, const M: usize, E: acs2_envs::goal::maze::MazeGoalEncodi
                 options.cap,
                 encoding,
             );
-            execute_protocol::<_, 8, G, M>(&distributions.protocol(), options, writer, metadata);
+            let second = options.second_test_cap.map(|cap| distributions.test.with_cap(cap));
+            let mut protocol = distributions.protocol();
+            protocol.second_test = second.as_ref();
+            execute_protocol::<_, 8, G, M>(&protocol, options, writer, metadata);
             return;
         }
         assert_eq!(protocol, MAZE_PROTOCOL_ID);
@@ -311,6 +331,7 @@ fn execute_protocol<T, const S: usize, const G: usize, const M: usize>(
                 })
                 .collect(),
             registration: protocol.registration.clone(),
+            second_test: None,
         };
         assert_eq!(selected_protocol.evaluations.len(), 1);
         &selected_protocol

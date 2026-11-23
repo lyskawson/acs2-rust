@@ -1,0 +1,909 @@
+{
+  "reservation_seconds": 114240,
+  "cpu_model": "AMD EPYC 9554 64-Core Processor",
+  "memory_mib": 2048,
+  "build_limit_seconds": 900,
+  "method": "Use the 6a seed-42 process CPU, full budget when it cost at most 330 seconds except Woods102 (prior pilot timeout). Charge 1.8 times matched CPU, 1.9 at share one, plus 90 seconds and 0.02 seconds per test pair. Round up to a minute, with a three-minute minimum.",
+  "input_sha256": {
+    "full-index.json": "cbb4d25c8dda0b505306811452fd7cb7b5daa88e1fe026495be531c19242d1de",
+    "run-costs.csv": "4b98277e243466e730bb7b3d0e0538fb4408874d684c7641ecace42d4063aeab"
+  },
+  "tasks": {
+    "maze4": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 226.410735
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 226.410735
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 226.410735
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 137.15426499999998
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 137.15426499999998
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 137.15426499999998
+      }
+    },
+    "maze5": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 61.77880012
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 61.77880012
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 61.77880012
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 232.73541899999998
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 232.73541899999998
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 232.73541899999998
+      }
+    },
+    "maze6": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 76.753834554
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 76.753834554
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 76.753834554
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 272.551537
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 272.551537
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 272.551537
+      }
+    },
+    "maze7": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 71.432274021
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 71.432274021
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 71.432274021
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 278.541533
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 278.541533
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 278.541533
+      }
+    },
+    "woods14": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 4000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 113.61880599999999
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 4000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 113.61880599999999
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 4000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 113.61880599999999
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 4000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.542288
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 4000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.542288
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 4000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.542288
+      }
+    },
+    "mazema": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 62.679143
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 62.679143
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 62.679143
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 31.730173
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 31.730173
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 31.730173
+      }
+    },
+    "cassandra4x4_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 278.844938345
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 10,
+        "matched_6a_process_cpu_seconds": 278.844938345
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 278.844938345
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 206.889518352
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 206.889518352
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 206.889518352
+      }
+    },
+    "littman57_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.68693499999999
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.68693499999999
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 72.68693499999999
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 46.706385
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 46.706385
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 46.706385
+      }
+    },
+    "littman89_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 225.34587399999998
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 225.34587399999998
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 225.34587399999998
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 139.49213600000002
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 139.49213600000002
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 139.49213600000002
+      }
+    },
+    "maze10_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 7,
+        "matched_6a_process_cpu_seconds": 170.789666
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 7,
+        "matched_6a_process_cpu_seconds": 170.789666
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 7,
+        "matched_6a_process_cpu_seconds": 170.789666
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 99.454706
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 99.454706
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 99.454706
+      }
+    },
+    "maze7_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 93.84204399999999
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 93.84204399999999
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 93.84204399999999
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 60.454554
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 60.454554
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 60.454554
+      }
+    },
+    "mazea_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 120.54365800000001
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 120.54365800000001
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 120.54365800000001
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.383167
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.383167
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.383167
+      }
+    },
+    "mazeb_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 87.804767881
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 87.804767881
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 87.804767881
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.440765845
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.440765845
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.440765845
+      }
+    },
+    "mazed_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.577400639
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.577400639
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 54.577400639
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 194.301769
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 194.301769
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 194.301769
+      }
+    },
+    "mazee1_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 30,
+        "matched_6a_process_cpu_seconds": 943.511129825
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 30,
+        "matched_6a_process_cpu_seconds": 943.511129825
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 32,
+        "matched_6a_process_cpu_seconds": 943.511129825
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 22,
+        "matched_6a_process_cpu_seconds": 654.501618694
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 22,
+        "matched_6a_process_cpu_seconds": 654.501618694
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 23,
+        "matched_6a_process_cpu_seconds": 654.501618694
+      }
+    },
+    "mazee2_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 62,
+        "matched_6a_process_cpu_seconds": 1979.234404094
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 62,
+        "matched_6a_process_cpu_seconds": 1979.234404094
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 65,
+        "matched_6a_process_cpu_seconds": 1979.234404094
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 49,
+        "matched_6a_process_cpu_seconds": 1567.152945852
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 49,
+        "matched_6a_process_cpu_seconds": 1567.152945852
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 52,
+        "matched_6a_process_cpu_seconds": 1567.152945852
+      }
+    },
+    "mazee3_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 104,
+        "matched_6a_process_cpu_seconds": 3372.886340755
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 104,
+        "matched_6a_process_cpu_seconds": 3372.886340755
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 109,
+        "matched_6a_process_cpu_seconds": 3372.886340755
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 76,
+        "matched_6a_process_cpu_seconds": 2438.550733866
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 76,
+        "matched_6a_process_cpu_seconds": 2438.550733866
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 80,
+        "matched_6a_process_cpu_seconds": 2438.550733866
+      }
+    },
+    "mazef1_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 48.853003
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 48.853003
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 48.853003
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 35.781651000000004
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 35.781651000000004
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 35.781651000000004
+      }
+    },
+    "mazef2_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 47.196379
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 47.196379
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 47.196379
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 37.341599
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 37.341599
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 37.341599
+      }
+    },
+    "mazef3_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.01342199999999
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.01342199999999
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 74.01342199999999
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 44.29206
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 44.29206
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 44.29206
+      }
+    },
+    "mazef4_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 122.547866
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 122.547866
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 122.547866
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.19761299999999
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.19761299999999
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.19761299999999
+      }
+    },
+    "miyazakia_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.413046102
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.413046102
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.413046102
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 209.935394255
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 209.935394255
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 209.935394255
+      }
+    },
+    "miyazakib_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 203.60957965
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 203.60957965
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 203.60957965
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 126.205173649
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 126.205173649
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 6,
+        "matched_6a_process_cpu_seconds": 126.205173649
+      }
+    },
+    "woods1_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.155313536
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.155313536
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 73.155313536
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 12,
+        "matched_6a_process_cpu_seconds": 325.684282
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 12,
+        "matched_6a_process_cpu_seconds": 325.684282
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 12,
+        "matched_6a_process_cpu_seconds": 325.684282
+      }
+    },
+    "woods100_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 23.457821
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 23.457821
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 23.457821
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 16.703415
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 16.703415
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 16.703415
+      }
+    },
+    "woods101_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 95.366022
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 95.366022
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 5,
+        "matched_6a_process_cpu_seconds": 95.366022
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 51.921329
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 51.921329
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 51.921329
+      }
+    },
+    "woods101_5_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.323673
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.323673
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 11,
+        "matched_6a_process_cpu_seconds": 283.323673
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 2000000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 213.803435
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 2000000,
+        "limit_minutes": 8,
+        "matched_6a_process_cpu_seconds": 213.803435
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 2000000,
+        "limit_minutes": 9,
+        "matched_6a_process_cpu_seconds": 213.803435
+      }
+    },
+    "woods102_alcs": {
+      "acs2tuher_mean_value_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 48.793142173
+      },
+      "acs2tuher_mean_value_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 48.793142173
+      },
+      "acs2tuher_mean_value_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 4,
+        "matched_6a_process_cpu_seconds": 48.793142173
+      },
+      "acs2tuher_random_goal_tu25": {
+        "last_target": 300000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 36.141487042
+      },
+      "acs2tuher_random_goal_tu75": {
+        "last_target": 300000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 36.141487042
+      },
+      "acs2tuher_random_goal_tu100": {
+        "last_target": 300000,
+        "limit_minutes": 3,
+        "matched_6a_process_cpu_seconds": 36.141487042
+      }
+    }
+  }
+}

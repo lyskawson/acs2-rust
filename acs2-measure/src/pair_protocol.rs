@@ -126,6 +126,21 @@ pub struct MazePairTask<E, const G: usize> {
 }
 
 impl<E: MazeGoalEncoding<G>, const G: usize> MazePairTask<E, G> {
+    pub fn with_cap(&self, cap: u32) -> Self {
+        Self {
+            maze: MazeTask::new(
+                self.maze.name.clone(),
+                self.maze.geometry,
+                self.maze.pool.clone(),
+                cap,
+                self.maze.encoding,
+            ),
+            starts_by_goal: self.starts_by_goal.clone(),
+            random_floor: self.random_floor,
+            ceiling: self.ceiling,
+        }
+    }
+
     pub(crate) fn registered(
         name: &str,
         geometry: &'static MazeGeometry,
@@ -275,6 +290,7 @@ impl<E: MazeGoalEncoding<G>, const G: usize> MazePairDistributions<E, G> {
                     task: &self.test,
                 },
             ],
+            second_test: None,
             registration: Some(
                 json!({"id": MAZE_PAIR_PROTOCOL_ID, "configuration": self.registration}),
             ),

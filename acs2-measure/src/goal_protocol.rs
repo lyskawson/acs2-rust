@@ -19,6 +19,7 @@ pub struct TaskProtocol<'a, T> {
     pub training: &'a T,
     pub evaluations: Vec<EvaluationBlock<'a, T>>,
     pub registration: Option<Value>,
+    pub second_test: Option<&'a T>,
 }
 
 impl<'a, T> TaskProtocol<'a, T> {
@@ -30,6 +31,7 @@ impl<'a, T> TaskProtocol<'a, T> {
                 task: training,
             }],
             registration: None,
+            second_test: None,
         }
     }
 }
@@ -134,6 +136,7 @@ impl<E: MazeGoalEncoding<G>, const G: usize> MazeGoalDistributions<E, G> {
                     task: &self.test,
                 },
             ],
+            second_test: None,
             registration: Some(json!({"id": MAZE_PROTOCOL_ID, "configuration": self.registration})),
         }
     }

@@ -151,6 +151,10 @@ def run(args):
         refresh = utility['refresh_steps']
         command.extend(['--tu-candidates', str(utility['candidates']),
                         '--tu-refresh', 'none' if refresh is None else str(refresh)])
+        if 'tu_share' in utility:
+            command.extend(['--tu-share', str(utility['tu_share'])])
+    if 'second_test_cap' in config:
+        command.extend(['--second-test-cap', str(config['second_test_cap'])])
     from replay_schema import registered_axes
     axes = registered_axes(config, agent)
     if axes is not None:

@@ -606,6 +606,7 @@ fn registered_vcp_arms_reproduce_the_pinned_pilot_rows_bit_for_bit_on_the_measur
                 .filter(|block| block.name == "validation")
                 .collect(),
             registration: full.registration,
+            second_test: None,
         };
         let targets: Vec<_> = oracle["nominal_points"]
             .as_array()

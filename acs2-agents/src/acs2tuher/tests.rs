@@ -191,6 +191,7 @@ fn selection_breaks_ties_uniformly_and_random_has_the_same_choices() {
         measure,
         candidates: 4,
         refresh_steps: None,
+        ..UtilityConfiguration::pilot(measure)
     };
     let mut mean = Utility::new(parameters(Measure::MeanValue), rngs(), &real);
     let mut random = Utility::new(parameters(Measure::RandomGoal), rngs(), &real);
@@ -396,4 +397,33 @@ fn ga_and_checkpoint_restore_fail() {
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| agent.restore(checkpoint)))
             .is_err()
     );
+}
+
+#[test]
+fn requested_route_shares_keep_the_original_draw_probability() {
+    for (share, expected) in [
+        (0.25, [1.0 / 3.0, 0.5, 1.0 / 6.0]),
+        (0.5, [1.0 / 3.0; 3]),
+        (0.75, [1.0 / 3.0, 1.0 / 6.0, 0.5]),
+        (1.0, [1.0 / 3.0, 0.0, 2.0 / 3.0]),
+    ] {
+        let parameters = UtilityConfiguration {
+            tu_share: share,
+            ..UtilityConfiguration::pilot(Measure::MeanValue)
+        };
+        let mut rng = ChaChaRandomSource::from_seed_and_stream(42, ROUTE_STREAM);
+        let mut totals = ByRoute::default();
+        for _ in 0..300_000 {
+            totals.record(parameters.route::<1>(&mut rng), 1);
+        }
+        for (actual, predicted) in [totals.original, totals.hindsight, totals.trajectory_utility]
+            .into_iter()
+            .zip(expected)
+        {
+            assert!((actual as f64 / 300_000.0 - predicted).abs() < 0.003);
+        }
+        if share == 1.0 {
+            assert_eq!(totals.hindsight, 0);
+        }
+    }
 }

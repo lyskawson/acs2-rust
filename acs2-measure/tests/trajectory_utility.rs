@@ -29,6 +29,7 @@ fn agent<const S: usize, const G: usize, const M: usize>(
     actions: usize,
     goals: &[Goal<G>],
     measure: Option<Measure>,
+    share: f64,
 ) -> Agent<S, G, M, ChaChaRandomSource, ChaChaRandomSource> {
     let preset = Preset::thesis();
     Agent::new(
@@ -39,7 +40,7 @@ fn agent<const S: usize, const G: usize, const M: usize>(
         ChaChaRandomSource::from_seed_and_stream(SEED, acs2_trajectory::SAMPLER_STREAM),
         measure.map(|measure| {
             (
-                UtilityConfiguration::pilot(measure),
+                UtilityConfiguration { tu_share: share, ..UtilityConfiguration::pilot(measure) },
                 UtilityRandom {
                     routes: ChaChaRandomSource::from_seed_and_stream(SEED, ROUTE_STREAM),
                     candidates: ChaChaRandomSource::from_seed_and_stream(SEED, CANDIDATE_STREAM),
@@ -77,7 +78,7 @@ fn disabled_utility_reproduces_s_plus_one_rows_pair_records_and_state() {
                 ChaChaRandomSource::from_seed_and_stream(SEED, acs2_trajectory::SAMPLER_STREAM),
             ),
         );
-    let mut disabled = EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, None));
+    let mut disabled = EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(Measure::MeanValue), 0.0));
     let mut reference = Vec::new();
     let mut actual = Vec::new();
     let targets = [30, 300, 1_000];
@@ -117,7 +118,7 @@ fn all_utility_presets_evaluate_read_only_on_the_registered_pair_blocks() {
             &protocol,
             SEED,
             &[30, 120],
-            || EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(measure))),
+            || EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(measure), 0.5)),
             |agent| agent.0.snapshot(),
         );
     }
@@ -127,8 +128,12 @@ fn all_utility_presets_evaluate_read_only_on_the_registered_pair_blocks() {
 fn all_utility_presets_act_greedily_with_exploration_point_eight() {
     let first = Goal::new([Symbol::Token(8)]);
     let second = Goal::new([Symbol::Token(9)]);
-    for measure in MEASURES {
-        let mut agent = agent::<2, 1, 3>(2, &[first, second], Some(measure));
+    for (measure, share) in MEASURES.into_iter().map(|measure| (measure, 0.5)).chain(
+        [Measure::MeanValue, Measure::RandomGoal].into_iter().flat_map(|measure|
+            [0.25, 0.75, 1.0].into_iter().map(move |share| (measure, share))
+        )
+    ) {
+        let mut agent = agent::<2, 1, 3>(2, &[first, second], Some(measure), share);
         let learner = agent.learner();
         let config = learner.config().clone();
         assert_eq!(config.epsilon, 0.8);
@@ -176,7 +181,7 @@ fn measurements_partition_draws_and_keep_learning_and_utility_work_separate() {
     let protocol = distributions.protocol();
     let goals = <_ as Task<8, 2, 10>>::training_goals(protocol.training).unwrap();
     for measure in MEASURES {
-        let mut agent = EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(measure)));
+        let mut agent = EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(measure), 0.5));
         let mut rows = Vec::new();
         let metadata = RunMetadata {
             record_starts: false,
@@ -271,5 +276,56 @@ fn cli_names_fix_the_copy_share() {
         );
         assert_eq!(preset.name(), measure.name());
         assert!(AgentKind::from_run_name(measure.name(), 0.5).is_err());
+    }
+}
+
+#[test]
+fn share_and_second_test_cap_preserve_state_and_all_registered_fields() {
+    let distributions =
+        MazePairDistributions::<Coordinates, 2>::registered("maze4", &MAZE4, 5, "coordinates");
+    let mut protocol = distributions.protocol();
+    let extended = distributions.test.with_cap(100);
+    let goals = <_ as Task<8, 2, 10>>::training_goals(protocol.training).unwrap();
+    let targets = [30, 120, 500];
+    for measure in [Measure::MeanValue, Measure::RandomGoal] {
+        for share in [0.25, 0.5, 0.75, 1.0] {
+            let make = || EpisodicGoalAgent(agent::<8, 2, 10>(8, goals, Some(measure), share));
+            protocol.second_test = Some(&extended);
+            assert_protocol_evaluation_read_only(
+                &protocol, SEED, &targets, make, |agent| agent.0.snapshot()
+            );
+            let run = |protocol| {
+                let mut agent = make();
+                let mut rows = Vec::new();
+                run_goal_agent_protocol_with_sink(
+                    protocol, &mut agent, SEED, &targets, &RunMetadata::test("test"), true,
+                    &mut |row| rows.push(row),
+                );
+                (rows, agent.0.snapshot())
+            };
+            let (actual, actual_state) = run(&protocol);
+            protocol.second_test = None;
+            let (expected, expected_state) = run(&protocol);
+            assert_eq!(actual_state, expected_state);
+            for (mut actual, mut expected) in actual.into_iter().zip(expected) {
+                let caps = actual.as_object_mut().unwrap().remove("test_caps").unwrap();
+                let test = &expected["evaluation_blocks"]["test"];
+                assert_eq!(caps["registered"]["success"], test["success"]);
+                assert!(caps["extended"]["success"].as_f64().unwrap() >= test["success"].as_f64().unwrap());
+                for (short, long) in test["starts"].as_array().unwrap().iter().zip(
+                    caps["extended"]["starts"].as_array().unwrap()
+                ) {
+                    if short["success"] == true {
+                        assert_eq!(short["success"], long["success"]);
+                        assert_eq!(short["steps"], long["steps"]);
+                    }
+                }
+                for row in [&mut actual, &mut expected] {
+                    let cost = row["trajectory_utility"]["cost"].as_object_mut().unwrap();
+                    cost.retain(|key, _| !key.ends_with("cpu_seconds"));
+                }
+                assert_eq!(without_timing(actual).to_string(), without_timing(expected).to_string());
+            }
+        }
     }
 }
