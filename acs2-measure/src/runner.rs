@@ -548,7 +548,9 @@ where
     A: GoalAgent<S, G, M>,
 {
     let evaluate = |head| {
-        evaluate_head(task, agent, pairs, seed, gamma, record_starts, head, extended)
+        evaluate_head(
+            task, agent, pairs, EvaluationSettings { seed, gamma, record_starts, head }, extended,
+        )
     };
     if agent.evaluation_heads() == 1 {
         return evaluate(0);
@@ -589,12 +591,19 @@ where
     result
 }
 
+struct EvaluationSettings {
+    seed: u64,
+    gamma: f64,
+    record_starts: bool,
+    head: usize,
+}
+
 fn evaluate_head<T, A, const S: usize, const G: usize, const M: usize>(
-    task: &T, agent: &A, pairs: &[Pair<T::State, G>], seed: u64, gamma: f64,
-    record_starts: bool, head: usize, extended: Option<&T>,
+    task: &T, agent: &A, pairs: &[Pair<T::State, G>], settings: EvaluationSettings, extended: Option<&T>,
 ) -> EvalResult
 where T: Task<S, G, M>, A: GoalAgent<S, G, M>,
 {
+    let EvaluationSettings { seed, gamma, record_starts, head } = settings;
     let mut env = task.environment(ChaChaRandomSource::from_seed_and_stream(
         seed,
         EVALUATION_ENVIRONMENT_STREAM,
@@ -1554,3 +1563,6 @@ fn evaluation_json(eval: &EvalResult, pairs: usize, refs: Reference) -> Value {
     }
     result
 }
+
+#[cfg(test)]
+mod capped_test_tests;
