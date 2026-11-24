@@ -9,6 +9,10 @@ from proportions import (ABLATION, ATTEMPT_SPREAD, MEASURES_BY_ARM, SCOUTS, chec
                          label, pilot_cells, read, registered)
 
 
+MARGINS = dict(late_drift=1.20, wall_attempt=1.45, seed_order=1.27,
+               archive_attempt=ATTEMPT_SPREAD, overhead_seconds=120)
+
+
 def json_lines(path):
     with path.open() as stream:
         return [json.loads(line) for line in stream]
@@ -61,16 +65,36 @@ def ceiling_minute(seconds):
     return math.ceil(seconds / 60) * 60
 
 
-def time_limits(allocations, seed_42, ratio_high, scout):
+def late_ratios(points):
+    return [row['overhead_ratio'] for row in points if row['checkpoint'] >= 100_000]
+
+
+def dependent_limit(scout_seconds, seed_spread):
+    return ceiling_minute(scout_seconds * seed_spread * ATTEMPT_SPREAD + MARGINS['overhead_seconds'])
+
+
+def time_limits(allocations, seed_42, ratio_high, scout, full):
     estimate = max(1.0, ratio_high)
     max_seed = max(allocations)
     spread = max_seed / seed_42
-    regular = ceiling_minute(max_seed * estimate * ATTEMPT_SPREAD + 120)
-    scout_limit = ceiling_minute(seed_42 * estimate * ATTEMPT_SPREAD + 120) if scout else None
-    envelope = ceiling_minute(scout_limit * spread * ATTEMPT_SPREAD + 120) if scout else None
+    pad = MARGINS['overhead_seconds']
+    prefix = MARGINS['late_drift'] * MARGINS['wall_attempt']
+    ordinary_margin = ATTEMPT_SPREAD if full else prefix * MARGINS['seed_order']
+    regular = ceiling_minute(max_seed * estimate * ordinary_margin + pad)
+    scout_limit = ceiling_minute(seed_42 * estimate * prefix + pad) if scout else None
+    envelope = dependent_limit(scout_limit, spread) if scout else None
     return dict(archive_seed_spread=spread, attempt_spread=ATTEMPT_SPREAD,
                 ordinary_limit_seconds=regular if not scout else None,
                 scout_limit_seconds=scout_limit, after_scout_initial_limit_seconds=envelope)
+
+
+def reservation_seconds(limits, seed_count):
+    return sum(
+        (row['scout_limit_seconds'] + (seed_count - 1) * row['after_scout_initial_limit_seconds']
+         if row['scout_limit_seconds'] else
+         (seed_count - int(row['full_pilot_reused'])) * row['ordinary_limit_seconds'])
+        for row in limits
+    )
 
 
 def write_csv(path, rows):
@@ -130,7 +154,7 @@ def forecast(root, archive, output):
             observations[targets[-1]] = total_cpu
         common = dict(task=task, maze=names[task], arm=label(agent, run['tu_share']),
                       agent=agent, tu_share=run['tu_share'])
-        ratios = []
+        first_match = len(matched)
         prior_extended = 0.0
         for record in records:
             point = record['nominal_step']
@@ -143,8 +167,6 @@ def forecast(root, archive, output):
                 raise ValueError('invalid process or evaluation CPU observation')
             prior_extended = extended
             ratio = process / base
-            if point >= 100_000:
-                ratios.append(ratio)
             matched.append(dict(common, checkpoint=point, process_cpu_seconds=process,
                                 base_6a_process_cpu_seconds=base, overhead_ratio=ratio,
                                 overhead_excluding_second_cap_ratio=(process - extended) / base,
@@ -154,10 +176,11 @@ def forecast(root, archive, output):
                                process_cpu_seconds=total_cpu, charged_cpu_seconds=entry['charged_cpu_seconds'],
                                extended_test_cpu_seconds=last['extended_test_cpu_seconds'],
                                utility_cpu_seconds=last['utility_cpu_seconds'], peak_rss_kib=completion['peak_rss_kib']))
+        ratios = late_ratios(matched[first_match:])
         ratio, low, high = last['overhead_ratio'], min(ratios), max(ratios)
         allocations = [costs[task, agent, s][0] for s in study['seeds']]
         seed_42 = costs[task, agent, seed][0]
-        limit = time_limits(allocations, seed_42, high, task in SCOUTS)
+        limit = time_limits(allocations, seed_42, high, task in SCOUTS, full)
         limits.append(dict(common, matched_checkpoint=targets[-1], cost_ratio=ratio, ratio_min=low, ratio_max=high,
                            archive_min_seed_seconds=min(allocations), archive_max_seed_seconds=max(allocations),
                            archive_seed_42_seconds=seed_42, full_pilot_reused=full, **limit))
@@ -175,12 +198,7 @@ def forecast(root, archive, output):
                                                                   if not row['from_full_pilot']) / 3600,
                                 low_cpu_hours=sum(row['low_cpu_seconds'] for row in subset) / 3600,
                                 high_cpu_hours=sum(row['high_cpu_seconds'] for row in subset) / 3600))
-    reserved = sum(
-        ((row['scout_limit_seconds'] + (len(study['seeds']) - 1) * row['after_scout_initial_limit_seconds'])
-         if row['scout_limit_seconds'] else
-         ((len(study['seeds']) - int(row['full_pilot_reused'])) * row['ordinary_limit_seconds']))
-        for row in limits
-    )
+    reserved = reservation_seconds(limits, len(study['seeds']))
     result = dict(state='complete', pilot_cells=len(pilot_rows), full_pilot_cells=sum(row['full_budget'] for row in pilot_rows),
                   forecast_cells=len(per_seed), matched_checkpoints=len(matched), pilot_waves=summary['waves'],
                   attempts=len(attempts), total_pilot_cpu_hours=summary['total_charged_cpu_seconds'] / 3600,
@@ -196,17 +214,18 @@ def forecast(root, archive, output):
                   forecast_remaining_cpu_hours=sum(row['forecast_remaining_cpu_hours'] for row in cost_totals),
                   forecast_cpu_hours_range=[sum(row[key] for row in cost_totals) for key in ('low_cpu_hours', 'high_cpu_hours')],
                   initial_reserved_grid_cpu_hours=reserved / 3600,
-                  attempt_spread=ATTEMPT_SPREAD, measurement_commit=summary['measurement_commit'],
+                  attempt_spread=ATTEMPT_SPREAD, margins=MARGINS, measurement_commit=summary['measurement_commit'],
                   binary_sha256=summary['binary_sha256'],
                   inputs=dict(archive=checksums, pilot_manifest=checksum(root / 'files.sha256.json')),
                   cost_model='Multiply each full 6a seed cost by the corresponding new arm-to-6a seed-42 process CPU ratio '
                   'at the last common checkpoint. Use the observed ratio extrema at >=100k as scenario bounds. '
                   'A complete pilot supplies its final process CPU; partial observations use schedstat samples.',
-                  limit_model='Use the maximum 6a seed cost, the upper matched ratio floored at one, and 1.41 attempt '
-                  'spread, plus 120s. Scout with the seed-42 6a cost and the same factors. The dependent initial envelope '
-                  'uses the entire scout reservation, multiplied by the 6a maximum-to-42 seed ratio and 1.41, plus 120s. '
-                  'After a successful scout replace its reservation by its charged allocation CPU in that formula. '
-                  'Round limits up to a minute.')
+                  limit_model='Floor the upper ratio at one. Use the maximum 6a seed cost for ordinary runs and '
+                  'the 6a seed-42 allocation cost for scouts. Multiply full-pilot ordinary cells by the archived '
+                  'attempt spread 1.41. For scouts use 1.20 late drift and 1.45 wall-clock spread. For other '
+                  'prefix-only cells also use 1.27 for changes in relative seed costs. Add 120s and round up to '
+                  'a minute. The dependent envelope is the scout limit times the archive maximum-to-42 seed '
+                  'ratio and 1.41, plus 120s, rounded up; use the actual charge after the scout.')
     output.mkdir(parents=True, exist_ok=False)
     write_csv(output / 'pilot-costs.csv', pilot_rows)
     write_csv(output / 'pilot-attempts.csv', attempts)

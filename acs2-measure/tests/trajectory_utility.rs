@@ -329,3 +329,64 @@ fn share_and_second_test_cap_preserve_state_and_all_registered_fields() {
         }
     }
 }
+
+#[test]
+fn half_share_reproduces_archived_measures_rows_and_pair_records() {
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../fixtures/trajectory_utility_measures_pair_rows.json"
+    ))
+    .unwrap();
+    let task = fixture["task"].as_str().unwrap();
+    let acs2_envs::roles::ResearchTask::GoalMaze(geometry) =
+        acs2_envs::roles::ResearchTask::named(task).unwrap()
+    else {
+        panic!("expected a maze");
+    };
+    let distributions = acs2_measure::research_pairs::registered::<Coordinates, 2>(
+        task,
+        geometry,
+        fixture["cap"].as_u64().unwrap() as u32,
+        "coordinates",
+    );
+    let protocol = acs2_measure::research_pairs::protocol(&distributions);
+    for cell in fixture["cells"].as_array().unwrap() {
+        let kind = match cell["agent"].as_str().unwrap() {
+            "acs2tuher_mean_value" => Measure::MeanValue,
+            "acs2tuher_random_goal" => Measure::RandomGoal,
+            _ => panic!("expected an archived measure"),
+        };
+        let expected = cell["rows"].as_array().unwrap();
+        let targets: Vec<_> = expected
+            .iter()
+            .map(|row| row["nominal_step"].as_u64().unwrap())
+            .collect();
+        let mut actual = Vec::new();
+        acs2_measure::runner::run_protocol_with_sink::<_, _, 8, 2, 10>(
+            &protocol,
+            AgentKind::Acs2TuHer(UtilityConfiguration {
+                tu_share: 0.5,
+                ..UtilityConfiguration::pilot(kind)
+            }),
+            fixture["seed"].as_u64().unwrap(),
+            &targets,
+            &RunMetadata::test("archived-pair-rows"),
+            acs2_measure::runner::RunSettings {
+                evaluate_points: true,
+                capture_final_state: false,
+            },
+            &mut |row| actual.push(row),
+        );
+        assert_eq!(actual.len(), expected.len());
+        for (row, expected) in actual.into_iter().zip(expected) {
+            let mut row = without_timing(row);
+            for key in ["commit", "host", "source_state", "cpu_model"] {
+                row.as_object_mut().unwrap().remove(key);
+            }
+            row["trajectory_utility"]["cost"]
+                .as_object_mut()
+                .unwrap()
+                .retain(|key, _| !key.ends_with("cpu_seconds"));
+            assert_eq!(row.to_string(), expected.to_string(), "{kind:?}");
+        }
+    }
+}

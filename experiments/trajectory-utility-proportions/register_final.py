@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from proportions import HERE, SCOUTS, checksum, label, pilot_cells, read
+from grid_plan import MAX_SECONDS, PILOT_CHARGE, derive, schedule, schedule_totals
 
 
 def final_plan(costs, identity, pilot_root):
@@ -37,7 +38,7 @@ def final_plan(costs, identity, pilot_root):
             raise ValueError('scout or ordinary time limit is missing')
         timing.append(dict(task=row['task'], arm=row['arm'], reuse_full_seed_42=full,
                            seed_spread=float(row['archive_seed_spread']), **limit))
-    return dict(
+    plan = dict(
         study=HERE.name, stage='grid_pending_approval',
         draft_sha256=checksum(HERE / 'plan.json'), pilot_cells_sha256=checksum(HERE / 'pilot-cells.json'),
         pilot_manifest_sha256=pilot_digest, identity_sha256=checksum(identity),
@@ -61,7 +62,7 @@ def final_plan(costs, identity, pilot_root):
             expected_remaining_cpu_hours=forecast['forecast_remaining_cpu_hours'],
             sum_of_initial_allocations_cpu_hours=forecast['initial_reserved_grid_cpu_hours'],
             checkpoint_scenario_cpu_hours=forecast['forecast_cpu_hours_range'],
-            model=forecast['cost_model'], limits=forecast['limit_model'],
+            model=forecast['cost_model'], limits=forecast['limit_model'], margins=forecast['margins'],
         ),
         scout_gate=dict(tasks=list(SCOUTS), seed=42, concurrency=40, limits=timing,
                         dependency='Submit each dependent array behind the full-budget seed-42 scout gate. '
@@ -69,6 +70,15 @@ def final_plan(costs, identity, pilot_root):
                         'Stop if any resulting limit exceeds the initial envelope or a scout fails.'),
         authorization='No grid submission until explicit approval states a CPU-hour limit covering the approved envelope and existing spend.'
     )
+    manifest = read(pilot_root / 'files.sha256.json')
+    totals = schedule_totals(schedule(derive(plan, manifest, pilot)))
+    cumulative = PILOT_CHARGE + totals['reserved_seconds']
+    if cumulative > MAX_SECONDS:
+        raise ValueError('the full initial schedule exceeds the CPU-hour authorization')
+    plan['costs']['scheduler_reservation'] = dict(
+        totals, pilot_cpu_seconds=PILOT_CHARGE, cumulative_cpu_seconds=cumulative,
+        authorization_cpu_seconds=MAX_SECONDS)
+    return plan
 
 
 if __name__ == '__main__':
@@ -78,5 +88,6 @@ if __name__ == '__main__':
     parser.add_argument('--pilot', required=True, type=Path)
     args = parser.parse_args()
     path = HERE / 'final-plan.json'
+    content = final_plan(args.costs, args.identity, args.pilot)
     with path.open('x') as stream:
-        stream.write(json.dumps(final_plan(args.costs, args.identity, args.pilot), indent=2) + '\n')
+        stream.write(json.dumps(content, indent=2) + '\n')

@@ -31,8 +31,8 @@
     "wave_count": 1
   },
   "costs": {
-    "forecast_sha256": "5d81b070670eae1dfa33424b948ee46087f53f9c35ce6701a0ad5d0678b26515",
-    "time_limits_sha256": "1c68a0bfefa3698476b6f57498b58e049166f6f488eaa9e28ac5b928532d32be",
+    "forecast_sha256": "adbc9f84b872d30698446cfcc0c3284565f2f1524e66148e7b20b7b2cd88bf10",
+    "time_limits_sha256": "d08b1e25a808285814d8d65d3615a8400ec0df2aaf99315a307374c9efed5d30",
     "archive_sha256": {
       "full-index": "cbb4d25c8dda0b505306811452fd7cb7b5daa88e1fe026495be531c19242d1de",
       "run-costs": "4b98277e243466e730bb7b3d0e0538fb4408874d684c7641ecace42d4063aeab"
@@ -40,13 +40,28 @@
     "new_cells": 3360,
     "expected_total_grid_cpu_hours": 1346.924185640687,
     "expected_remaining_cpu_hours": 1343.4400448757103,
-    "sum_of_initial_allocations_cpu_hours": 3149.733333333333,
+    "sum_of_initial_allocations_cpu_hours": 4059.6,
     "checkpoint_scenario_cpu_hours": [
       1336.113771176734,
       1428.88631001837
     ],
     "model": "Multiply each full 6a seed cost by the corresponding new arm-to-6a seed-42 process CPU ratio at the last common checkpoint. Use the observed ratio extrema at >=100k as scenario bounds. A complete pilot supplies its final process CPU; partial observations use schedstat samples.",
-    "limits": "Use the maximum 6a seed cost, the upper matched ratio floored at one, and 1.41 attempt spread, plus 120s. Scout with the seed-42 6a cost and the same factors. The dependent initial envelope uses the entire scout reservation, multiplied by the 6a maximum-to-42 seed ratio and 1.41, plus 120s. After a successful scout replace its reservation by its charged allocation CPU in that formula. Round limits up to a minute."
+    "limits": "Floor the upper ratio at one. Use the maximum 6a seed cost for ordinary runs and the 6a seed-42 allocation cost for scouts. Multiply full-pilot ordinary cells by the archived attempt spread 1.41. For scouts use 1.20 late drift and 1.45 wall-clock spread. For other prefix-only cells also use 1.27 for changes in relative seed costs. Add 120s and round up to a minute. The dependent envelope is the scout limit times the archive maximum-to-42 seed ratio and 1.41, plus 120s, rounded up; use the actual charge after the scout.",
+    "margins": {
+      "late_drift": 1.2,
+      "wall_attempt": 1.45,
+      "seed_order": 1.27,
+      "archive_attempt": 1.41,
+      "overhead_seconds": 120
+    },
+    "scheduler_reservation": {
+      "arrays": 32,
+      "allocations": 800,
+      "reserved_seconds": 14742420,
+      "pilot_cpu_seconds": 53037,
+      "cumulative_cpu_seconds": 14795457,
+      "authorization_cpu_seconds": 18000000
+    }
   },
   "scout_gate": {
     "tasks": [
@@ -115,7 +130,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.12,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -124,7 +139,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.12,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1020,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -133,7 +148,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.12,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1020,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -169,7 +184,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0072639225181599,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -178,7 +193,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0072639225181599,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -187,7 +202,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0072639225181599,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -223,7 +238,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1871794871794872,
-        "ordinary_limit_seconds": 840,
+        "ordinary_limit_seconds": 1200,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -232,7 +247,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1871794871794872,
-        "ordinary_limit_seconds": 840,
+        "ordinary_limit_seconds": 1260,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -241,7 +256,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1871794871794872,
-        "ordinary_limit_seconds": 780,
+        "ordinary_limit_seconds": 1200,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -385,7 +400,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0992338562568407,
-        "ordinary_limit_seconds": 4800,
+        "ordinary_limit_seconds": 7440,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -394,7 +409,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0992338562568407,
-        "ordinary_limit_seconds": 4380,
+        "ordinary_limit_seconds": 6780,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -403,7 +418,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0992338562568407,
-        "ordinary_limit_seconds": 4380,
+        "ordinary_limit_seconds": 6780,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -412,7 +427,7 @@
         "arm": "acs2tuher_random_goal_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0175,
-        "ordinary_limit_seconds": 3300,
+        "ordinary_limit_seconds": 5100,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -421,7 +436,7 @@
         "arm": "acs2tuher_random_goal_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0175,
-        "ordinary_limit_seconds": 3000,
+        "ordinary_limit_seconds": 4620,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -430,7 +445,7 @@
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0175,
-        "ordinary_limit_seconds": 3000,
+        "ordinary_limit_seconds": 4620,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -709,52 +724,52 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1860,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1680,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.0512048192771084,
+        "ordinary_limit_seconds": 1800,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1238532110091743,
+        "ordinary_limit_seconds": 1620,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "mazeb_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1238532110091743,
         "ordinary_limit_seconds": 1260,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
       {
         "task": "mazeb_alcs",
-        "arm": "acs2tuher_mean_value_p3of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.0512048192771084,
-        "ordinary_limit_seconds": 1140,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "mazeb_alcs",
-        "arm": "acs2tuher_mean_value_p1of1",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.0512048192771084,
-        "ordinary_limit_seconds": 1200,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "mazeb_alcs",
-        "arm": "acs2tuher_random_goal_p1of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.1238532110091743,
-        "ordinary_limit_seconds": 1080,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "mazeb_alcs",
-        "arm": "acs2tuher_random_goal_p3of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.1238532110091743,
-        "ordinary_limit_seconds": 840,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "mazeb_alcs",
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1238532110091743,
-        "ordinary_limit_seconds": 840,
+        "ordinary_limit_seconds": 1260,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -763,7 +778,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.171919770773639,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -772,7 +787,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.171919770773639,
-        "ordinary_limit_seconds": 780,
+        "ordinary_limit_seconds": 1140,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -781,7 +796,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.171919770773639,
-        "ordinary_limit_seconds": 780,
+        "ordinary_limit_seconds": 1140,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -817,7 +832,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0576161853100718,
-        "ordinary_limit_seconds": 10320,
+        "ordinary_limit_seconds": 16080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -826,7 +841,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0576161853100718,
-        "ordinary_limit_seconds": 10320,
+        "ordinary_limit_seconds": 16080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -835,7 +850,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0576161853100718,
-        "ordinary_limit_seconds": 10320,
+        "ordinary_limit_seconds": 16080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -844,7 +859,7 @@
         "arm": "acs2tuher_random_goal_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
-        "ordinary_limit_seconds": 8400,
+        "ordinary_limit_seconds": 13080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -853,7 +868,7 @@
         "arm": "acs2tuher_random_goal_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
-        "ordinary_limit_seconds": 8820,
+        "ordinary_limit_seconds": 13740,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -862,7 +877,7 @@
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
-        "ordinary_limit_seconds": 7500,
+        "ordinary_limit_seconds": 11640,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -872,8 +887,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1267576366281082,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 22140,
-        "after_scout_initial_limit_seconds": 35340
+        "scout_limit_seconds": 27240,
+        "after_scout_initial_limit_seconds": 43440
       },
       {
         "task": "mazee2_alcs",
@@ -881,8 +896,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1267576366281082,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 20580,
-        "after_scout_initial_limit_seconds": 32820
+        "scout_limit_seconds": 25320,
+        "after_scout_initial_limit_seconds": 40380
       },
       {
         "task": "mazee2_alcs",
@@ -890,8 +905,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1267576366281082,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 20940,
-        "after_scout_initial_limit_seconds": 33420
+        "scout_limit_seconds": 25800,
+        "after_scout_initial_limit_seconds": 41160
       },
       {
         "task": "mazee2_alcs",
@@ -899,8 +914,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0180915786103106,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 17880,
-        "after_scout_initial_limit_seconds": 25800
+        "scout_limit_seconds": 22020,
+        "after_scout_initial_limit_seconds": 31740
       },
       {
         "task": "mazee2_alcs",
@@ -908,8 +923,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0180915786103106,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 17760,
-        "after_scout_initial_limit_seconds": 25620
+        "scout_limit_seconds": 21900,
+        "after_scout_initial_limit_seconds": 31560
       },
       {
         "task": "mazee2_alcs",
@@ -917,8 +932,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0180915786103106,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 17760,
-        "after_scout_initial_limit_seconds": 25620
+        "scout_limit_seconds": 21900,
+        "after_scout_initial_limit_seconds": 31560
       },
       {
         "task": "mazee3_alcs",
@@ -926,8 +941,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 31260,
-        "after_scout_initial_limit_seconds": 44220
+        "scout_limit_seconds": 38580,
+        "after_scout_initial_limit_seconds": 54540
       },
       {
         "task": "mazee3_alcs",
@@ -935,8 +950,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 25140,
-        "after_scout_initial_limit_seconds": 35580
+        "scout_limit_seconds": 30960,
+        "after_scout_initial_limit_seconds": 43800
       },
       {
         "task": "mazee3_alcs",
@@ -944,8 +959,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.0,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 25080,
-        "after_scout_initial_limit_seconds": 35520
+        "scout_limit_seconds": 30960,
+        "after_scout_initial_limit_seconds": 43800
       },
       {
         "task": "mazee3_alcs",
@@ -953,8 +968,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1676715007332572,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 20220,
-        "after_scout_initial_limit_seconds": 33420
+        "scout_limit_seconds": 24960,
+        "after_scout_initial_limit_seconds": 41220
       },
       {
         "task": "mazee3_alcs",
@@ -962,8 +977,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1676715007332572,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 21000,
-        "after_scout_initial_limit_seconds": 34740
+        "scout_limit_seconds": 25860,
+        "after_scout_initial_limit_seconds": 42720
       },
       {
         "task": "mazee3_alcs",
@@ -971,8 +986,8 @@
         "reuse_full_seed_42": false,
         "seed_spread": 1.1676715007332572,
         "ordinary_limit_seconds": null,
-        "scout_limit_seconds": 24000,
-        "after_scout_initial_limit_seconds": 39660
+        "scout_limit_seconds": 29580,
+        "after_scout_initial_limit_seconds": 48840
       },
       {
         "task": "mazef1_alcs",
@@ -1195,7 +1210,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1286799620132955,
-        "ordinary_limit_seconds": 3720,
+        "ordinary_limit_seconds": 5700,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1204,7 +1219,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1286799620132955,
-        "ordinary_limit_seconds": 3480,
+        "ordinary_limit_seconds": 5400,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1213,7 +1228,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1286799620132955,
-        "ordinary_limit_seconds": 4020,
+        "ordinary_limit_seconds": 6180,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1222,7 +1237,7 @@
         "arm": "acs2tuher_random_goal_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1382913337430853,
-        "ordinary_limit_seconds": 2880,
+        "ordinary_limit_seconds": 4440,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1231,7 +1246,7 @@
         "arm": "acs2tuher_random_goal_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1382913337430853,
-        "ordinary_limit_seconds": 2760,
+        "ordinary_limit_seconds": 4260,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1240,7 +1255,7 @@
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1382913337430853,
-        "ordinary_limit_seconds": 2760,
+        "ordinary_limit_seconds": 4260,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1249,52 +1264,52 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 4020,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_mean_value_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 3600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_mean_value_p1of1",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.1227694503925767,
+        "ordinary_limit_seconds": 3600,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_random_goal_p1of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.094488188976378,
+        "ordinary_limit_seconds": 3060,
+        "scout_limit_seconds": null,
+        "after_scout_initial_limit_seconds": null
+      },
+      {
+        "task": "miyazakib_alcs",
+        "arm": "acs2tuher_random_goal_p3of4",
+        "reuse_full_seed_42": false,
+        "seed_spread": 1.094488188976378,
         "ordinary_limit_seconds": 2640,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
       {
         "task": "miyazakib_alcs",
-        "arm": "acs2tuher_mean_value_p3of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.1227694503925767,
-        "ordinary_limit_seconds": 2340,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "miyazakib_alcs",
-        "arm": "acs2tuher_mean_value_p1of1",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.1227694503925767,
-        "ordinary_limit_seconds": 2340,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "miyazakib_alcs",
-        "arm": "acs2tuher_random_goal_p1of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.094488188976378,
-        "ordinary_limit_seconds": 2040,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "miyazakib_alcs",
-        "arm": "acs2tuher_random_goal_p3of4",
-        "reuse_full_seed_42": false,
-        "seed_spread": 1.094488188976378,
-        "ordinary_limit_seconds": 1740,
-        "scout_limit_seconds": null,
-        "after_scout_initial_limit_seconds": null
-      },
-      {
-        "task": "miyazakib_alcs",
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.094488188976378,
-        "ordinary_limit_seconds": 1740,
+        "ordinary_limit_seconds": 2580,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1303,7 +1318,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.802020202020202,
-        "ordinary_limit_seconds": 1380,
+        "ordinary_limit_seconds": 2100,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1312,7 +1327,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.802020202020202,
-        "ordinary_limit_seconds": 1560,
+        "ordinary_limit_seconds": 2340,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1321,7 +1336,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.802020202020202,
-        "ordinary_limit_seconds": 1440,
+        "ordinary_limit_seconds": 2220,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1519,7 +1534,7 @@
         "arm": "acs2tuher_mean_value_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.3406940063091484,
-        "ordinary_limit_seconds": 720,
+        "ordinary_limit_seconds": 1080,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1528,7 +1543,7 @@
         "arm": "acs2tuher_mean_value_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.3406940063091484,
-        "ordinary_limit_seconds": 780,
+        "ordinary_limit_seconds": 1140,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1537,7 +1552,7 @@
         "arm": "acs2tuher_mean_value_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.3406940063091484,
-        "ordinary_limit_seconds": 780,
+        "ordinary_limit_seconds": 1200,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1546,7 +1561,7 @@
         "arm": "acs2tuher_random_goal_p1of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.236842105263158,
-        "ordinary_limit_seconds": 540,
+        "ordinary_limit_seconds": 780,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1555,7 +1570,7 @@
         "arm": "acs2tuher_random_goal_p3of4",
         "reuse_full_seed_42": false,
         "seed_spread": 1.236842105263158,
-        "ordinary_limit_seconds": 540,
+        "ordinary_limit_seconds": 780,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       },
@@ -1564,7 +1579,7 @@
         "arm": "acs2tuher_random_goal_p1of1",
         "reuse_full_seed_42": false,
         "seed_spread": 1.236842105263158,
-        "ordinary_limit_seconds": 540,
+        "ordinary_limit_seconds": 780,
         "scout_limit_seconds": null,
         "after_scout_initial_limit_seconds": null
       }

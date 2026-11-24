@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from analysis_rules import carry_share
 from proportions import MEAN, S1, SHARES, label, pilot_cells
@@ -56,16 +57,83 @@ class CarryRuleTest(unittest.TestCase):
         self.assertEqual(carry_share(study, configs, rows), actual)
 
 
+class MeasurementValidationTest(unittest.TestCase):
+    def capped_row(self, extended):
+        registered = [
+            dict(success=True, steps=2, shortest_distance=1, weight=0.2),
+            dict(success=False, steps=5, shortest_distance=4, weight=0.3),
+            dict(success=False, steps=5, shortest_distance=7, weight=0.5),
+        ]
+        shortest = 4.9
+        mean = sum(pair['weight'] * long['steps'] for pair, long in zip(registered, extended))
+        return dict(wall_seconds_eval=1, evaluation_blocks={'test': dict(
+            success=0.2, mean_success_steps=2, starts=registered)}, test_caps=dict(
+            registered=dict(cap=5, success=0.2, mean_shortest_path=shortest, mean_steps=4.4,
+                            mean_steps_over_shortest=4.4 / shortest),
+            extended=dict(cap=100, success=0.5, mean_shortest_path=shortest, mean_steps=mean,
+                          mean_steps_over_shortest=mean / shortest, starts=extended,
+                          heads=None, cumulative_cpu_seconds=0.1)))
+
+    def test_pair_prefix_despite_consistent_aggregates(self):
+        from validate_proportions import validate_test_caps
+
+        config = dict(cap=5, second_test_cap=100, per_start_diagnostics=True)
+        tail = [dict(success=True, steps=7), dict(success=False, steps=100)]
+        validate_test_caps(self.capped_row([dict(success=True, steps=2), *tail]), config)
+        with self.assertRaisesRegex(ValueError, 'disagrees with its registered pair'):
+            validate_test_caps(self.capped_row([dict(success=True, steps=3), *tail]), config)
+        with self.assertRaisesRegex(ValueError, 'disagrees with its registered pair'):
+            validate_test_caps(self.capped_row([dict(success=True, steps=2),
+                                               dict(success=True, steps=5), tail[-1]]), config)
+
+    def test_unit_share_rejects_even_one_hindsight_request(self):
+        from proportions import BLOCKS
+        from validate_proportions import validate_row
+
+        config = dict(second_test_cap=100, evaluation_blocks=BLOCKS, per_start_diagnostics=True,
+                      trajectory_utility=dict(tu_share=1.0, candidates=8, refresh_steps=2000))
+        draws = dict(original=5, hindsight=0, trajectory_utility=10)
+        row = dict(agent=MEAN, test_caps={}, agent_parameters={'trajectory_utility': dict(
+            tu_share=1.0, route_probabilities=dict(original=1 / 3, hindsight=0, trajectory_utility=2 / 3))},
+            trajectory_utility=dict(diagnostics=dict(draw_requests=draws)))
+        with (patch('validate_proportions.validate_test_caps'),
+              patch('validate_proportions.validate_measures') as delegate):
+            validate_row(row, config, MEAN, 42, 'pinned', 1000)
+            delegate.assert_called_once()
+            draws.update(hindsight=1, trajectory_utility=9)
+            with self.assertRaisesRegex(ValueError, 'has a hindsight request'):
+                validate_row(row, config, MEAN, 42, 'pinned', 1000)
+
+
 class LimitModelTest(unittest.TestCase):
-    def test_limits_cover_archived_seed_and_attempt_spreads(self):
+    def test_limits_cover_margins_and_floor_the_upper_ratio(self):
         from cost_forecast import time_limits
 
-        ordinary = time_limits([300, 500, 700], 500, 1.2, False)
-        self.assertEqual(ordinary['ordinary_limit_seconds'], 1320)
-        self.assertEqual(ordinary['archive_seed_spread'], 1.4)
-        self.assertIsNone(ordinary['scout_limit_seconds'])
-
-        heavy = time_limits([300, 500, 700], 500, 1.2, True)
-        self.assertEqual(heavy['scout_limit_seconds'], 1020)
-        self.assertEqual(heavy['after_scout_initial_limit_seconds'], 2160)
+        full = time_limits([300, 500, 700], 500, 1.2, False, True)
+        self.assertEqual(full['ordinary_limit_seconds'], 1320)
+        self.assertEqual(full['archive_seed_spread'], 1.4)
+        self.assertIsNone(full['scout_limit_seconds'])
+        below_one = time_limits([300, 500, 700], 500, 0.7, False, True)
+        self.assertEqual(below_one['ordinary_limit_seconds'], 1140)
+        prefix = time_limits([300, 500, 700], 500, 1.2, False, False)
+        self.assertEqual(prefix['ordinary_limit_seconds'], 1980)
+        heavy = time_limits([300, 500, 700], 500, 1.2, True, False)
+        self.assertEqual(heavy['scout_limit_seconds'], 1200)
+        self.assertEqual(heavy['after_scout_initial_limit_seconds'], 2520)
         self.assertIsNone(heavy['ordinary_limit_seconds'])
+
+    def test_ratio_band_starts_at_100k(self):
+        from cost_forecast import late_ratios
+
+        records = [dict(checkpoint=step, overhead_ratio=ratio)
+                   for step, ratio in [(30000, 3.0), (99999, 0.1), (100000, 1.4),
+                                       (300000, 1.1), (1000000, 1.2)]]
+        self.assertEqual(late_ratios(records), [1.4, 1.1, 1.2])
+
+    def test_reused_and_gated_cells_reserve_exactly_nineteen_seed_slots(self):
+        from cost_forecast import reservation_seconds
+
+        rows = [dict(scout_limit_seconds=1000, after_scout_initial_limit_seconds=2300),
+                dict(scout_limit_seconds=None, full_pilot_reused=True, ordinary_limit_seconds=300),
+                dict(scout_limit_seconds=None, full_pilot_reused=False, ordinary_limit_seconds=450)]
+        self.assertEqual(reservation_seconds(rows, 20), 59400)
