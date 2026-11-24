@@ -69,7 +69,7 @@ def derive(final, pilot_manifest, pilot_summary):
                 cpu_model=settings['cpu_model'], memory_mib=settings['memory_mib'])
 
 
-def bundle_ordinary(runs, capacity=7200):
+def bundle_ordinary(runs, capacity=21_600):
     bundles = []
     for run in sorted(runs, key=lambda row: (-row['limit_seconds'], row['run_id'])):
         for bundle in bundles:

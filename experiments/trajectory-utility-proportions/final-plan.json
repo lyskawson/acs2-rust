@@ -55,11 +55,11 @@
       "overhead_seconds": 120
     },
     "scheduler_reservation": {
-      "arrays": 32,
-      "allocations": 800,
-      "reserved_seconds": 14742420,
+      "arrays": 28,
+      "allocations": 468,
+      "reserved_seconds": 14662920,
       "pilot_cpu_seconds": 53037,
-      "cumulative_cpu_seconds": 14795457,
+      "cumulative_cpu_seconds": 14715957,
       "authorization_cpu_seconds": 18000000
     }
   },
