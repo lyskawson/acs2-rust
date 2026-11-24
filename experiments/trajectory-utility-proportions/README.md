@@ -47,3 +47,33 @@ identity checks. It verifies the source checksums and compares original pair
 records. It also verifies all existing presets with the second test cap toggled.
 `analysis_rules.py` selects the share carried into adaptive replay from validation
 only. The full grid requires an explicit approval and CPU-hour limit.
+
+## Full grid
+
+The revised final plan records the margin for drift after 300k, the observed
+wall-clock spread, and the additional seed-order margin for ordinary cells
+with prefix evidence. It also binds the initial Slurm allocation total,
+including the bundled ordinary jobs and the scout gate. The 105 full pilot
+measurements fill their seed-42 cells.
+
+Freeze the operations source under the grid results directory. Run
+`grid_stage.py prepare PLAN_SHA256 --operations-commit COMMIT`, then submit
+with `grid_stage.py submit OPERATIONS_SHA256`. The controller uses the pilot
+clone and checks its binary identity. One allocated CPU runs a bundle of
+ordinary cells in separate timed Slurm steps. The scouts can overlap that
+chain. The gate checks all 12 scout completions and their pilot prefixes,
+then updates the pending limits for the MazeE2 and MazeE3 dependency chains
+within their initial envelopes. Every submission checks the association,
+shared grant, cumulative study budget and Slurm admission.
+
+Use `grid_stage.py status OPERATIONS_SHA256` for accounting and
+`grid_stage.py seal OPERATIONS_SHA256` for terminal evidence. A real failure
+writes STOP. The grid launcher does not retry measurements.
+
+After verifying both archive copies, run `grid_results.py` with the sealed
+grid, pilot, original ablation and measures archives. It derives exact
+random-policy floors for 100 steps, verifies shortest paths and the
+registered-step reconstruction, and reports the ablation's registered-cap
+ACS2 ease label at both caps. It selects the carried share from validation
+only. `grid_figures.py` plots the registered test curves and the group means
+of primary test success over the fixed shares.
