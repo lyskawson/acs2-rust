@@ -1,0 +1,12 @@
+{
+  "stage": "approved_recovery",
+  "stopped_manifest_sha256": "0da1da2946fe5e955ac24e8a84070c36352fce9448541453bebb322dc8fbcccb",
+  "final_plan_sha256": "db5c71750b28996460996d832c98cb2b8c26ff9ac6b9ca36862c2a44a3a1bdcc",
+  "measurement_commit": "8ea47c086ba6312da98bf9be26789d7420b32809",
+  "binary_sha256": "2ee08d8f6a0378e5dad2c1c9696d9262ee164d568b6ff879e64339496aee6ee0",
+  "run_count": 77,
+  "wall_limit_seconds": 50400,
+  "cumulative_cpu_limit_seconds": 18000000,
+  "prior_cpu_seconds": 4202368,
+  "maximum_reserved_and_spent_cpu_seconds": 8083168
+}
