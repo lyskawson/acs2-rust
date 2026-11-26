@@ -100,7 +100,7 @@ def allocation_status(ledger, gate=None):
             continue
         if row['JobID'] in records:
             raise ValueError('duplicate Slurm allocation slot')
-        if not (state(row) == 'CANCELLED' and row['CPUTimeRAW'] == '0'
+        if not (state(row) in ('PENDING', 'CANCELLED') and row['CPUTimeRAW'] == '0'
                 and row['Start'] in ('None', 'Unknown', 'N/A', '')):
             if identifier in charged:
                 raise ValueError('duplicate Slurm allocation raw ID')
