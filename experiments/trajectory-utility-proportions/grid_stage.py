@@ -1,4 +1,6 @@
 import argparse
+import csv
+import io
 from collections import Counter
 import json
 import os
@@ -13,6 +15,7 @@ from grid_plan import (BINARY_SHA256, GRANT_SECONDS, MAX_SECONDS, MEASUREMENT_CO
                        derive, schedule, schedule_totals)
 from grid_protocol import TERMINAL, atomic_json, load_plan, require_budget, seconds, stop_phase
 from pilot import BINARY, CLONE, ROOT as PILOT, sacct, state
+from recovery_plan import (FIRST_PLAN, PREFIX_COUNT, derive_recovery, recovery_schedule)
 from submit import execute, shared_reservation, submission_command
 from validate_proportions import validate_row
 from worker import allocation, deterministic_fields
@@ -20,8 +23,10 @@ import collect
 import pair_schema
 from schema import per_pair_enabled
 
-ROOT = PILOT / 'grid'
-JOB = 'tu-proportions-grid'
+INITIAL_GRID = PILOT / 'grid'
+RECOVERY = PILOT / 'grid-recovery'
+ROOT = RECOVERY if HERE == RECOVERY / 'operations/experiments/trajectory-utility-proportions' else INITIAL_GRID
+JOB = 'tu-proportions-recovery' if ROOT == RECOVERY else 'tu-proportions-grid'
 
 
 def operations():
@@ -52,11 +57,21 @@ def registered_schedule(plan_sha):
     return plan, scheduled
 
 
+def admitted_schedule(plan_sha):
+    plan, scheduled = registered_schedule(plan_sha)
+    if ROOT == RECOVERY:
+        if plan_sha != FIRST_PLAN:
+            raise ValueError('recovery must use the original approved grid plan')
+        plan = derive_recovery(plan, INITIAL_GRID, read(HERE / 'recovery-registration.json'))
+        scheduled = recovery_schedule(plan)
+    return plan, scheduled
+
+
 def prepare(plan_sha, operations_commit):
     if HERE != ROOT / 'operations/experiments/trajectory-utility-proportions':
         raise ValueError('run grid operations from a frozen results snapshot')
     measurement_identity()
-    registered_schedule(plan_sha)
+    admitted_schedule(plan_sha)
     (ROOT / 'logs').mkdir(exist_ok=False)
     atomic_json(ROOT / 'operations.json', dict(plan_sha256=plan_sha,
                                               operations_commit=operations_commit, files=operations()))
@@ -70,13 +85,27 @@ def current(operations_sha, verify_files=True):
     frozen = load_plan(ROOT / 'operations.json', operations_sha)
     if verify_files and frozen['files'] != operations():
         raise ValueError('the grid operations snapshot changed')
-    return registered_schedule(frozen['plan_sha256'])
+    return admitted_schedule(frozen['plan_sha256'])
 
 
 def allocation_status(ledger, gate=None):
     if any(entry['array_id'] is None for entry in ledger):
         raise ValueError('a submission intent requires reconciliation')
-    raw, records = sacct([entry['array_id'] for entry in ledger])
+    raw, _ = sacct([entry['array_id'] for entry in ledger])
+    records = {}
+    charged = set()
+    for row in csv.DictReader(io.StringIO(raw), delimiter='|'):
+        identifier = row['JobIDRaw']
+        if '.' in identifier or '[' in row['JobID']:
+            continue
+        if row['JobID'] in records:
+            raise ValueError('duplicate Slurm allocation slot')
+        if not (state(row) == 'CANCELLED' and row['CPUTimeRAW'] == '0'
+                and row['Start'] in ('None', 'Unknown', 'N/A', '')):
+            if identifier in charged:
+                raise ValueError('duplicate Slurm allocation raw ID')
+            charged.add(identifier)
+        records[row['JobID']] = row
     by_job, states = {}, Counter()
     spent = reserved = 0
     for entry in ledger:
@@ -97,9 +126,6 @@ def allocation_status(ledger, gate=None):
             by_job[job] = dict(state=status, charged_cpu_seconds=cost,
                                raw_id=row['JobIDRaw'] if row else None,
                                exit_code=row['ExitCode'] if row else None)
-    ids = [row['raw_id'] for row in by_job.values() if row['raw_id']]
-    if len(set(ids)) != len(ids):
-        raise ValueError('duplicate Slurm allocation raw ID')
     return raw, dict(spent_seconds=spent, reserved_seconds=reserved, states=dict(states), jobs=by_job)
 
 
@@ -123,8 +149,8 @@ def check_grant(needed, slots):
     return dict(used_cpu_seconds=used, queue=queue, association_limit=min(limits), qos=qos)
 
 
-def charge_and_reservation(account, planned=0):
-    return require_budget(PILOT_CHARGE, account, planned, MAX_SECONDS / 3600)
+def charge_and_reservation(account, planned=0, prior=PILOT_CHARGE):
+    return require_budget(prior, account, planned, MAX_SECONDS / 3600)
 
 
 def assignment(index):
@@ -146,7 +172,7 @@ def submit(operations_sha):
         _, account = allocation_status(ledger)
         if failures(account):
             raise ValueError('a submitted allocation failed')
-        bound = charge_and_reservation(account, remaining)
+        bound = charge_and_reservation(account, remaining, plan.get('prior_cpu_seconds', PILOT_CHARGE))
         grant = check_grant(remaining, slots)
         descriptor = assignment(index)
         atomic_json(descriptor, dict(operations_sha256=operations_sha, index=index, batch=batch))
@@ -201,25 +227,34 @@ def checked_result(directory, targets):
     return complete, rows
 
 
-def prefix_identity(run, rows, blocks):
-    reference = run['pilot']
-    path = PILOT / reference['path']
+def matched_prefix(reference, folder, rows, blocks):
+    path = folder / reference['path']
     if checksum(path) != reference['sha256']:
-        raise ValueError('pilot row checksum differs')
+        raise ValueError('preserved row checksum differs')
     old, incomplete = collect.complete_rows(path)
     if incomplete or len(old) != reference['checkpoints'] or len(old) >= len(rows):
-        raise ValueError('pilot data are not the registered prefix')
+        raise ValueError('saved rows are not the registered prefix')
     if any(deterministic_fields(a, blocks) != deterministic_fields(b, blocks)
            for a, b in zip(old, rows)):
-        raise ValueError('full-budget run failed bitwise identity against the pilot prefix')
-    return dict(rows=len(old), differences=0, pilot_sha256=reference['sha256'])
+        raise ValueError('full-budget run failed bitwise identity against its preserved prefix')
+    return len(old)
+
+
+def prefix_source(run):
+    if run.get('previous'):
+        return run['previous'], INITIAL_GRID, 'recovery-prefix-identity.json', 'previous_sha256'
+    if run['pilot']:
+        return run['pilot'], PILOT, 'prefix-identity.json', 'pilot_sha256'
+    return None
 
 
 def compare_prefix(run, config, directory):
-    if run['pilot']:
+    if source := prefix_source(run):
+        reference, folder, name, key = source
         _, rows = checked_result(directory, config['targets'])
-        result = prefix_identity(run, rows, config['evaluation_blocks'])
-        atomic_json(directory / 'prefix-identity.json', result)
+        count = matched_prefix(reference, folder, rows, config['evaluation_blocks'])
+        result = {'rows': count, 'differences': 0, key: reference['sha256']}
+        atomic_json(directory / name, result)
 
 
 def expect_pending(array, count, limit):
@@ -337,7 +372,7 @@ def worker(path):
         attempt = directory.parents[1]
         attempt.mkdir(parents=True, exist_ok=False)
         atomic_json(attempt / 'allocation-start.json', dict(response=detail, fields=actual))
-        manifest = dict(configuration=cfg, agent=run['agent'], seed=run['seed'], attempt_id=run['run_id'],
+        manifest = dict(configuration=cfg, agent=run['agent'], seed=run['seed'], attempt_id=run.get('attempt_id', run['run_id']),
                         stop_path=str(ROOT/'STOP.json'), measurement_commit=MEASUREMENT_COMMIT,
                         expected_binary_sha256=BINARY_SHA256, expected_preset=plan['preset'],
                         expected_cpu_model=plan['cpu_model'], process_timeout_seconds=timeout,
@@ -377,27 +412,37 @@ def status(operations_sha, seal=False):
     completed = sum(len(runs) for batch, event in zip(scheduled, ledger)
                     for slot, runs in enumerate(batch['jobs'])
                     if account['jobs'][f"{event['array_id']}_{slot}"]['state'] == 'COMPLETED')
-    bound = charge_and_reservation(account)
+    prior = plan.get('prior_cpu_seconds', PILOT_CHARGE)
+    bound = charge_and_reservation(account, prior=prior)
     summary = dict(states=account['states'], completed_runs=completed, stopped=stopped, reused=len(plan['reused']),
                    submitted_runs=sum(entry['run_count'] for entry in ledger), pilot_cpu_seconds=PILOT_CHARGE,
                    grid_cpu_seconds=account['spent_seconds'], reserved_seconds=account['reserved_seconds'],
-                   upper_bound_seconds=bound, grid_total_pilot_and_spent_cpu_seconds=PILOT_CHARGE+account['spent_seconds'])
+                   upper_bound_seconds=bound, grid_total_pilot_and_spent_cpu_seconds=prior+account['spent_seconds'])
+    if plan.get('recovery'):
+        summary.update(earlier_completed_runs=plan['earlier_completed_runs'],
+                       earlier_grid_cpu_seconds=plan['earlier_grid_cpu_seconds'])
     print(json.dumps(summary), flush=True)
     if seal:
         if account['reserved_seconds'] or set(account['states']) - TERMINAL:
             raise ValueError('seal requires terminal Slurm accounting')
-        if not stopped and (completed != len(plan['runs']) or not gate):
+        if not stopped and (completed != len(plan['runs']) or (ROOT == INITIAL_GRID and not gate)):
             raise ValueError('the entire admitted grid and gate must complete successfully')
         if not stopped:
+            reproduced = 0
             for run in plan['runs']:
                 cfg = configuration(run, plan['configs'])
                 directory = output_directory(run, cfg)
                 checked_result(directory, cfg['targets'])
-                if run['pilot']:
-                    proof = read(directory / 'prefix-identity.json')
-                    prior = run['pilot']
-                    if proof != dict(rows=prior['checkpoints'], differences=0, pilot_sha256=prior['sha256']):
-                        raise ValueError('the seed-42 prefix proof differs')
+                if source := prefix_source(run):
+                    reference, _, name, key = source
+                    proof = read(directory / name)
+                    if proof != {'rows': reference['checkpoints'], 'differences': 0, key: reference['sha256']}:
+                        raise ValueError('the preserved prefix proof differs')
+                    reproduced += proof['rows']
+            if plan.get('recovery'):
+                if reproduced != PREFIX_COUNT:
+                    raise ValueError('the recovery did not reproduce every saved checkpoint')
+                summary['reproduced_checkpoints'] = reproduced
         (ROOT / 'accounting.psv').write_text(raw)
         atomic_json(ROOT / 'accounting-summary.json', summary)
         atomic_json(ROOT / 'allocations.json', account['jobs'])

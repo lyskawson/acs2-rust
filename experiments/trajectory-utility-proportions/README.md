@@ -77,3 +77,20 @@ registered-step reconstruction, and reports the ablation's registered-cap
 ACS2 ease label at both caps. It selects the carried share from validation
 only. `grid_figures.py` plots the registered test curves and the group means
 of primary test success over the fixed shares.
+
+## Recovery after the MazeE3 deadline
+
+The original STOP seal preserves 3,178 full measurements and the attempt
+records for all 3,255 scheduled runs. A recovery admission requires an
+explicit wall-clock limit registered in `recovery-registration.json`. It
+derives the 77 unfinished cells and charges the sealed first-wave and pilot
+spend before reserving any new allocations. Its two arrays run in a chain.
+The worker uses the pilot binary and verifies all 127 preserved checkpoints
+in binary64 bits before the recovery can seal.
+
+Freeze the approved recovery operations under the separate
+`grid-recovery/operations` results directory. Use the same prepare, submit,
+status and seal commands as for the initial grid. The original grid archive
+supplies the completed runs and the preserved prefixes. For analysis pass
+`--recovery` and `--recovery-sha` along with the sealed stopped grid and its
+partial manifest checksum.

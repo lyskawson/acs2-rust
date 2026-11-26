@@ -13,6 +13,8 @@ from grid_plan import BINARY_SHA256, MEASUREMENT_COMMIT, derive
 from grid_protocol import T19, load_plan
 from proportions import ABLATION, HERE, MEAN, RANDOM, S1, SHARES, checksum, label, read, registered
 from agent_names import canonical_run_name
+from recovery_plan import (FIRST_MANIFEST, FIRST_PLAN, ORIGINAL_COMPLETE, PREFIX_COUNT, RETRY_COUNT,
+                           derive_recovery, sealed_stop)
 from register_protocol import exact_floor
 from validate_proportions import capped_steps, close
 
@@ -106,20 +108,87 @@ def old_sources(archive, measures, configs, seeds, final):
     return simple | old
 
 
-def measured_sources(pilot, grid, grid_manifest_sha, final):
-    manifest = load_plan(grid / 'files.sha256.json', grid_manifest_sha)
-    load = lambda name: load_plan(grid / name, manifest[name])
-    summary = load('accounting-summary.json')
-    if (summary['stopped'] or summary['completed_runs'] != 3255 or summary['submitted_runs'] != 3255
-            or summary['reserved_seconds'] or summary['reused'] != 105
-            or load('operations.json')['plan_sha256'] != checksum(HERE / 'final-plan.json')):
-        raise ValueError('registered analysis requires the fully completed grid')
+def sealed_reader(root, manifest):
+    def read_file(name):
+        return load_plan(root / name, manifest[name])
+    return read_file
+
+
+def measurement_steps(root, manifest, partial=False):
+    load = sealed_reader(root, manifest)
+    prefix = 'partial-' if partial else ''
+    allocations = load(f'{prefix}allocations.json')
+    accounting = f'{prefix}accounting.psv'
+    records = {row['JobIDRaw']: row for row in csv_rows(
+        verified(root/accounting, manifest[accounting]), delimiter='|') if '.' in row['JobIDRaw']}
+    raw_ids = {job: row['JobIDRaw' if partial else 'raw_id'] for job, row in allocations.items()}
+    return records, raw_ids
+
+
+def complete_source(run, cfg, root, manifest, steps, used_steps):
+    load = sealed_reader(root, manifest)
+    attempt = f"attempts/{run['run_id']}"
+    folder = f"{attempt}/measurement/{cfg['id']}_{run['agent']}_s{run['seed']}"
+    completion = load(f'{folder}/completion.json')
+    step = load(f'{attempt}/step.json')
+    job, raw_step = step['job_id'], f"{step['job_id_raw']}.{step['step_id']}"
+    records, raw_ids = steps
+    record = records[raw_step]
+    charged = int(record['CPUTimeRAW'])
+    if (raw_step in used_steps or raw_ids[job] != step['job_id_raw']
+            or record['JobID'] != f"{job}.{step['step_id']}"
+            or record['AllocCPUS'] != '1' or record['ExitCode'] != '0:0'
+            or record['State'] != 'COMPLETED' or not 0 < charged <= step['limit_seconds']):
+        raise ValueError('measurement step is not a distinct registered Slurm charge')
+    used_steps.add(raw_step)
+    reproduced = 0
+    if reference := run.get('previous') or run['pilot']:
+        recovery = run.get('previous') is not None
+        filename = 'recovery-prefix-identity.json' if recovery else 'prefix-identity.json'
+        field = 'previous_sha256' if recovery else 'pilot_sha256'
+        proof = load(f'{folder}/{filename}')
+        if proof != {'rows': reference['checkpoints'], 'differences': 0, field: reference['sha256']}:
+            raise ValueError('preserved prefix proof does not match its source')
+        reproduced = proof['rows']
+    return completion, root / folder / 'rows.jsonl', manifest[f'{folder}/rows.jsonl'], charged, reproduced
+
+
+def measured_sources(pilot, grid, grid_manifest_sha, final, recovery=None, recovery_sha=None):
     pilot_manifest = load_plan(pilot/'files.sha256.json', final['pilot_manifest_sha256'])
     pilot_summary = load_plan(pilot/'pilot-summary.json', pilot_manifest['pilot-summary.json'])
     data = derive(final, pilot_manifest, pilot_summary)
-    allocation = load('allocations.json')
-    records = {row['JobIDRaw']: row for row in csv_rows(
-        verified(grid/'accounting.psv', manifest['accounting.psv']), delimiter='|')}
+    if (recovery is None) != (recovery_sha is None):
+        raise ValueError('a recovery needs its sealed manifest checksum')
+    recovered, recovery_overlap = {}, 0
+    if recovery is None:
+        manifest = load_plan(grid / 'files.sha256.json', grid_manifest_sha)
+        load = sealed_reader(grid, manifest)
+        summary = load('accounting-summary.json')
+        if (summary['stopped'] or summary['completed_runs'] != 3255 or summary['submitted_runs'] != 3255
+                or summary['reserved_seconds'] or summary['reused'] != 105
+                or load('operations.json')['plan_sha256'] != checksum(HERE / 'final-plan.json')):
+            raise ValueError('registered analysis requires the fully completed grid')
+    else:
+        if grid_manifest_sha != FIRST_MANIFEST or checksum(HERE / 'final-plan.json') != FIRST_PLAN:
+            raise ValueError('recovery requires the original sealed stopped grid')
+        manifest, original, _ = sealed_stop(grid)
+        recovery_manifest = load_plan(recovery / 'files.sha256.json', recovery_sha)
+        load = sealed_reader(recovery, recovery_manifest)
+        summary = load('accounting-summary.json')
+        earlier_spent = original['grid_cpu_seconds']
+        if (summary['stopped'] or summary['completed_runs'] != RETRY_COUNT
+                or summary['submitted_runs'] != RETRY_COUNT or summary['reserved_seconds']
+                or summary['reused'] != 105 or summary['earlier_completed_runs'] != ORIGINAL_COMPLETE
+                or summary['earlier_grid_cpu_seconds'] != earlier_spent
+                or summary['reproduced_checkpoints'] != PREFIX_COUNT
+                or summary['grid_total_pilot_and_spent_cpu_seconds'] != original['total_cpu_seconds'] + summary['grid_cpu_seconds']
+                or load('operations.json')['plan_sha256'] != FIRST_PLAN):
+            raise ValueError('the recovered grid is incomplete or its accounting differs')
+        approved = load('operations/experiments/trajectory-utility-proportions/recovery-registration.json')
+        scheduled = derive_recovery(data, grid, approved)
+        recovered = {run['run_id']: run for run in scheduled['runs']}
+        recovered_steps = measurement_steps(recovery, recovery_manifest)
+    steps = measurement_steps(grid, manifest, partial=recovery is not None)
     result, used_steps, overlap = {}, set(), 0
     for run in data['reused'] + data['runs']:
         cfg = data['configs'][run['task']]
@@ -130,35 +199,22 @@ def measured_sources(pilot, grid, grid_manifest_sha, final):
             relative = str(path.with_name('completion.json').relative_to(pilot))
             completion = load_plan(pilot / relative, pilot_manifest[relative])
             digest, charged, source = reference['sha256'], reference['slurm_cpu_seconds'], 'pilot'
+        elif retry := recovered.get(run['run_id']):
+            completion, path, digest, charged, reproduced = complete_source(
+                retry, cfg, recovery, recovery_manifest, recovered_steps, used_steps)
+            recovery_overlap += reproduced
+            source = 'recovery'
         else:
-            attempt = f"attempts/{run['run_id']}"
-            folder = f"{attempt}/measurement/{cfg['id']}_{run['agent']}_s{run['seed']}"
-            path = grid / folder / 'rows.jsonl'
-            completion = load(f'{folder}/completion.json')
-            step = load(f'{attempt}/step.json')
-            job, raw_step = step['job_id'], f"{step['job_id_raw']}.{step['step_id']}"
-            record = records[raw_step]
-            job_raw = allocation[job]['raw_id']
-            charged = int(record['CPUTimeRAW'])
-            if (raw_step in used_steps or job_raw != step['job_id_raw']
-                    or record['JobID'] != f"{job}.{step['step_id']}"
-                    or record['AllocCPUS'] != '1' or record['ExitCode'] != '0:0'
-                    or record['State'] != 'COMPLETED' or not 0 < charged <= step['limit_seconds']):
-                raise ValueError('measurement step is not a distinct registered Slurm charge')
-            used_steps.add(raw_step)
-            digest, source = manifest[f'{folder}/rows.jsonl'], 'grid'
-            if run['pilot']:
-                proof = load(f'{folder}/prefix-identity.json')
-                if proof != dict(rows=run['pilot']['checkpoints'], differences=0,
-                                 pilot_sha256=run['pilot']['sha256']):
-                    raise ValueError('pilot prefix proof does not match its source')
-                overlap += proof['rows']
+            completion, path, digest, charged, reproduced = complete_source(
+                run, cfg, grid, manifest, steps, used_steps)
+            overlap += reproduced
+            source = 'grid'
         if completion['sha256']['rows.jsonl'] != digest or completion['rows_seen'] != len(cfg['targets']):
             raise ValueError('measurement completion differs from the sealed rows')
         result[key] = dict(path=path, sha256=digest, source=source, allocated=charged,
                            process=completion['user_cpu_seconds']+completion['system_cpu_seconds'],
                            peak=completion['peak_rss_kib'])
-    if len(result) != 3360 or len(used_steps) != 3255:
+    if len(result) != 3360 or len(used_steps) != 3255 or recovery is not None and recovery_overlap != PREFIX_COUNT:
         raise ValueError('the measurement archives do not cover the whole grid')
     return result, summary, overlap
 
@@ -169,7 +225,7 @@ def raw_inputs(sources, configs, references, names):
         cfg = configs[task]
         registered_cap = cfg['cap']
         reference = references[task]
-        host_measurement = source['source'] in ('pilot', 'grid')
+        host_measurement = source['source'] in ('pilot', 'grid', 'recovery')
         rows = json_lines(verified(source['path'], source['sha256']))
         if [row['nominal_step'] for row in rows] != cfg['targets']:
             raise ValueError('checkpoint horizons differ from registration')
@@ -348,14 +404,16 @@ def analyze(args):
     easy = {row['task']: row['too_easy']=='True' for row in easy_rows}
     if easy.keys() != configs.keys() or any(row['too_easy'] not in ('True','False') for row in easy_rows):
         raise ValueError('archived ACS2 ease labels differ')
-    new, accounting, overlap = measured_sources(args.pilot,args.grid,args.grid_sha,final)
+    new, accounting, overlap = measured_sources(args.pilot, args.grid, args.grid_sha, final,
+                                                 args.recovery, args.recovery_sha)
     old = old_sources(args.ablation,args.measures,configs,study['seeds'],final)
     observations, validation, timings = raw_inputs(new | old,configs,refs,names)
     results = statistics(study,configs,names,refs,easy,observations,timings)
     carried = carry_share(study,configs,validation)
     result = dict(measured_runs=len(new), reused_pilot=105, reference_runs=len(old),
                   pilot_prefix_checkpoints=overlap, contrasts=len(results['comparisons']),
-                  grid_manifest_sha256=args.grid_sha, binary_sha256=BINARY_SHA256,
+                  grid_manifest_sha256=args.grid_sha, recovery_manifest_sha256=args.recovery_sha,
+                  binary_sha256=BINARY_SHA256,
                   final_plan_sha256=checksum(HERE/'final-plan.json'), accounting=accounting,
                   carried_from_validation=carried, too_easy_source=EASY_SOURCE)
     args.out.mkdir(exist_ok=False,parents=True)
@@ -370,4 +428,6 @@ if __name__ == '__main__':
     for arg in ('pilot','grid','ablation','measures','out'):
         parser.add_argument(f'--{arg}',type=Path,required=True)
     parser.add_argument('--grid-sha',required=True)
+    parser.add_argument('--recovery',type=Path)
+    parser.add_argument('--recovery-sha')
     analyze(parser.parse_args())
