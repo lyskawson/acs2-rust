@@ -6019,6 +6019,59 @@ under `~/tu_runs/trajectory-utility-measures/` on WCSS and
 `~/Desktop/tu-runs/trajectory-utility-measures/` locally. The pilot, stopped
 grid and recovery copies have matching SHA-256 manifests for 18,667 files.
 
+## Fixed trajectory utility shares on shortened hindsight replay
+
+The [registered plan](../experiments/trajectory-utility-proportions/final-plan.json)
+compares Mean value and Random goal at requested TU shares λ = 1/4, 3/4 and 1
+across the 28 mazes and seeds 42–61. S+1 supplies λ = 0, and both archived
+trajectory utility arms supply λ = 1/2. Each replay draw uses the episode goal
+with probability 1/3, shortened hindsight with probability 2(1 − λ)/3, and
+the assigned TU goal with probability 2λ/3. The S+1 update and admissibility
+fallback apply throughout. Requested and realized shares are recorded separately.
+
+The primary measure averages test success over registered checkpoints within
+each seed. The final measure uses the last checkpoint. Each maze has a paired
+marginal 95% t(19) interval. The primary matched-share contrast between Mean
+value and Random goal gives the following verdicts and `A+/A−/n` counts.
+
+| λ | Without observation aliasing | With observation aliasing |
+|---|---|---|
+| 1/4 | no clear effect 0/2/9 | mixed 1/3/19 |
+| 3/4 | no clear effect 0/4/9 | mixed 4/6/19 |
+| 1 | worsens 0/8/9 | worsens 0/13/19 |
+
+On the primary measure without aliasing, Random goal improves over S+1 at
+λ = 1/4 (5/0/9) and 3/4 (7/0/9). The validation-only rule selects λ = 1/2
+without aliasing (0.748599) and λ = 1/4 with aliasing (0.628845) for the
+adaptive study. It uses Mean value scores averaged over checkpoints, seeds,
+and mazes within each group, with the smaller share winning ties within 1e−12.
+
+The additional 100-step test rollout starts with the registered-cap rollout's
+state and evaluation stream. It uses the exact 100-step random-policy floor.
+The `too_easy` label for the 100-step verdicts comes from original ACS2 at the
+registered cap in the ablation. Seven mazes with aliasing meet the 100-step
+floor rule. The archive includes both caps' success, capped steps and ratios to
+the same pairs' mean shortest path. It also includes registered-cap speed
+thresholds and per-maze medians of the paired process and utility CPU ratios
+to the S+1 process CPU.
+
+The last allocation finished on 2026-11-27. The analysis covers 3,360 new-arm
+runs and 1,680 archived references. The 105 full pilot runs, 3,178 first-grid
+runs and 77 recovery runs all used the pilot binary from `8ea47c0`. A deadline
+for MazeE3 Random goal at λ = 1/4, seed 43, stopped 19 other measurements and
+left 57 jobs cancelled before start. The approved 14-hour allocations completed
+all 77 cells. The 378 extended pilot checkpoints and 127 checkpoints saved
+before STOP match bit for bit in the compared deterministic fields. Slurm
+charged 5,036,362 CPU-seconds, or 1,398.989444 of 5,000 CPU-hours, across all
+attempts and the pilot.
+
+The [execution and analysis tools](../experiments/trajectory-utility-proportions/README.md)
+produce 672 paired intervals, descriptive tables, checkpoint curves for all
+nine arms, and primary test success by share and aliasing group. The archive
+under `~/tu_runs/trajectory-utility-proportions/` on WCSS and
+`~/Desktop/tu-runs/trajectory-utility-proportions/` locally has matching
+checksums for 36,009 files across the pilot, stopped grid and recovery.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
