@@ -51,3 +51,36 @@ class RecoveryPlanTests(unittest.TestCase):
         self.assertEqual(first['dependencies'], [])
         self.assertEqual(second['dependencies'], [first['name']])
         self.assertEqual(len(first['jobs'])+len(second['jobs']), 77)
+
+    def admit_stopped_cell(self, limit, *, outcome, **evidence):
+        task = SCOUTS[0]
+        run = dict(run_id='maze-43', task=task, agent=MEAN, arm='mean', seed=43,
+                   tu_share=.25, phase='conditional', pilot=None)
+        path = f'attempts/maze-43/measurement/maze_{MEAN}_s43'
+        row = dict(run, path=path, outcome=outcome, prior_limit_seconds=7200,
+                   checkpoints=0, last_checkpoint=None, rows_sha256=None)
+        row.update(evidence)
+        manifest = {f'{path}/rows.jsonl': 'previous-rows'}
+        summary = dict(total_cpu_seconds=490000, grid_cpu_seconds=436963, trigger=row)
+        plan = dict(runs=[run], configs={task: dict(id='maze', targets=[1000, 3000])}, reused=[])
+        root = Path('sealed')
+        with (patch.object(recovery_plan, 'sealed_stop', return_value=(manifest, summary, [row])),
+              patch.object(recovery_plan, 'RETRY_COUNT', 1),
+              patch.object(recovery_plan, 'PREFIX_COUNT', int(outcome == 'partial'))):
+            approved = recovery_plan.registration(root, limit)
+            return recovery_plan.derive_recovery(plan, root, approved)['runs'][0]
+
+    def test_recovery_limit_must_exceed_the_stopped_allocation(self):
+        evidence = dict(outcome='partial', checkpoints=1, last_checkpoint=1000, rows_sha256='previous-rows')
+        self.assertEqual(self.admit_stopped_cell(7260, **evidence)['limit_seconds'], 7260)
+        for limit in (7140, 7200):
+            with self.subTest(limit=limit):
+                with self.assertRaisesRegex(ValueError, 'wall-clock limit differs'):
+                    self.admit_stopped_cell(limit, **evidence)
+
+    def test_cancelled_cell_must_have_no_measurement_evidence(self):
+        self.assertIsNone(self.admit_stopped_cell(7260, outcome='not_started')['previous'])
+        for evidence in (dict(checkpoints=1), dict(rows_sha256='previous-rows')):
+            with self.subTest(evidence=evidence):
+                with self.assertRaisesRegex(ValueError, 'cancelled slot has measurement evidence'):
+                    self.admit_stopped_cell(7260, outcome='not_started', **evidence)
