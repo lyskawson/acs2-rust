@@ -6072,6 +6072,68 @@ under `~/tu_runs/trajectory-utility-proportions/` on WCSS and
 `~/Desktop/tu-runs/trajectory-utility-proportions/` locally has matching
 checksums for 36,009 files across the pilot, stopped grid and recovery.
 
+## First decisions and value errors under trajectory utility copies by start-goal distance
+
+This analysis is post hoc relative to every run it reads and describes
+associations in stored rows. It runs no learning. The
+[registered plan](../experiments/trajectory-utility-pair-decisions/plan.json)
+was committed in `5dbf4b5` before any measure was computed. It lists the
+5,600 input files with their SHA-256 and the predictions. The analysis ran at
+`c06c2f1`. Sources are the original archives selected as in the fixed-share
+analysis: E+1 and S+1 from the ablation index, with the six pyalcs mazes from
+the per-goal-reward archive. Mean value and Random goal at λ = 1/2 come from
+the trajectory utility measures index. The λ = 1/4, 3/4 and 1 arms come from
+`measured_sources` over the pilot, first submission and recovery. Trial update
+is not carried.
+
+Measures use the registered test block of each maze at the registered cap L,
+seeds 42–46, at every checkpoint. Q* and V* come from `acs2-maze-truth` at L
+and are attached by the unchanged `per-pair-diagnostics` code. F is the
+optimal-first-action rate over non-fallback decisions. The value error is the
+recorded estimate minus Q* of the chosen action over all pairs. Overestimation
+is an estimate above V* over non-fallback decisions. Pairs are grouped by
+shortest distance: 1–2, 3–4, 5–6 and 7 or more. Pooled views give each pair
+weight 1 across the mazes of an aliasing group; the 4M point is Woods14 alone.
+Comparisons are per-seed differences of pooled measures, with t(4) intervals.
+No registered test pair lies beyond L, and fallback shares stay at or below
+0.026.
+
+A prediction cell is supported when its interval lies on the predicted side of
+zero, contradicted when it lies on the other side, and inconclusive otherwise.
+All five predictions concern mazes without aliasing.
+
+| Prediction | Cells | Supported | Contradicted | Inconclusive |
+|---|---:|---:|---:|---:|
+| P1: R − S+1 in F > 0, d ≥ 5, 30k and 100k, λ = 1/2 and 3/4 | 8 | 5 | 0 | 3 |
+| P2: R − S+1 in value error > 0, same cells | 8 | 2 | 4 | 2 |
+| P3: R − S+1 in F < 0, d ≤ 4, 1k–10k, λ = 1 | 6 | 5 | 1 | 0 |
+| P4: S+1 − E+1 in F > 0, d ≤ 4, 1k–10k | 6 | 5 | 0 | 1 |
+| P5: R − M in F > 0, d ≥ 5, 30k and 100k, λ = 3/4 | 4 | 2 | 0 | 2 |
+
+Without aliasing, every P1 cell at 100k is supported, for example
++0.240 [0.186, 0.294] for λ = 3/4 on 5–6 steps. At 30k only λ = 3/4 on 7 or
+more steps is supported. P2 is contradicted at 30k in all four cells: Random
+goal's estimates lie further below Q* than those of S+1. At 100k the
+difference is positive on 7 or more steps and inconclusive on 5–6 steps. At
+30k and 100k every arm's mean error on pairs of 5 or more steps is below −467;
+S+1 has −508 on 7 or more steps at 100k. At λ = 1/2 and 3/4 the absolute
+error of Random goal is larger than that of S+1 from 3k to 30k in every
+distance bin. P3's contradicted cell is 3–4 steps at 10k. P5
+is supported at 100k and inconclusive at 30k.
+
+With aliasing, S+1 − E+1 in F is positive on 1–4 steps at every checkpoint
+from 3k to 300k. Random goal at λ = 1/2 has a larger absolute error than S+1
+at every distance and checkpoint from 3k to 300k, and fewer overestimated
+decisions from 10k onward.
+
+The rows also record copy counters. Random goal reaches about 0.12 of its
+assigned goals in the trajectory and Mean value about 0.47–0.56 (group medians
+at 100k). Neither E+1 nor S+1 records the TU counters; both record the
+realized relabeled share and the replay fallbacks. The execution commands are
+in the [study README](../experiments/trajectory-utility-pair-decisions/README.md).
+Outputs, including per-maze tables and exact-distance views, are under
+`~/Desktop/tu-runs/trajectory-utility-pair-decisions/`.
+
 ## Clippy — the determinism invariants, checked by machine
 
 `clippy.toml` at the workspace root turns two claims this document makes into lints:
